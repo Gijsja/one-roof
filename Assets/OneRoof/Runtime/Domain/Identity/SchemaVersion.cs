@@ -41,5 +41,13 @@ namespace OneRoof.Domain.Identity
         public static bool operator ==(SchemaVersion left, SchemaVersion right) => left.Equals(right);
 
         public static bool operator !=(SchemaVersion left, SchemaVersion right) => !left.Equals(right);
+
+        public static bool operator <(SchemaVersion left, SchemaVersion right) => left.Value < right.Value;
+
+        public static bool operator <=(SchemaVersion left, SchemaVersion right) => left.Value <= right.Value;
+
+        public static bool operator >(SchemaVersion left, SchemaVersion right) => left.Value > right.Value;
+
+        public static bool operator >=(SchemaVersion left, SchemaVersion right) => left.Value >= right.Value;
     }
 }

@@ -135,6 +135,7 @@ namespace OneRoof.Domain.Transit
                 Direction = nextTarget > CurrentFloor ? ElevatorDirection.Up : ElevatorDirection.Down;
                 Phase = ElevatorCarPhase.Moving;
                 TimerTicksRemaining = Timing.FloorTravelTicks;
+                UpdateMoving();
             }
         }
 
