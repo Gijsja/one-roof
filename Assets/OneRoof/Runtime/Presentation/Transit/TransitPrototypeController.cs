@@ -39,6 +39,15 @@ namespace OneRoof.Presentation.Transit
             RenderSnapshot();
         }
 
+        private void OnDestroy()
+        {
+            if (_worldMaterial != null)
+            {
+                Object.Destroy(_worldMaterial);
+                _worldMaterial = null;
+            }
+        }
+
         private void OnGUI()
         {
             EnsureGuiStyles();
@@ -135,10 +144,22 @@ namespace OneRoof.Presentation.Transit
             }
         }
 
-        private int FindPassengerElevator(TransitPrototypeProjection snapshot, int residentId)
+        private static int FindPassengerElevator(TransitPrototypeProjection snapshot, int residentId)
         {
-            // The prototype has no passenger manifest projection yet. Assign riders deterministically to a visible active car.
-            return residentId % snapshot.Elevators.Count;
+            for (var i = 0; i < snapshot.Elevators.Count; i++)
+            {
+                var ids = snapshot.Elevators[i].PassengerIds;
+                for (var j = 0; j < ids.Count; j++)
+                {
+                    if (ids[j] == residentId)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            // Defensive fallback: resident not found in any car manifest (should not occur during normal play)
+            return 0;
         }
 
         private MeshRenderer CreateRectangle(string objectName, Color color, Vector3 position, Vector2 size, Transform parent)
@@ -148,7 +169,18 @@ namespace OneRoof.Presentation.Transit
             gameObject.transform.SetParent(parent);
             gameObject.transform.position = position;
             gameObject.transform.localScale = new Vector3(size.x, size.y, 0.1f);
-            Destroy(gameObject.GetComponent<BoxCollider>());
+            var collider = gameObject.GetComponent<BoxCollider>();
+            if (collider != null)
+            {
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(collider);
+                }
+                else
+                {
+                    DestroyImmediate(collider);
+                }
+            }
             var renderer = gameObject.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = _worldMaterial;
             _colorBlock.SetColor("_BaseColor", color);

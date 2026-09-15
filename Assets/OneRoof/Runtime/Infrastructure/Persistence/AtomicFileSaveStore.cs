@@ -34,13 +34,17 @@ namespace OneRoof.Infrastructure.Persistence
                 // Write full content to temporary file first
                 File.WriteAllText(tempPath, content ?? string.Empty);
 
-                // Atomically replace target
+                // Atomically replace target — File.Replace is an atomic rename on same-filesystem
+                // paths (maps to rename(2) on Linux) and has no window where both files are absent.
+                // If no prior save exists we fall back to a plain Move (nothing to lose).
                 if (File.Exists(filePath))
                 {
-                    File.Delete(filePath);
+                    File.Replace(tempPath, filePath, null);
                 }
-
-                File.Move(tempPath, filePath);
+                else
+                {
+                    File.Move(tempPath, filePath);
+                }
                 return SaveResult.Success();
             }
             catch (Exception ex)

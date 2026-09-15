@@ -31,12 +31,13 @@ namespace OneRoof.Domain.Transit
 
     public readonly struct ElevatorCarSnapshot
     {
-        public ElevatorCarSnapshot(EntityId elevatorId, int floor, int passengerCount, int capacity)
+        public ElevatorCarSnapshot(EntityId elevatorId, int floor, int passengerCount, int capacity, IReadOnlyList<EntityId> passengerIds)
         {
             ElevatorId = elevatorId;
             Floor = floor;
             PassengerCount = passengerCount;
             Capacity = capacity;
+            PassengerIds = passengerIds ?? Array.Empty<EntityId>();
         }
 
         public EntityId ElevatorId { get; }
@@ -46,6 +47,8 @@ namespace OneRoof.Domain.Transit
         public int PassengerCount { get; }
 
         public int Capacity { get; }
+
+        public IReadOnlyList<EntityId> PassengerIds { get; }
     }
 
     public sealed class TransitPrototypeSnapshot
@@ -149,7 +152,13 @@ namespace OneRoof.Domain.Transit
             var elevators = new List<ElevatorCarSnapshot>(_elevators.Count);
             foreach (var elevator in _elevators)
             {
-                elevators.Add(new ElevatorCarSnapshot(elevator.Id, elevator.Floor, elevator.Passengers.Count, ElevatorCapacity));
+                var passengerIds = new List<EntityId>(elevator.Passengers.Count);
+                foreach (var p in elevator.Passengers)
+                {
+                    passengerIds.Add(p.Id);
+                }
+
+                elevators.Add(new ElevatorCarSnapshot(elevator.Id, elevator.Floor, elevator.Passengers.Count, ElevatorCapacity, passengerIds));
             }
 
             var averageWait = _arrivedCount == 0 ? 0f : (float)_totalCompletedWait / _arrivedCount;

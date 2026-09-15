@@ -29,41 +29,39 @@ namespace OneRoof.Domain.Transit
 
             var distances = new Dictionary<EntityId, int>();
             var previousEdge = new Dictionary<EntityId, TransitEdge>();
-            var unvisited = new HashSet<EntityId>();
+
+            // SortedSet with a composite (distance, nodeId) key gives deterministic tie-breaking:
+            // equal-cost candidates are always visited in ascending node-ID order, producing
+            // identical routes across runtimes regardless of HashSet enumeration order.
+            var unvisited = new SortedSet<(int Distance, int NodeIdValue, EntityId NodeId)>(
+                Comparer<(int Distance, int NodeIdValue, EntityId NodeId)>.Create(
+                    (x, y) =>
+                    {
+                        var d = x.Distance.CompareTo(y.Distance);
+                        return d != 0 ? d : x.NodeIdValue.CompareTo(y.NodeIdValue);
+                    }));
 
             foreach (var node in _graph.Nodes)
             {
                 distances[node.Id] = int.MaxValue;
-                unvisited.Add(node.Id);
             }
 
             distances[originNodeId] = 0;
+            unvisited.Add((0, originNodeId.Value, originNodeId));
 
             while (unvisited.Count > 0)
             {
-                EntityId current = default;
-                var smallestDistance = int.MaxValue;
-
-                foreach (var id in unvisited)
-                {
-                    var dist = distances[id];
-                    if (dist < smallestDistance)
-                    {
-                        smallestDistance = dist;
-                        current = id;
-                    }
-                }
+                var (smallestDistance, _, current) = unvisited.Min;
+                unvisited.Remove(unvisited.Min);
 
                 if (smallestDistance == int.MaxValue || current.Equals(destinationNodeId))
                 {
                     break;
                 }
 
-                unvisited.Remove(current);
-
                 foreach (var edge in _graph.GetOutgoingEdges(current))
                 {
-                    if (!unvisited.Contains(edge.ToNodeId))
+                    if (!distances.ContainsKey(edge.ToNodeId))
                     {
                         continue;
                     }
@@ -71,8 +69,11 @@ namespace OneRoof.Domain.Transit
                     var alt = smallestDistance + edge.Cost;
                     if (alt < distances[edge.ToNodeId])
                     {
+                        // Remove old entry before updating (SortedSet requires remove+re-add to re-sort)
+                        unvisited.Remove((distances[edge.ToNodeId], edge.ToNodeId.Value, edge.ToNodeId));
                         distances[edge.ToNodeId] = alt;
                         previousEdge[edge.ToNodeId] = edge;
+                        unvisited.Add((alt, edge.ToNodeId.Value, edge.ToNodeId));
                     }
                 }
             }

@@ -130,5 +130,21 @@ namespace OneRoof.Domain.Tests.EditMode
 
             Assert.That(bank.DeliveredCount, Is.EqualTo(2));
         }
+
+        [Test]
+        public void EnqueuePassengerWithDestinationOutsideBankRangeThrows()
+        {
+            var timing = new ElevatorTimingConfig(1, 1, 1);
+            var car = new ElevatorCar(new EntityId(1), 0, 8, timing);
+            var bank = new ElevatorBank(0, 4, new[] { car });
+
+            // Floor 5 is outside [0..4]
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(999), 0, 5)));
+
+            // Floor -1 is also outside [0..4]
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(998), 0, -1)));
+        }
     }
 }

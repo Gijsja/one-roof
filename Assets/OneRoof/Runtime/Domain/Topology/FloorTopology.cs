@@ -70,6 +70,12 @@ namespace OneRoof.Domain.Topology
                         throw new ArgumentException($"Duplicate portal ID {portal.Id} on floor {floorLevel}.");
                     }
 
+                    if (!_roomsById.ContainsKey(portal.RoomId))
+                    {
+                        throw new ArgumentException(
+                            $"Portal {portal.Id} references room {portal.RoomId} which does not exist on floor {floorLevel}.");
+                    }
+
                     _portalsById.Add(portal.Id, portal);
                     portalList.Add(portal);
                 }

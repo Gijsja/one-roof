@@ -83,11 +83,39 @@ namespace OneRoof.Domain.Transit
             return 0;
         }
 
+        public (long MaxWaitTicks, float AverageWaitTicks) GetFloorWaitMetrics(int floor)
+        {
+            if (!_floorQueues.TryGetValue(floor, out var queue) || queue.Count == 0)
+            {
+                return (0L, 0f);
+            }
+
+            long max = 0;
+            long total = 0;
+            foreach (var passenger in queue)
+            {
+                if (passenger.WaitTicks > max)
+                {
+                    max = passenger.WaitTicks;
+                }
+
+                total += passenger.WaitTicks;
+            }
+
+            return (max, (float)total / queue.Count);
+        }
+
         public void EnqueuePassenger(ElevatorPassenger passenger)
         {
             if (passenger == null)
             {
                 throw new ArgumentNullException(nameof(passenger));
+            }
+
+            if (passenger.DestinationFloor < MinFloor || passenger.DestinationFloor > MaxFloor)
+            {
+                throw new ArgumentOutOfRangeException(nameof(passenger),
+                    $"Destination floor {passenger.DestinationFloor} is outside bank range [{MinFloor}..{MaxFloor}].");
             }
 
             if (!_floorQueues.TryGetValue(passenger.OriginFloor, out var queue))

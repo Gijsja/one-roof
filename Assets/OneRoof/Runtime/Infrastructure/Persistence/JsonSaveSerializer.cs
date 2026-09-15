@@ -125,16 +125,27 @@ namespace OneRoof.Infrastructure.Persistence
                     "Deserialized state payload was null or invalid.");
             }
 
-            var actualState = dto.randomState != 0 ? dto.randomState : (dto.randomSeed != 0 ? dto.randomSeed : 1UL);
-            var randomState = new RandomStreamState(dto.randomSeed, actualState, dto.randomPosition);
-            var metadata = new SaveEnvelopeMetadata(
-                currentVersion,
-                new Tick(dto.simulationTick),
-                randomState,
-                dto.createdAtUtc,
-                dto.gameVersion);
+            SaveEnvelope<TState> envelope;
+            try
+            {
+                var actualState = dto.randomState != 0 ? dto.randomState : (dto.randomSeed != 0 ? dto.randomSeed : 1UL);
+                var randomState = new RandomStreamState(dto.randomSeed, actualState, dto.randomPosition);
+                var metadata = new SaveEnvelopeMetadata(
+                    currentVersion,
+                    new Tick(dto.simulationTick),
+                    randomState,
+                    dto.createdAtUtc,
+                    dto.gameVersion);
+                envelope = new SaveEnvelope<TState>(metadata, state);
+            }
+            catch (Exception ex)
+            {
+                return LoadResult<SaveEnvelope<TState>>.Failure(
+                    LoadErrorReason.CorruptData,
+                    $"Corrupt save metadata (timestamp, tick, or random state): {ex.Message}");
+            }
 
-            return LoadResult<SaveEnvelope<TState>>.Success(new SaveEnvelope<TState>(metadata, state));
+            return LoadResult<SaveEnvelope<TState>>.Success(envelope);
         }
 
         private static List<ISaveMigrator> BuildMigrationChain(

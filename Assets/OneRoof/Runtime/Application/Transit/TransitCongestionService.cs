@@ -22,8 +22,8 @@ namespace OneRoof.Application.Transit
             for (var floor = bank.MinFloor; floor <= bank.MaxFloor; floor++)
             {
                 var queuedCount = bank.GetQueueLength(floor);
-                // Note: since elevator bank encapsulates queues, we evaluate based on queue length
-                var floorSeverity = CongestionEvaluator.Evaluate(queuedCount, 0);
+                var (maxWaitTicks, averageWaitTicks) = bank.GetFloorWaitMetrics(floor);
+                var floorSeverity = CongestionEvaluator.Evaluate(queuedCount, maxWaitTicks);
 
                 if (queuedCount > maxFloorQueue)
                 {
@@ -39,8 +39,8 @@ namespace OneRoof.Application.Transit
                 floorProjections.Add(new FloorCongestionProjection(
                     floor,
                     queuedCount,
-                    0,
-                    0f,
+                    maxWaitTicks,
+                    averageWaitTicks,
                     floorSeverity));
             }
 
@@ -53,7 +53,8 @@ namespace OneRoof.Application.Transit
                     car.Id.Value,
                     car.CurrentFloor,
                     car.Passengers.Count,
-                    car.Capacity));
+                    car.Capacity,
+                    null)); // congestion service projects queue metrics only, not passenger manifest
             }
 
             return new ElevatorBankCongestionProjection(

@@ -9,6 +9,7 @@ namespace OneRoof.Domain.Transit
     public sealed class HierarchicalTransitGraph
     {
         private const int VerticalElevatorFloorCost = 10;
+        private const int VerticalStairFloorCost = 15;
 
         private readonly Dictionary<EntityId, TransitNode> _nodesById;
         private readonly Dictionary<EntityId, List<TransitEdge>> _outgoingEdges;
@@ -52,11 +53,12 @@ namespace OneRoof.Domain.Transit
                 foreach (var edge in edges)
                 {
                     if (edge == null) continue;
-                    if (_outgoingEdges.TryGetValue(edge.FromNodeId, out var outgoing))
-                    {
-                        outgoing.Add(edge);
-                        edgeList.Add(edge);
-                    }
+                    // P2: drop edges whose source or destination node is not registered — prevents
+                    // KeyNotFoundException during routing on malformed content.
+                    if (!_outgoingEdges.TryGetValue(edge.FromNodeId, out var outgoing)) continue;
+                    if (!_nodesById.ContainsKey(edge.ToNodeId)) continue;
+                    outgoing.Add(edge);
+                    edgeList.Add(edge);
                 }
             }
 
@@ -168,6 +170,39 @@ namespace OneRoof.Domain.Transit
 
                         edges.Add(new TransitEdge(a.Id, b.Id, transitCost, TransitMode.Elevator));
                         edges.Add(new TransitEdge(b.Id, a.Id, transitCost, TransitMode.Elevator));
+                    }
+                }
+            }
+
+            // 4. Connect vertical stair landing nodes across floors (Walk mode, higher cost than elevator)
+            var stairLandingsByColumn = new Dictionary<int, List<TransitNode>>();
+            foreach (var node in nodes)
+            {
+                if (node.Type == TransitNodeType.StairLanding)
+                {
+                    if (!stairLandingsByColumn.TryGetValue(node.Location.X, out var columnStairs))
+                    {
+                        columnStairs = new List<TransitNode>();
+                        stairLandingsByColumn[node.Location.X] = columnStairs;
+                    }
+
+                    columnStairs.Add(node);
+                }
+            }
+
+            foreach (var column in stairLandingsByColumn.Values)
+            {
+                for (var i = 0; i < column.Count; i++)
+                {
+                    for (var j = i + 1; j < column.Count; j++)
+                    {
+                        var a = column[i];
+                        var b = column[j];
+                        var floorDelta = Math.Abs(a.Floor - b.Floor);
+                        var stairCost = floorDelta * VerticalStairFloorCost;
+
+                        edges.Add(new TransitEdge(a.Id, b.Id, stairCost, TransitMode.Walk));
+                        edges.Add(new TransitEdge(b.Id, a.Id, stairCost, TransitMode.Walk));
                     }
                 }
             }

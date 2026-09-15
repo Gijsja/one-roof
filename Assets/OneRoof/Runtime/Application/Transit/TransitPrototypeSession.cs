@@ -29,12 +29,13 @@ namespace OneRoof.Application.Transit
 
     public readonly struct ElevatorProjection
     {
-        public ElevatorProjection(int elevatorId, int floor, int passengerCount, int capacity)
+        public ElevatorProjection(int elevatorId, int floor, int passengerCount, int capacity, IReadOnlyList<int> passengerIds)
         {
             ElevatorId = elevatorId;
             Floor = floor;
             PassengerCount = passengerCount;
             Capacity = capacity;
+            PassengerIds = passengerIds ?? System.Array.Empty<int>();
         }
 
         public int ElevatorId { get; }
@@ -44,6 +45,9 @@ namespace OneRoof.Application.Transit
         public int PassengerCount { get; }
 
         public int Capacity { get; }
+
+        /// <summary>Entity ID values for every resident currently inside this car.</summary>
+        public IReadOnlyList<int> PassengerIds { get; }
     }
 
     public sealed class TransitPrototypeProjection
@@ -78,6 +82,8 @@ namespace OneRoof.Application.Transit
         public const int ResidentCount = TransitPrototypeSimulation.ResidentCount;
 
         private readonly TransitPrototypeSimulation _simulation = new TransitPrototypeSimulation();
+        private TransitPrototypeProjection _cachedProjection;
+        private long _cachedTick = -1;
 
         public void AdvanceOneTick() => _simulation.AdvanceOneTick();
 
@@ -85,6 +91,12 @@ namespace OneRoof.Application.Transit
 
         public TransitPrototypeProjection Projection()
         {
+            var currentTick = _simulation.CurrentTick.Value;
+            if (_cachedProjection != null && _cachedTick == currentTick)
+            {
+                return _cachedProjection;
+            }
+
             var snapshot = _simulation.Snapshot();
             var residents = new List<TransitResidentProjection>(snapshot.Residents.Count);
             foreach (var resident in snapshot.Residents)
@@ -95,16 +107,24 @@ namespace OneRoof.Application.Transit
             var elevators = new List<ElevatorProjection>(snapshot.Elevators.Count);
             foreach (var elevator in snapshot.Elevators)
             {
-                elevators.Add(new ElevatorProjection(elevator.ElevatorId.Value, elevator.Floor, elevator.PassengerCount, elevator.Capacity));
+                var ids = new List<int>(elevator.PassengerIds.Count);
+                foreach (var id in elevator.PassengerIds)
+                {
+                    ids.Add(id.Value);
+                }
+
+                elevators.Add(new ElevatorProjection(elevator.ElevatorId.Value, elevator.Floor, elevator.PassengerCount, elevator.Capacity, ids));
             }
 
-            return new TransitPrototypeProjection(
+            _cachedProjection = new TransitPrototypeProjection(
                 snapshot.Tick.Value,
                 snapshot.QueueLength,
                 snapshot.ArrivedCount,
                 snapshot.AverageWaitTicks,
                 new ReadOnlyCollection<TransitResidentProjection>(residents),
                 new ReadOnlyCollection<ElevatorProjection>(elevators));
+            _cachedTick = currentTick;
+            return _cachedProjection;
         }
 
         private static TransitResidentStatus ToStatus(ResidentTransitPhase phase)

@@ -100,6 +100,47 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(result.Value.StatePayload.buildingName, Is.EqualTo("Old_Migrated"));
         }
 
+        [Test]
+        public void CorruptNegativeTickReturnsCorruptData()
+        {
+            // Build a valid envelope, then replace simulationTick with a negative value in raw JSON.
+            // Tick rejects negative values, so metadata construction must be caught and returned as CorruptData.
+            var serializer = new JsonSaveSerializer();
+            var randomState = new RandomStreamState(1, 1, 0);
+            var metadata = new SaveEnvelopeMetadata(new SchemaVersion(1), new Tick(10), randomState, "2026-01-01T00:00:00Z", "1.0.0");
+            var envelope = new SaveEnvelope<SampleSaveState>(metadata, new SampleSaveState { buildingName = "X", totalFloors = 1 });
+
+            var json = serializer.Serialize(envelope);
+            // Corrupt the tick to a negative value using raw string replacement
+            var corrupt = json.Replace("\"simulationTick\": 10", "\"simulationTick\": -99");
+
+            var result = serializer.Deserialize<SampleSaveState>(corrupt, new SchemaVersion(1));
+
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.ErrorReason, Is.EqualTo(LoadErrorReason.CorruptData));
+        }
+
+        [Test]
+        public void CorruptZeroRandomStateReturnsCorruptData()
+        {
+            // RandomStreamState rejects state == 0.
+            // Build a valid envelope, then zero-out randomState in raw JSON.
+            var serializer = new JsonSaveSerializer();
+            var randomState = new RandomStreamState(42, 7, 3);
+            var metadata = new SaveEnvelopeMetadata(new SchemaVersion(1), new Tick(5), randomState, "2026-01-01T00:00:00Z", "1.0.0");
+            var envelope = new SaveEnvelope<SampleSaveState>(metadata, new SampleSaveState { buildingName = "Y", totalFloors = 2 });
+
+            var json = serializer.Serialize(envelope);
+            // Force randomState field to 0 — this bypasses the DTO guard (schemaVersion > 0 only)
+            // and hits the RandomStreamState constructor guard.
+            var corrupt = json.Replace("\"randomState\": 7", "\"randomState\": 0");
+
+            var result = serializer.Deserialize<SampleSaveState>(corrupt, new SchemaVersion(1));
+
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.ErrorReason, Is.EqualTo(LoadErrorReason.CorruptData));
+        }
+
         private sealed class DummyMigrator : ISaveMigrator
         {
             public DummyMigrator(SchemaVersion sourceVersion, SchemaVersion targetVersion)

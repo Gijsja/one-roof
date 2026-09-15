@@ -9,6 +9,26 @@ namespace OneRoof.Presentation.Tests.EditMode
 {
     public sealed class TransitPrototypeSceneCompositionTests
     {
+        private string _sceneBeforeTest;
+
+        [SetUp]
+        public void SetUp()
+        {
+            // Record the active scene path before each test so we can restore it in TearDown.
+            // This prevents Editor scene state from leaking between test runs.
+            _sceneBeforeTest = SceneManager.GetActiveScene().path;
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            // Restore the scene that was active before the test ran.
+            if (!string.IsNullOrEmpty(_sceneBeforeTest))
+            {
+                EditorSceneManager.OpenScene(_sceneBeforeTest, OpenSceneMode.Single);
+            }
+        }
+
         [Test]
         public void TestbedTransitSceneContainsThePrototypeController()
         {

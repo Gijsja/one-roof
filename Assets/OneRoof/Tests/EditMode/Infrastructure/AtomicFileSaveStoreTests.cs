@@ -66,5 +66,31 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(File.Exists(filePath), Is.False);
             Assert.That(File.Exists(filePath + ".tmp"), Is.False);
         }
+
+        [Test]
+        public void SaveOverExistingFileReplacesContentWithoutGap()
+        {
+            var store = new AtomicFileSaveStore();
+            var filePath = Path.Combine(_testDirectory, "overwrite.save");
+            var originalContent = "{\"version\":1}";
+            var updatedContent = "{\"version\":2}";
+
+            store.Save(filePath, originalContent);
+            Assert.That(File.ReadAllText(filePath), Is.EqualTo(originalContent));
+
+            var result = store.Save(filePath, updatedContent);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(File.ReadAllText(filePath), Is.EqualTo(updatedContent));
+            Assert.That(File.Exists(filePath + ".tmp"), Is.False, "Temp file must be cleaned up after atomic replace");
+        }
+
+        [Test]
+        public void DeleteWhenFileAbsentReturnsFalse()
+        {
+            var store = new AtomicFileSaveStore();
+            var filePath = Path.Combine(_testDirectory, "never_existed.save");
+
+            Assert.That(store.Delete(filePath), Is.False);
+        }
     }
 }
