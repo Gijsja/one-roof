@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneroof.game/schemas/handoff.schema.json",
+  "title": "One Roof Machine-Readable Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["taskId", "status", "objective", "changedFiles", "validation", "nextAction"],
+  "properties": {
+    "taskId": { "type": "string", "pattern": "^OR-[0-9]{3}$" },
+    "status": { "enum": ["active", "blocked", "review", "done"] },
+    "owner": { "type": "string" },
+    "objective": { "type": "string", "minLength": 1 },
+    "changedFiles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "decisions": { "type": "array", "items": { "type": "string" } },
+    "validation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "result"],
+        "properties": {
+          "name": { "type": "string" },
+          "command": { "type": "string" },
+          "result": { "enum": ["pass", "fail", "not_run"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "nextAction": { "type": "string", "minLength": 1 }
+  }
+}
+

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneroof.game/schemas/asset-spec.schema.json",
+  "title": "One Roof Asset Specification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["assetType", "contentId", "styleProfile", "approvalState", "source"],
+  "properties": {
+    "assetType": { "enum": ["npc_component", "furniture", "room_shell", "surface", "prop", "ui", "event_visual", "audio"] },
+    "contentId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$" },
+    "styleProfile": { "type": "string", "minLength": 1 },
+    "theme": { "type": "string" },
+    "rig": { "type": ["string", "null"] },
+    "bodyCompatibility": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "layer": { "type": ["string", "null"] },
+    "footprint": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "anchors": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "approvalState": { "enum": ["draft", "validated", "approved", "rejected", "deprecated"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provenance"],
+      "properties": {
+        "kind": { "enum": ["artist", "generator", "licensed", "internal"] },
+        "provenance": { "type": "string", "minLength": 1 },
+        "license": { "type": "string" },
+        "promptHash": { "type": "string" }
+      }
+    }
+  }
+}
+
