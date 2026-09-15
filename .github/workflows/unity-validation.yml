@@ -1,0 +1,80 @@
+name: Unity validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  test:
+    name: ${{ matrix.test-mode }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-mode: [editmode, playmode]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Unity Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ runner.os }}-${{ matrix.test-mode }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ runner.os }}-${{ matrix.test-mode }}-
+
+      - name: Run ${{ matrix.test-mode }} tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          unityVersion: auto
+          testMode: ${{ matrix.test-mode }}
+          artifactsPath: artifacts/${{ matrix.test-mode }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ${{ matrix.test-mode }} results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.test-mode }}-test-results
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  compile:
+    name: Standalone Linux compile
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Unity Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ runner.os }}-StandaloneLinux64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ runner.os }}-StandaloneLinux64-
+
+      - name: Compile Standalone Linux player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          unityVersion: auto
+          targetPlatform: StandaloneLinux64
+
+      - name: Upload compile artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-linux-compile
+          path: build/StandaloneLinux64
+          if-no-files-found: error

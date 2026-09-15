@@ -14,3 +14,4 @@ Append decisions; do not silently rewrite history. Use `Handoffs/DECISION_TEMPLA
 | ADR-008 | Accepted | Ship the initial release as a premium single-player desktop game using Unity 6000.3.24f1, URP, and GitHub-hosted Git | Confirms OR-001 from the product vision, installed project metadata, and established repository workflow |
 | ADR-009 | Accepted | Use Unity Addressables 4.0.1 and 2D Animation 13.0.6 | These approved Package Manager resolutions implement ADR-007 for the current Unity 6000.3.24f1 project |
 | ADR-010 | Accepted | Separate runtime concerns into named assemblies with pure Domain and Application layers | Compile-time references enforce the architecture boundary before simulation systems are added |
+| ADR-011 | Accepted | Run Unity validation in GitHub Actions with GameCI v4 | The workflow tests Edit Mode and Play Mode separately, then compiles a Linux player from a clean checkout |
