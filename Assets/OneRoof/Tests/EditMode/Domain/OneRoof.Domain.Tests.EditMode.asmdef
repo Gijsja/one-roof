@@ -1,0 +1,21 @@
+{
+  "name": "OneRoof.Domain.Tests.EditMode",
+  "rootNamespace": "OneRoof.Domain.Tests.EditMode",
+  "references": [
+    "OneRoof.Domain"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "OneRoof.Tests.PlayMode",
+  "rootNamespace": "OneRoof.Tests.PlayMode",
+  "references": [
+    "OneRoof.Application",
+    "OneRoof.Infrastructure",
+    "OneRoof.Presentation",
+    "OneRoof.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

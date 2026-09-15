@@ -1,0 +1,16 @@
+{
+  "name": "OneRoof.Application",
+  "rootNamespace": "OneRoof.Application",
+  "references": [
+    "OneRoof.Domain"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
