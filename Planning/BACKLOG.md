@@ -4,10 +4,10 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 
 | ID | Status | Milestone | Task | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| OR-001 | READY | M0 | Confirm platform, monetization, Unity version, and VCS | — | Choices recorded in decision log |
-| OR-002 | BLOCKED | M0 | Create Unity project from a listed template | OR-001 | Project opens and imports cleanly |
-| OR-003 | BLOCKED | M0 | Install approved packages through Package Manager API | OR-002 | Manifest resolves; no package errors |
-| OR-004 | BLOCKED | M0 | Create assemblies and test assemblies | OR-003 | Dependency-boundary tests compile |
+| OR-001 | DONE | M0 | Confirm platform, monetization, Unity version, and VCS | — | Choices recorded in decision log |
+| OR-002 | DONE | M0 | Create Unity project from a listed template | OR-001 | Project opens and imports cleanly |
+| OR-003 | DONE | M0 | Install approved packages through Package Manager API | OR-002 | Manifest resolves; no package errors |
+| OR-004 | READY | M0 | Create assemblies and test assemblies | OR-003 | Dependency-boundary tests compile |
 | OR-005 | BLOCKED | M0 | Add CI compile plus Edit/Play Mode tests | OR-002 | Clean run on fresh checkout |
 | OR-101 | BLOCKED | M1 | Implement IDs, clock, seed, command, and event primitives | OR-004 | Pure C# deterministic tests pass |
 | OR-102 | BLOCKED | M1 | Implement floors, cells, rooms, portals | OR-101 | Fixture creates valid five-floor topology |
@@ -22,4 +22,3 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-402 | BLOCKED | M4 | Implement elevator-wait flow overlay | OR-203, OR-401 | Bottleneck and cause are visible |
 | OR-403 | BLOCKED | M4 | Implement elevator placement prediction | OR-203, OR-401 | Preview estimates before/after wait |
 | OR-404 | BLOCKED | M4 | Complete golden first-playable test | OR-302, OR-402, OR-403 | Intervention improves agreed metrics |
-
