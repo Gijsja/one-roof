@@ -87,7 +87,11 @@ namespace OneRoof.Application.Transit
 
         public void AdvanceOneTick() => _simulation.AdvanceOneTick();
 
-        public void AddCapacity() => _simulation.AddElevator();
+        public void AddCapacity()
+        {
+            _simulation.AddElevator();
+            _cachedProjection = null; // elevator count changed without tick advancing — force cache rebuild
+        }
 
         public TransitPrototypeProjection Projection()
         {

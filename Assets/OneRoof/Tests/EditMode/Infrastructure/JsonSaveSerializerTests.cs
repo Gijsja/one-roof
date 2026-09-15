@@ -121,19 +121,19 @@ namespace OneRoof.Infrastructure.Tests.EditMode
         }
 
         [Test]
-        public void CorruptZeroRandomStateReturnsCorruptData()
+        public void CorruptNegativeRandomPositionReturnsCorruptData()
         {
-            // RandomStreamState rejects state == 0.
-            // Build a valid envelope, then zero-out randomState in raw JSON.
+            // RandomStreamState rejects negative position unconditionally (no fallback path).
+            // Build a valid envelope, then corrupt randomPosition to -1 in raw JSON.
             var serializer = new JsonSaveSerializer();
             var randomState = new RandomStreamState(42, 7, 3);
             var metadata = new SaveEnvelopeMetadata(new SchemaVersion(1), new Tick(5), randomState, "2026-01-01T00:00:00Z", "1.0.0");
             var envelope = new SaveEnvelope<SampleSaveState>(metadata, new SampleSaveState { buildingName = "Y", totalFloors = 2 });
 
             var json = serializer.Serialize(envelope);
-            // Force randomState field to 0 — this bypasses the DTO guard (schemaVersion > 0 only)
-            // and hits the RandomStreamState constructor guard.
-            var corrupt = json.Replace("\"randomState\": 7", "\"randomState\": 0");
+            // Corrupt randomPosition to a negative value — RandomStreamState(seed, state, -1) throws
+            // ArgumentOutOfRangeException with no fallback, so the boundary must return CorruptData.
+            var corrupt = json.Replace("\"randomPosition\": 3", "\"randomPosition\": -1");
 
             var result = serializer.Deserialize<SampleSaveState>(corrupt, new SchemaVersion(1));
 
