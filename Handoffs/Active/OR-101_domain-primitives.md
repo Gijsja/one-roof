@@ -1,9 +1,9 @@
 # OR-101 — Domain primitives
 
 **Milestone:** M1
-**Status:** READY
+**Status:** DONE
 **Dependencies:** OR-004
-**Owner:** unassigned
+**Owner:** Codex session
 
 ## Outcome
 
@@ -36,12 +36,12 @@ Provide a pure C# foundation for deterministic simulation: stable runtime IDs, s
 
 ## Acceptance criteria
 
-- [ ] Domain primitives compile in `OneRoof.Domain` without a UnityEngine reference.
-- [ ] Equal IDs compare and hash consistently; invalid/empty values are rejected at the chosen boundary.
-- [ ] A fixed clock advances deterministically and exposes its tick without frame-time dependency.
-- [ ] Two random streams with the same seed and operations produce identical sequences; restored state resumes exactly.
-- [ ] Rejected commands expose stable, machine-readable reason data; accepted results can carry immutable domain events.
-- [ ] Pure Edit Mode tests demonstrate deterministic behavior without loading a scene.
+- [x] Domain primitives compile in `OneRoof.Domain` without a UnityEngine reference.
+- [x] Equal IDs compare and hash consistently; invalid/empty values are rejected at the chosen boundary.
+- [x] A fixed clock advances deterministically and exposes its tick without frame-time dependency.
+- [x] Two random streams with the same seed and operations produce identical sequences; restored state resumes exactly.
+- [x] Rejected commands expose stable, machine-readable reason data; accepted results can carry immutable domain events.
+- [x] Pure Edit Mode tests demonstrate deterministic behavior without loading a scene.
 
 ## Required validation
 
@@ -49,6 +49,33 @@ Provide a pure C# foundation for deterministic simulation: stable runtime IDs, s
   `unity test /home/geisha/Vibecode/UnityAI/one-roof --editor-version 6000.3.24f1 --mode EditMode --filter "OneRoof.Domain.Tests" --output /tmp/one-roof-or101-editmode.xml --timeout 180 --format json`
 - If the Unity CLI retains a dead Pipeline PID after a batch run, confirm there is no process or `Temp/UnityLockfile`, then use the direct headless Editor test runner and record that fallback.
 - Do not claim remote CI passed until `UNITY_LICENSE` is configured and the GitHub workflow has completed.
+
+## Completed work
+
+- Added validated `EntityId`, `ContentId`, `Tick`, and `SchemaVersion` primitives. Runtime IDs and schema versions are positive; content IDs use `namespace:name`; ticks are non-negative.
+- Added a fixed-step `SimulationClock` and a saveable xorshift64 random stream represented by seed, internal state, and consumed-value position.
+- Added immutable command result/rejection contracts and immutable domain events, with deterministic event sorting by tick then event ID.
+- Added seven focused pure Domain tests, alongside the existing Domain-to-UnityEngine boundary test.
+- Recorded ADR-012 and marked OR-101 complete. OR-102, OR-103, and OR-301 are now ready.
+
+## Validation
+
+| Check | Command or procedure | Result |
+| --- | --- | --- |
+| Focused Domain Edit Mode (CLI) | `unity test /home/geisha/Vibecode/UnityAI/one-roof --editor-version 6000.3.24f1 --mode EditMode --filter "OneRoof.Domain.Tests" --output /tmp/one-roof-or101-editmode.xml --timeout 180 --format json` | NOT RUN TO VERDICT — CLI exited before test execution because its sandboxed licensing initialization failed and attempted to open X. |
+| Stale-process check | Checked for Unity/LicenseClient processes and `Temp/UnityLockfile` after the CLI exit. | PASS — none found. |
+| Focused Domain Edit Mode (direct fallback) | `/home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -projectPath /home/geisha/Vibecode/UnityAI/one-roof -runTests -testPlatform EditMode -testFilter OneRoof.Domain.Tests -testResults /tmp/one-roof-or101-editmode.xml -logFile /tmp/one-roof-or101-editor.log` | PASS — 8 passed, 0 failed; report: `/tmp/one-roof-or101-editmode.xml`. |
+| Whitespace check | `git diff --check` | PASS |
+
+## Known risks
+
+- Remote CI remains unverified because OR-005 is blocked on the repository `UNITY_LICENSE` secret.
+- The Unity CLI test wrapper cannot access the local licensing service inside the filesystem sandbox; use the documented direct headless fallback until that environment issue changes.
+- User-authored scene and ProjectSettings changes remain unmodified.
+
+## Next safe action
+
+Start OR-102 to introduce the five-floor topology primitives on top of these IDs and fixed clock contracts.
 
 ## Expected ownership
 

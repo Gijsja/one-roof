@@ -3,7 +3,8 @@
   "rootNamespace": "OneRoof.Editor",
   "references": [
     "OneRoof.Application",
-    "OneRoof.Content"
+    "OneRoof.Content",
+    "OneRoof.Presentation"
   ],
   "includePlatforms": [
     "Editor"
