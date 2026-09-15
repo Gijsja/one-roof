@@ -9,7 +9,7 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-003 | DONE | M0 | Install approved packages through Package Manager API | OR-002 | Manifest resolves; no package errors |
 | OR-004 | DONE | M0 | Create assemblies and test assemblies | OR-003 | Dependency-boundary tests compile |
 | OR-005 | BLOCKED | M0 | Add CI compile plus Edit/Play Mode tests | OR-002 | Clean run on fresh checkout; requires GitHub `UNITY_LICENSE` secret |
-| OR-101 | BLOCKED | M1 | Implement IDs, clock, seed, command, and event primitives | OR-004 | Pure C# deterministic tests pass |
+| OR-101 | READY | M1 | Implement IDs, clock, seed, command, and event primitives | OR-004 | Pure C# deterministic tests pass |
 | OR-102 | BLOCKED | M1 | Implement floors, cells, rooms, portals | OR-101 | Fixture creates valid five-floor topology |
 | OR-103 | BLOCKED | M1 | Implement versioned save envelope | OR-101 | Round-trip and corrupt-save tests pass |
 | OR-201 | BLOCKED | M2 | Implement hierarchical transit graph | OR-102 | Known route fixtures pass |
