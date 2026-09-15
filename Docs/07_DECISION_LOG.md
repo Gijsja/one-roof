@@ -11,4 +11,4 @@ Append decisions; do not silently rewrite history. Use `Handoffs/DECISION_TEMPLA
 | ADR-005 | Accepted | ScriptableObjects for definitions only | Prevent mutable campaign state leaking into assets |
 | ADR-006 | Accepted | First playable precedes factions and asset generation | Prove the core cause-and-effect loop first |
 | ADR-007 | Proposed | Unity 6 LTS + URP + 2D Animation + Addressables | Matches 2.5D presentation and content volume; confirm exact versions after project creation |
-
+| ADR-008 | Accepted | Ship the initial release as a premium single-player desktop game using Unity 6000.3.24f1, URP, and GitHub-hosted Git | Confirms OR-001 from the product vision, installed project metadata, and established repository workflow |
