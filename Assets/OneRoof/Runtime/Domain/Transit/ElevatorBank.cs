@@ -34,9 +34,45 @@ namespace OneRoof.Domain.Transit
             DeliveredPassengers = new ReadOnlyCollection<ElevatorPassenger>(_deliveredPassengers);
         }
 
-        public int MinFloor { get; }
+        public int MinFloor { get; private set; }
 
-        public int MaxFloor { get; }
+        public int MaxFloor { get; private set; }
+
+        public void ExpandFloorRange(int minFloor, int maxFloor)
+        {
+            if (minFloor < MinFloor)
+            {
+                for (var f = minFloor; f < MinFloor; f++)
+                {
+                    if (!_floorQueues.ContainsKey(f))
+                    {
+                        _floorQueues[f] = new Queue<ElevatorPassenger>();
+                    }
+                }
+                MinFloor = minFloor;
+            }
+
+            if (maxFloor > MaxFloor)
+            {
+                for (var f = MaxFloor + 1; f <= maxFloor; f++)
+                {
+                    if (!_floorQueues.ContainsKey(f))
+                    {
+                        _floorQueues[f] = new Queue<ElevatorPassenger>();
+                    }
+                }
+                MaxFloor = maxFloor;
+            }
+        }
+
+        public void RestoreDeliveredPassengers(IEnumerable<ElevatorPassenger> passengers)
+        {
+            _deliveredPassengers.Clear();
+            if (passengers != null)
+            {
+                _deliveredPassengers.AddRange(passengers);
+            }
+        }
 
         public IReadOnlyList<ElevatorCar> Cars { get; }
 

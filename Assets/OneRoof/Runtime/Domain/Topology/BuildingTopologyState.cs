@@ -17,8 +17,8 @@ namespace OneRoof.Domain.Topology
     public sealed class BuildingTopologyState
     {
         private const int DefaultFloorWidth = 60;
-        private const int DefaultMinX = -30;
-        private const int DefaultMaxX = 29;
+        private const int DefaultMinX = -14;
+        private const int DefaultMaxX = 17;
 
         private readonly SortedDictionary<int, CellBounds> _floorSlabs;
         private readonly Dictionary<EntityId, Room> _roomsById;
@@ -162,7 +162,7 @@ namespace OneRoof.Domain.Topology
 
             InvalidateGraph();
 
-            var evt = new DomainEvent(AllocateId(), new ContentId("event:floor_slab_built"), tick, new[] { new EntityId(cmd.FloorLevel) });
+            var evt = new DomainEvent(AllocateId(), new ContentId("event:floor_slab_built"), tick, Array.Empty<EntityId>());
             return CommandResult.Accept(new[] { evt });
         }
 
@@ -278,6 +278,8 @@ namespace OneRoof.Domain.Topology
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("transit:invalid_floor_range"), "Bottom floor must be strictly less than top floor.") });
             }
 
+            var shaftContentType = new ContentId("transit:elevator_shaft");
+
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
             {
                 if (!_floorSlabs.ContainsKey(floor))
@@ -292,6 +294,12 @@ namespace OneRoof.Domain.Topology
                     {
                         if (existing.Bounds.Overlaps(shaftBounds))
                         {
+                            // Extending an existing shaft at identical column bounds is allowed
+                            if (existing.ContentType == shaftContentType && existing.Bounds.MinX == cmd.ShaftMinX && existing.Bounds.MaxX == cmd.ShaftMaxX)
+                            {
+                                continue;
+                            }
+
                             return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_overlap"), $"Elevator shaft overlaps existing room {existing.Id} on floor {floor}.") });
                         }
                     }
@@ -299,10 +307,27 @@ namespace OneRoof.Domain.Topology
             }
 
             var affectedIds = new List<EntityId>();
-            var shaftContentType = new ContentId("transit:elevator_shaft");
 
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
             {
+                if (_roomsByFloor.TryGetValue(floor, out var existingRooms))
+                {
+                    var alreadyHasShaft = false;
+                    foreach (var existing in existingRooms)
+                    {
+                        if (existing.ContentType == shaftContentType && existing.Bounds.MinX == cmd.ShaftMinX && existing.Bounds.MaxX == cmd.ShaftMaxX)
+                        {
+                            alreadyHasShaft = true;
+                            break;
+                        }
+                    }
+
+                    if (alreadyHasShaft)
+                    {
+                        continue;
+                    }
+                }
+
                 var roomId = AllocateId();
                 var portalId = AllocateId();
                 var portal = new Portal(portalId, PortalType.ElevatorShaftDoor, new CellCoordinate(cmd.ShaftMinX, floor), roomId);
@@ -335,6 +360,8 @@ namespace OneRoof.Domain.Topology
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("transit:invalid_floor_range"), "Bottom floor must be strictly less than top floor.") });
             }
 
+            var stairContentType = new ContentId("amenity:stairwell");
+
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
             {
                 if (!_floorSlabs.ContainsKey(floor))
@@ -349,6 +376,12 @@ namespace OneRoof.Domain.Topology
                     {
                         if (existing.Bounds.Overlaps(stairBounds))
                         {
+                            // Extending an existing stairwell at identical column bounds is allowed
+                            if (existing.ContentType == stairContentType && existing.Bounds.MinX == cmd.StairMinX && existing.Bounds.MaxX == cmd.StairMaxX)
+                            {
+                                continue;
+                            }
+
                             return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:stair_overlap"), $"Stairwell overlaps existing room {existing.Id} on floor {floor}.") });
                         }
                     }
@@ -356,10 +389,27 @@ namespace OneRoof.Domain.Topology
             }
 
             var affectedIds = new List<EntityId>();
-            var stairContentType = new ContentId("amenity:stairwell");
 
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
             {
+                if (_roomsByFloor.TryGetValue(floor, out var existingRooms))
+                {
+                    var alreadyHasStair = false;
+                    foreach (var existing in existingRooms)
+                    {
+                        if (existing.ContentType == stairContentType && existing.Bounds.MinX == cmd.StairMinX && existing.Bounds.MaxX == cmd.StairMaxX)
+                        {
+                            alreadyHasStair = true;
+                            break;
+                        }
+                    }
+
+                    if (alreadyHasStair)
+                    {
+                        continue;
+                    }
+                }
+
                 var roomId = AllocateId();
                 var portalId = AllocateId();
                 var portal = new Portal(portalId, PortalType.StairwellDoor, new CellCoordinate(cmd.StairMinX, floor), roomId);

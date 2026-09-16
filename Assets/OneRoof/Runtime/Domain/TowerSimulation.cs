@@ -161,6 +161,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                ElevatorBank.ExpandFloorRange(cmd.BottomFloor, cmd.TopFloor);
             }
 
             return result;
@@ -396,12 +397,26 @@ namespace OneRoof.Domain
                 }
             }
 
+            var deliveredPassengerList = new List<ElevatorPassengerSaveData>();
+            foreach (var p in ElevatorBank.DeliveredPassengers)
+            {
+                deliveredPassengerList.Add(new ElevatorPassengerSaveData
+                {
+                    personId = p.PersonId.Value,
+                    originFloor = p.OriginFloor,
+                    destinationFloor = p.DestinationFloor,
+                    waitTicks = p.WaitTicks,
+                    rideTicks = p.RideTicks
+                });
+            }
+
             data.elevatorBank = new ElevatorBankSaveData
             {
                 minFloor = ElevatorBank.MinFloor,
                 maxFloor = ElevatorBank.MaxFloor,
                 cars = carSaveList.ToArray(),
-                queuedPassengers = queuedPassengerList.ToArray()
+                queuedPassengers = queuedPassengerList.ToArray(),
+                deliveredPassengers = deliveredPassengerList.ToArray()
             };
 
             // 7. Active in-flight trips
@@ -563,8 +578,22 @@ namespace OneRoof.Domain
                 }
             }
 
+            if (data.elevatorBank?.deliveredPassengers != null)
+            {
+                var delivered = new List<ElevatorPassenger>(data.elevatorBank.deliveredPassengers.Length);
+                foreach (var dp in data.elevatorBank.deliveredPassengers)
+                {
+                    delivered.Add(new ElevatorPassenger(new EntityId(dp.personId), dp.originFloor, dp.destinationFloor)
+                    {
+                        WaitTicks = dp.waitTicks,
+                        RideTicks = dp.rideTicks
+                    });
+                }
+                elevatorBank.RestoreDeliveredPassengers(delivered);
+            }
+
             // 4. Restore Economy
-            var economy = new TowerEconomyState(data.cashBalance, data.sandboxMode);
+            var economy = new TowerEconomyState(data.cashBalance, data.sandboxMode, data.totalRevenue, data.totalExpenses);
 
             // 5. Build Simulation
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream);

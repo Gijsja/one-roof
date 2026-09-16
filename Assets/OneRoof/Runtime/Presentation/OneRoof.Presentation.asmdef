@@ -4,7 +4,8 @@
   "references": [
     "OneRoof.Domain",
     "OneRoof.Application",
-    "OneRoof.UI"
+    "OneRoof.UI",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

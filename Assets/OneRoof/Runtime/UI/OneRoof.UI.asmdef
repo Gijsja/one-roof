@@ -2,7 +2,8 @@
   "name": "OneRoof.UI",
   "rootNamespace": "OneRoof.UI",
   "references": [
-    "OneRoof.Application"
+    "OneRoof.Application",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

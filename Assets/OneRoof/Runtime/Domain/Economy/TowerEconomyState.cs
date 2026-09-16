@@ -23,12 +23,12 @@ namespace OneRoof.Domain.Economy
         public const int RentPerResidentCycle = 25;
         public const int RentPerCommercialRoomCycle = 200;
 
-        public TowerEconomyState(long initialTreasury = DefaultStartingTreasury, bool sandboxMode = false)
+        public TowerEconomyState(long initialTreasury = DefaultStartingTreasury, bool sandboxMode = false, long totalRevenue = 0, long totalExpenses = 0)
         {
             CashBalance = initialTreasury;
             SandboxMode = sandboxMode;
-            TotalRevenue = 0;
-            TotalExpenses = 0;
+            TotalRevenue = totalRevenue;
+            TotalExpenses = totalExpenses;
         }
 
         public long CashBalance { get; private set; }

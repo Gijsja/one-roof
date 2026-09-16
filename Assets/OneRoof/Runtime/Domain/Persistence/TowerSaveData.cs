@@ -91,6 +91,7 @@ namespace OneRoof.Domain.Persistence
         public int maxFloor;
         public ElevatorCarSaveData[] cars;
         public ElevatorPassengerSaveData[] queuedPassengers;
+        public ElevatorPassengerSaveData[] deliveredPassengers;
     }
 
     [Serializable]

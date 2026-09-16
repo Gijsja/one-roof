@@ -287,7 +287,7 @@ namespace OneRoof.Presentation.Tower
 
             if (toolId.Equals("transit:elevator_shaft", StringComparison.OrdinalIgnoreCase))
             {
-                var cmd = new AddElevatorShaftCommand(0, floor, cellX, cellX + 1);
+                var cmd = new AddElevatorShaftCommand(cellX, cellX + 1, 0, floor);
                 result = _simulationSession.AddElevatorShaft(cmd);
                 PlacementExecuted?.Invoke(result);
                 return result.Accepted;

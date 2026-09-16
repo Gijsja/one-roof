@@ -36,6 +36,32 @@ namespace OneRoof.UI.Modes
 
         public void HandleKeyboardShortcuts()
         {
+#if ENABLE_INPUT_SYSTEM
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.bKey.wasPressedThisFrame || keyboard.digit1Key.wasPressedThisFrame)
+                {
+                    Session.SwitchMode(InteractionMode.Build);
+                }
+                else if (keyboard.iKey.wasPressedThisFrame || keyboard.digit2Key.wasPressedThisFrame)
+                {
+                    Session.SwitchMode(InteractionMode.Inspect);
+                }
+                else if (keyboard.dKey.wasPressedThisFrame || keyboard.digit3Key.wasPressedThisFrame)
+                {
+                    Session.SwitchMode(InteractionMode.Data);
+                }
+                else if (keyboard.mKey.wasPressedThisFrame || keyboard.digit4Key.wasPressedThisFrame)
+                {
+                    Session.SwitchMode(InteractionMode.Manage);
+                }
+                else if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    Session.CancelOrEscape();
+                }
+            }
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.Alpha1))
             {
                 Session.SwitchMode(InteractionMode.Build);
@@ -56,6 +82,7 @@ namespace OneRoof.UI.Modes
             {
                 Session.CancelOrEscape();
             }
+#endif
         }
 
         private void OnGUI()

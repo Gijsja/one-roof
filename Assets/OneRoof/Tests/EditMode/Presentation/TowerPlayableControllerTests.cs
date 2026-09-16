@@ -20,6 +20,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         {
             _holder = new GameObject("Test_Tower_World");
             _controller = _holder.AddComponent<TowerPlayableController>();
+            _controller.Initialize();
         }
 
         [TearDown]

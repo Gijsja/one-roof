@@ -22,6 +22,7 @@ namespace OneRoof.Presentation.Tower
     /// Mode Shell (Build/Inspect/Data/Manage), Elevator Wait Flow Overlay, Root-Cause Inspector Card,
     /// Placement Prediction Preview, and Interactive Grid Placement into an interactive playable proof.
     /// </summary>
+    [ExecuteAlways]
     [DisallowMultipleComponent]
     public sealed class TowerPlayableController : MonoBehaviour
     {
@@ -66,13 +67,19 @@ namespace OneRoof.Presentation.Tower
         public GridPlacementController GridPlacement => _gridPlacement;
         public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
 
-        private void Awake()
+        public void Initialize()
         {
+            if (_simulationSession != null) return;
             InitializeSessions();
             InitializeSubcomponents();
             CreateWorldGeometry();
             SubscribeEvents();
             RenderVisualSnapshot();
+        }
+
+        private void Awake()
+        {
+            Initialize();
         }
 
         private void OnDestroy()
@@ -89,13 +96,22 @@ namespace OneRoof.Presentation.Tower
 
             if (_worldMaterial != null)
             {
-                Destroy(_worldMaterial);
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(_worldMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(_worldMaterial);
+                }
                 _worldMaterial = null;
             }
         }
 
         private void Update()
         {
+            if (!UnityEngine.Application.isPlaying) return;
+
             HandleKeyboardInputs();
 
             if (!_isPaused)
@@ -168,7 +184,7 @@ namespace OneRoof.Presentation.Tower
             // If entering Build mode with elevator tool, open prediction card
             if (projection.IsBuildMode && projection.SelectedBuildTool == "transit:elevator_car")
             {
-                ShowPlacementPreview();
+                UpdatePlacementCard();
             }
             else if (!projection.IsBuildMode && _placementCard.IsOpen)
             {
@@ -194,6 +210,24 @@ namespace OneRoof.Presentation.Tower
 
         private void HandleKeyboardInputs()
         {
+#if ENABLE_INPUT_SYSTEM
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                {
+                    _isPaused = !_isPaused;
+                }
+                else if (keyboard.rKey.wasPressedThisFrame)
+                {
+                    ResetCommuteSimulation();
+                }
+                else if (keyboard.tKey.wasPressedThisFrame && _isPaused)
+                {
+                    _simulationSession.AdvanceOneTick();
+                }
+            }
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 _isPaused = !_isPaused;
@@ -206,6 +240,7 @@ namespace OneRoof.Presentation.Tower
             {
                 _simulationSession.AdvanceOneTick();
             }
+#endif
         }
 
         private void UpdateOverlayAndPredictions()
@@ -255,14 +290,26 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void ShowPlacementPreview()
+        private void UpdatePlacementCard()
         {
-            _modeSession.SwitchMode(InteractionMode.Build);
-            _modeSession.SelectBuildTool("transit:elevator_car");
-
             var congestion = _simulationSession.CongestionProjection();
             var preview = _predictor.PredictAddition(congestion);
             _placementCard.SetPreview(preview, OnConfirmElevatorPlacement);
+        }
+
+        public void ShowPlacementPreview()
+        {
+            if (_modeSession.CurrentMode != InteractionMode.Build)
+            {
+                _modeSession.SwitchMode(InteractionMode.Build);
+            }
+
+            if (_modeSession.Projection().SelectedBuildTool != "transit:elevator_car")
+            {
+                _modeSession.SelectBuildTool("transit:elevator_car");
+            }
+
+            UpdatePlacementCard();
         }
 
         public void OnConfirmElevatorPlacement()

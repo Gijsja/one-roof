@@ -64,7 +64,7 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(sim.BuildRoom(apt4Cmd).Accepted, Is.True);
 
             // 2c. Extend elevator shaft to Floor 5 (cost: 6 floors * 2 cells * $500 = $6,000)
-            var shaftCmd = new AddElevatorShaftCommand(0, 5, 0, 1);
+            var shaftCmd = new AddElevatorShaftCommand(0, 1, 0, 5);
             Assert.That(sim.AddElevatorShaft(shaftCmd).Accepted, Is.True);
 
             Assert.That(sim.Economy.CashBalance, Is.LessThan(25000), "Construction costs must be deducted from treasury.");
@@ -86,9 +86,9 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             // Clone/checkpoint state via save data to run parallel 1-car vs 2-car comparison
             var checkpointData = sim.ExportSaveData();
 
-            // Run Baseline (1 car) through commute rush for 80 ticks
+            // Run Baseline (1 car) through commute rush (300 ticks to deliver morning rush)
             var baselineSim = TowerSimulation.RestoreFromSaveData(checkpointData, new DeterministicRandomStream(99));
-            for (var tick = 0; tick < 80; tick++)
+            for (var tick = 0; tick < 300; tick++)
             {
                 baselineSim.AdvanceOneTick();
             }
@@ -96,12 +96,12 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             var baselineAvgWait = baselineSim.AverageElevatorWaitTicks;
             Assert.That(baselineAvgWait, Is.GreaterThan(0f), "Commute traffic must register non-zero elevator wait time.");
 
-            // Run Intervention (Add 2nd elevator car) through identical commute rush for 80 ticks
+            // Run Intervention (Add 2nd elevator car) through identical commute rush
             var interventionSim = TowerSimulation.RestoreFromSaveData(checkpointData, new DeterministicRandomStream(99));
             interventionSim.AddElevatorCar(capacity: 10, startingFloor: 0);
             Assert.That(interventionSim.ElevatorBank.Cars.Count, Is.EqualTo(2));
 
-            for (var tick = 0; tick < 80; tick++)
+            for (var tick = 0; tick < 300; tick++)
             {
                 interventionSim.AdvanceOneTick();
             }

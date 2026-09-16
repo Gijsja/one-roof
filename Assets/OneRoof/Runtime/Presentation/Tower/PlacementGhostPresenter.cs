@@ -36,13 +36,27 @@ namespace OneRoof.Presentation.Tower
         {
             if (_ghostMaterial != null)
             {
-                Destroy(_ghostMaterial);
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(_ghostMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(_ghostMaterial);
+                }
                 _ghostMaterial = null;
             }
 
             if (_ghostObject != null)
             {
-                Destroy(_ghostObject);
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(_ghostObject);
+                }
+                else
+                {
+                    DestroyImmediate(_ghostObject);
+                }
                 _ghostObject = null;
             }
         }

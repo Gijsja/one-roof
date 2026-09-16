@@ -40,7 +40,7 @@ namespace OneRoof.Tests.PlayMode
             Assert.That(aptResult.Accepted, Is.True);
 
             // Extend shaft to floor 5
-            var shaftCmd = new AddElevatorShaftCommand(0, 5, 0, 1);
+            var shaftCmd = new AddElevatorShaftCommand(0, 1, 0, 5);
             var shaftResult = controller.SimulationSession.AddElevatorShaft(shaftCmd);
             Assert.That(shaftResult.Accepted, Is.True);
 
