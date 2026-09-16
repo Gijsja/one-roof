@@ -17,7 +17,7 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-203 | DONE | M2 | Add wait-time and congestion projections | OR-202 | Fixed scenario produces stable metrics |
 | OR-301 | DONE | M3 | Implement household/person/schedule records | OR-101 | Fifty-resident fixture is deterministic |
 | OR-302 | DONE | M3 | Generate trips from home/work/food routines | OR-201, OR-301 | Morning trip demand matches fixture |
-| OR-303 | READY | M3 | Bind pooled NPC views to projections | OR-302 | 40-view cap holds while 50 persist |
+| OR-303 | DONE | M3 | Bind pooled NPC views to projections | OR-302 | 40-view cap holds while 50 persist |
 | OR-401 | READY | M4 | Implement Build, Inspect, and Data mode shell | OR-102 | Modes switch without mutating state directly |
 | OR-402 | BLOCKED | M4 | Implement elevator-wait flow overlay | OR-203, OR-401 | Bottleneck and cause are visible |
 | OR-403 | BLOCKED | M4 | Implement elevator placement prediction | OR-203, OR-401 | Preview estimates before/after wait |
