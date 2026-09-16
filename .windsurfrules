@@ -1,0 +1,16 @@
+# One Roof — Windsurf / Cascade Rules
+
+Always read and strictly follow [AGENTS.md](./AGENTS.md).
+
+## Required Reading Order
+1. `Docs/01_GAME_VISION.md`
+2. `Docs/02_ARCHITECTURE.md`
+3. `Docs/03_DATA_CONTRACTS.md`
+4. Active task in `Planning/BACKLOG.md`
+5. Latest handoff in `Handoffs/Active/`
+
+## Core Boundaries
+- Domain: Pure C# (`OneRoof.Domain`), no UnityEngine.
+- Application: Pure C# (`OneRoof.Application`), read-only projections.
+- Presentation: Unity views, pooled NPCs (capped at 40), reads projections only.
+- Commit all `.meta` files paired with assets.

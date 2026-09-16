@@ -1,0 +1,9 @@
+---
+description: Universal agent instructions for One Roof project
+globs: *
+alwaysApply: true
+---
+
+Always read and strictly follow [AGENTS.md](mdc:AGENTS.md).
+Follow required reading order: Docs/01_GAME_VISION.md -> Docs/02_ARCHITECTURE.md -> Docs/03_DATA_CONTRACTS.md -> Planning/BACKLOG.md -> Handoffs/Active/.
+Respect layer boundaries: Domain (pure C#) -> Application (projections, noEngineReferences) -> Presentation (Unity views, pooling).
