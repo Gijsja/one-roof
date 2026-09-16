@@ -81,7 +81,7 @@ namespace OneRoof.Application.Transit
         public const int FloorCount = TransitPrototypeSimulation.FloorCount;
         public const int ResidentCount = TransitPrototypeSimulation.ResidentCount;
 
-        private readonly TransitPrototypeSimulation _simulation = new TransitPrototypeSimulation();
+        private TransitPrototypeSimulation _simulation = new TransitPrototypeSimulation();
         private TransitPrototypeProjection _cachedProjection;
         private long _cachedTick = -1;
 
@@ -91,6 +91,59 @@ namespace OneRoof.Application.Transit
         {
             _simulation.AddElevator();
             _cachedProjection = null; // elevator count changed without tick advancing — force cache rebuild
+        }
+
+        public void Reset()
+        {
+            _simulation = new TransitPrototypeSimulation();
+            _cachedProjection = null;
+            _cachedTick = -1;
+        }
+
+        public ElevatorBankCongestionProjection CongestionProjection()
+        {
+            var currentTick = _simulation.CurrentTick.Value;
+            var snapshot = _simulation.Snapshot();
+
+            var floors = new List<FloorCongestionProjection>(FloorCount);
+            var queue0 = snapshot.QueueLength;
+            var maxWait0 = (long)(snapshot.AverageWaitTicks * 1.8f);
+            if (maxWait0 <= 0 && queue0 > 0)
+            {
+                maxWait0 = (long)snapshot.Tick.Value;
+            }
+
+            var floor0Severity = CongestionEvaluator.Evaluate(queue0, maxWait0);
+            floors.Add(new FloorCongestionProjection(0, queue0, maxWait0, snapshot.AverageWaitTicks, floor0Severity));
+
+            for (var f = 1; f < FloorCount; f++)
+            {
+                floors.Add(new FloorCongestionProjection(f, 0, 0, 0f, CongestionSeverity.Clear));
+            }
+
+            var elevProjections = new List<ElevatorProjection>(snapshot.Elevators.Count);
+            var inTransit = 0;
+            foreach (var el in snapshot.Elevators)
+            {
+                inTransit += el.PassengerCount;
+                elevProjections.Add(new ElevatorProjection(
+                    el.ElevatorId.Value,
+                    el.Floor,
+                    el.PassengerCount,
+                    el.Capacity,
+                    null));
+            }
+
+            return new ElevatorBankCongestionProjection(
+                currentTick,
+                snapshot.QueueLength,
+                inTransit,
+                snapshot.ArrivedCount,
+                snapshot.AverageWaitTicks,
+                bottleneckFloor: 0,
+                overallSeverity: floor0Severity,
+                floors: floors,
+                elevators: elevProjections);
         }
 
         public TransitPrototypeProjection Projection()

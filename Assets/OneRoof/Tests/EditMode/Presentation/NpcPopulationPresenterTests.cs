@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using OneRoof.Application.Population;
-using OneRoof.Domain.Population;
 using OneRoof.Presentation.Population;
 using UnityEngine;
 
@@ -110,7 +109,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var floor = (i - 1) % 5;
                 var roomId = 100 + floor * 10 + (i % 3);
                 var isTransit = i % 4 == 0;
-                var activity = isTransit ? ActivityKind.Idle : (i % 2 == 0 ? ActivityKind.Working : ActivityKind.Sleeping);
+                var activity = isTransit ? NpcActivityKind.Idle : (i % 2 == 0 ? NpcActivityKind.Working : NpcActivityKind.Sleeping);
                 var waitTicks = isTransit ? (i * 2) : 0;
                 list.Add(new NpcProjection(
                     personId: i,

@@ -1,5 +1,4 @@
 using OneRoof.Application.Population;
-using OneRoof.Domain.Population;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Population
@@ -92,13 +91,13 @@ namespace OneRoof.Presentation.Population
 
             switch (projection.CurrentActivity)
             {
-                case ActivityKind.Working:
+                case NpcActivityKind.Working:
                     return new Color(0.35f, 0.75f, 1f); // Blue / work
-                case ActivityKind.Eating:
+                case NpcActivityKind.Eating:
                     return new Color(0.95f, 0.45f, 0.35f); // Coral / eat
-                case ActivityKind.Leisure:
+                case NpcActivityKind.Leisure:
                     return new Color(0.55f, 0.9f, 0.45f); // Green / leisure
-                case ActivityKind.Sleeping:
+                case NpcActivityKind.Sleeping:
                     return new Color(0.45f, 0.4f, 0.65f); // Muted purple / sleep
                 default:
                     // Household color tint

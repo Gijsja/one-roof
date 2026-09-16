@@ -4,7 +4,8 @@
   "references": [
     "OneRoof.Application",
     "OneRoof.Content",
-    "OneRoof.Presentation"
+    "OneRoof.Presentation",
+    "OneRoof.UI"
   ],
   "includePlatforms": [
     "Editor"

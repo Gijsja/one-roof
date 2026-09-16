@@ -97,12 +97,29 @@ namespace OneRoof.Application.Population
                 person.HouseholdId.Value,
                 floor,
                 currentRoomId.Value,
-                person.CurrentActivity,
+                ToNpcActivity(person.CurrentActivity),
                 isInTransit,
                 destFloor,
                 destRoomId,
                 waitTicks,
                 horizontalPos);
+        }
+
+        public static NpcActivityKind ToNpcActivity(ActivityKind activity)
+        {
+            switch (activity)
+            {
+                case ActivityKind.Sleeping:
+                    return NpcActivityKind.Sleeping;
+                case ActivityKind.Working:
+                    return NpcActivityKind.Working;
+                case ActivityKind.Eating:
+                    return NpcActivityKind.Eating;
+                case ActivityKind.Leisure:
+                    return NpcActivityKind.Leisure;
+                default:
+                    return NpcActivityKind.Idle;
+            }
         }
 
         private EntityId ResolveCurrentRoom(PersonRecord person)
@@ -112,6 +129,7 @@ namespace OneRoof.Application.Population
                 case ActivityKind.Working:
                     return person.WorkplaceRoomId;
                 case ActivityKind.Sleeping:
+                    return person.HomeRoomId;
                 case ActivityKind.Idle:
                 default:
                     return person.HomeRoomId;

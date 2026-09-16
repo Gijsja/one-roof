@@ -1,0 +1,541 @@
+using System;
+using System.Collections.Generic;
+using OneRoof.Application.Inspectors;
+using OneRoof.Application.Modes;
+using OneRoof.Application.Modes.Commands;
+using OneRoof.Application.Overlays;
+using OneRoof.Application.Prediction;
+using OneRoof.Application.Transit;
+using OneRoof.Presentation.Overlays;
+using OneRoof.UI.Inspectors;
+using OneRoof.UI.Modes;
+using OneRoof.UI.Prediction;
+using UnityEngine;
+
+namespace OneRoof.Presentation.Tower
+{
+    /// <summary>
+    /// Master presentation controller for the interactive First Playable Tower scene (Assets/Scenes/Tower.unity).
+    /// Assembles the five-floor building cutaway, 50 persistent residents, elevator bank transit simulation,
+    /// Mode Shell (Build/Inspect/Data/Manage), Elevator Wait Flow Overlay, Root-Cause Inspector Card,
+    /// and Placement Prediction Preview into an interactive playable proof.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public sealed class TowerPlayableController : MonoBehaviour
+    {
+        private const float DefaultTickInterval = 0.35f;
+        private const int TotalResidents = TransitPrototypeSession.ResidentCount;
+        private const int TotalFloors = TransitPrototypeSession.FloorCount;
+
+        // Core application sessions & services (pure C#, non-MonoBehaviour)
+        private TransitPrototypeSession _transitSession;
+        private ModeShellSession _modeSession;
+        private ElevatorWaitOverlayService _overlayService;
+        private ElevatorPlacementPredictor _predictor;
+
+        // Presentation & UI subcomponents
+        private ModeShellBarController _modeBar;
+        private ElevatorWaitOverlayPresenter _overlayPresenter;
+        private CongestionInspectorCardView _inspectorCard;
+        private PlacementPreviewCardView _placementCard;
+
+        // Visual world rendering state
+        private Material _worldMaterial;
+        private MaterialPropertyBlock _colorBlock;
+        private readonly List<MeshRenderer> _residentViews = new List<MeshRenderer>(TotalResidents);
+        private readonly List<MeshRenderer> _elevatorViews = new List<MeshRenderer>();
+        private readonly List<GameObject> _worldObjects = new List<GameObject>();
+
+        private float _tickAccumulator;
+        private float _tickInterval = DefaultTickInterval;
+        private bool _isPaused;
+
+        private GUIStyle _hudHeaderStyle;
+        private GUIStyle _hudMetricStyle;
+        private GUIStyle _hudButtonStyle;
+        private GUIStyle _hudHelpStyle;
+
+        public TransitPrototypeSession TransitSession => _transitSession;
+        public ModeShellSession ModeSession => _modeSession;
+
+        private void Awake()
+        {
+            InitializeSessions();
+            InitializeSubcomponents();
+            CreateWorldGeometry();
+            SubscribeEvents();
+            RenderVisualSnapshot();
+        }
+
+        private void OnDestroy()
+        {
+            if (_modeSession != null)
+            {
+                _modeSession.ModeChanged -= OnModeChanged;
+            }
+
+            if (_worldMaterial != null)
+            {
+                Destroy(_worldMaterial);
+                _worldMaterial = null;
+            }
+        }
+
+        private void Update()
+        {
+            HandleKeyboardInputs();
+
+            if (!_isPaused)
+            {
+                _tickAccumulator += Time.deltaTime;
+                while (_tickAccumulator >= _tickInterval)
+                {
+                    _tickAccumulator -= _tickInterval;
+                    _transitSession.AdvanceOneTick();
+                }
+            }
+
+            UpdateOverlayAndPredictions();
+            RenderVisualSnapshot();
+        }
+
+        private void InitializeSessions()
+        {
+            _transitSession = new TransitPrototypeSession();
+            _modeSession = new ModeShellSession();
+            _overlayService = new ElevatorWaitOverlayService();
+            _predictor = new ElevatorPlacementPredictor();
+
+            _colorBlock = new MaterialPropertyBlock();
+            _worldMaterial = CreateWorldMaterial();
+        }
+
+        private void InitializeSubcomponents()
+        {
+            // Wire ModeShellBarController
+            _modeBar = gameObject.GetComponent<ModeShellBarController>() ?? gameObject.AddComponent<ModeShellBarController>();
+            _modeBar.Session = _modeSession;
+
+            // Wire ElevatorWaitOverlayPresenter
+            _overlayPresenter = gameObject.GetComponent<ElevatorWaitOverlayPresenter>() ?? gameObject.AddComponent<ElevatorWaitOverlayPresenter>();
+            _overlayPresenter.SetVisible(false);
+
+            // Wire CongestionInspectorCardView
+            _inspectorCard = gameObject.GetComponent<CongestionInspectorCardView>() ?? gameObject.AddComponent<CongestionInspectorCardView>();
+            _inspectorCard.Session = _modeSession;
+
+            // Wire PlacementPreviewCardView
+            _placementCard = gameObject.GetComponent<PlacementPreviewCardView>() ?? gameObject.AddComponent<PlacementPreviewCardView>();
+        }
+
+        private void SubscribeEvents()
+        {
+            _modeSession.ModeChanged += OnModeChanged;
+        }
+
+        private void OnModeChanged(ModeShellProjection projection)
+        {
+            // Toggle overlay visibility based on Data mode
+            _overlayPresenter.SetVisible(projection.IsDataMode);
+
+            if (projection.IsDataMode)
+            {
+                var congestion = _transitSession.CongestionProjection();
+                _overlayPresenter.UpdateOverlay(_overlayService.CreateOverlay(congestion));
+            }
+
+            // If entering Build mode with elevator tool, open prediction card
+            if (projection.IsBuildMode && projection.SelectedBuildTool == "transit:elevator_car")
+            {
+                ShowPlacementPreview();
+            }
+            else if (!projection.IsBuildMode && _placementCard.IsOpen)
+            {
+                _placementCard.Close();
+            }
+
+            // If leaving Inspect mode, close inspector card
+            if (!projection.IsInspectMode && _inspectorCard.IsOpen)
+            {
+                _inspectorCard.Close();
+            }
+        }
+
+        private void HandleKeyboardInputs()
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                _isPaused = !_isPaused;
+            }
+            else if (Input.GetKeyDown(KeyCode.R))
+            {
+                ResetCommuteSimulation();
+            }
+            else if (Input.GetKeyDown(KeyCode.T) && _isPaused)
+            {
+                _transitSession.AdvanceOneTick();
+            }
+        }
+
+        private void UpdateOverlayAndPredictions()
+        {
+            var congestion = _transitSession.CongestionProjection();
+
+            if (_overlayPresenter.IsVisible)
+            {
+                _overlayPresenter.UpdateOverlay(_overlayService.CreateOverlay(congestion));
+            }
+
+            if (_placementCard.IsOpen)
+            {
+                var preview = _predictor.PredictAddition(congestion);
+                _placementCard.SetPreview(preview, OnConfirmElevatorPlacement);
+            }
+        }
+
+        public void InspectBottleneck()
+        {
+            _modeSession.SwitchMode(InteractionMode.Inspect);
+            var congestion = _transitSession.CongestionProjection();
+            var overlay = _overlayService.CreateOverlay(congestion);
+
+            var inspectorProjection = new ElevatorCongestionInspectorProjection(
+                floorLevel: 0,
+                title: "Floor 0 Elevator Congestion",
+                symptomDescription: $"Morning commute bottleneck: {congestion.TotalQueued} residents waiting for elevator throughput.",
+                contributingCauses: overlay.ContributingCauses,
+                suggestedResponseAction: overlay.RecommendedAction,
+                canDirectRouteToBuild: true,
+                targetBuildTool: "transit:elevator_car");
+
+            _inspectorCard.Inspect(inspectorProjection);
+        }
+
+        public void ToggleDataOverlay()
+        {
+            if (_modeSession.CurrentMode == InteractionMode.Data)
+            {
+                _modeSession.SwitchMode(InteractionMode.Inspect);
+            }
+            else
+            {
+                _modeSession.SwitchMode(InteractionMode.Data);
+                _modeSession.SetActiveOverlay("overlay:elevator_wait");
+            }
+        }
+
+        public void ShowPlacementPreview()
+        {
+            _modeSession.SwitchMode(InteractionMode.Build);
+            _modeSession.SelectBuildTool("transit:elevator_car");
+
+            var congestion = _transitSession.CongestionProjection();
+            var preview = _predictor.PredictAddition(congestion);
+            _placementCard.SetPreview(preview, OnConfirmElevatorPlacement);
+        }
+
+        public void OnConfirmElevatorPlacement()
+        {
+            _transitSession.AddCapacity();
+            _placementCard.Close();
+            EnsureElevatorViews();
+        }
+
+        public void ResetCommuteSimulation()
+        {
+            _transitSession.Reset();
+            _inspectorCard.Close();
+            _placementCard.Close();
+            _overlayPresenter.SetVisible(_modeSession.CurrentMode == InteractionMode.Data);
+            EnsureElevatorViews();
+        }
+
+        private void CreateWorldGeometry()
+        {
+            // Set up camera
+            var camObj = GameObject.Find("Tower Camera");
+            if (camObj == null)
+            {
+                camObj = new GameObject("Tower Camera");
+                var cam = camObj.AddComponent<Camera>();
+                cam.orthographic = true;
+                cam.orthographicSize = 6.4f;
+                cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
+                camObj.transform.position = new Vector3(1.1f, 0.4f, -10f);
+            }
+
+            // Create tower backdrop & floors
+            for (var floor = 0; floor < TotalFloors; floor++)
+            {
+                var y = FloorY(floor);
+                var isLobby = floor == 0;
+
+                var floorColor = isLobby
+                    ? new Color(0.13f, 0.18f, 0.26f)
+                    : new Color(0.10f, 0.14f, 0.20f);
+
+                // Main floor slab
+                CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(1.1f, y, 1f), new Vector2(10.8f, 1.55f), transform);
+
+                // Floor baseline divider
+                CreateQuad($"Floor Line {floor}", new Color(0.35f, 0.45f, 0.58f), new Vector3(1.1f, y - 0.74f, 0f), new Vector2(10.8f, 0.05f), transform);
+
+                // Room division posts on residential floors
+                if (!isLobby)
+                {
+                    CreateQuad($"Wall L {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(0.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
+                    CreateQuad($"Wall R {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(3.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
+                }
+            }
+
+            // Elevator Shaft cavity at X = -2.4
+            CreateQuad("Elevator Shaft Cavity", new Color(0.06f, 0.08f, 0.12f), new Vector3(-2.4f, 0.3f, 0.8f), new Vector2(1.8f, 8.8f), transform);
+            CreateQuad("Shaft Rail Left", new Color(0.3f, 0.38f, 0.48f), new Vector3(-3.25f, 0.3f, 0.2f), new Vector2(0.04f, 8.8f), transform);
+            CreateQuad("Shaft Rail Right", new Color(0.3f, 0.38f, 0.48f), new Vector3(-1.55f, 0.3f, 0.2f), new Vector2(0.04f, 8.8f), transform);
+
+            EnsureElevatorViews();
+            EnsureResidentViews();
+        }
+
+        private void EnsureElevatorViews()
+        {
+            var targetCount = _transitSession.Projection().Elevators.Count;
+            while (_elevatorViews.Count < targetCount)
+            {
+                var index = _elevatorViews.Count;
+                var x = targetCount == 1 ? -2.4f : (-2.85f + index * 0.9f);
+                var view = CreateQuad($"Elevator Car {index}", new Color(0.25f, 0.92f, 0.65f), new Vector3(x, FloorY(0), 0f), new Vector2(0.8f, 0.5f), transform);
+                _elevatorViews.Add(view);
+            }
+        }
+
+        private void EnsureResidentViews()
+        {
+            while (_residentViews.Count < TotalResidents)
+            {
+                var index = _residentViews.Count;
+                var view = CreateQuad($"Resident View {index + 1}", ResolveResidentColor(index), Vector3.zero, new Vector2(0.22f, 0.44f), transform);
+                _residentViews.Add(view);
+            }
+        }
+
+        private void RenderVisualSnapshot()
+        {
+            var snapshot = _transitSession.Projection();
+
+            // Update elevator cars
+            for (var i = 0; i < snapshot.Elevators.Count; i++)
+            {
+                if (i >= _elevatorViews.Count)
+                {
+                    EnsureElevatorViews();
+                }
+
+                var elevator = snapshot.Elevators[i];
+                var targetY = FloorY(elevator.Floor);
+                var targetX = snapshot.Elevators.Count == 1 ? -2.4f : (-2.85f + i * 0.9f);
+
+                var carTransform = _elevatorViews[i].transform;
+                carTransform.position = Vector3.Lerp(carTransform.position, new Vector3(targetX, targetY, 0f), 0.25f);
+
+                // Tint car brighter when carrying passengers
+                var carColor = elevator.PassengerCount > 0
+                    ? new Color(0.3f, 0.95f, 0.7f)
+                    : new Color(0.18f, 0.65f, 0.5f);
+                SetRendererColor(_elevatorViews[i], carColor);
+            }
+
+            // Update resident views
+            var queueIndex = 0;
+            var arrivedCountsPerFloor = new int[TotalFloors];
+
+            for (var i = 0; i < snapshot.Residents.Count; i++)
+            {
+                if (i >= _residentViews.Count)
+                {
+                    break;
+                }
+
+                var resident = snapshot.Residents[i];
+                var residentTransform = _residentViews[i].transform;
+
+                switch (resident.Status)
+                {
+                    case TransitResidentStatus.Queued:
+                    {
+                        var queueX = -1.2f + (queueIndex % 20) * 0.32f;
+                        var queueY = FloorY(0) - 0.45f + (queueIndex / 20) * 0.42f;
+                        residentTransform.position = new Vector3(queueX, queueY, -0.2f);
+                        SetRendererColor(_residentViews[i], new Color(1f, 0.65f, 0.25f)); // Amber waiting
+                        queueIndex++;
+                        break;
+                    }
+                    case TransitResidentStatus.Riding:
+                    {
+                        // Inside elevator car
+                        var elevatorIndex = i % snapshot.Elevators.Count;
+                        var carY = FloorY(snapshot.Elevators[elevatorIndex].Floor);
+                        var carX = snapshot.Elevators.Count == 1 ? -2.4f : (-2.85f + elevatorIndex * 0.9f);
+                        residentTransform.position = new Vector3(carX + ((i % 4) - 1.5f) * 0.15f, carY, -0.3f);
+                        SetRendererColor(_residentViews[i], new Color(0.25f, 0.85f, 1f)); // Cyan transit
+                        break;
+                    }
+                    case TransitResidentStatus.Arrived:
+                    {
+                        var destFloor = resident.DestinationFloor;
+                        var slot = arrivedCountsPerFloor[destFloor]++;
+                        var arrivedX = -0.8f + (slot % 16) * 0.42f;
+                        var arrivedY = FloorY(destFloor) - 0.35f;
+                        residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
+                        SetRendererColor(_residentViews[i], new Color(0.35f, 0.85f, 0.5f)); // Green arrived
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void OnGUI()
+        {
+            EnsureStyles();
+
+            var snapshot = _transitSession.Projection();
+            var congestion = _transitSession.CongestionProjection();
+
+            // Top-left dashboard HUD
+            var hudRect = new Rect(20, 20, 360, 220);
+            GUILayout.BeginArea(hudRect, GUI.skin.box);
+
+            GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
+            GUILayout.Label($"Sim Tick: {snapshot.Tick}  •  Status: {(_isPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
+            GUILayout.Space(4);
+
+            var overlay = _overlayPresenter.CurrentOverlay ?? _overlayService.CreateOverlay(congestion);
+            var severityBadge = overlay.OverallSeverity.ToString().ToUpperInvariant();
+
+            GUILayout.Label($"Lobby Queue: {snapshot.QueueLength}/{TotalResidents} waiting  [{severityBadge}]", _hudMetricStyle);
+            GUILayout.Label($"Delivered: {snapshot.ArrivedCount}/{TotalResidents} arrived", _hudMetricStyle);
+            GUILayout.Label($"Average Completed Wait: {snapshot.AverageWaitTicks:F1} ticks", _hudMetricStyle);
+            GUILayout.Label($"Elevator Bank: {snapshot.Elevators.Count} active car(s)", _hudMetricStyle);
+            GUILayout.Space(8);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Inspect Bottleneck [I]", _hudButtonStyle, GUILayout.Height(28)))
+            {
+                InspectBottleneck();
+            }
+            if (GUILayout.Button("Flow Overlay [D]", _hudButtonStyle, GUILayout.Height(28)))
+            {
+                ToggleDataOverlay();
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Preview Car [B]", _hudButtonStyle, GUILayout.Height(28)))
+            {
+                ShowPlacementPreview();
+            }
+            if (GUILayout.Button("+ Add Car Now", _hudButtonStyle, GUILayout.Height(28)))
+            {
+                OnConfirmElevatorPlacement();
+            }
+            if (GUILayout.Button("Reset [R]", _hudButtonStyle, GUILayout.Height(28)))
+            {
+                ResetCommuteSimulation();
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(4);
+            GUILayout.Label("Shortcuts: [Space] Pause  [1] Build  [2] Inspect  [3] Data  [Esc] Cancel", _hudHelpStyle);
+            GUILayout.EndArea();
+        }
+
+        private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size, Transform parent)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.position = position;
+            go.transform.localScale = new Vector3(size.x, size.y, 1f);
+
+            var col = go.GetComponent<Collider>();
+            if (col != null)
+            {
+                DestroyImmediate(col);
+            }
+
+            var renderer = go.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = _worldMaterial;
+            SetRendererColor(renderer, color);
+
+            _worldObjects.Add(go);
+            return renderer;
+        }
+
+        private void SetRendererColor(MeshRenderer renderer, Color color)
+        {
+            _colorBlock.SetColor("_BaseColor", color);
+            _colorBlock.SetColor("_Color", color);
+            renderer.SetPropertyBlock(_colorBlock);
+        }
+
+        private static Material CreateWorldMaterial()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Sprites/Default");
+
+            if (shader == null)
+            {
+                throw new MissingReferenceException("No suitable unlit shader found for TowerPlayableController.");
+            }
+
+            return new Material(shader);
+        }
+
+        private static float FloorY(int floor) => -3.2f + floor * 1.75f;
+
+        private static Color ResolveResidentColor(int residentIndex)
+        {
+            return residentIndex % 3 == 0
+                ? new Color(1f, 0.65f, 0.3f)
+                : residentIndex % 3 == 1
+                    ? new Color(0.35f, 0.75f, 1f)
+                    : new Color(0.9f, 0.45f, 0.7f);
+        }
+
+        private void EnsureStyles()
+        {
+            if (_hudHeaderStyle != null)
+            {
+                return;
+            }
+
+            _hudHeaderStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.25f, 0.88f, 1f) }
+            };
+
+            _hudMetricStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+
+            _hudButtonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 11,
+                fontStyle = FontStyle.Bold
+            };
+
+            _hudHelpStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Italic,
+                normal = { textColor = new Color(0.7f, 0.8f, 0.9f) }
+            };
+        }
+    }
+}

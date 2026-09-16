@@ -2,7 +2,8 @@
   "name": "OneRoof.Presentation",
   "rootNamespace": "OneRoof.Presentation",
   "references": [
-    "OneRoof.Application"
+    "OneRoof.Application",
+    "OneRoof.UI"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

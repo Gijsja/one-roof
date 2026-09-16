@@ -103,15 +103,15 @@ namespace OneRoof.Application.Population
             // 3. Activity relevance bonus
             switch (npc.CurrentActivity)
             {
-                case ActivityKind.Working:
-                case ActivityKind.Eating:
-                case ActivityKind.Leisure:
+                case NpcActivityKind.Working:
+                case NpcActivityKind.Eating:
+                case NpcActivityKind.Leisure:
                     score += 500;
                     break;
-                case ActivityKind.Idle:
+                case NpcActivityKind.Idle:
                     score += 100;
                     break;
-                case ActivityKind.Sleeping:
+                case NpcActivityKind.Sleeping:
                     score += 0;
                     break;
             }

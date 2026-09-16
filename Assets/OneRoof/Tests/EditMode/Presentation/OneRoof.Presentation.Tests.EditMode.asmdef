@@ -3,7 +3,8 @@
   "rootNamespace": "OneRoof.Presentation.Tests.EditMode",
   "references": [
     "OneRoof.Application",
-    "OneRoof.Presentation"
+    "OneRoof.Presentation",
+    "OneRoof.UI"
   ],
   "includePlatforms": [
     "Editor"

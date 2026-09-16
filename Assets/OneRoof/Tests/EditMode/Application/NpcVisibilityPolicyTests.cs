@@ -83,8 +83,8 @@ namespace OneRoof.Application.Tests.EditMode
         {
             var testProjections = new List<NpcProjection>
             {
-                new NpcProjection(1, 1, floor: 2, roomId: 201, ActivityKind.Sleeping, isInTransit: false, null, null, 0, 0f),
-                new NpcProjection(2, 1, floor: 2, roomId: 201, ActivityKind.Working, isInTransit: true, destinationFloor: 0, destinationRoomId: 101, waitTicks: 15, 0f)
+                new NpcProjection(1, 1, floor: 2, roomId: 201, NpcActivityKind.Sleeping, isInTransit: false, null, null, 0, 0f),
+                new NpcProjection(2, 1, floor: 2, roomId: 201, NpcActivityKind.Working, isInTransit: true, destinationFloor: 0, destinationRoomId: 101, waitTicks: 15, 0f)
             };
 
             var selected = _policy.SelectVisibleNpcs(testProjections, VisibleFloorRange.All(4));
@@ -114,7 +114,7 @@ namespace OneRoof.Application.Tests.EditMode
             var smallList = new List<NpcProjection>();
             for (var i = 1; i <= 25; i++)
             {
-                smallList.Add(new NpcProjection(i, 1, floor: 1, roomId: 101, ActivityKind.Working, false, null, null, 0, 0f));
+                smallList.Add(new NpcProjection(i, 1, floor: 1, roomId: 101, NpcActivityKind.Working, false, null, null, 0, 0f));
             }
 
             var selected = _policy.SelectVisibleNpcs(smallList, VisibleFloorRange.All(4));

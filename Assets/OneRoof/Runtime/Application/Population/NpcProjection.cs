@@ -1,5 +1,3 @@
-using OneRoof.Domain.Population;
-
 namespace OneRoof.Application.Population
 {
     /// <summary>
@@ -13,7 +11,7 @@ namespace OneRoof.Application.Population
             int householdId,
             int floor,
             int roomId,
-            ActivityKind currentActivity,
+            NpcActivityKind currentActivity,
             bool isInTransit,
             int? destinationFloor,
             int? destinationRoomId,
@@ -40,7 +38,7 @@ namespace OneRoof.Application.Population
 
         public int RoomId { get; }
 
-        public ActivityKind CurrentActivity { get; }
+        public NpcActivityKind CurrentActivity { get; }
 
         public bool IsInTransit { get; }
 
