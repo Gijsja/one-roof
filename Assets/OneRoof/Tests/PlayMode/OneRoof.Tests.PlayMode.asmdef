@@ -2,6 +2,7 @@
   "name": "OneRoof.Tests.PlayMode",
   "rootNamespace": "OneRoof.Tests.PlayMode",
   "references": [
+    "OneRoof.Domain",
     "OneRoof.Application",
     "OneRoof.Infrastructure",
     "OneRoof.Presentation",

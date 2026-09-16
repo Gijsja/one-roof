@@ -42,6 +42,11 @@ namespace OneRoof.Domain.Population
         /// <param name="rng">
         /// A seeded, deterministic random stream. The same seed produces the same population.
         /// </param>
+        public static PopulationState Create()
+        {
+            return Create(FiveFloorTopologyFixture.Create(), new DeterministicRandomStream(1337));
+        }
+
         public static PopulationState Create(BuildingTopology topology, IRandomStream rng)
         {
             if (topology == null) throw new ArgumentNullException(nameof(topology));

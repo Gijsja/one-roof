@@ -88,6 +88,28 @@ namespace OneRoof.Domain.Transit
             return discharged;
         }
 
+        public void RestoreState(
+            int floor,
+            ElevatorCarPhase phase,
+            ElevatorDirection direction,
+            int timerRemaining,
+            IEnumerable<ElevatorPassenger> passengers)
+        {
+            CurrentFloor = floor;
+            Phase = phase;
+            Direction = direction;
+            TimerTicksRemaining = timerRemaining;
+            _passengers.Clear();
+            if (passengers != null)
+            {
+                _passengers.AddRange(passengers);
+                foreach (var p in passengers)
+                {
+                    _targetFloors.Add(p.DestinationFloor);
+                }
+            }
+        }
+
         public void Tick()
         {
             switch (Phase)

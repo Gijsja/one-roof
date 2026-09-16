@@ -46,6 +46,7 @@ namespace OneRoof.Domain.Population
                 : new ReadOnlyCollection<PersonTrait>(new List<PersonTrait>());
 
             _currentActivity = ActivityKind.Idle;
+            _currentRoomId = homeRoomId;
         }
 
         // ── Identity ──────────────────────────────────────────────────────────
@@ -57,6 +58,10 @@ namespace OneRoof.Domain.Population
         public EntityId HomeRoomId { get; }
 
         public EntityId WorkplaceRoomId { get; }
+
+        public EntityId CurrentRoomId => _currentRoomId;
+
+        private EntityId _currentRoomId;
 
         // ── Schedule & activity ───────────────────────────────────────────────
 
@@ -76,6 +81,13 @@ namespace OneRoof.Domain.Population
         public void UpdateActivity(ActivityKind activity)
         {
             _currentActivity = activity;
+        }
+
+        /// <summary>Updates the resident's current room location. Called upon trip arrival.</summary>
+        public void UpdateLocation(EntityId roomId)
+        {
+            roomId.EnsureValid();
+            _currentRoomId = roomId;
         }
 
         /// <summary>

@@ -42,6 +42,8 @@ namespace OneRoof.Domain.Transit
 
         public IReadOnlyList<ElevatorPassenger> DeliveredPassengers { get; }
 
+        public IReadOnlyDictionary<int, Queue<ElevatorPassenger>> FloorQueues => _floorQueues;
+
         public int DeliveredCount => _deliveredPassengers.Count;
 
         public int TotalQueuedCount
@@ -56,6 +58,16 @@ namespace OneRoof.Domain.Transit
 
                 return total;
             }
+        }
+
+        public void AddCar(ElevatorCar car)
+        {
+            if (car == null)
+            {
+                throw new ArgumentNullException(nameof(car));
+            }
+
+            _cars.Add(car);
         }
 
         public float AverageWaitTicks
@@ -104,6 +116,60 @@ namespace OneRoof.Domain.Transit
 
             return (max, (float)total / queue.Count);
         }
+
+        public bool TryTakeDeliveredPassenger(EntityId personId, out ElevatorPassenger passenger)
+        {
+            for (var i = 0; i < _deliveredPassengers.Count; i++)
+            {
+                if (_deliveredPassengers[i].PersonId.Equals(personId))
+                {
+                    passenger = _deliveredPassengers[i];
+                    _deliveredPassengers.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            passenger = null;
+            return false;
+        }
+
+        public bool IsPassengerInCar(EntityId personId, out ElevatorCar car)
+        {
+            foreach (var c in _cars)
+            {
+                foreach (var p in c.Passengers)
+                {
+                    if (p.PersonId.Equals(personId))
+                    {
+                        car = c;
+                        return true;
+                    }
+                }
+            }
+
+            car = null;
+            return false;
+        }
+
+        public bool IsPassengerInQueue(EntityId personId, out int floor)
+        {
+            foreach (var kvp in _floorQueues)
+            {
+                foreach (var p in kvp.Value)
+                {
+                    if (p.PersonId.Equals(personId))
+                    {
+                        floor = kvp.Key;
+                        return true;
+                    }
+                }
+            }
+
+            floor = -1;
+            return false;
+        }
+
+        public void ClearDeliveredPassengers() => _deliveredPassengers.Clear();
 
         public void EnqueuePassenger(ElevatorPassenger passenger)
         {

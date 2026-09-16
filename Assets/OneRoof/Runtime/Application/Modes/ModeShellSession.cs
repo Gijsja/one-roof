@@ -88,6 +88,12 @@ namespace OneRoof.Application.Modes
             ExecuteCommand(new SetInteractionModeCommand(InteractionMode.Data, overlayId: overlayId));
         }
 
+        public void SetPlacementTarget(int? floor, int? cellX)
+        {
+            _state.SetPlacementTarget(floor, cellX);
+            ModeChanged?.Invoke(Projection());
+        }
+
         public void CancelOrEscape()
         {
             if (_state.CurrentMode == InteractionMode.Build && _state.SelectedBuildTool != null)

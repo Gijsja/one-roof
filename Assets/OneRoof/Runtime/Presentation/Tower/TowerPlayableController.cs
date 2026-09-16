@@ -5,7 +5,9 @@ using OneRoof.Application.Modes;
 using OneRoof.Application.Modes.Commands;
 using OneRoof.Application.Overlays;
 using OneRoof.Application.Prediction;
+using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
+using OneRoof.Domain.Commands;
 using OneRoof.Presentation.Overlays;
 using OneRoof.UI.Inspectors;
 using OneRoof.UI.Modes;
@@ -16,19 +18,19 @@ namespace OneRoof.Presentation.Tower
 {
     /// <summary>
     /// Master presentation controller for the interactive First Playable Tower scene (Assets/Scenes/Tower.unity).
-    /// Assembles the five-floor building cutaway, 50 persistent residents, elevator bank transit simulation,
+    /// Assembles the building cutaway, persistent residents, elevator bank transit simulation,
     /// Mode Shell (Build/Inspect/Data/Manage), Elevator Wait Flow Overlay, Root-Cause Inspector Card,
-    /// and Placement Prediction Preview into an interactive playable proof.
+    /// Placement Prediction Preview, and Interactive Grid Placement into an interactive playable proof.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class TowerPlayableController : MonoBehaviour
     {
         private const float DefaultTickInterval = 0.35f;
-        private const int TotalResidents = TransitPrototypeSession.ResidentCount;
-        private const int TotalFloors = TransitPrototypeSession.FloorCount;
+        public const int InitialResidentCount = 50;
+        public const int InitialFloorCount = 5;
 
         // Core application sessions & services (pure C#, non-MonoBehaviour)
-        private TransitPrototypeSession _transitSession;
+        private TowerSimulationSession _simulationSession;
         private ModeShellSession _modeSession;
         private ElevatorWaitOverlayService _overlayService;
         private ElevatorPlacementPredictor _predictor;
@@ -38,13 +40,16 @@ namespace OneRoof.Presentation.Tower
         private ElevatorWaitOverlayPresenter _overlayPresenter;
         private CongestionInspectorCardView _inspectorCard;
         private PlacementPreviewCardView _placementCard;
+        private GridPlacementController _gridPlacement;
+        private PlacementGhostPresenter _ghostPresenter;
 
         // Visual world rendering state
         private Material _worldMaterial;
         private MaterialPropertyBlock _colorBlock;
-        private readonly List<MeshRenderer> _residentViews = new List<MeshRenderer>(TotalResidents);
+        private readonly List<MeshRenderer> _residentViews = new List<MeshRenderer>();
         private readonly List<MeshRenderer> _elevatorViews = new List<MeshRenderer>();
         private readonly List<GameObject> _worldObjects = new List<GameObject>();
+        private int _renderedFloorCount = 0;
 
         private float _tickAccumulator;
         private float _tickInterval = DefaultTickInterval;
@@ -55,8 +60,11 @@ namespace OneRoof.Presentation.Tower
         private GUIStyle _hudButtonStyle;
         private GUIStyle _hudHelpStyle;
 
-        public TransitPrototypeSession TransitSession => _transitSession;
+        public TowerSimulationSession SimulationSession => _simulationSession;
+        public TowerSimulationSession TransitSession => _simulationSession;
         public ModeShellSession ModeSession => _modeSession;
+        public GridPlacementController GridPlacement => _gridPlacement;
+        public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
 
         private void Awake()
         {
@@ -72,6 +80,11 @@ namespace OneRoof.Presentation.Tower
             if (_modeSession != null)
             {
                 _modeSession.ModeChanged -= OnModeChanged;
+            }
+
+            if (_gridPlacement != null)
+            {
+                _gridPlacement.PlacementExecuted -= OnPlacementExecuted;
             }
 
             if (_worldMaterial != null)
@@ -91,7 +104,7 @@ namespace OneRoof.Presentation.Tower
                 while (_tickAccumulator >= _tickInterval)
                 {
                     _tickAccumulator -= _tickInterval;
-                    _transitSession.AdvanceOneTick();
+                    _simulationSession.AdvanceOneTick();
                 }
             }
 
@@ -101,7 +114,7 @@ namespace OneRoof.Presentation.Tower
 
         private void InitializeSessions()
         {
-            _transitSession = new TransitPrototypeSession();
+            _simulationSession = new TowerSimulationSession();
             _modeSession = new ModeShellSession();
             _overlayService = new ElevatorWaitOverlayService();
             _predictor = new ElevatorPlacementPredictor();
@@ -126,6 +139,14 @@ namespace OneRoof.Presentation.Tower
 
             // Wire PlacementPreviewCardView
             _placementCard = gameObject.GetComponent<PlacementPreviewCardView>() ?? gameObject.AddComponent<PlacementPreviewCardView>();
+
+            // Wire PlacementGhostPresenter & GridPlacementController
+            _ghostPresenter = gameObject.GetComponent<PlacementGhostPresenter>() ?? gameObject.AddComponent<PlacementGhostPresenter>();
+            _gridPlacement = gameObject.GetComponent<GridPlacementController>() ?? gameObject.AddComponent<GridPlacementController>();
+            _gridPlacement.ModeSession = _modeSession;
+            _gridPlacement.SimulationSession = _simulationSession;
+            _gridPlacement.GhostPresenter = _ghostPresenter;
+            _gridPlacement.PlacementExecuted += OnPlacementExecuted;
         }
 
         private void SubscribeEvents()
@@ -140,7 +161,7 @@ namespace OneRoof.Presentation.Tower
 
             if (projection.IsDataMode)
             {
-                var congestion = _transitSession.CongestionProjection();
+                var congestion = _simulationSession.CongestionProjection();
                 _overlayPresenter.UpdateOverlay(_overlayService.CreateOverlay(congestion));
             }
 
@@ -161,6 +182,16 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
+        private void OnPlacementExecuted(CommandResult result)
+        {
+            if (result.Accepted)
+            {
+                EnsureFloorViews();
+                EnsureElevatorViews();
+                EnsureResidentViews();
+            }
+        }
+
         private void HandleKeyboardInputs()
         {
             if (Input.GetKeyDown(KeyCode.Space))
@@ -173,13 +204,13 @@ namespace OneRoof.Presentation.Tower
             }
             else if (Input.GetKeyDown(KeyCode.T) && _isPaused)
             {
-                _transitSession.AdvanceOneTick();
+                _simulationSession.AdvanceOneTick();
             }
         }
 
         private void UpdateOverlayAndPredictions()
         {
-            var congestion = _transitSession.CongestionProjection();
+            var congestion = _simulationSession.CongestionProjection();
 
             if (_overlayPresenter.IsVisible)
             {
@@ -196,7 +227,7 @@ namespace OneRoof.Presentation.Tower
         public void InspectBottleneck()
         {
             _modeSession.SwitchMode(InteractionMode.Inspect);
-            var congestion = _transitSession.CongestionProjection();
+            var congestion = _simulationSession.CongestionProjection();
             var overlay = _overlayService.CreateOverlay(congestion);
 
             var inspectorProjection = new ElevatorCongestionInspectorProjection(
@@ -229,25 +260,30 @@ namespace OneRoof.Presentation.Tower
             _modeSession.SwitchMode(InteractionMode.Build);
             _modeSession.SelectBuildTool("transit:elevator_car");
 
-            var congestion = _transitSession.CongestionProjection();
+            var congestion = _simulationSession.CongestionProjection();
             var preview = _predictor.PredictAddition(congestion);
             _placementCard.SetPreview(preview, OnConfirmElevatorPlacement);
         }
 
         public void OnConfirmElevatorPlacement()
         {
-            _transitSession.AddCapacity();
+            _simulationSession.AddCapacity();
             _placementCard.Close();
             EnsureElevatorViews();
         }
 
         public void ResetCommuteSimulation()
         {
-            _transitSession.Reset();
+            _simulationSession.Reset();
+            if (_gridPlacement != null)
+            {
+                _gridPlacement.SimulationSession = _simulationSession;
+            }
             _inspectorCard.Close();
             _placementCard.Close();
             _overlayPresenter.SetVisible(_modeSession.CurrentMode == InteractionMode.Data);
             EnsureElevatorViews();
+            EnsureResidentViews();
         }
 
         private void CreateWorldGeometry()
@@ -264,9 +300,22 @@ namespace OneRoof.Presentation.Tower
                 camObj.transform.position = new Vector3(1.1f, 0.4f, -10f);
             }
 
-            // Create tower backdrop & floors
-            for (var floor = 0; floor < TotalFloors; floor++)
+            // Elevator Shaft cavity at X = -2.4
+            CreateQuad("Elevator Shaft Cavity", new Color(0.06f, 0.08f, 0.12f), new Vector3(-2.4f, 0.3f, 0.8f), new Vector2(1.8f, 10.5f), transform);
+            CreateQuad("Shaft Rail Left", new Color(0.3f, 0.38f, 0.48f), new Vector3(-3.25f, 0.3f, 0.2f), new Vector2(0.04f, 10.5f), transform);
+            CreateQuad("Shaft Rail Right", new Color(0.3f, 0.38f, 0.48f), new Vector3(-1.55f, 0.3f, 0.2f), new Vector2(0.04f, 10.5f), transform);
+
+            EnsureFloorViews();
+            EnsureElevatorViews();
+            EnsureResidentViews();
+        }
+
+        private void EnsureFloorViews()
+        {
+            var targetCount = _simulationSession != null ? _simulationSession.Topology.FloorCount : InitialFloorCount;
+            while (_renderedFloorCount < targetCount)
             {
+                var floor = _renderedFloorCount;
                 var y = FloorY(floor);
                 var isLobby = floor == 0;
 
@@ -286,20 +335,14 @@ namespace OneRoof.Presentation.Tower
                     CreateQuad($"Wall L {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(0.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
                     CreateQuad($"Wall R {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(3.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
                 }
+
+                _renderedFloorCount++;
             }
-
-            // Elevator Shaft cavity at X = -2.4
-            CreateQuad("Elevator Shaft Cavity", new Color(0.06f, 0.08f, 0.12f), new Vector3(-2.4f, 0.3f, 0.8f), new Vector2(1.8f, 8.8f), transform);
-            CreateQuad("Shaft Rail Left", new Color(0.3f, 0.38f, 0.48f), new Vector3(-3.25f, 0.3f, 0.2f), new Vector2(0.04f, 8.8f), transform);
-            CreateQuad("Shaft Rail Right", new Color(0.3f, 0.38f, 0.48f), new Vector3(-1.55f, 0.3f, 0.2f), new Vector2(0.04f, 8.8f), transform);
-
-            EnsureElevatorViews();
-            EnsureResidentViews();
         }
 
         private void EnsureElevatorViews()
         {
-            var targetCount = _transitSession.Projection().Elevators.Count;
+            var targetCount = _simulationSession.Simulation.ElevatorBank.Cars.Count;
             while (_elevatorViews.Count < targetCount)
             {
                 var index = _elevatorViews.Count;
@@ -311,7 +354,8 @@ namespace OneRoof.Presentation.Tower
 
         private void EnsureResidentViews()
         {
-            while (_residentViews.Count < TotalResidents)
+            var targetCount = _simulationSession.ResidentCount;
+            while (_residentViews.Count < targetCount)
             {
                 var index = _residentViews.Count;
                 var view = CreateQuad($"Resident View {index + 1}", ResolveResidentColor(index), Vector3.zero, new Vector2(0.22f, 0.44f), transform);
@@ -321,7 +365,12 @@ namespace OneRoof.Presentation.Tower
 
         private void RenderVisualSnapshot()
         {
-            var snapshot = _transitSession.Projection();
+            EnsureFloorViews();
+            EnsureElevatorViews();
+            EnsureResidentViews();
+
+            var snapshot = _simulationSession.Projection();
+            var floorCount = Math.Max(InitialFloorCount, _simulationSession.Topology.FloorCount);
 
             // Update elevator cars
             for (var i = 0; i < snapshot.Elevators.Count; i++)
@@ -347,7 +396,7 @@ namespace OneRoof.Presentation.Tower
 
             // Update resident views
             var queueIndex = 0;
-            var arrivedCountsPerFloor = new int[TotalFloors];
+            var arrivedCountsPerFloor = new int[floorCount];
 
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
@@ -373,7 +422,7 @@ namespace OneRoof.Presentation.Tower
                     case TransitResidentStatus.Riding:
                     {
                         // Inside elevator car
-                        var elevatorIndex = i % snapshot.Elevators.Count;
+                        var elevatorIndex = i % Math.Max(1, snapshot.Elevators.Count);
                         var carY = FloorY(snapshot.Elevators[elevatorIndex].Floor);
                         var carX = snapshot.Elevators.Count == 1 ? -2.4f : (-2.85f + elevatorIndex * 0.9f);
                         residentTransform.position = new Vector3(carX + ((i % 4) - 1.5f) * 0.15f, carY, -0.3f);
@@ -383,6 +432,7 @@ namespace OneRoof.Presentation.Tower
                     case TransitResidentStatus.Arrived:
                     {
                         var destFloor = resident.DestinationFloor;
+                        if (destFloor < 0 || destFloor >= floorCount) destFloor = 0;
                         var slot = arrivedCountsPerFloor[destFloor]++;
                         var arrivedX = -0.8f + (slot % 16) * 0.42f;
                         var arrivedY = FloorY(destFloor) - 0.35f;
@@ -398,25 +448,28 @@ namespace OneRoof.Presentation.Tower
         {
             EnsureStyles();
 
-            var snapshot = _transitSession.Projection();
-            var congestion = _transitSession.CongestionProjection();
+            var snapshot = _simulationSession.Projection();
+            var congestion = _simulationSession.CongestionProjection();
+            var totalRes = Math.Max(1, _simulationSession.ResidentCount);
 
             // Top-left dashboard HUD
-            var hudRect = new Rect(20, 20, 360, 220);
+            var hudHeight = _modeSession.CurrentMode == InteractionMode.Build ? 260 : 220;
+            var hudRect = new Rect(20, 20, 380, hudHeight);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
             GUILayout.Label($"Sim Tick: {snapshot.Tick}  •  Status: {(_isPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
+            GUILayout.Label($"Treasury: ${_simulationSession.Economy.CashBalance:N0}  •  Residents: {_simulationSession.ResidentCount}  •  Floors: {_simulationSession.FloorCount}", _hudMetricStyle);
             GUILayout.Space(4);
 
             var overlay = _overlayPresenter.CurrentOverlay ?? _overlayService.CreateOverlay(congestion);
             var severityBadge = overlay.OverallSeverity.ToString().ToUpperInvariant();
 
-            GUILayout.Label($"Lobby Queue: {snapshot.QueueLength}/{TotalResidents} waiting  [{severityBadge}]", _hudMetricStyle);
-            GUILayout.Label($"Delivered: {snapshot.ArrivedCount}/{TotalResidents} arrived", _hudMetricStyle);
+            GUILayout.Label($"Lobby Queue: {snapshot.QueueLength}/{totalRes} waiting  [{severityBadge}]", _hudMetricStyle);
+            GUILayout.Label($"Delivered: {snapshot.ArrivedCount}/{totalRes} arrived", _hudMetricStyle);
             GUILayout.Label($"Average Completed Wait: {snapshot.AverageWaitTicks:F1} ticks", _hudMetricStyle);
             GUILayout.Label($"Elevator Bank: {snapshot.Elevators.Count} active car(s)", _hudMetricStyle);
-            GUILayout.Space(8);
+            GUILayout.Space(6);
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Inspect Bottleneck [I]", _hudButtonStyle, GUILayout.Height(28)))
@@ -443,6 +496,25 @@ namespace OneRoof.Presentation.Tower
                 ResetCommuteSimulation();
             }
             GUILayout.EndHorizontal();
+
+            if (_modeSession.CurrentMode == InteractionMode.Build)
+            {
+                GUILayout.Space(4);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("+ Apartment", _hudButtonStyle, GUILayout.Height(24)))
+                {
+                    _modeSession.SelectBuildTool("residential:apartment");
+                }
+                if (GUILayout.Button("+ Shaft", _hudButtonStyle, GUILayout.Height(24)))
+                {
+                    _modeSession.SelectBuildTool("transit:elevator_shaft");
+                }
+                if (GUILayout.Button("+ Slab", _hudButtonStyle, GUILayout.Height(24)))
+                {
+                    _modeSession.SelectBuildTool("floor:slab");
+                }
+                GUILayout.EndHorizontal();
+            }
 
             GUILayout.Space(4);
             GUILayout.Label("Shortcuts: [Space] Pause  [1] Build  [2] Inspect  [3] Data  [Esc] Cancel", _hudHelpStyle);
@@ -492,7 +564,7 @@ namespace OneRoof.Presentation.Tower
             return new Material(shader);
         }
 
-        private static float FloorY(int floor) => -3.2f + floor * 1.75f;
+        public static float FloorY(int floor) => -3.2f + floor * 1.75f;
 
         private static Color ResolveResidentColor(int residentIndex)
         {

@@ -14,6 +14,8 @@ namespace OneRoof.Domain.Population
     {
         private readonly Dictionary<EntityId, PersonRecord> _persons;
         private readonly Dictionary<EntityId, HouseholdRecord> _households;
+        private readonly List<PersonRecord> _personList;
+        private readonly List<HouseholdRecord> _householdList;
 
         public PopulationState(
             IEnumerable<PersonRecord> persons,
@@ -21,8 +23,9 @@ namespace OneRoof.Domain.Population
         {
             _persons = new Dictionary<EntityId, PersonRecord>();
             _households = new Dictionary<EntityId, HouseholdRecord>();
+            _personList = new List<PersonRecord>();
+            _householdList = new List<HouseholdRecord>();
 
-            var personList = new List<PersonRecord>();
             if (persons != null)
             {
                 foreach (var person in persons)
@@ -38,11 +41,10 @@ namespace OneRoof.Domain.Population
                     }
 
                     _persons.Add(person.Id, person);
-                    personList.Add(person);
+                    _personList.Add(person);
                 }
             }
 
-            var householdList = new List<HouseholdRecord>();
             if (households != null)
             {
                 foreach (var household in households)
@@ -58,21 +60,38 @@ namespace OneRoof.Domain.Population
                     }
 
                     _households.Add(household.Id, household);
-                    householdList.Add(household);
+                    _householdList.Add(household);
                 }
             }
-
-            Persons = new ReadOnlyCollection<PersonRecord>(personList);
-            Households = new ReadOnlyCollection<HouseholdRecord>(householdList);
         }
 
         // ── Collections ───────────────────────────────────────────────────────
 
         /// <summary>All persons in insertion order.</summary>
-        public IReadOnlyList<PersonRecord> Persons { get; }
+        public IReadOnlyList<PersonRecord> Persons => _personList;
 
         /// <summary>All households in insertion order.</summary>
-        public IReadOnlyList<HouseholdRecord> Households { get; }
+        public IReadOnlyList<HouseholdRecord> Households => _householdList;
+
+        public int ResidentCount => _persons.Count;
+
+        public void AddPerson(PersonRecord person)
+        {
+            if (person == null) throw new ArgumentNullException(nameof(person));
+            if (_persons.ContainsKey(person.Id)) throw new ArgumentException($"Duplicate person ID {person.Id}.");
+
+            _persons.Add(person.Id, person);
+            _personList.Add(person);
+        }
+
+        public void AddHousehold(HouseholdRecord household)
+        {
+            if (household == null) throw new ArgumentNullException(nameof(household));
+            if (_households.ContainsKey(household.Id)) throw new ArgumentException($"Duplicate household ID {household.Id}.");
+
+            _households.Add(household.Id, household);
+            _householdList.Add(household);
+        }
 
         public int PersonCount => _persons.Count;
 

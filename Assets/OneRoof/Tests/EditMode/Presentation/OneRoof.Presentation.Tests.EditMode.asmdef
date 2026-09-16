@@ -2,6 +2,7 @@
   "name": "OneRoof.Presentation.Tests.EditMode",
   "rootNamespace": "OneRoof.Presentation.Tests.EditMode",
   "references": [
+    "OneRoof.Domain",
     "OneRoof.Application",
     "OneRoof.Presentation",
     "OneRoof.UI"

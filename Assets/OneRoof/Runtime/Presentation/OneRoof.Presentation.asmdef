@@ -2,6 +2,7 @@
   "name": "OneRoof.Presentation",
   "rootNamespace": "OneRoof.Presentation",
   "references": [
+    "OneRoof.Domain",
     "OneRoof.Application",
     "OneRoof.UI"
   ],
