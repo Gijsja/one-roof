@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Time;
@@ -150,6 +151,87 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(observedWalking, Is.True, "Should observe residents walking along corridors.");
             Assert.That(observedQueued, Is.True, "Should observe residents queued at elevator.");
             Assert.That(observedRiding, Is.True, "Should observe residents riding elevator car.");
+        }
+
+        [Test]
+        public void InitialState_ElevatorIsIdleAndNoPassengersQueued()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+
+            Assert.That(sim.TotalQueuedElevatorPassengers, Is.EqualTo(0));
+            Assert.That(sim.ElevatorBank.Cars[0].Phase, Is.EqualTo(ElevatorCarPhase.Idle));
+            Assert.That(sim.ElevatorBank.Cars[0].Passengers.Count, Is.EqualTo(0));
+            Assert.That(sim.ElevatorBank.Cars[0].HasRequests, Is.False);
+        }
+
+        [Test]
+        public void BuildingRoom_DynamicallySynchronizesPlannerAndProducesElevatorRoute()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor(new TowerEconomyState(50000));
+
+            // Build a second diner on Floor 0 at unoccupied cells [4..13]
+            var buildCmd = new OneRoof.Domain.Commands.BuildRoomCommand(
+                0,
+                4,
+                13,
+                new ContentId("commercial:diner"),
+                capacity: 10);
+
+            var result = sim.BuildRoom(buildCmd);
+            Assert.That(result.Accepted, Is.True);
+
+            // Locate newly allocated room
+            Room newDiner = null;
+            foreach (var r in sim.Topology.GetRoomsOnFloor(0))
+            {
+                if (r.Bounds.MinX == 4 && r.Bounds.MaxX == 13)
+                {
+                    newDiner = r;
+                    break;
+                }
+            }
+            Assert.That(newDiner, Is.Not.Null);
+
+            // Plan route from a residential apartment on Floor 3 to the new Diner on Floor 0
+            var floor3Rooms = sim.Topology.GetRoomsOnFloor(3);
+            var aptFloor3 = floor3Rooms[1]; // apartment on floor 3
+
+            var originNode = sim.Topology.TransitGraph.GetPortalNodeForRoom(aptFloor3.Id);
+            var destNode = sim.Topology.TransitGraph.GetPortalNodeForRoom(newDiner.Id);
+
+            Assert.That(originNode, Is.Not.Null);
+            Assert.That(destNode, Is.Not.Null);
+
+            var route = sim.Planner.FindRoute(originNode.Id, destNode.Id);
+            Assert.That(route, Is.Not.Null);
+            Assert.That(route.Legs.Count, Is.EqualTo(3));
+            Assert.That(route.Legs[0].Mode, Is.EqualTo(TransitMode.Walk));
+            Assert.That(route.Legs[1].Mode, Is.EqualTo(TransitMode.Elevator));
+            Assert.That(route.Legs[2].Mode, Is.EqualTo(TransitMode.Walk));
+        }
+
+        [Test]
+        public void UnroutableTrip_IsCancelledWithoutTeleportingResident()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var person = sim.Population.Persons[0];
+            var initialLocation = person.CurrentRoomId;
+
+            // Submit trip with null route to unreachable room ID 9999
+            var unroutableTrip = new TripRecord(
+                new EntityId(8888),
+                person.Id,
+                initialLocation,
+                new EntityId(9999),
+                TripPurpose.Work,
+                sim.Clock.CurrentTick,
+                plannedRoute: null);
+
+            sim.Transit.SubmitTrip(unroutableTrip, sim.Topology, sim.Clock.CurrentTick, sim.Population);
+
+            Assert.That(unroutableTrip.State, Is.EqualTo(TripState.Cancelled));
+            Assert.That(person.CurrentRoomId, Is.EqualTo(initialLocation), "Resident must not teleport to destination on routing failure.");
+            Assert.That(sim.Transit.ActiveTripCount, Is.EqualTo(0));
         }
     }
 }

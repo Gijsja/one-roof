@@ -42,12 +42,12 @@ namespace OneRoof.Domain.Population
         /// <param name="rng">
         /// A seeded, deterministic random stream. The same seed produces the same population.
         /// </param>
-        public static PopulationState Create()
+        public static PopulationState Create(long baseSleepEnd = 15)
         {
-            return Create(FiveFloorTopologyFixture.Create(), new DeterministicRandomStream(1337));
+            return Create(FiveFloorTopologyFixture.Create(), new DeterministicRandomStream(1337), baseSleepEnd);
         }
 
-        public static PopulationState Create(BuildingTopology topology, IRandomStream rng)
+        public static PopulationState Create(BuildingTopology topology, IRandomStream rng, long baseSleepEnd = 15)
         {
             if (topology == null) throw new ArgumentNullException(nameof(topology));
             if (rng == null)      throw new ArgumentNullException(nameof(rng));
@@ -101,7 +101,7 @@ namespace OneRoof.Domain.Population
                 var household   = households[hIndex];
                 var traitKind   = allTraitKinds[rng.NextInt(0, allTraitKinds.Length)];
                 var trait       = new PersonTrait(traitKind);
-                var schedule    = DailySchedule.Standard(trait, rng);
+                var schedule    = DailySchedule.Standard(trait, rng, baseSleepEnd);
 
                 var needs = new[]
                 {

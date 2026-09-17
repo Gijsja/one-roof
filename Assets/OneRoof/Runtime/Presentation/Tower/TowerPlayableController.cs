@@ -238,8 +238,12 @@ namespace OneRoof.Presentation.Tower
         {
             if (result.Accepted)
             {
-                ClearWorldGeometry();
-                CreateWorldGeometry();
+                UpdateCamera();
+                EnsureShaftViews();
+                EnsureFloorViews();
+                EnsureRoomViews();
+                EnsureElevatorViews();
+                EnsureResidentViews();
             }
         }
 
@@ -567,6 +571,28 @@ namespace OneRoof.Presentation.Tower
         {
             if (_simulationSession == null) return;
             var topology = _simulationSession.Topology;
+
+            // Remove views for rooms that were demolished
+            var activeRoomIds = new HashSet<OneRoof.Domain.Identity.EntityId>(topology.Rooms.Keys);
+            var demolishedIds = new List<OneRoof.Domain.Identity.EntityId>();
+            foreach (var id in _renderedRoomIds)
+            {
+                if (!activeRoomIds.Contains(id))
+                {
+                    demolishedIds.Add(id);
+                    var child = transform.Find($"RoomView_{id}");
+                    if (child != null)
+                    {
+                        _worldObjects.Remove(child.gameObject);
+                        if (UnityEngine.Application.isPlaying) Destroy(child.gameObject);
+                        else DestroyImmediate(child.gameObject);
+                    }
+                }
+            }
+            foreach (var id in demolishedIds)
+            {
+                _renderedRoomIds.Remove(id);
+            }
 
             foreach (var room in topology.Rooms.Values)
             {

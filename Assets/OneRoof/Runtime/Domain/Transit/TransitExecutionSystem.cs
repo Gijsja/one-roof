@@ -126,8 +126,18 @@ namespace OneRoof.Domain.Transit
 
             var person = population?.TryGetPerson(trip.PersonId, out var p) == true ? p : null;
 
-            // Local trips or empty routes complete immediately
-            if (trip.IsLocal || trip.PlannedRoute == null || trip.PlannedRoute.Legs.Count == 0)
+            // If trip has no planned route (unreachable), cancel it without teleporting
+            if (trip.PlannedRoute == null)
+            {
+                if (trip.State == TripState.Planned)
+                {
+                    trip.Cancel();
+                }
+                return;
+            }
+
+            // Local trips or 0-leg routes complete immediately
+            if (trip.IsLocal || trip.PlannedRoute.Legs.Count == 0)
             {
                 if (trip.State == TripState.Planned)
                 {

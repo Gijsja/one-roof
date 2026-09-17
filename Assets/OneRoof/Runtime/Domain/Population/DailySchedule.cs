@@ -74,34 +74,34 @@ namespace OneRoof.Domain.Population
         /// using <paramref name="rng"/> to add small jitter to block boundaries.
         /// The schedule is deterministic when <paramref name="rng"/> is identically seeded.
         /// </summary>
-        public static DailySchedule Standard(PersonTrait trait, IRandomStream rng)
+        public static DailySchedule Standard(PersonTrait trait, IRandomStream rng, long baseSleepEnd = 480)
         {
             if (rng == null)
             {
                 throw new ArgumentNullException(nameof(rng));
             }
 
-            // Base split (ticks): Sleep=480, Work=480, Eat=120, Leisure=360 → total 1440
-            // Jitter window: ±30 ticks per boundary, shifted by trait.
-            const long baseSleepEnd   = 480;   // ~08:00
-            const long baseWorkEnd    = 960;   // ~16:00
-            const long baseEatEnd     = 1080;  // ~18:00
-            // Leisure fills to TicksPerDay.
+            // Base split (ticks): Sleep=baseSleepEnd, Work=480, Eat=120, Leisure fills remainder of day
+            var isSliceScale = baseSleepEnd <= 60;
+            var baseWorkEnd  = isSliceScale ? baseSleepEnd + 80 : 960L;
+            var baseEatEnd   = isSliceScale ? baseWorkEnd + 40 : 1080L;
 
             var traitShift = trait.Kind switch
             {
-                PersonTraitKind.EarlyBird  => -60L,
-                PersonTraitKind.NightOwl   => +60L,
+                PersonTraitKind.EarlyBird  => isSliceScale ? -3L : -60L,
+                PersonTraitKind.NightOwl   => isSliceScale ? +3L : +60L,
                 _                          => 0L,
             };
 
-            var jitter1 = rng.NextInt(-30, 31);  // sleep/work boundary jitter
-            var jitter2 = rng.NextInt(-20, 21);  // work/eat boundary jitter
-            var jitter3 = rng.NextInt(-15, 16);  // eat/leisure boundary jitter
+            var jitter1 = isSliceScale ? rng.NextInt(-2, 3) : rng.NextInt(-30, 31);
+            var jitter2 = isSliceScale ? rng.NextInt(-5, 6) : rng.NextInt(-20, 21);
+            var jitter3 = isSliceScale ? rng.NextInt(-4, 5) : rng.NextInt(-15, 16);
 
-            var sleepEnd   = Clamp(baseSleepEnd  + traitShift + jitter1, 360, 660);
-            var workEnd    = Clamp(baseWorkEnd   + traitShift + jitter2, sleepEnd + 240, 1100);
-            var eatEnd     = Clamp(baseEatEnd    + traitShift + jitter3, workEnd  + 60,  1200);
+            var minSleep   = Math.Max(2, (int)(baseSleepEnd * 0.5f));
+            var maxSleep   = isSliceScale ? baseSleepEnd + 8 : 660L;
+            var sleepEnd   = Clamp(baseSleepEnd  + traitShift + jitter1, minSleep, maxSleep);
+            var workEnd    = Clamp(baseWorkEnd   + traitShift + jitter2, sleepEnd + (isSliceScale ? 20 : 240), isSliceScale ? 250 : 1100);
+            var eatEnd     = Clamp(baseEatEnd    + traitShift + jitter3, workEnd  + (isSliceScale ? 15 : 60),  isSliceScale ? 350 : 1200);
 
             var blocks = new List<ScheduleBlock>(4)
             {

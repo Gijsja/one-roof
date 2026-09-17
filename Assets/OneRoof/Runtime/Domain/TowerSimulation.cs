@@ -58,9 +58,9 @@ namespace OneRoof.Domain
 
         public IRandomStream RandomStream { get; }
 
-        public TransitRoutePlanner Planner { get; }
+        public TransitRoutePlanner Planner { get; private set; }
 
-        public ScheduleTripGenerator TripGenerator { get; }
+        public ScheduleTripGenerator TripGenerator { get; private set; }
 
         public TransitExecutionSystem Transit { get; }
 
@@ -103,6 +103,13 @@ namespace OneRoof.Domain
             Transit.Advance(currentTick, Topology, ElevatorBank, Population);
         }
 
+        public void SyncTransitServices()
+        {
+            var currentGraph = Topology.TransitGraph;
+            Planner = new TransitRoutePlanner(currentGraph);
+            TripGenerator.UpdateTopology(Topology.ToSnapshot(), currentGraph, Planner);
+        }
+
         public OneRoof.Domain.Commands.CommandResult BuildFloorSlab(OneRoof.Domain.Commands.BuildFloorSlabCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
@@ -119,6 +126,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                SyncTransitServices();
             }
 
             return result;
@@ -140,6 +148,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                SyncTransitServices();
             }
 
             return result;
@@ -162,6 +171,7 @@ namespace OneRoof.Domain
             {
                 Economy.TryDeduct(cost);
                 ElevatorBank.ExpandFloorRange(cmd.BottomFloor, cmd.TopFloor);
+                SyncTransitServices();
             }
 
             return result;
@@ -183,6 +193,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                SyncTransitServices();
             }
 
             return result;
@@ -235,10 +246,21 @@ namespace OneRoof.Domain
                     Economy.AddRevenue(salvageRefund);
                 }
 
+                if (result.Accepted)
+                {
+                    SyncTransitServices();
+                }
+
                 return result;
             }
 
-            return Topology.Execute(cmd, Clock.CurrentTick);
+            var fallbackResult = Topology.Execute(cmd, Clock.CurrentTick);
+            if (fallbackResult.Accepted)
+            {
+                SyncTransitServices();
+            }
+
+            return fallbackResult;
         }
 
         public void AddElevatorCar(int capacity = 10, int startingFloor = 0)
@@ -264,7 +286,7 @@ namespace OneRoof.Domain
             return ElevatorBank.GetQueueLength(floor);
         }
 
-        public static TowerSimulation CreateStandardFiveFloor(TowerEconomyState economy = null, IRandomStream randomStream = null, bool enqueueMorningRush = true)
+        public static TowerSimulation CreateStandardFiveFloor(TowerEconomyState economy = null, IRandomStream randomStream = null, bool enqueueMorningRush = false)
         {
             var clock = new SimulationClock(new Tick(0));
             var topologyState = BuildingTopologyState.CreateWithFixture();
@@ -273,22 +295,56 @@ namespace OneRoof.Domain
             var car = new ElevatorCar(new EntityId(501), startingFloor: 0, capacity: 10);
             var elevatorBank = new ElevatorBank(minFloor: 0, maxFloor: 4, new[] { car });
 
-            if (enqueueMorningRush)
-            {
-                for (var i = 1; i <= 50; i++)
-                {
-                    var destFloor = 1 + ((i - 1) % 4);
-                    elevatorBank.EnqueuePassenger(new ElevatorPassenger(new EntityId(2000 + i), 0, destFloor));
-                }
-            }
-
-            return new TowerSimulation(
+            var sim = new TowerSimulation(
                 clock,
                 topologyState,
                 population,
                 elevatorBank,
                 economy,
                 randomStream);
+
+            if (enqueueMorningRush)
+            {
+                // Generate real morning commute trips for residents from their apartments on Floors 1-4
+                // down to their workplace (Diner on Floor 0) using the full transit system.
+                EntityId? dinerId = population.Persons.Count > 0 ? population.Persons[0].WorkplaceRoomId : (EntityId?)null;
+                var nextTripId = 1000;
+
+                foreach (var person in population.Persons)
+                {
+                    var originRoomId = person.HomeRoomId;
+                    var destinationRoomId = person.WorkplaceRoomId.IsValid
+                        ? person.WorkplaceRoomId
+                        : (dinerId ?? originRoomId);
+
+                    if (!originRoomId.Equals(destinationRoomId))
+                    {
+                        var originNode = sim.Topology.TransitGraph.GetPortalNodeForRoom(originRoomId);
+                        var destNode = sim.Topology.TransitGraph.GetPortalNodeForRoom(destinationRoomId);
+                        TransitRoute route = null;
+                        if (originNode != null && destNode != null)
+                        {
+                            route = sim.Planner.FindRoute(originNode.Id, destNode.Id);
+                        }
+
+                        if (route != null)
+                        {
+                            var trip = new TripRecord(
+                                new EntityId(nextTripId++),
+                                person.Id,
+                                originRoomId,
+                                destinationRoomId,
+                                TripPurpose.Work,
+                                clock.CurrentTick,
+                                route);
+
+                            sim.Transit.SubmitTrip(trip, topologyState, clock.CurrentTick, population);
+                        }
+                    }
+                }
+            }
+
+            return sim;
         }
 
         public TowerSaveData ExportSaveData()
@@ -687,6 +743,7 @@ namespace OneRoof.Domain
                 }
             }
 
+            sim.SyncTransitServices();
             return sim;
         }
     }

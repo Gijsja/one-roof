@@ -21,9 +21,9 @@ namespace OneRoof.Domain.Trips
     /// </summary>
     public sealed class ScheduleTripGenerator
     {
-        private readonly BuildingTopology _topology;
-        private readonly HierarchicalTransitGraph _graph;
-        private readonly TransitRoutePlanner _planner;
+        private BuildingTopology _topology;
+        private HierarchicalTransitGraph _graph;
+        private TransitRoutePlanner _planner;
 
         private int _nextTripId;
 
@@ -47,6 +47,13 @@ namespace OneRoof.Domain.Trips
             }
 
             _nextTripId = firstTripId;
+        }
+
+        public void UpdateTopology(BuildingTopology topology, HierarchicalTransitGraph graph, TransitRoutePlanner planner)
+        {
+            _topology = topology ?? throw new ArgumentNullException(nameof(topology));
+            _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
+            _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
         }
 
         /// <summary>
@@ -169,11 +176,14 @@ namespace OneRoof.Domain.Trips
 
         private EntityId? FindRoomByContent(ContentId contentId, int floorHint)
         {
+            var isCommercialFood = contentId == FiveFloorTopologyFixture.CommercialContentId;
+
             if (_topology.TryGetFloor(floorHint, out var floor))
             {
                 foreach (var room in floor.Rooms)
                 {
-                    if (room.ContentType == contentId)
+                    if (room.ContentType == contentId ||
+                        (isCommercialFood && (room.ContentType.Value.StartsWith("commercial:") || room.ContentType.Value.StartsWith("room:diner"))))
                     {
                         return room.Id;
                     }
@@ -185,7 +195,8 @@ namespace OneRoof.Domain.Trips
             {
                 foreach (var room in f.Rooms)
                 {
-                    if (room.ContentType == contentId)
+                    if (room.ContentType == contentId ||
+                        (isCommercialFood && (room.ContentType.Value.StartsWith("commercial:") || room.ContentType.Value.StartsWith("room:diner"))))
                     {
                         return room.Id;
                     }
