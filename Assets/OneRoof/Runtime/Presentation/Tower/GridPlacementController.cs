@@ -77,7 +77,7 @@ namespace OneRoof.Presentation.Tower
                 return;
             }
 
-            if (TryGetCellFromScreen(Input.mousePosition, Camera, out var floor, out var cellX))
+            if (TryGetScreenPointerPosition(out var screenPos) && TryGetCellFromScreen(screenPos, Camera, out var floor, out var cellX))
             {
                 _modeSession.SetPlacementTarget(floor, cellX);
 
@@ -89,7 +89,7 @@ namespace OneRoof.Presentation.Tower
                 var worldSize = new Vector2(width * _cellWidth, _floorHeight * 0.9f);
                 GhostPresenter.ShowGhost(worldPos, worldSize, isValid);
 
-                if (Input.GetMouseButtonDown(0))
+                if (IsPrimaryPointerDown())
                 {
                     TryExecutePlacement(toolId, floor, cellX, out _);
                 }
@@ -100,9 +100,44 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
+        private static bool TryGetScreenPointerPosition(out Vector3 screenPos)
+        {
+#if ENABLE_INPUT_SYSTEM
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse != null)
+            {
+                var pos = mouse.position.ReadValue();
+                screenPos = new Vector3(pos.x, pos.y, 0f);
+                return true;
+            }
+            screenPos = Vector3.zero;
+            return false;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            screenPos = Input.mousePosition;
+            return true;
+#else
+            screenPos = Vector3.zero;
+            return false;
+#endif
+        }
+
+        private static bool IsPrimaryPointerDown()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            return mouse != null && mouse.leftButton.wasPressedThisFrame;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetMouseButtonDown(0);
+#else
+            return false;
+#endif
+        }
+
         public Vector3 CellToWorld(int floor, int cellX, int widthInCells = 1)
         {
-            var worldX = _cellOriginX + (cellX + (widthInCells - 1) * 0.5f) * _cellWidth;
+            var worldLeft = _cellOriginX + cellX * _cellWidth;
+            var worldRight = _cellOriginX + (cellX + widthInCells) * _cellWidth;
+            var worldX = (worldLeft + worldRight) * 0.5f;
             var worldY = _floorOriginY + floor * _floorHeight;
             return new Vector3(worldX, worldY, 0f);
         }
@@ -110,7 +145,7 @@ namespace OneRoof.Presentation.Tower
         public bool TryGetCellFromWorld(Vector3 worldPos, out int floor, out int cellX)
         {
             floor = Mathf.RoundToInt((worldPos.y - _floorOriginY) / _floorHeight);
-            cellX = Mathf.RoundToInt((worldPos.x - _cellOriginX) / _cellWidth);
+            cellX = Mathf.FloorToInt((worldPos.x - _cellOriginX) / _cellWidth);
             return true;
         }
 

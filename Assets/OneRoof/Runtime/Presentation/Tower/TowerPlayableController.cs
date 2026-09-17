@@ -50,6 +50,15 @@ namespace OneRoof.Presentation.Tower
         private readonly List<MeshRenderer> _residentViews = new List<MeshRenderer>();
         private readonly List<MeshRenderer> _elevatorViews = new List<MeshRenderer>();
         private readonly List<GameObject> _worldObjects = new List<GameObject>();
+        private readonly HashSet<OneRoof.Domain.Identity.EntityId> _renderedRoomIds = new HashSet<OneRoof.Domain.Identity.EntityId>();
+        private GameObject _shaftCavity;
+        private GameObject _shaftRailLeft;
+        private GameObject _shaftRailRight;
+        private GameObject _shaftColumnLeft;
+        private GameObject _shaftColumnRight;
+        private GameObject _shaftPenthouse;
+        private GameObject _shaftPitBuffer;
+        private int _renderedShaftFloorCount;
         private int _renderedFloorCount = 0;
 
         private float _tickAccumulator;
@@ -82,7 +91,12 @@ namespace OneRoof.Presentation.Tower
             Initialize();
         }
 
-        private void OnDestroy()
+        private void OnEnable()
+        {
+            Initialize();
+        }
+
+        private void OnDisable()
         {
             if (_modeSession != null)
             {
@@ -93,6 +107,11 @@ namespace OneRoof.Presentation.Tower
             {
                 _gridPlacement.PlacementExecuted -= OnPlacementExecuted;
             }
+        }
+
+        private void OnDestroy()
+        {
+            OnDisable();
 
             if (_worldMaterial != null)
             {
@@ -111,6 +130,13 @@ namespace OneRoof.Presentation.Tower
         private void Update()
         {
             if (!UnityEngine.Application.isPlaying) return;
+
+            if (_simulationSession == null)
+            {
+                Initialize();
+            }
+
+            if (_simulationSession == null) return;
 
             HandleKeyboardInputs();
 
@@ -202,9 +228,8 @@ namespace OneRoof.Presentation.Tower
         {
             if (result.Accepted)
             {
-                EnsureFloorViews();
-                EnsureElevatorViews();
-                EnsureResidentViews();
+                ClearWorldGeometry();
+                CreateWorldGeometry();
             }
         }
 
@@ -329,37 +354,142 @@ namespace OneRoof.Presentation.Tower
             _inspectorCard.Close();
             _placementCard.Close();
             _overlayPresenter.SetVisible(_modeSession.CurrentMode == InteractionMode.Data);
-            EnsureElevatorViews();
-            EnsureResidentViews();
+            ClearWorldGeometry();
+            CreateWorldGeometry();
         }
 
         private void CreateWorldGeometry()
         {
-            // Set up camera
-            var camObj = GameObject.Find("Tower Camera");
-            if (camObj == null)
-            {
-                camObj = new GameObject("Tower Camera");
-                var cam = camObj.AddComponent<Camera>();
-                cam.orthographic = true;
-                cam.orthographicSize = 6.4f;
-                cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
-                camObj.transform.position = new Vector3(1.1f, 0.4f, -10f);
-            }
-
-            // Elevator Shaft cavity at X = -2.4
-            CreateQuad("Elevator Shaft Cavity", new Color(0.06f, 0.08f, 0.12f), new Vector3(-2.4f, 0.3f, 0.8f), new Vector2(1.8f, 10.5f), transform);
-            CreateQuad("Shaft Rail Left", new Color(0.3f, 0.38f, 0.48f), new Vector3(-3.25f, 0.3f, 0.2f), new Vector2(0.04f, 10.5f), transform);
-            CreateQuad("Shaft Rail Right", new Color(0.3f, 0.38f, 0.48f), new Vector3(-1.55f, 0.3f, 0.2f), new Vector2(0.04f, 10.5f), transform);
-
+            ClearWorldGeometry();
+            UpdateCamera();
+            EnsureShaftViews();
             EnsureFloorViews();
+            EnsureRoomViews();
             EnsureElevatorViews();
             EnsureResidentViews();
         }
 
+        private void UpdateCamera()
+        {
+            var camObj = GameObject.Find("Tower Camera");
+            Camera cam;
+            if (camObj == null)
+            {
+                camObj = new GameObject("Tower Camera");
+                cam = camObj.AddComponent<Camera>();
+            }
+            else
+            {
+                cam = camObj.GetComponent<Camera>();
+            }
+
+            if (cam != null)
+            {
+                var floorCount = _simulationSession != null ? _simulationSession.Topology.FloorCount : InitialFloorCount;
+                var centerY = FloorY(0) + (floorCount - 1) * 1.75f * 0.5f;
+
+                cam.orthographic = true;
+                cam.orthographicSize = Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
+                cam.transform.position = new Vector3(-1.6f, centerY, -10f);
+            }
+        }
+
+        private void ClearWorldGeometry()
+        {
+            for (var i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i).gameObject;
+                if (child.name == "PlacementGhost") continue;
+                if (UnityEngine.Application.isPlaying)
+                {
+                    Destroy(child);
+                }
+                else
+                {
+                    DestroyImmediate(child);
+                }
+            }
+
+            _worldObjects.Clear();
+            _residentViews.Clear();
+            _elevatorViews.Clear();
+            _renderedRoomIds.Clear();
+            _shaftCavity = null;
+            _shaftRailLeft = null;
+            _shaftRailRight = null;
+            _shaftColumnLeft = null;
+            _shaftColumnRight = null;
+            _shaftPenthouse = null;
+            _shaftPitBuffer = null;
+            _renderedShaftFloorCount = 0;
+            _renderedFloorCount = 0;
+        }
+
+        private void EnsureShaftViews()
+        {
+            var floorCount = _simulationSession != null ? _simulationSession.Topology.FloorCount : InitialFloorCount;
+            var bottomY = FloorY(0) - 0.74f;
+            var topY = FloorY(floorCount - 1) + 0.74f;
+            var shaftHeight = topY - bottomY;
+            var centerY = (bottomY + topY) * 0.5f;
+
+            const float shaftCenterX = -1.90f;
+            const float shaftWidth = 1.00f; // Exactly discrete cells 0..1 (from -2.40f to -1.40f)
+            const float colLeftX = -2.40f;
+            const float colRightX = -1.40f;
+            const float railLeftX = -2.36f;
+            const float railRightX = -1.44f;
+
+            if (_shaftCavity == null)
+            {
+                // Dark interior shaft cavity (behind cars/rails, in front of floor slab background)
+                _shaftCavity = CreateQuad("Elevator Shaft Cavity", new Color(0.04f, 0.06f, 0.09f), new Vector3(shaftCenterX, centerY, 0.85f), new Vector2(shaftWidth, shaftHeight), transform).gameObject;
+
+                // Guide rails running the entire vertical length
+                _shaftRailLeft = CreateQuad("Shaft Rail Left", new Color(0.48f, 0.58f, 0.72f), new Vector3(railLeftX, centerY, 0.2f), new Vector2(0.035f, shaftHeight), transform).gameObject;
+                _shaftRailRight = CreateQuad("Shaft Rail Right", new Color(0.48f, 0.58f, 0.72f), new Vector3(railRightX, centerY, 0.2f), new Vector2(0.035f, shaftHeight), transform).gameObject;
+
+                // Outer structural vertical columns framing the shaft
+                _shaftColumnLeft = CreateQuad("Shaft Column Left", new Color(0.35f, 0.45f, 0.58f), new Vector3(colLeftX, centerY, 0.15f), new Vector2(0.06f, shaftHeight), transform).gameObject;
+                _shaftColumnRight = CreateQuad("Shaft Column Right", new Color(0.35f, 0.45f, 0.58f), new Vector3(colRightX, centerY, 0.15f), new Vector2(0.06f, shaftHeight), transform).gameObject;
+
+                // Rooftop elevator machine room / penthouse cap
+                _shaftPenthouse = CreateQuad("Shaft Penthouse Cap", new Color(0.38f, 0.48f, 0.62f), new Vector3(shaftCenterX, topY + 0.08f, 0.1f), new Vector2(1.12f, 0.16f), transform).gameObject;
+
+                // Foundation pit buffer
+                _shaftPitBuffer = CreateQuad("Shaft Pit Buffer", new Color(0.28f, 0.36f, 0.48f), new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f), new Vector2(1.12f, 0.16f), transform).gameObject;
+            }
+            else
+            {
+                _shaftCavity.transform.position = new Vector3(shaftCenterX, centerY, 0.85f);
+                _shaftCavity.transform.localScale = new Vector3(shaftWidth, shaftHeight, 1f);
+
+                _shaftRailLeft.transform.position = new Vector3(railLeftX, centerY, 0.2f);
+                _shaftRailLeft.transform.localScale = new Vector3(0.035f, shaftHeight, 1f);
+
+                _shaftRailRight.transform.position = new Vector3(railRightX, centerY, 0.2f);
+                _shaftRailRight.transform.localScale = new Vector3(0.035f, shaftHeight, 1f);
+
+                _shaftColumnLeft.transform.position = new Vector3(colLeftX, centerY, 0.15f);
+                _shaftColumnLeft.transform.localScale = new Vector3(0.06f, shaftHeight, 1f);
+
+                _shaftColumnRight.transform.position = new Vector3(colRightX, centerY, 0.15f);
+                _shaftColumnRight.transform.localScale = new Vector3(0.06f, shaftHeight, 1f);
+
+                _shaftPenthouse.transform.position = new Vector3(shaftCenterX, topY + 0.08f, 0.1f);
+                _shaftPitBuffer.transform.position = new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f);
+            }
+
+            _renderedShaftFloorCount = floorCount;
+        }
+
         private void EnsureFloorViews()
         {
-            var targetCount = _simulationSession != null ? _simulationSession.Topology.FloorCount : InitialFloorCount;
+            var topology = _simulationSession != null ? _simulationSession.Topology : null;
+            var targetCount = topology != null ? topology.FloorCount : InitialFloorCount;
+
             while (_renderedFloorCount < targetCount)
             {
                 var floor = _renderedFloorCount;
@@ -367,23 +497,135 @@ namespace OneRoof.Presentation.Tower
                 var isLobby = floor == 0;
 
                 var floorColor = isLobby
-                    ? new Color(0.13f, 0.18f, 0.26f)
-                    : new Color(0.10f, 0.14f, 0.20f);
+                    ? new Color(0.11f, 0.15f, 0.22f)
+                    : new Color(0.09f, 0.12f, 0.18f);
 
-                // Main floor slab
-                CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(1.1f, y, 1f), new Vector2(10.8f, 1.55f), transform);
-
-                // Floor baseline divider
-                CreateQuad($"Floor Line {floor}", new Color(0.35f, 0.45f, 0.58f), new Vector3(1.1f, y - 0.74f, 0f), new Vector2(10.8f, 0.05f), transform);
-
-                // Room division posts on residential floors
-                if (!isLobby)
+                float minX = -14f, maxX = 16f;
+                if (topology != null && topology.TryGetFloorSlab(floor, out var slab))
                 {
-                    CreateQuad($"Wall L {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(0.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
-                    CreateQuad($"Wall R {floor}", new Color(0.20f, 0.26f, 0.35f), new Vector3(3.5f, y, 0.5f), new Vector2(0.06f, 1.4f), transform);
+                    minX = slab.MinX;
+                    maxX = slab.MaxX;
+                }
+
+                var worldLeft = -2.4f + minX * 0.5f;
+                var worldRight = -2.4f + (maxX + 1) * 0.5f;
+                var width = worldRight - worldLeft;
+                var centerX = (worldLeft + worldRight) * 0.5f;
+
+                // Main floor slab background
+                CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(centerX, y, 1f), new Vector2(width, 1.55f), transform);
+
+                // Floor baseline dividers - split around elevator shaft [-2.40f, -1.40f] so the shaft remains an open vertical chute
+                const float shaftLeft = -2.40f;
+                const float shaftRight = -1.40f;
+                var floorLineY = y - 0.74f;
+                var floorLineColor = new Color(0.35f, 0.45f, 0.58f);
+
+                if (shaftLeft > worldLeft)
+                {
+                    var leftSegWidth = shaftLeft - worldLeft;
+                    var leftSegCenter = (worldLeft + shaftLeft) * 0.5f;
+                    CreateQuad($"Floor Line L {floor}", floorLineColor, new Vector3(leftSegCenter, floorLineY, 0.05f), new Vector2(leftSegWidth, 0.05f), transform);
+                }
+
+                if (worldRight > shaftRight)
+                {
+                    var rightSegWidth = worldRight - shaftRight;
+                    var rightSegCenter = (shaftRight + worldRight) * 0.5f;
+                    CreateQuad($"Floor Line R {floor}", floorLineColor, new Vector3(rightSegCenter, floorLineY, 0.05f), new Vector2(rightSegWidth, 0.05f), transform);
                 }
 
                 _renderedFloorCount++;
+            }
+        }
+
+        private void EnsureRoomViews()
+        {
+            if (_simulationSession == null) return;
+            var topology = _simulationSession.Topology;
+
+            foreach (var room in topology.Rooms.Values)
+            {
+                if (_renderedRoomIds.Contains(room.Id)) continue;
+                _renderedRoomIds.Add(room.Id);
+
+                var contentTypeStr = room.ContentType.Value ?? "";
+                if (contentTypeStr.Equals("transit:elevator_shaft") || contentTypeStr.Equals("elevator_shaft"))
+                {
+                    continue; // shaft rendered via EnsureShaftViews
+                }
+
+                var worldLeft = -2.4f + room.Bounds.MinX * 0.5f;
+                var worldRight = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+                var width = worldRight - worldLeft;
+                var centerX = (worldLeft + worldRight) * 0.5f;
+                var y = FloorY(room.Floor);
+
+                var isResidential = contentTypeStr.StartsWith("residential") || contentTypeStr.StartsWith("room:apartment");
+                var isCommercial = contentTypeStr.StartsWith("commercial") || contentTypeStr.StartsWith("room:diner");
+                var isLobby = contentTypeStr.Contains("lobby");
+
+                if (isResidential)
+                {
+                    // 1. Cozy residential wallpaper backdrop (warm slate with strong contrast)
+                    CreateQuad($"Apt Bg {room.Id}", new Color(0.20f, 0.26f, 0.36f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
+
+                    // 2. Warm honey-oak flooring along bottom of room
+                    CreateQuad($"Apt Floor {room.Id}", new Color(0.42f, 0.30f, 0.20f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
+
+                    // 3. Molded ceiling trim along top
+                    CreateQuad($"Apt Ceiling {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(centerX, y + 0.68f, 0.65f), new Vector2(width - 0.06f, 0.06f), transform);
+
+                    // 4. Cozy illuminated window (domestic warm interior lamp glow)
+                    var isWestSide = centerX < -1.9f;
+                    var windowX = isWestSide ? (centerX - width * 0.18f) : (centerX + width * 0.18f);
+                    CreateQuad($"Apt Window Frame {room.Id}", new Color(0.28f, 0.36f, 0.48f), new Vector3(windowX, y + 0.12f, 0.55f), new Vector2(0.68f, 0.56f), transform);
+                    CreateQuad($"Apt Window Light {room.Id}", new Color(0.92f, 0.82f, 0.48f), new Vector3(windowX, y + 0.12f, 0.52f), new Vector2(0.60f, 0.48f), transform);
+                    CreateQuad($"Apt Window Mullion V {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(windowX, y + 0.12f, 0.50f), new Vector2(0.04f, 0.48f), transform);
+                    CreateQuad($"Apt Window Mullion H {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(windowX, y + 0.12f, 0.50f), new Vector2(0.60f, 0.04f), transform);
+
+                    // 5. Apartment entrance door (inner corridor side towards shaft)
+                    var doorX = isWestSide ? (worldRight - 0.32f) : (worldLeft + 0.32f);
+                    CreateQuad($"Apt Door Frame {room.Id}", new Color(0.35f, 0.25f, 0.18f), new Vector3(doorX, y - 0.30f, 0.55f), new Vector2(0.36f, 0.80f), transform);
+                    CreateQuad($"Apt Door Panel {room.Id}", new Color(0.24f, 0.17f, 0.13f), new Vector3(doorX, y - 0.30f, 0.52f), new Vector2(0.30f, 0.74f), transform);
+                    var knobOffset = isWestSide ? -0.10f : 0.10f;
+                    CreateQuad($"Apt Doorknob {room.Id}", new Color(0.95f, 0.82f, 0.35f), new Vector3(doorX + knobOffset, y - 0.34f, 0.48f), new Vector2(0.04f, 0.04f), transform);
+
+                    // 6. Apartment unit number plaque near door
+                    CreateQuad($"Apt Tag {room.Id}", new Color(0.30f, 0.42f, 0.56f), new Vector3(doorX, y + 0.25f, 0.50f), new Vector2(0.32f, 0.10f), transform);
+
+                    // 7. Structural dividing walls
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                }
+                else if (isCommercial)
+                {
+                    // Commercial Diner: warm terracotta bistro ambiance
+                    CreateQuad($"Diner Bg {room.Id}", new Color(0.28f, 0.19f, 0.14f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
+                    CreateQuad($"Diner Floor {room.Id}", new Color(0.42f, 0.30f, 0.22f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
+                    CreateQuad($"Diner Counter {room.Id}", new Color(0.62f, 0.40f, 0.26f), new Vector3(centerX - 0.3f, y - 0.45f, 0.55f), new Vector2(width * 0.45f, 0.32f), transform);
+                    CreateQuad($"Diner Awning {room.Id}", new Color(0.85f, 0.42f, 0.25f), new Vector3(centerX, y + 0.58f, 0.55f), new Vector2(1.3f, 0.16f), transform);
+
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                }
+                else if (isLobby)
+                {
+                    // Reception Lobby: expansive corporate navy with polished floor
+                    CreateQuad($"Lobby Bg {room.Id}", new Color(0.14f, 0.20f, 0.28f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
+                    CreateQuad($"Lobby Floor {room.Id}", new Color(0.35f, 0.45f, 0.55f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
+                    CreateQuad($"Lobby Desk {room.Id}", new Color(0.48f, 0.58f, 0.70f), new Vector3(centerX - 1.2f, y - 0.46f, 0.55f), new Vector2(1.2f, 0.30f), transform);
+
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                }
+                else
+                {
+                    // Generic room fallback
+                    CreateQuad($"Room {room.Id} ({contentTypeStr})", new Color(0.18f, 0.24f, 0.32f), new Vector3(centerX, y, 0.6f), new Vector2(width - 0.08f, 1.4f), transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
+                }
             }
         }
 
@@ -393,8 +635,8 @@ namespace OneRoof.Presentation.Tower
             while (_elevatorViews.Count < targetCount)
             {
                 var index = _elevatorViews.Count;
-                var x = targetCount == 1 ? -2.4f : (-2.85f + index * 0.9f);
-                var view = CreateQuad($"Elevator Car {index}", new Color(0.25f, 0.92f, 0.65f), new Vector3(x, FloorY(0), 0f), new Vector2(0.8f, 0.5f), transform);
+                var x = targetCount == 1 ? -1.9f : (-2.15f + index * 0.5f);
+                var view = CreateQuad($"Elevator Car {index}", new Color(0.25f, 0.92f, 0.65f), new Vector3(x, FloorY(0), 0f), new Vector2(0.48f, 0.5f), transform);
                 _elevatorViews.Add(view);
             }
         }
@@ -412,9 +654,12 @@ namespace OneRoof.Presentation.Tower
 
         private void RenderVisualSnapshot()
         {
+            EnsureShaftViews();
             EnsureFloorViews();
+            EnsureRoomViews();
             EnsureElevatorViews();
             EnsureResidentViews();
+            UpdateCamera();
 
             var snapshot = _simulationSession.Projection();
             var floorCount = Math.Max(InitialFloorCount, _simulationSession.Topology.FloorCount);
@@ -429,7 +674,7 @@ namespace OneRoof.Presentation.Tower
 
                 var elevator = snapshot.Elevators[i];
                 var targetY = FloorY(elevator.Floor);
-                var targetX = snapshot.Elevators.Count == 1 ? -2.4f : (-2.85f + i * 0.9f);
+                var targetX = snapshot.Elevators.Count == 1 ? -1.9f : (-2.15f + i * 0.5f);
 
                 var carTransform = _elevatorViews[i].transform;
                 carTransform.position = Vector3.Lerp(carTransform.position, new Vector3(targetX, targetY, 0f), 0.25f);
@@ -459,8 +704,8 @@ namespace OneRoof.Presentation.Tower
                 {
                     case TransitResidentStatus.Queued:
                     {
-                        var queueX = -1.2f + (queueIndex % 20) * 0.32f;
-                        var queueY = FloorY(0) - 0.45f + (queueIndex / 20) * 0.42f;
+                        var queueX = -0.8f + (queueIndex % 16) * 0.35f;
+                        var queueY = FloorY(0) - 0.35f + (queueIndex / 16) * 0.42f;
                         residentTransform.position = new Vector3(queueX, queueY, -0.2f);
                         SetRendererColor(_residentViews[i], new Color(1f, 0.65f, 0.25f)); // Amber waiting
                         queueIndex++;
@@ -469,10 +714,10 @@ namespace OneRoof.Presentation.Tower
                     case TransitResidentStatus.Riding:
                     {
                         // Inside elevator car
-                        var elevatorIndex = i % Math.Max(1, snapshot.Elevators.Count);
+                        var elevatorIndex = FindPassengerElevator(snapshot, resident.ResidentId);
                         var carY = FloorY(snapshot.Elevators[elevatorIndex].Floor);
-                        var carX = snapshot.Elevators.Count == 1 ? -2.4f : (-2.85f + elevatorIndex * 0.9f);
-                        residentTransform.position = new Vector3(carX + ((i % 4) - 1.5f) * 0.15f, carY, -0.3f);
+                        var carX = snapshot.Elevators.Count == 1 ? -1.9f : (-2.15f + elevatorIndex * 0.5f);
+                        residentTransform.position = new Vector3(carX + ((i % 2) - 0.5f) * 0.12f, carY, -0.3f);
                         SetRendererColor(_residentViews[i], new Color(0.25f, 0.85f, 1f)); // Cyan transit
                         break;
                     }
@@ -481,7 +726,7 @@ namespace OneRoof.Presentation.Tower
                         var destFloor = resident.DestinationFloor;
                         if (destFloor < 0 || destFloor >= floorCount) destFloor = 0;
                         var slot = arrivedCountsPerFloor[destFloor]++;
-                        var arrivedX = -0.8f + (slot % 16) * 0.42f;
+                        var arrivedX = -0.8f + (slot % 14) * 0.42f;
                         var arrivedY = FloorY(destFloor) - 0.35f;
                         residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
                         SetRendererColor(_residentViews[i], new Color(0.35f, 0.85f, 0.5f)); // Green arrived
@@ -491,8 +736,34 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
+        private static int FindPassengerElevator(TransitPrototypeProjection snapshot, int residentId)
+        {
+            for (var i = 0; i < snapshot.Elevators.Count; i++)
+            {
+                var ids = snapshot.Elevators[i].PassengerIds;
+                for (var j = 0; j < ids.Count; j++)
+                {
+                    if (ids[j] == residentId)
+                    {
+                        return i;
+                    }
+                }
+            }
+            return 0;
+        }
+
         private void OnGUI()
         {
+            if (_simulationSession == null)
+            {
+                Initialize();
+            }
+
+            if (_simulationSession == null || _modeSession == null)
+            {
+                return;
+            }
+
             EnsureStyles();
 
             var snapshot = _simulationSession.Projection();

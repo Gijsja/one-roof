@@ -166,19 +166,73 @@ namespace OneRoof.Application.Tower
                 return _cachedTransitProjection;
             }
 
+            // Index elevator bank passenger states for rush hour and transit visualization
+            var deliveredByPerson = new Dictionary<EntityId, ElevatorPassenger>(_simulation.ElevatorBank.DeliveredPassengers.Count);
+            foreach (var p in _simulation.ElevatorBank.DeliveredPassengers)
+            {
+                deliveredByPerson[p.PersonId] = p;
+            }
+
+            var ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
+            foreach (var car in _simulation.ElevatorBank.Cars)
+            {
+                foreach (var p in car.Passengers)
+                {
+                    ridingByPerson[p.PersonId] = p;
+                }
+            }
+
+            var queuedByPerson = new Dictionary<EntityId, ElevatorPassenger>();
+            foreach (var queue in _simulation.ElevatorBank.FloorQueues.Values)
+            {
+                foreach (var p in queue)
+                {
+                    queuedByPerson[p.PersonId] = p;
+                }
+            }
+
             var residents = new List<TransitResidentProjection>(_simulation.ResidentCount);
+            var arrivedCount = 0;
+
             foreach (var person in _simulation.Population.Persons)
             {
-                var spatial = _simulation.GetResidentPosition(person.Id);
-                var status = spatial.Activity == ActivityKind.Commuting
-                    ? TransitResidentStatus.Riding
-                    : (spatial.Activity == ActivityKind.Working || spatial.Activity == ActivityKind.Eating || spatial.Activity == ActivityKind.Sleeping
-                        ? TransitResidentStatus.Arrived
-                        : TransitResidentStatus.Queued);
+                TransitResidentStatus status;
+                int targetFloor;
+
+                if (deliveredByPerson.TryGetValue(person.Id, out var delivered))
+                {
+                    status = TransitResidentStatus.Arrived;
+                    targetFloor = delivered.DestinationFloor;
+                }
+                else if (ridingByPerson.TryGetValue(person.Id, out var riding))
+                {
+                    status = TransitResidentStatus.Riding;
+                    targetFloor = riding.DestinationFloor;
+                }
+                else if (queuedByPerson.TryGetValue(person.Id, out var queued))
+                {
+                    status = TransitResidentStatus.Queued;
+                    targetFloor = queued.DestinationFloor;
+                }
+                else
+                {
+                    var spatial = _simulation.GetResidentPosition(person.Id);
+                    status = spatial.Activity == ActivityKind.Commuting
+                        ? TransitResidentStatus.Riding
+                        : (spatial.Activity == ActivityKind.Working || spatial.Activity == ActivityKind.Eating || spatial.Activity == ActivityKind.Sleeping
+                            ? TransitResidentStatus.Arrived
+                            : TransitResidentStatus.Queued);
+                    targetFloor = spatial.Floor;
+                }
+
+                if (status == TransitResidentStatus.Arrived)
+                {
+                    arrivedCount++;
+                }
 
                 residents.Add(new TransitResidentProjection(
                     person.Id.Value,
-                    spatial.Floor,
+                    targetFloor,
                     status));
             }
 
@@ -202,7 +256,7 @@ namespace OneRoof.Application.Tower
             _cachedTransitProjection = new TransitPrototypeProjection(
                 _simulation.CurrentTick,
                 _simulation.TotalQueuedElevatorPassengers,
-                _simulation.ResidentCount - _simulation.ActiveTripCount,
+                arrivedCount,
                 _simulation.AverageElevatorWaitTicks,
                 residents,
                 elevators);

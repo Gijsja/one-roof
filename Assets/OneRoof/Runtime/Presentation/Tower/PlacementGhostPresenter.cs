@@ -98,14 +98,22 @@ namespace OneRoof.Presentation.Tower
             _ghostMaterial = CreateGhostMaterial();
             _colorBlock = new MaterialPropertyBlock();
 
-            _ghostObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            _ghostObject.name = "PlacementGhost";
-            _ghostObject.transform.SetParent(transform, false);
-
-            var col = _ghostObject.GetComponent<Collider>();
-            if (col != null)
+            var existing = transform.Find("PlacementGhost");
+            if (existing != null)
             {
-                DestroyImmediate(col);
+                _ghostObject = existing.gameObject;
+            }
+            else
+            {
+                _ghostObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                _ghostObject.name = "PlacementGhost";
+                _ghostObject.transform.SetParent(transform, false);
+
+                var col = _ghostObject.GetComponent<Collider>();
+                if (col != null)
+                {
+                    DestroyImmediate(col);
+                }
             }
 
             _ghostRenderer = _ghostObject.GetComponent<MeshRenderer>();
@@ -130,6 +138,11 @@ namespace OneRoof.Presentation.Tower
             {
                 mat.SetFloat("_Surface", 1); // Transparent in URP
             }
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             return mat;
         }
     }
