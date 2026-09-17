@@ -21,12 +21,14 @@ graph TD
     M4 --> M51["M5.1: Dynamic Building & Expansion (DONE)"]
     M51 --> M52["M5.2: Sliced Architecture, Camera & Anchors (DONE)"]
     M52 --> M53["M5.3: Shaders, Props & Room Living (ACTIVE)"]
-    M53 --> M54["M5.4: Anchor Docking & Inspection Depth (NEXT)"]
+    M53 --> M53a["M5.3a: Architecture Deepening (READY)"]
+    M53a --> M54["M5.4: Anchor Docking & Inspection Depth"]
     M54 --> M6["M6: Resident Psychology, Needs & Spine 2D"]
     M6 --> M7["M7: Commercial Leases, Businesses & Services"]
     M7 --> M8["M8: Physical Utilities (Power, Water, Waste, Maintenance)"]
     M8 --> M9["M9: Social Networks, Factions & Policy Decrees"]
     M9 --> M10["M10: 30-Floor Scale, Blueprints & Beta Exit (City Status)"]
+    style M53a fill:#065f46,color:#fff,stroke:#065f46
 ```
 
 ---
@@ -90,6 +92,164 @@ graph TD
 - [ ] **`OR-520`**: Elevator congestion and resident agitation visual shader aura on doors and waiting commuters when wait times exceed thresholds.
 
 **Exit Criteria:** All 16 props furnished, holographic ghost and shader outlines operational, zero primitives in scene, residents live inside rooms and walk transit legs, and tests pass cleanly.
+
+---
+
+### M5.3a — Architecture Deepening *(READY)*
+**Goal:** Reduce accumulated architectural friction before shader tasks (OR-518/519/520) add more code to the hottest modules. Each task deepens a shallow module, removes a leaky interface, or deletes an unjustified seam — improving testability, locality, and leverage for all subsequent milestones.
+
+> **Sequencing rationale:** OR-518/519/520 all touch `TowerPlayableController.cs` (the project's hottest file at 8 changes, 1100+ lines). Splitting the God Presenter *before* those tasks prevents piling more concerns into a shallow module and gives each shader task a clean, focused presenter to target. The remaining deepenings (CanExecute, serialization, queue encapsulation) prepare the Domain and Application layers for M6+ scale.
+
+#### ARCH-001 — Delete the parallel prototype simulation *(DONE · Strong · Deletion candidate)*
+
+**Files:** `TransitPrototypeSession.cs`, `TransitPrototypeSimulation.cs`, `TowerSimulationSession.cs`
+**Problem:** Unjustified seam — two parallel simulations with redundant projection mappings risk silent divergence.
+**Deepening:** Delete `TransitPrototypeSimulation` and `TransitPrototypeSession`. `TowerSimulationSession` becomes the single deep module. `Testbed_Transit` scene loads the real `TowerSimulation` with `FiftyResidentFixture`.
+
+<details>
+<summary><strong>🤖 Agent Instructions — ARCH-001</strong></summary>
+
+**Task ID:** `ARCH-001`
+**Acceptance:** `TransitPrototypeSimulation.cs` and `TransitPrototypeSession.cs` deleted; `Testbed_Transit` scene uses `TowerSimulationSession` with `FiftyResidentFixture`; all 173+ tests pass; no projection code duplicated across sessions.
+
+1. Read `Docs/02_ARCHITECTURE.md`, `Docs/03_DATA_CONTRACTS.md`, and `Handoffs/Active/` for context.
+2. Read `TransitPrototypeSimulation.cs` and `TransitPrototypeSession.cs` fully. Identify every projection, data contract, and scene reference they own.
+3. Read `TowerSimulationSession.cs` fully. Verify it already produces equivalent projections (`TransitPrototypeProjection` or its replacement). If any projection mapping exists only in the prototype, migrate it into `TowerSimulationSession`.
+4. Search for all references to `TransitPrototypeSession` and `TransitPrototypeSimulation` across the codebase: `grep -rn "TransitPrototype" Assets/`.
+5. Update `Testbed_Transit` scene composition (or its bootstrap script) to instantiate `TowerSimulationSession` using `FiftyResidentFixture` instead of the prototype session.
+6. Update or delete any tests in `Assets/OneRoof/Tests/` that reference the prototype. Replace with equivalent tests against `TowerSimulationSession`.
+7. Delete `TransitPrototypeSimulation.cs`, `TransitPrototypeSession.cs`, and their `.meta` files.
+8. Compile: `unity -projectPath . -batchmode -nographics -logFile - -quit` or use the unity-pipeline skill's recompile loop.
+9. Run all tests: EditMode and PlayMode. All 173+ must pass.
+10. Record ADR-036 in `Docs/07_DECISION_LOG.md`: "Delete TransitPrototypeSimulation; TowerSimulationSession is the single session module."
+11. Create handoff: `Handoffs/Active/ARCH-001_delete-prototype-simulation.md`.
+</details>
+
+#### ARCH-002 — Deepen the God Presenter: split TowerPlayableController *(Strong · Highest churn)*
+
+**Files:** `TowerPlayableController.cs` (1100+ lines, 8 changes — hottest file)
+**Problem:** Shallow module mixing UI lifecycle, domain init, input dispatch, floor slab quads, elevator shaft geometry, room rendering, NPC sync, and overlay toggling. Terrible locality.
+**Deepening:** Extract four cohesive deep presenters (`TowerStructurePresenter`, `ElevatorBankPresenter`, `RoomPresenter`, `NpcPopulationPresenter`). Reduce `TowerPlayableController` to an ~80-line adapter routing `Projection` snapshots to sub-presenters.
+
+> **Conflict note:** OR-518 (outline shader), OR-519 (dissolve shader), and OR-520 (agitation aura) must target the *new* split presenters, not the monolith. Complete ARCH-002 before starting those tasks.
+
+<details>
+<summary><strong>🤖 Agent Instructions — ARCH-002</strong></summary>
+
+**Task ID:** `ARCH-002`
+**Depends on:** `ARCH-001`
+**Acceptance:** `TowerPlayableController.cs` is ≤150 lines; four new presenter files exist in `Presentation/Tower/`; each presenter has EditMode tests; all 173+ tests pass; OR-518/519/520 dependency updated to target new presenters.
+
+1. Read `TowerPlayableController.cs` fully. Map every responsibility to one of four categories: (a) structural tower geometry (slabs, columns, floor lines), (b) elevator shaft visuals (shaft quads, rails, car sprites, queue indicators), (c) room visuals (apartment/diner/office backdrops, doors, windows), (d) NPC population sync (sprite pooling, emote bubbles, position updates).
+2. For each category, create a new presenter class in `Assets/OneRoof/Runtime/Presentation/Tower/`:
+   - `TowerStructurePresenter.cs` — owns floor slab quad generation, column rendering, baseline lines.
+   - `ElevatorBankPresenter.cs` — owns shaft geometry, car sprites, rail lines, queue indicators.
+   - `RoomPresenter.cs` — owns room backdrop instantiation, door/window fixtures, demolish visuals.
+   - Keep `NpcPopulationPresenter.cs` (already exists or consolidate with `NpcView` pool logic).
+3. Define a shared interface contract: each presenter receives the relevant slice of `TowerSimulationSession.Projection()` and a parent `Transform`. Presenters manage their own child GameObjects.
+4. Refactor `TowerPlayableController` to:
+   - Retain only `OnEnable`/`OnDisable` lifecycle, `Update` tick dispatch, and input routing.
+   - Instantiate the four presenters in `OnEnable`, passing projection slices each frame.
+   - Remove all inline `CreateQuad`, `FloorY()`, color constants, and mesh generation.
+5. Write EditMode tests for each new presenter using mock/stub projections (no scene load required).
+6. Update `TowerPlayableControllerTests.cs` to test only orchestration, not rendering internals.
+7. Compile and run full test suite. All must pass.
+8. Update the BACKLOG.md entries for OR-518, OR-519, OR-520 to reference the specific presenter they should target (e.g., OR-520 targets `ElevatorBankPresenter` + `NpcPopulationPresenter`).
+9. Create handoff: `Handoffs/Active/ARCH-002_split-god-presenter.md`.
+</details>
+
+#### ARCH-003 — Lift placement validation behind Domain CanExecute seam *(Strong · Ports & adapters)*
+
+**Files:** `GridPlacementController.cs`, `TowerSimulation.cs`, `BuildingTopologyState.cs`
+**Problem:** Presentation duplicates Domain placement rules (CanAfford, FloorSlab exists, room overlap) to tint the preview ghost — a leaky interface.
+**Deepening:** Domain exposes `CanExecute(ICommand) → CommandResult { bool Ok, string Reason }`. Presentation queries the domain; one source of truth. Refines ADR-029.
+
+<details>
+<summary><strong>🤖 Agent Instructions — ARCH-003</strong></summary>
+
+**Task ID:** `ARCH-003`
+**Depends on:** `ARCH-001`
+**Acceptance:** `TowerSimulation.CanExecute()` exists; `GridPlacementController` contains zero domain validation logic; all placement ghost tests verify through `CanExecute`; all 173+ tests pass.
+
+1. Read `GridPlacementController.cs` fully. Extract every validation check in `ValidatePlacement()` (or equivalent): affordability, slab existence, room overlap, boundary checks.
+2. Read `TowerSimulation.cs` and locate the command execution methods (`ExecuteCommand`, `BuildFloorSlab`, etc.). Note which validation checks are already performed there.
+3. Define `CommandResult` as a plain C# record in `Domain/Commands/`:
+   ```csharp
+   public readonly struct CommandResult
+   {
+       public bool Ok { get; }
+       public string Reason { get; }
+       // factory methods: CommandResult.Success(), CommandResult.Fail(reason)
+   }
+   ```
+4. Add `public CommandResult CanExecute(ICommand command)` to `TowerSimulation`. This must perform all validation *without* mutating state. Factor out the validation from the existing `Execute` path so both `CanExecute` and `Execute` share the same validation logic (DRY).
+5. Update `GridPlacementController` to call `session.Simulation.CanExecute(cmd)` and use `result.Ok` for ghost color and `result.Reason` for tooltip text. Delete all inline validation code.
+6. Write EditMode domain tests for `CanExecute`: test each failure reason (no slab, overlap, can't afford, boundary) and success case.
+7. Update `GridPlacementControllerTests` to verify it calls `CanExecute` and responds to `Ok`/`Reason`.
+8. Compile and run full test suite.
+9. Record ADR-037: "Domain CanExecute seam replaces duplicated placement validation in Presentation. Refines ADR-029."
+10. Create handoff: `Handoffs/Active/ARCH-003_can-execute-seam.md`.
+</details>
+
+#### ARCH-004 — Push serialization formatting into aggregates *(Worth exploring)*
+
+**Files:** `TowerSimulation.cs`, `BuildingTopologyState.cs`, `PopulationState.cs`, `EconomyState.cs`
+**Problem:** `TowerSimulation.ExportSaveData()` manually maps every sub-aggregate into save arrays — the domain root is burdened with formatting its children's internals. Leaky interface, poor locality.
+**Deepening:** Each aggregate owns `ToSaveData()` / `FromSaveData()`. `TowerSimulation` orchestrates assembly but does not translate field-by-field.
+
+<details>
+<summary><strong>🤖 Agent Instructions — ARCH-004</strong></summary>
+
+**Task ID:** `ARCH-004`
+**Depends on:** `ARCH-001`
+**Acceptance:** Each aggregate (`BuildingTopologyState`, `PopulationState`, `EconomyState`, `TransitExecutionSystem`) has its own `ToSaveData()` / `FromSaveData()` round-trip; `TowerSimulation.ExportSaveData()` delegates to aggregates; save/load tests pass including golden acceptance.
+
+1. Read `TowerSimulation.ExportSaveData()` and `RestoreFromSaveData()` fully. Catalog every field mapping grouped by sub-aggregate.
+2. For each aggregate, define a matching save data record in `Domain/Persistence/` (e.g., `TopologySaveData`, `PopulationSaveData`, `EconomySaveData`).
+3. Add `ToSaveData()` and `static FromSaveData()` methods to each aggregate class, moving the field-by-field mapping out of `TowerSimulation`.
+4. Refactor `TowerSimulation.ExportSaveData()` to call each aggregate's `ToSaveData()` and compose them into `TowerSaveData`. The method should be ~10–15 lines of orchestration.
+5. Refactor `TowerSimulation.RestoreFromSaveData()` symmetrically.
+6. Write per-aggregate EditMode round-trip tests: create aggregate → `ToSaveData()` → `FromSaveData()` → assert equality.
+7. Verify existing `JsonSaveSerializerTests` and `GoldenExpansionAcceptanceTests` still pass (they exercise the full pipeline).
+8. Compile and run full test suite.
+9. Create handoff: `Handoffs/Active/ARCH-004_aggregate-serialization.md`.
+</details>
+
+#### ARCH-005 — Encapsulate ElevatorBank queue internals behind Snapshot *(Worth exploring)*
+
+**Files:** `ElevatorBank.cs`, `TowerSimulationSession.cs`
+**Problem:** `ElevatorBank` exposes raw `IReadOnlyDictionary<int, Queue<ElevatorPassenger>> FloorQueues` — a leaky interface forcing the Application layer to iterate internal data structures.
+**Deepening:** `ElevatorBank` provides an `ElevatorBankSnapshot Snapshot()` method encapsulating queue state. Internal data structures can evolve (e.g., priority queues) without breaking Application.
+
+<details>
+<summary><strong>🤖 Agent Instructions — ARCH-005</strong></summary>
+
+**Task ID:** `ARCH-005`
+**Depends on:** `ARCH-001`
+**Acceptance:** `ElevatorBank.FloorQueues` and `DeliveredPassengers` are no longer publicly exposed; `ElevatorBank.Snapshot()` returns an `ElevatorBankSnapshot`; `TowerSimulationSession` builds projections from snapshot; all tests pass.
+
+1. Read `ElevatorBank.cs` fully. Identify all public properties that expose internal collections: `FloorQueues`, `DeliveredPassengers`, `Cars`, and any other raw state.
+2. Read `TowerSimulationSession.cs` to find every place it accesses these properties to build projections.
+3. Define `ElevatorBankSnapshot` as an immutable record in `Domain/Transit/`:
+   ```csharp
+   public readonly struct ElevatorBankSnapshot
+   {
+       // Per-floor queue counts and passenger IDs
+       // Per-car state (floor, direction, passenger list)
+       // Delivered passenger list
+       // Total waiting count, total delivered count
+   }
+   ```
+4. Add `public ElevatorBankSnapshot Snapshot()` to `ElevatorBank` that constructs the snapshot from internal state.
+5. Change `FloorQueues` and `DeliveredPassengers` visibility from `public` to `internal` (domain-internal access for transit execution).
+6. Update `TowerSimulationSession` to call `bank.Snapshot()` and build projections from the snapshot instead of iterating raw queues.
+7. Update `ElevatorBankTests` to test through `Snapshot()` where they previously inspected raw queues. Keep internal-access tests for transit execution logic.
+8. Update `TransitCongestionProjectionTests` if they access raw queues.
+9. Compile and run full test suite.
+10. Create handoff: `Handoffs/Active/ARCH-005_elevator-snapshot.md`.
+</details>
+
+**Exit Criteria:** Prototype simulation deleted; God Presenter split into four deep presenters; placement validation lives behind `CanExecute`; aggregate serialization is self-contained; `ElevatorBank` internals hidden behind `Snapshot()`. All tests pass. No new Unity warnings.
 
 ---
 

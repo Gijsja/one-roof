@@ -18,7 +18,7 @@ namespace OneRoof.Application.Tower
     public sealed class TowerSimulationSession
     {
         private TowerSimulation _simulation;
-        private TransitPrototypeProjection _cachedTransitProjection;
+        private TowerProjection _cachedTransitProjection;
         private long _cachedTick = -1;
 
         public TowerSimulationSession(TowerSimulation simulation = null)
@@ -157,9 +157,9 @@ namespace OneRoof.Application.Tower
                 elevProjections);
         }
 
-        public TransitPrototypeProjection Projection() => TransitProjection();
+        public TowerProjection Projection() => TransitProjection();
 
-        public TransitPrototypeProjection TransitProjection()
+        public TowerProjection TransitProjection()
         {
             if (_cachedTransitProjection != null && _cachedTick == _simulation.CurrentTick)
             {
@@ -279,7 +279,7 @@ namespace OneRoof.Application.Tower
                     passengerIds));
             }
 
-            _cachedTransitProjection = new TransitPrototypeProjection(
+            _cachedTransitProjection = new TowerProjection(
                 _simulation.CurrentTick,
                 _simulation.TotalQueuedElevatorPassengers,
                 arrivedCount,

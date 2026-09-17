@@ -918,7 +918,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private static int FindPassengerElevator(TransitPrototypeProjection snapshot, int residentId)
+        private static int FindPassengerElevator(TowerProjection snapshot, int residentId)
         {
             for (var i = 0; i < snapshot.Elevators.Count; i++)
             {
