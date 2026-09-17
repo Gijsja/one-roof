@@ -134,5 +134,24 @@ namespace OneRoof.Domain.Economy
             AddRevenue(totalRent);
             return totalRent;
         }
+
+        // ── Serialization ──────────────────────────────────────────────────────
+
+        public OneRoof.Domain.Persistence.EconomySaveData ToSaveData()
+        {
+            return new OneRoof.Domain.Persistence.EconomySaveData
+            {
+                cashBalance = CashBalance,
+                sandboxMode = SandboxMode,
+                totalRevenue = TotalRevenue,
+                totalExpenses = TotalExpenses
+            };
+        }
+
+        public static TowerEconomyState FromSaveData(OneRoof.Domain.Persistence.EconomySaveData data)
+        {
+            if (data == null) return new TowerEconomyState();
+            return new TowerEconomyState(data.cashBalance, data.sandboxMode, data.totalRevenue, data.totalExpenses);
+        }
     }
 }

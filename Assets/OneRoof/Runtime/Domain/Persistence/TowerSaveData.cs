@@ -26,6 +26,51 @@ namespace OneRoof.Domain.Persistence
 
         public ElevatorBankSaveData elevatorBank;
         public ActiveTripSaveData[] activeTrips;
+
+        public TopologySaveData GetTopologySaveData() => new TopologySaveData
+        {
+            floorSlabs = floorSlabs,
+            rooms = rooms,
+            portals = portals
+        };
+
+        public void SetTopologySaveData(TopologySaveData top)
+        {
+            floorSlabs = top?.floorSlabs;
+            rooms = top?.rooms;
+            portals = top?.portals;
+        }
+
+        public PopulationSaveData GetPopulationSaveData() => new PopulationSaveData
+        {
+            households = households,
+            persons = persons
+        };
+
+        public void SetPopulationSaveData(PopulationSaveData pop)
+        {
+            households = pop?.households;
+            persons = pop?.persons;
+        }
+
+        public EconomySaveData GetEconomySaveData() => new EconomySaveData
+        {
+            cashBalance = cashBalance,
+            sandboxMode = sandboxMode,
+            totalRevenue = totalRevenue,
+            totalExpenses = totalExpenses
+        };
+
+        public void SetEconomySaveData(EconomySaveData econ)
+        {
+            if (econ != null)
+            {
+                cashBalance = econ.cashBalance;
+                sandboxMode = econ.sandboxMode;
+                totalRevenue = econ.totalRevenue;
+                totalExpenses = econ.totalExpenses;
+            }
+        }
     }
 
     [Serializable]

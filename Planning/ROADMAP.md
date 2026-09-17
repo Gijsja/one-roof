@@ -191,7 +191,7 @@ graph TD
 10. Create handoff: `Handoffs/Active/ARCH-003_can-execute-seam.md`.
 </details>
 
-#### ARCH-004 — Push serialization formatting into aggregates *(Worth exploring)*
+#### ARCH-004 — Push serialization formatting into aggregates *(DONE · Worth exploring)*
 
 **Files:** `TowerSimulation.cs`, `BuildingTopologyState.cs`, `PopulationState.cs`, `EconomyState.cs`
 **Problem:** `TowerSimulation.ExportSaveData()` manually maps every sub-aggregate into save arrays — the domain root is burdened with formatting its children's internals. Leaky interface, poor locality.

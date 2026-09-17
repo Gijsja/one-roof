@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
@@ -117,6 +118,77 @@ namespace OneRoof.Domain.Transit
         {
             _activeTrips.Clear();
             _activeTripsByPerson.Clear();
+        }
+
+        // ── Serialization ──────────────────────────────────────────────────────
+
+        public ActiveTripSaveData[] ToSaveData()
+        {
+            var tripList = new List<ActiveTripSaveData>(_activeTrips.Count);
+            foreach (var exec in _activeTrips)
+            {
+                tripList.Add(new ActiveTripSaveData
+                {
+                    tripId = exec.Trip.Id.Value,
+                    personId = exec.Trip.PersonId.Value,
+                    originRoomId = exec.Trip.OriginRoomId.Value,
+                    destinationRoomId = exec.Trip.DestinationRoomId.Value,
+                    purpose = (int)exec.Trip.Purpose,
+                    departureTick = exec.Trip.DepartureTick.Value,
+                    state = (int)exec.Trip.State,
+                    waitTicks = exec.Trip.WaitTicks,
+                    currentLegIndex = exec.CurrentLegIndex,
+                    legRemainingTicks = exec.LegRemainingTicks,
+                    isQueuedInElevator = exec.IsQueuedInElevator,
+                    isRidingElevator = exec.IsRidingElevator,
+                    currentFloor = exec.CurrentFloor,
+                    currentX = exec.CurrentX
+                });
+            }
+
+            return tripList.ToArray();
+        }
+
+        public void RestoreFromSaveData(ActiveTripSaveData[] data, BuildingTopologyState topology, TransitRoutePlanner planner)
+        {
+            ClearActiveTrips();
+            if (data == null) return;
+
+            foreach (var t in data)
+            {
+                var originNode = topology?.TransitGraph?.GetPortalNodeForRoom(new EntityId(t.originRoomId));
+                var destNode = topology?.TransitGraph?.GetPortalNodeForRoom(new EntityId(t.destinationRoomId));
+                TransitRoute route = null;
+                if (originNode != null && destNode != null && t.originRoomId != t.destinationRoomId && planner != null)
+                {
+                    route = planner.FindRoute(originNode.Id, destNode.Id);
+                }
+
+                var trip = new TripRecord(
+                    new EntityId(t.tripId),
+                    new EntityId(t.personId),
+                    new EntityId(t.originRoomId),
+                    new EntityId(t.destinationRoomId),
+                    (TripPurpose)t.purpose,
+                    new Tick(t.departureTick),
+                    route);
+
+                if (t.state == (int)TripState.InProgress)
+                {
+                    trip.Begin();
+                }
+
+                trip.AddWaitTicks(t.waitTicks);
+
+                RestoreTripExecution(
+                    trip,
+                    t.currentLegIndex,
+                    t.legRemainingTicks,
+                    t.isQueuedInElevator,
+                    t.isRidingElevator,
+                    t.currentFloor,
+                    t.currentX);
+            }
         }
 
         public void SubmitTrip(TripRecord trip, BuildingTopologyState topology, Tick currentTick, PopulationState population)

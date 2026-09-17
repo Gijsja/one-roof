@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Time;
 
 namespace OneRoof.Domain.Transit
@@ -336,6 +337,136 @@ namespace OneRoof.Domain.Transit
             {
                 car.RequestFloor(nearestFloor);
             }
+        }
+
+        // ── Serialization ──────────────────────────────────────────────────────
+
+        public ElevatorBankSaveData ToSaveData()
+        {
+            var carSaveList = new List<ElevatorCarSaveData>(_cars.Count);
+            foreach (var car in _cars)
+            {
+                var riderList = new List<ElevatorPassengerSaveData>(car.Passengers.Count);
+                foreach (var rider in car.Passengers)
+                {
+                    riderList.Add(new ElevatorPassengerSaveData
+                    {
+                        personId = rider.PersonId.Value,
+                        originFloor = rider.OriginFloor,
+                        destinationFloor = rider.DestinationFloor,
+                        waitTicks = rider.WaitTicks,
+                        rideTicks = rider.RideTicks
+                    });
+                }
+
+                carSaveList.Add(new ElevatorCarSaveData
+                {
+                    id = car.Id.Value,
+                    currentFloor = car.CurrentFloor,
+                    capacity = car.Capacity,
+                    phase = (int)car.Phase,
+                    direction = (int)car.Direction,
+                    timerTicksRemaining = car.TimerTicksRemaining,
+                    passengers = riderList.ToArray()
+                });
+            }
+
+            var queuedPassengerList = new List<ElevatorPassengerSaveData>();
+            foreach (var queue in _floorQueues.Values)
+            {
+                foreach (var p in queue)
+                {
+                    queuedPassengerList.Add(new ElevatorPassengerSaveData
+                    {
+                        personId = p.PersonId.Value,
+                        originFloor = p.OriginFloor,
+                        destinationFloor = p.DestinationFloor,
+                        waitTicks = p.WaitTicks,
+                        rideTicks = p.RideTicks
+                    });
+                }
+            }
+
+            var deliveredPassengerList = new List<ElevatorPassengerSaveData>(_deliveredPassengers.Count);
+            foreach (var p in _deliveredPassengers)
+            {
+                deliveredPassengerList.Add(new ElevatorPassengerSaveData
+                {
+                    personId = p.PersonId.Value,
+                    originFloor = p.OriginFloor,
+                    destinationFloor = p.DestinationFloor,
+                    waitTicks = p.WaitTicks,
+                    rideTicks = p.RideTicks
+                });
+            }
+
+            return new ElevatorBankSaveData
+            {
+                minFloor = MinFloor,
+                maxFloor = MaxFloor,
+                cars = carSaveList.ToArray(),
+                queuedPassengers = queuedPassengerList.ToArray(),
+                deliveredPassengers = deliveredPassengerList.ToArray()
+            };
+        }
+
+        public static ElevatorBank FromSaveData(ElevatorBankSaveData data)
+        {
+            var cars = new List<ElevatorCar>();
+            if (data?.cars != null)
+            {
+                foreach (var c in data.cars)
+                {
+                    var car = new ElevatorCar(new EntityId(c.id), c.currentFloor, c.capacity);
+                    var riders = new List<ElevatorPassenger>();
+                    if (c.passengers != null)
+                    {
+                        foreach (var riderData in c.passengers)
+                        {
+                            riders.Add(new ElevatorPassenger(new EntityId(riderData.personId), riderData.originFloor, riderData.destinationFloor)
+                            {
+                                WaitTicks = riderData.waitTicks,
+                                RideTicks = riderData.rideTicks
+                            });
+                        }
+                    }
+
+                    car.RestoreState(c.currentFloor, (ElevatorCarPhase)c.phase, (ElevatorDirection)c.direction, c.timerTicksRemaining, riders);
+                    cars.Add(car);
+                }
+            }
+
+            var minFloor = data?.minFloor ?? 0;
+            var maxFloor = data?.maxFloor ?? 4;
+            var elevatorBank = new ElevatorBank(minFloor, maxFloor, cars);
+
+            if (data?.queuedPassengers != null)
+            {
+                foreach (var qp in data.queuedPassengers)
+                {
+                    elevatorBank.EnqueuePassenger(new ElevatorPassenger(new EntityId(qp.personId), qp.originFloor, qp.destinationFloor)
+                    {
+                        WaitTicks = qp.waitTicks,
+                        RideTicks = qp.rideTicks
+                    });
+                }
+            }
+
+            if (data?.deliveredPassengers != null)
+            {
+                var delivered = new List<ElevatorPassenger>(data.deliveredPassengers.Length);
+                foreach (var dp in data.deliveredPassengers)
+                {
+                    delivered.Add(new ElevatorPassenger(new EntityId(dp.personId), dp.originFloor, dp.destinationFloor)
+                    {
+                        WaitTicks = dp.waitTicks,
+                        RideTicks = dp.rideTicks
+                    });
+                }
+                elevatorBank.RestoreDeliveredPassengers(delivered);
+            }
+
+            return elevatorBank;
         }
     }
 }

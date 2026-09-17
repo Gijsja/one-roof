@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
+using OneRoof.Domain.Randomness;
 
 namespace OneRoof.Domain.Population
 {
@@ -124,5 +126,108 @@ namespace OneRoof.Domain.Population
 
         public bool TryGetHousehold(EntityId id, out HouseholdRecord household) =>
             _households.TryGetValue(id, out household);
+
+        // ── Serialization ──────────────────────────────────────────────────────
+
+        public PopulationSaveData ToSaveData()
+        {
+            var householdList = new List<HouseholdSaveData>(_householdList.Count);
+            foreach (var h in _householdList)
+            {
+                var mIds = new int[h.MemberIds.Count];
+                for (var i = 0; i < h.MemberIds.Count; i++) mIds[i] = h.MemberIds[i].Value;
+
+                householdList.Add(new HouseholdSaveData
+                {
+                    id = h.Id.Value,
+                    homeRoomId = h.HomeRoomId.Value,
+                    memberIds = mIds,
+                    budget = h.Budget,
+                    satisfaction = h.Satisfaction
+                });
+            }
+
+            var personList = new List<PersonSaveData>(_personList.Count);
+            foreach (var p in _personList)
+            {
+                float hunger = 1f, rest = 1f, social = 1f;
+                foreach (var need in p.Needs)
+                {
+                    if (need.Kind == NeedKind.Hunger) hunger = need.Satisfaction;
+                    else if (need.Kind == NeedKind.Rest) rest = need.Satisfaction;
+                    else if (need.Kind == NeedKind.Social) social = need.Satisfaction;
+                }
+
+                personList.Add(new PersonSaveData
+                {
+                    id = p.Id.Value,
+                    householdId = p.HouseholdId.Value,
+                    homeRoomId = p.HomeRoomId.Value,
+                    workplaceRoomId = p.WorkplaceRoomId.Value,
+                    currentRoomId = p.CurrentRoomId.Value,
+                    currentActivity = (int)p.CurrentActivity,
+                    trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
+                    hungerSatisfaction = hunger,
+                    restSatisfaction = rest,
+                    socialSatisfaction = social
+                });
+            }
+
+            return new PopulationSaveData
+            {
+                households = householdList.ToArray(),
+                persons = personList.ToArray()
+            };
+        }
+
+        public static PopulationState FromSaveData(PopulationSaveData data, IRandomStream randomStream = null)
+        {
+            var households = new List<HouseholdRecord>();
+            if (data?.households != null)
+            {
+                foreach (var h in data.households)
+                {
+                    var mList = new List<EntityId>();
+                    if (h.memberIds != null)
+                    {
+                        foreach (var mid in h.memberIds) mList.Add(new EntityId(mid));
+                    }
+                    households.Add(new HouseholdRecord(new EntityId(h.id), mList, new EntityId(h.homeRoomId), h.budget, h.satisfaction));
+                }
+            }
+
+            var persons = new List<PersonRecord>();
+            if (data?.persons != null)
+            {
+                var rng = randomStream ?? new DeterministicRandomStream(1337);
+                foreach (var p in data.persons)
+                {
+                    var traitKind = Enum.IsDefined(typeof(PersonTraitKind), p.trait) ? (PersonTraitKind)p.trait : PersonTraitKind.EarlyBird;
+                    var trait = new PersonTrait(traitKind);
+                    var schedule = DailySchedule.Standard(trait, rng);
+                    var needs = new[]
+                    {
+                        new NeedState(NeedKind.Hunger, p.hungerSatisfaction),
+                        new NeedState(NeedKind.Rest, p.restSatisfaction),
+                        new NeedState(NeedKind.Social, p.socialSatisfaction)
+                    };
+                    var traits = new[] { trait };
+                    var person = new PersonRecord(
+                        new EntityId(p.id),
+                        new EntityId(p.householdId),
+                        new EntityId(p.homeRoomId),
+                        new EntityId(p.workplaceRoomId),
+                        schedule,
+                        needs,
+                        traits);
+
+                    person.UpdateLocation(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId));
+                    person.UpdateActivity((ActivityKind)p.currentActivity);
+                    persons.Add(person);
+                }
+            }
+
+            return new PopulationState(persons, households);
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using OneRoof.Domain.Commands;
 using OneRoof.Domain.Events;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
 
@@ -554,6 +555,103 @@ namespace OneRoof.Domain.Topology
         public static BuildingTopologyState CreateWithFixture()
         {
             return FromBuildingTopology(FiveFloorTopologyFixture.Create());
+        }
+
+        // ── Serialization ──────────────────────────────────────────────────────
+
+        public TopologySaveData ToSaveData()
+        {
+            var slabList = new List<FloorSlabSaveData>(_floorSlabs.Count);
+            foreach (var slab in _floorSlabs.Values)
+            {
+                slabList.Add(new FloorSlabSaveData
+                {
+                    floorLevel = slab.Floor,
+                    minX = slab.MinX,
+                    maxX = slab.MaxX
+                });
+            }
+
+            var roomList = new List<RoomSaveData>(_roomsById.Count);
+            foreach (var room in _roomsById.Values)
+            {
+                var pIds = new int[room.PortalIds.Count];
+                for (var i = 0; i < room.PortalIds.Count; i++) pIds[i] = room.PortalIds[i].Value;
+
+                roomList.Add(new RoomSaveData
+                {
+                    id = room.Id.Value,
+                    contentType = room.ContentType.Value,
+                    floor = room.Floor,
+                    minX = room.Bounds.MinX,
+                    maxX = room.Bounds.MaxX,
+                    capacity = room.Capacity,
+                    portalIds = pIds
+                });
+            }
+
+            var portalList = new List<PortalSaveData>(_portalsById.Count);
+            foreach (var portal in _portalsById.Values)
+            {
+                portalList.Add(new PortalSaveData
+                {
+                    id = portal.Id.Value,
+                    portalType = (int)portal.Type,
+                    floor = portal.Location.Floor,
+                    x = portal.Location.X,
+                    roomId = portal.RoomId.Value,
+                    targetPortalId = portal.TargetPortalId?.Value ?? -1
+                });
+            }
+
+            return new TopologySaveData
+            {
+                floorSlabs = slabList.ToArray(),
+                rooms = roomList.ToArray(),
+                portals = portalList.ToArray()
+            };
+        }
+
+        public static BuildingTopologyState FromSaveData(TopologySaveData data, int nextEntityId = 3000)
+        {
+            var topology = new BuildingTopologyState(nextEntityId);
+            if (data == null) return topology;
+
+            var slabs = new List<CellBounds>();
+            if (data.floorSlabs != null)
+            {
+                foreach (var s in data.floorSlabs)
+                {
+                    slabs.Add(new CellBounds(s.floorLevel, s.minX, s.maxX));
+                }
+            }
+
+            var rooms = new List<Room>();
+            if (data.rooms != null)
+            {
+                foreach (var r in data.rooms)
+                {
+                    var pIdList = new List<EntityId>();
+                    if (r.portalIds != null)
+                    {
+                        foreach (var pid in r.portalIds) pIdList.Add(new EntityId(pid));
+                    }
+                    rooms.Add(new Room(new EntityId(r.id), new ContentId(r.contentType), new CellBounds(r.floor, r.minX, r.maxX), pIdList, r.capacity));
+                }
+            }
+
+            var portals = new List<Portal>();
+            if (data.portals != null)
+            {
+                foreach (var p in data.portals)
+                {
+                    EntityId? target = p.targetPortalId > 0 ? new EntityId(p.targetPortalId) : null;
+                    portals.Add(new Portal(new EntityId(p.id), (PortalType)p.portalType, new CellCoordinate(p.x, p.floor), new EntityId(p.roomId), target));
+                }
+            }
+
+            topology.RestoreFromData(slabs, rooms, portals);
+            return topology;
         }
     }
 }
