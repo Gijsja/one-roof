@@ -58,6 +58,21 @@ Request → Asset spec → Source art → Normalize → Validate → Preview →
 | **Civic & Lobby** | Reception curved desk, freestanding directory kiosk, coat rack, waiting bench | `visitor-greet`, `staff-back`, `rest` | Ground Lobby & Sky lobbies |
 | **Building Systems** | Transformer panel, water boiler, HVAC duct terminal, fire extinguisher station | `service-panel`, `inspect-meter` | Utility, Maintenance & Shafts |
 
+#### Shader & Visual FX Presentation Track (AllIn1SpriteShader)
+
+Presentation-only GPU shader effects integrated cleanly via `MaterialPropertyBlock` without domain coupling:
+
+1. **Holographic Build Placement Ghost (`OR-517` - DONE):**
+   - Animated vertical/horizontal scanlines (`HOLOGRAM_ON`) across room and slab placement footprints.
+   - Dynamic validity response: emerald green for legal placement, bright warning red with accelerated scanlines and boosted glow for obstructed/invalid cells.
+   - Procedural border alpha texture and automatic URP Unlit fallback for test runners.
+2. **Inspect Mode Selection & Hover Outlines (`OR-518` - PLANNED):**
+   - High-contrast pixel-perfect outline silhouettes (`OUTBASE_ON`, `GLOW_ON`) when hovering or selecting rooms, elevators, and residents in Inspect mode.
+3. **Demolition Dissolve FX (`OR-519` - PLANNED):**
+   - Burn/dissolve shader transitions (`FADE_ON` / `DISSOLVE_ON`) when bulldozing rooms or floor slabs.
+4. **Simulation Symptom & Congestion Auras (`OR-520` - PLANNED):**
+   - Pulsing visual aura on elevator doors and waiting resident views during extreme commute bottlenecks, adhering to UX Contract Rule #1 (visible symptoms for all tower failures).
+
 ---
 
 ### Phase 3 — Spine 2D Skeletal Animation & Wardrobe Composition (Milestone 6.0)

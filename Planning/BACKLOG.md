@@ -36,7 +36,12 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-516 | DONE | M5.2 | Domain Interaction Point & Furniture Anchor Schema | OR-513 | Domain records for seat/sleep/cook/work/browse, room interaction points, and resident anchor docking |
 | ART-001 | DONE | M5.2 | First-playable architectural dressing (backdrops, doors, windows, cabin) | OR-514 | Sliced 9-sliceable backdrops and doors in runtime content; zero primitive rects in Tower scene |
 | ART-002 | DONE | M5.3 | Environment prop families & themed room furnishings | ART-001, OR-516 | 16-prop sheet normalized, collision & interaction anchors declared for residential, diner, and office |
+| OR-517 | DONE | M5.3 | AllIn1SpriteShader integration & holographic placement ghost | OR-505 | `PlacementGhostPresenter` renders animated holographic scanlines with dynamic validity outline/glow, procedural border texture, and URP fallback; zero compiler errors |
+| OR-518 | READY | M5.3 | Inspect mode selection and hover outline shader presenter | OR-517 | Selected and hovered rooms, residents, and elevator shafts render pixel-perfect outline and soft glow silhouettes |
+| OR-519 | READY | M5.3 | Demolition dissolve and construction scanline shader transitions | OR-511, OR-517 | Bulldozing rooms/slabs triggers animated dissolve shader effect; construction fades in with digital blueprint wireframe |
+| OR-520 | READY | M5.3 | Elevator congestion & resident agitation visual shader aura | OR-203, OR-517 | Residents waiting beyond congestion threshold and overcrowded elevator doors display pulsing agitation aura |
 | ART-003 | READY | M6.0 | Spine 2D skeletal animation & 8-layer wardrobe composition | ART-002 | Shared 17-bone rig animated with 6 clips; dynamic 8-layer wardrobe compositor operational |
 | ART-004 | READY | M6.1 | AssetLab validation tooling & Addressables packaging | ART-003 | Standalone AssetLab scene runs automated seam, rig, and anchor checks; Addressables bundles build cleanly |
 | ART-005 | READY | M6.2 | Spatial audio soundscapes & environmental lighting atmosphere | ART-004 | Footstep surface audio, elevator mechanical foley, roomtones, and volumetric window lighting |
+
 
