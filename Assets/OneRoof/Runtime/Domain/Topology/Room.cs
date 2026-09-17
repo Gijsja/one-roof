@@ -7,7 +7,13 @@ namespace OneRoof.Domain.Topology
 {
     public sealed class Room : IEquatable<Room>
     {
-        public Room(EntityId id, ContentId contentType, CellBounds bounds, IReadOnlyList<EntityId> portalIds, int capacity)
+        public Room(
+            EntityId id,
+            ContentId contentType,
+            CellBounds bounds,
+            IReadOnlyList<EntityId> portalIds,
+            int capacity,
+            IReadOnlyList<InteractionPoint> interactionPoints = null)
         {
             if (capacity < 0)
             {
@@ -19,6 +25,7 @@ namespace OneRoof.Domain.Topology
             Bounds = bounds;
             PortalIds = new ReadOnlyCollection<EntityId>(new List<EntityId>(portalIds ?? Array.Empty<EntityId>()));
             Capacity = capacity;
+            InteractionPoints = new ReadOnlyCollection<InteractionPoint>(new List<InteractionPoint>(interactionPoints ?? Array.Empty<InteractionPoint>()));
         }
 
         public EntityId Id { get; }
@@ -32,6 +39,28 @@ namespace OneRoof.Domain.Topology
         public IReadOnlyList<EntityId> PortalIds { get; }
 
         public int Capacity { get; }
+
+        public IReadOnlyList<InteractionPoint> InteractionPoints { get; }
+
+        public bool TryGetAvailablePoint(InteractionPointKind kind, out InteractionPoint point)
+        {
+            for (var i = 0; i < InteractionPoints.Count; i++)
+            {
+                var pt = InteractionPoints[i];
+                if (pt.Kind == kind && pt.IsAvailable)
+                {
+                    point = pt;
+                    return true;
+                }
+            }
+            point = null;
+            return false;
+        }
+
+        public Room WithInteractionPoints(IReadOnlyList<InteractionPoint> points)
+        {
+            return new Room(Id, ContentType, Bounds, PortalIds, Capacity, points);
+        }
 
         public bool Contains(CellCoordinate coordinate) => Bounds.Contains(coordinate);
 

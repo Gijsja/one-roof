@@ -9,6 +9,8 @@ using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Content;
 using OneRoof.Domain.Commands;
+using OneRoof.Presentation.Architecture;
+using OneRoof.Presentation.Furnishings;
 using OneRoof.Presentation.Overlays;
 using OneRoof.Presentation.Population;
 using OneRoof.UI.Inspectors;
@@ -408,6 +410,12 @@ namespace OneRoof.Presentation.Tower
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
                 cam.transform.position = new Vector3(-1.6f, centerY, -10f);
+
+                // Wire interactive pan/zoom navigation controller
+                var camCtrl = camObj.GetComponent<TowerCameraController>() ?? camObj.AddComponent<TowerCameraController>();
+                camCtrl.Camera = cam;
+                camCtrl.SetOverviewDefaults(new Vector3(-1.6f, centerY, -10f), cam.orthographicSize);
+                camCtrl.SetBounds(-16f, 16f, FloorY(0) - 2f, FloorY(floorCount - 1) + 4f);
             }
         }
 
@@ -582,62 +590,43 @@ namespace OneRoof.Presentation.Tower
                 var isDiner = (contentTypeStr.StartsWith("commercial") || contentTypeStr.StartsWith("room:diner")) && !isOffice;
                 var isStairwell = contentTypeStr.Equals("amenity:stairwell", StringComparison.OrdinalIgnoreCase) || contentTypeStr.Contains("stairwell");
                 var isLobby = contentTypeStr.Contains("lobby");
+                var isWestSide = centerX < -1.9f;
+
+                if (isResidential || isOffice || isDiner || isLobby)
+                {
+                    // Production 9-sliced architectural backdrop, fixtures, and themed furnishings
+                    var roomObj = new GameObject($"RoomView_{room.Id}");
+                    roomObj.transform.SetParent(transform, false);
+                    roomObj.transform.position = new Vector3(centerX, y, 0f);
+
+                    var backdropPresenter = roomObj.AddComponent<RoomBackdropPresenter>();
+                    backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
+
+                    var furnishingPresenter = roomObj.AddComponent<RoomFurnishingPresenter>();
+                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
+
+                    _worldObjects.Add(roomObj);
+                }
 
                 if (isResidential)
                 {
-                    // 1. Cozy residential wallpaper backdrop (warm slate with strong contrast)
-                    CreateQuad($"Apt Bg {room.Id}", new Color(0.20f, 0.26f, 0.36f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
+                    // Apartment unit number plaque near door
+                    var doorX = isWestSide ? (worldRight - 0.35f) : (worldLeft + 0.35f);
+                    CreateQuad($"Apt Tag {room.Id}", new Color(0.30f, 0.42f, 0.56f), new Vector3(doorX, y + 0.25f, 0.42f), new Vector2(0.28f, 0.09f), transform);
 
-                    // 2. Warm honey-oak flooring along bottom of room
-                    CreateQuad($"Apt Floor {room.Id}", new Color(0.42f, 0.30f, 0.20f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
-
-                    // 3. Molded ceiling trim along top
-                    CreateQuad($"Apt Ceiling {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(centerX, y + 0.68f, 0.65f), new Vector2(width - 0.06f, 0.06f), transform);
-
-                    // 4. Cozy illuminated window (domestic warm interior lamp glow)
-                    var isWestSide = centerX < -1.9f;
-                    var windowX = isWestSide ? (centerX - width * 0.18f) : (centerX + width * 0.18f);
-                    CreateQuad($"Apt Window Frame {room.Id}", new Color(0.28f, 0.36f, 0.48f), new Vector3(windowX, y + 0.12f, 0.55f), new Vector2(0.68f, 0.56f), transform);
-                    CreateQuad($"Apt Window Light {room.Id}", new Color(0.92f, 0.82f, 0.48f), new Vector3(windowX, y + 0.12f, 0.52f), new Vector2(0.60f, 0.48f), transform);
-                    CreateQuad($"Apt Window Mullion V {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(windowX, y + 0.12f, 0.50f), new Vector2(0.04f, 0.48f), transform);
-                    CreateQuad($"Apt Window Mullion H {room.Id}", new Color(0.32f, 0.40f, 0.52f), new Vector3(windowX, y + 0.12f, 0.50f), new Vector2(0.60f, 0.04f), transform);
-
-                    // 5. Apartment entrance door (inner corridor side towards shaft)
-                    var doorX = isWestSide ? (worldRight - 0.32f) : (worldLeft + 0.32f);
-                    CreateQuad($"Apt Door Frame {room.Id}", new Color(0.35f, 0.25f, 0.18f), new Vector3(doorX, y - 0.30f, 0.55f), new Vector2(0.36f, 0.80f), transform);
-                    CreateQuad($"Apt Door Panel {room.Id}", new Color(0.24f, 0.17f, 0.13f), new Vector3(doorX, y - 0.30f, 0.52f), new Vector2(0.30f, 0.74f), transform);
-                    var knobOffset = isWestSide ? -0.10f : 0.10f;
-                    CreateQuad($"Apt Doorknob {room.Id}", new Color(0.95f, 0.82f, 0.35f), new Vector3(doorX + knobOffset, y - 0.34f, 0.48f), new Vector2(0.04f, 0.04f), transform);
-
-                    // 6. Apartment unit number plaque near door
-                    CreateQuad($"Apt Tag {room.Id}", new Color(0.30f, 0.42f, 0.56f), new Vector3(doorX, y + 0.25f, 0.50f), new Vector2(0.32f, 0.10f), transform);
-
-                    // 7. Structural dividing walls
+                    // Structural dividing walls
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
                 }
                 else if (isOffice)
                 {
-                    // Modern Corporate Office: cool slate/cyan tech ambiance
-                    CreateQuad($"Office Bg {room.Id}", new Color(0.16f, 0.22f, 0.28f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
-                    CreateQuad($"Office Floor {room.Id}", new Color(0.24f, 0.28f, 0.35f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
-                    CreateQuad($"Office Light {room.Id}", new Color(0.85f, 0.95f, 1.0f), new Vector3(centerX, y + 0.64f, 0.55f), new Vector2(width * 0.75f, 0.05f), transform);
-
-                    // Dual workstation desks with illuminated computer monitors
-                    CreateQuad($"Office Desk 1 {room.Id}", new Color(0.40f, 0.46f, 0.55f), new Vector3(centerX - width * 0.22f, y - 0.44f, 0.55f), new Vector2(width * 0.32f, 0.28f), transform);
-                    CreateQuad($"Office Desk 2 {room.Id}", new Color(0.40f, 0.46f, 0.55f), new Vector3(centerX + width * 0.22f, y - 0.44f, 0.55f), new Vector2(width * 0.32f, 0.28f), transform);
-                    CreateQuad($"Office Monitor 1 {room.Id}", new Color(0.35f, 0.78f, 0.95f), new Vector3(centerX - width * 0.22f, y - 0.18f, 0.50f), new Vector2(0.32f, 0.22f), transform);
-                    CreateQuad($"Office Monitor 2 {room.Id}", new Color(0.35f, 0.78f, 0.95f), new Vector3(centerX + width * 0.22f, y - 0.18f, 0.50f), new Vector2(0.32f, 0.22f), transform);
-
+                    // Structural dividing walls
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
                 }
                 else if (isDiner)
                 {
-                    // Commercial Diner: warm terracotta bistro ambiance
-                    CreateQuad($"Diner Bg {room.Id}", new Color(0.28f, 0.19f, 0.14f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
-                    CreateQuad($"Diner Floor {room.Id}", new Color(0.42f, 0.30f, 0.22f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
-                    CreateQuad($"Diner Counter {room.Id}", new Color(0.62f, 0.40f, 0.26f), new Vector3(centerX - 0.3f, y - 0.45f, 0.55f), new Vector2(width * 0.45f, 0.32f), transform);
+                    // Commercial Diner: warm bistro awning
                     CreateQuad($"Diner Awning {room.Id}", new Color(0.85f, 0.42f, 0.25f), new Vector3(centerX, y + 0.58f, 0.55f), new Vector2(1.3f, 0.16f), transform);
 
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
@@ -665,13 +654,18 @@ namespace OneRoof.Presentation.Tower
                 }
                 else if (isLobby)
                 {
-                    // Reception Lobby: expansive corporate navy with polished floor
-                    CreateQuad($"Lobby Bg {room.Id}", new Color(0.14f, 0.20f, 0.28f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.06f, 1.42f), transform);
-                    CreateQuad($"Lobby Floor {room.Id}", new Color(0.35f, 0.45f, 0.55f), new Vector3(centerX, y - 0.65f, 0.65f), new Vector2(width - 0.06f, 0.14f), transform);
+                    // Reception Lobby desk and dividing walls
                     CreateQuad($"Lobby Desk {room.Id}", new Color(0.48f, 0.58f, 0.70f), new Vector3(centerX - 1.2f, y - 0.46f, 0.55f), new Vector2(1.2f, 0.30f), transform);
 
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), transform);
+                }
+                else
+                {
+                    // Generic room fallback
+                    CreateQuad($"Room {room.Id} ({contentTypeStr})", new Color(0.18f, 0.24f, 0.32f), new Vector3(centerX, y, 0.6f), new Vector2(width - 0.08f, 1.4f), transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
                 }
                 else
                 {

@@ -178,7 +178,7 @@ namespace OneRoof.Domain.Tests.EditMode
             // Attempt unforced demolish of occupied apartment
             var unforcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: false));
             Assert.That(unforcedResult.Accepted, Is.False);
-            Assert.That(unforcedResult.Rejections[0].Reason, Does.Contain("occupied apartment"));
+            Assert.That(unforcedResult.Rejections[0].Detail, Does.Contain("occupied apartment"));
 
             // Forced demolish succeeds
             var forcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: true));
