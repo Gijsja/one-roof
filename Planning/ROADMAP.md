@@ -95,7 +95,7 @@ graph TD
 
 ---
 
-### M5.3a — Architecture Deepening *(READY)*
+### M5.3a — Architecture Deepening *(COMPLETE)*
 **Goal:** Reduce accumulated architectural friction before shader tasks (OR-518/519/520) add more code to the hottest modules. Each task deepens a shallow module, removes a leaky interface, or deletes an unjustified seam — improving testability, locality, and leverage for all subsequent milestones.
 
 > **Sequencing rationale:** OR-518/519/520 all touch `TowerPlayableController.cs` (the project's hottest file at 8 changes, 1100+ lines). Splitting the God Presenter *before* those tasks prevents piling more concerns into a shallow module and gives each shader task a clean, focused presenter to target. The remaining deepenings (CanExecute, serialization, queue encapsulation) prepare the Domain and Application layers for M6+ scale.
@@ -215,7 +215,7 @@ graph TD
 9. Create handoff: `Handoffs/Active/ARCH-004_aggregate-serialization.md`.
 </details>
 
-#### ARCH-005 — Encapsulate ElevatorBank queue internals behind Snapshot *(Worth exploring)*
+#### ARCH-005 — Encapsulate ElevatorBank queue internals behind Snapshot *(DONE · Worth exploring)*
 
 **Files:** `ElevatorBank.cs`, `TowerSimulationSession.cs`
 **Problem:** `ElevatorBank` exposes raw `IReadOnlyDictionary<int, Queue<ElevatorPassenger>> FloorQueues` — a leaky interface forcing the Application layer to iterate internal data structures.

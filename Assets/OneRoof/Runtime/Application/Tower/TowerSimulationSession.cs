@@ -179,14 +179,16 @@ namespace OneRoof.Application.Tower
             }
 
             // Index elevator bank passenger states for rush hour and transit visualization
-            var deliveredByPerson = new Dictionary<EntityId, ElevatorPassenger>(_simulation.ElevatorBank.DeliveredPassengers.Count);
-            foreach (var p in _simulation.ElevatorBank.DeliveredPassengers)
+            var snapshot = _simulation.ElevatorBank.Snapshot();
+
+            var deliveredByPerson = new Dictionary<EntityId, ElevatorPassenger>(snapshot.DeliveredPassengers.Count);
+            foreach (var p in snapshot.DeliveredPassengers)
             {
                 deliveredByPerson[p.PersonId] = p;
             }
 
             var ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
-            foreach (var car in _simulation.ElevatorBank.Cars)
+            foreach (var car in snapshot.Cars)
             {
                 foreach (var p in car.Passengers)
                 {
@@ -195,12 +197,9 @@ namespace OneRoof.Application.Tower
             }
 
             var queuedByPerson = new Dictionary<EntityId, ElevatorPassenger>();
-            foreach (var queue in _simulation.ElevatorBank.FloorQueues.Values)
+            foreach (var p in snapshot.QueuedPassengers)
             {
-                foreach (var p in queue)
-                {
-                    queuedByPerson[p.PersonId] = p;
-                }
+                queuedByPerson[p.PersonId] = p;
             }
 
             var roomOccupantCounts = new Dictionary<EntityId, int>();

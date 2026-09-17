@@ -79,9 +79,32 @@ namespace OneRoof.Domain.Transit
 
         public IReadOnlyList<ElevatorCar> Cars { get; }
 
-        public IReadOnlyList<ElevatorPassenger> DeliveredPassengers { get; }
+        internal IReadOnlyList<ElevatorPassenger> DeliveredPassengers { get; }
 
-        public IReadOnlyDictionary<int, Queue<ElevatorPassenger>> FloorQueues => _floorQueues;
+        internal IReadOnlyDictionary<int, Queue<ElevatorPassenger>> FloorQueues => _floorQueues;
+
+        public ElevatorBankSnapshot Snapshot()
+        {
+            var floorQueues = new Dictionary<int, IReadOnlyList<ElevatorPassenger>>(_floorQueues.Count);
+            foreach (var kvp in _floorQueues)
+            {
+                floorQueues[kvp.Key] = kvp.Value.ToArray();
+            }
+
+            var cars = new ElevatorCar[_cars.Count];
+            for (var i = 0; i < _cars.Count; i++)
+            {
+                cars[i] = _cars[i];
+            }
+
+            return new ElevatorBankSnapshot(
+                MinFloor,
+                MaxFloor,
+                cars,
+                floorQueues,
+                _deliveredPassengers.ToArray(),
+                AverageWaitTicks);
+        }
 
         public int DeliveredCount => _deliveredPassengers.Count;
 
