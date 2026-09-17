@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "status": "validated-asset-candidate",
+  "sourceFile": "resident-spritesheet-v1.png",
+  "sourceHashSha256": "f62a15d1ac43cd46734fd1e3b2e210a55428c68d042a944cace7d0ebf21b32ae",
+  "skeletalRigFile": "resident-spine-setup-v1.json",
+  "provenance": {
+    "method": "built-in image generation followed by canvas normalization and anatomical keypoint alignment",
+    "generatedOn": "2026-09-17",
+    "referenceRole": "one-roof-resident-lineup-concept-v1.png, normalized to uniform 256x512 grid"
+  },
+  "sheet": {
+    "pixels": {
+      "width": 1536,
+      "height": 512
+    },
+    "grid": {
+      "columns": 6,
+      "rows": 1,
+      "cellPixels": {
+        "width": 256,
+        "height": 512
+      }
+    },
+    "background": "transparent RGBA",
+    "pixelsPerUnit": 512,
+    "perspectiveProfile": "cutaway-orthographic-front",
+    "theme": "midnight-structure-warm-interior-v1"
+  },
+  "npcLayerContract": {
+    "rigId": "rig.npc.humanoid.2d.v1",
+    "compatibleBodyTypes": [
+      "adult-standard"
+    ],
+    "standardLayerOrder": [
+      "hair_back",
+      "body",
+      "footwear",
+      "lower_clothing",
+      "upper_clothing",
+      "face",
+      "hair_front",
+      "accessory",
+      "carried_prop"
+    ],
+    "bespokeExceptionClause": "First-playable slice uses unified bespoke character silhouette attachments mapped to the Spine skeleton root and bone chains, replacing individual loose layer separates until the multi-layer wardrobe compositor is active in Milestone 6.",
+    "anchorSet": [
+      "feet-center",
+      "hip",
+      "chest",
+      "neck",
+      "head",
+      "hand-L",
+      "hand-R"
+    ],
+    "scaleProfile": {
+      "targetWorldHeight": 0.58,
+      "targetWorldWidth": 0.28
+    }
+  },
+  "recommendedUnityImport": {
+    "textureType": "Sprite (2D and UI)",
+    "spriteMode": "Multiple",
+    "filterMode": "Bilinear",
+    "compression": "High Quality",
+    "meshType": "Full Rect",
+    "pixelsPerUnit": 512,
+    "spritePivot": {
+      "x": 0.5,
+      "y": 0.0
+    },
+    "packingTag": "one-roof-residents"
+  },
+  "assets": [
+    {
+      "contentId": "npc.resident.service.v1",
+      "proposedKey": "resident-01-barista",
+      "displayName": "Service Resident (Barista / Diner Staff)",
+      "cell": [
+        0,
+        0
+      ],
+      "bounds": [
+        54,
+        26,
+        147,
+        470
+      ],
+      "primaryRole": "Service",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "dark hair in casual bun",
+        "face": "gentle friendly expression",
+        "upper_clothing": "cream rolled-sleeve collar shirt",
+        "lower_clothing": "dark tailored rolled pants",
+        "footwear": "white athletic sneakers",
+        "accessory": "deep teal waist-tied apron"
+      },
+      "interactionPoints": [
+        "feet",
+        "reach-counter",
+        "carry-tray"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    },
+    {
+      "contentId": "npc.resident.corporate.v1",
+      "proposedKey": "resident-02-executive",
+      "displayName": "Corporate Resident (Manager / Office Worker)",
+      "cell": [
+        1,
+        0
+      ],
+      "bounds": [
+        303,
+        26,
+        161,
+        470
+      ],
+      "primaryRole": "Corporate",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "styled dark side-part",
+        "face": "attentive confident expression",
+        "upper_clothing": "navy business suit jacket over collared shirt and v-neck",
+        "lower_clothing": "navy matching tailored suit trousers",
+        "footwear": "brown leather oxfords",
+        "accessory": "corporate ID badge on lanyard",
+        "carried_prop": "laptop portfolio in hand"
+      },
+      "interactionPoints": [
+        "feet",
+        "desk-work",
+        "briefcase-place"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    },
+    {
+      "contentId": "npc.resident.creative.v1",
+      "proposedKey": "resident-03-creative",
+      "displayName": "Creative Resident (Designer / Architect)",
+      "cell": [
+        2,
+        0
+      ],
+      "bounds": [
+        561,
+        26,
+        157,
+        470
+      ],
+      "primaryRole": "Creative",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "voluminous curly afro with orange headband",
+        "face": "warm expressive smile with gold hoop earrings",
+        "upper_clothing": "terracotta duster coat over white knit top",
+        "lower_clothing": "wide-leg dark slate trousers with leather belt",
+        "footwear": "black ankle dress boots",
+        "carried_prop": "designer canvas tote shoulder bag"
+      },
+      "interactionPoints": [
+        "feet",
+        "drafting-work",
+        "lounge-sit"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    },
+    {
+      "contentId": "npc.resident.senior.v1",
+      "proposedKey": "resident-04-senior",
+      "displayName": "Senior Resident (Retired Scholar / Community Elder)",
+      "cell": [
+        3,
+        0
+      ],
+      "bounds": [
+        812,
+        26,
+        168,
+        470
+      ],
+      "primaryRole": "Senior",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "short cropped silver hair and neat trimmed beard",
+        "face": "distinguished spectacles and thoughtful gaze",
+        "upper_clothing": "navy crewneck sweater over collared oxford",
+        "lower_clothing": "tan casual chinos",
+        "footwear": "comfortable brown leather walking shoes",
+        "carried_prop": "white ceramic coffee mug"
+      },
+      "interactionPoints": [
+        "feet",
+        "reading-sit",
+        "sip-coffee"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    },
+    {
+      "contentId": "npc.resident.youth.v1",
+      "proposedKey": "resident-05-student",
+      "displayName": "Youth Resident (Student / Freelancer)",
+      "cell": [
+        4,
+        0
+      ],
+      "bounds": [
+        1066,
+        26,
+        172,
+        470
+      ],
+      "primaryRole": "Youth",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "black shoulder bob under mustard-yellow knit beanie",
+        "face": "curious cheerful gaze",
+        "upper_clothing": "teal bomber jacket over oversized black hoodie",
+        "lower_clothing": "olive cargo jogger pants",
+        "footwear": "black and white skate sneakers",
+        "accessory": "black crossbody utility sling bag"
+      },
+      "interactionPoints": [
+        "feet",
+        "study-desk",
+        "music-listen"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    },
+    {
+      "contentId": "npc.resident.trades.v1",
+      "proposedKey": "resident-06-technician",
+      "displayName": "Trades Resident (Maintenance Technician / Facility Engineer)",
+      "cell": [
+        5,
+        0
+      ],
+      "bounds": [
+        1316,
+        26,
+        184,
+        470
+      ],
+      "primaryRole": "Trades",
+      "bodyType": "adult-standard",
+      "layers": {
+        "hair": "dark hair under navy work baseball cap",
+        "face": "sturdy cheerful tradesperson smile",
+        "upper_clothing": "navy mechanic jumpsuit with high-vis yellow vest and tool pockets",
+        "lower_clothing": "reinforced utility jumpsuit legs",
+        "footwear": "heavy-duty steel-toe work boots",
+        "accessory": "leather tool belt with wrenches and pliers, work gloves"
+      },
+      "interactionPoints": [
+        "feet",
+        "panel-repair",
+        "elevator-inspect"
+      ],
+      "paletteBehavior": "status-underfoot-with-tint"
+    }
+  ],
+  "integrationConstraints": [
+    "All contentId values are immutable and namespaced (npc.resident.*.v1).",
+    "Pivot anchor is strictly bottom-center (0.5, 0.0) at ground baseline.",
+    "World scale is normalized to 0.58m height to maintain realistic architectural proportion inside 1.42m rooms and 0.80m doors.",
+    "Skeletal rig matches Spine 4.2 bone coordinates in resident-spine-setup-v1.json."
+  ]
+}

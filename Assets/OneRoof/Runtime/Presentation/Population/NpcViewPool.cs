@@ -143,19 +143,15 @@ namespace OneRoof.Presentation.Population
         private NpcView CreateNewViewInstance()
         {
             var index = _allViews.Count + 1;
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = $"NpcView_{index}";
+            var go = new GameObject($"NpcView_{index}");
             go.transform.SetParent(transform, false);
-            go.transform.localScale = new Vector3(0.22f, 0.3f, 0.1f);
 
-            var collider = go.GetComponent<Collider>();
-            if (collider != null)
-            {
-                DestroyImmediate(collider);
-            }
+            var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+            skeletal.Initialize(index - 1);
 
-            var renderer = go.GetComponent<MeshRenderer>();
+            var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = GetOrCreateSharedMaterial();
+            renderer.enabled = false;
 
             var view = go.AddComponent<NpcView>();
             go.SetActive(false);

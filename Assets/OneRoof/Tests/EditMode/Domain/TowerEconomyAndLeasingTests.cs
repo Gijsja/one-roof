@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
@@ -132,6 +133,102 @@ namespace OneRoof.Domain.Tests.EditMode
 
             // New resident should have leased the apartment
             Assert.That(sim.ResidentCount, Is.GreaterThan(initialCount));
+        }
+
+        [Test]
+        public void DemolishRoom_RefundsFiftyPercentSalvageCash_ToTreasury()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            sim.BuildFloorSlab(new BuildFloorSlabCommand(5, -30, 30));
+
+            // Build an office room (8 cells * 350 = 2800)
+            var buildResult = sim.BuildRoom(new BuildRoomCommand(5, 5, 12, new ContentId("commercial:office"), 8));
+            Assert.That(buildResult.Accepted, Is.True);
+
+            var roomsF5 = sim.Topology.GetRoomsOnFloor(5);
+            Room office = null;
+            for (var i = 0; i < roomsF5.Count; i++)
+            {
+                if (roomsF5[i].ContentType.Value == "commercial:office")
+                {
+                    office = roomsF5[i];
+                    break;
+                }
+            }
+            Assert.That(office, Is.Not.Null);
+
+            var cost = sim.Economy.CalculateRoomCost(office.ContentType, office.Bounds);
+            Assert.That(cost, Is.EqualTo(8 * TowerEconomyState.CostPerCommercialCell));
+
+            var cashBefore = sim.Economy.CashBalance;
+            var demolishResult = sim.DemolishRoom(new DemolishRoomCommand(office.Id));
+
+            Assert.That(demolishResult.Accepted, Is.True);
+            Assert.That(sim.Economy.CashBalance, Is.EqualTo(cashBefore + (cost / 2)));
+            Assert.That(sim.Topology.TryGetRoom(office.Id, out _), Is.False);
+        }
+
+        [Test]
+        public void DemolishRoom_OccupiedApartment_RejectsUnlessForced()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var household = sim.Population.Households[0];
+            var homeRoomId = household.HomeRoomId;
+
+            // Attempt unforced demolish of occupied apartment
+            var unforcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: false));
+            Assert.That(unforcedResult.Accepted, Is.False);
+            Assert.That(unforcedResult.Rejections[0].Reason, Does.Contain("occupied apartment"));
+
+            // Forced demolish succeeds
+            var forcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: true));
+            Assert.That(forcedResult.Accepted, Is.True);
+            Assert.That(sim.Topology.TryGetRoom(homeRoomId, out _), Is.False);
+        }
+
+        [Test]
+        public void OfficeZoning_LeasingDemand_EmploysNewResidentsAtOffice()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+
+            // Build floor 5 slab, an office room, and a vacant apartment
+            sim.BuildFloorSlab(new BuildFloorSlabCommand(5, -30, 30));
+            var officeResult = sim.BuildRoom(new BuildRoomCommand(5, 5, 12, new ContentId("commercial:office"), 8));
+            var aptResult = sim.BuildRoom(new BuildRoomCommand(5, -10, -5, new ContentId("residential:apartment"), 4));
+
+            Assert.That(officeResult.Accepted, Is.True);
+            Assert.That(aptResult.Accepted, Is.True);
+
+            var roomsF5 = sim.Topology.GetRoomsOnFloor(5);
+            Room office = null;
+            for (var i = 0; i < roomsF5.Count; i++)
+            {
+                if (roomsF5[i].ContentType.Value == "commercial:office")
+                {
+                    office = roomsF5[i];
+                    break;
+                }
+            }
+            Assert.That(office, Is.Not.Null);
+
+            // Advance simulation to trigger leasing evaluation
+            for (var tick = 0; tick < 15; tick++)
+            {
+                sim.AdvanceOneTick();
+            }
+
+            // Find any resident whose workplace is the new office
+            var employedAtOffice = false;
+            foreach (var person in sim.Population.Persons)
+            {
+                if (person.WorkplaceRoomId.Equals(office.Id))
+                {
+                    employedAtOffice = true;
+                    break;
+                }
+            }
+
+            Assert.That(employedAtOffice, Is.True, "Expected at least one newly leased resident to be employed at the office.");
         }
     }
 }

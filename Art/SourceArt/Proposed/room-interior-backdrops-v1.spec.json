@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed-source-art",
+  "sourceFile": "room-interior-backdrops-v1.png",
+  "sourceHashSha256": "bd71c1dbbe4ad051a92e2081c20a3a514ff411c4a9c7460406c2f8a7e757477e",
+  "provenance": {
+    "method": "built-in image generation, followed by canvas normalization",
+    "generatedOn": "2026-09-17",
+    "referenceRole": "room-props-spritesheet-v1.png, style reference only"
+  },
+  "sheet": {
+    "pixels": { "width": 1024, "height": 1024 },
+    "grid": { "columns": 2, "rows": 2, "cellPixels": { "width": 512, "height": 512 } },
+    "background": "opaque RGB room backdrop",
+    "pixelsPerUnit": 360,
+    "perspectiveProfile": "cutaway-orthographic-front",
+    "theme": "midnight-structure-warm-interior-v1"
+  },
+  "recommendedUnityImport": {
+    "textureType": "Sprite (2D and UI)",
+    "spriteMode": "Multiple",
+    "filterMode": "Bilinear",
+    "compression": "High Quality",
+    "meshType": "Full Rect",
+    "pixelsPerUnit": 360,
+    "packingTag": "one-roof-room-interiors",
+    "spriteBordersPixels": { "left": 32, "bottom": 32, "right": 32, "top": 32 },
+    "usage": "Render behind furniture at room backdrop depth; horizontally slice/stretch only after AssetLab confirms seams in rooms wider than one grid cell."
+  },
+  "backdrops": [
+    {
+      "proposedKey": "residential-studio-warm-slate",
+      "cell": [0, 0],
+      "roomThemes": ["residential"],
+      "wallTreatment": "warm slate-blue botanical wallpaper, honey-oak ceiling and base trim",
+      "floorTreatment": "honey-oak plank",
+      "colorRole": "inhabited-warm"
+    },
+    {
+      "proposedKey": "office-compact-acoustic",
+      "cell": [1, 0],
+      "roomThemes": ["office", "clinic", "maintenance"],
+      "wallTreatment": "cool slate acoustic panels with navy trim",
+      "floorTreatment": "muted blue-grey carpet tile",
+      "colorRole": "work-cool"
+    },
+    {
+      "proposedKey": "diner-warm-terracotta",
+      "cell": [0, 1],
+      "roomThemes": ["restaurant", "retail"],
+      "wallTreatment": "restrained terracotta brick with cream band",
+      "floorTreatment": "dark warm wood plank",
+      "colorRole": "social-warm"
+    },
+    {
+      "proposedKey": "lobby-polished-navy",
+      "cell": [1, 1],
+      "roomThemes": ["lobby", "elevator-lobby"],
+      "wallTreatment": "deep navy architectural panels with thin brass accent",
+      "floorTreatment": "cool polished stone tile",
+      "colorRole": "civic-calm"
+    }
+  ],
+  "integrationConstraints": [
+    "proposedKey is not a released ContentId; the content tool owns final immutable IDs.",
+    "Backdrops are visual variants only; they must not alter room capacity, portal placement, or navigation geometry.",
+    "Validate each crop at the current 1.42-unit room height and against both narrow and wide room bounds before registry submission.",
+    "Reject or correct any visible nine-slice seams before runtime use."
+  ]
+}

@@ -57,5 +57,29 @@ namespace OneRoof.UI.Tests.EditMode
             _controller.Session.CancelOrEscape();
             Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
         }
+
+        [Test]
+        public void Controller_OnBuildModeRequested_AutoSelectsApartmentWhenNoToolSelected()
+        {
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
+
+            _controller.OnBuildModeRequested();
+
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Build));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("residential:apartment"));
+        }
+
+        [Test]
+        public void Controller_OnBuildModeRequested_PreservesExistingToolSelection()
+        {
+            _controller.Session.SelectBuildTool("commercial:diner");
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("commercial:diner"));
+
+            _controller.OnBuildModeRequested();
+
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Build));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("commercial:diner"));
+        }
     }
 }

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed-source-art",
+  "sourceFile": "room-props-spritesheet-v1.png",
+  "sourceHashSha256": "017c2fd543619dc4698c2b0b4a5d44cc6c9656bb7ecd2de138c2265196d2d512",
+  "provenance": {
+    "method": "built-in image generation, followed by canvas normalization",
+    "generatedOn": "2026-09-17",
+    "referenceRole": "one-roof-environment-props-concept-v1.png, style reference only"
+  },
+  "sheet": {
+    "pixels": { "width": 1024, "height": 1024 },
+    "grid": { "columns": 4, "rows": 4, "cellPixels": { "width": 256, "height": 256 } },
+    "background": "transparent RGBA",
+    "pixelsPerUnit": 64,
+    "perspectiveProfile": "cutaway-orthographic-front",
+    "theme": "midnight-structure-warm-interior-v1"
+  },
+  "assets": [
+    { "proposedKey": "residential-sofa-2seat", "cell": [0, 0], "footprintCells": [2, 1], "anchor": "bottom-center", "heightClass": "low", "collisionMask": "solid", "interactionPoints": ["seat-left", "seat-right"], "roomThemes": ["residential"] },
+    { "proposedKey": "residential-double-bed", "cell": [1, 0], "footprintCells": [2, 2], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["sleep-left", "sleep-right"], "roomThemes": ["residential"] },
+    { "proposedKey": "residential-bookcase-tall", "cell": [2, 0], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "solid", "interactionPoints": ["browse-front"], "roomThemes": ["residential", "office"] },
+    { "proposedKey": "interior-monstera-planter", "cell": [3, 0], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "solid", "interactionPoints": [], "roomThemes": ["residential", "office", "lobby", "retail"] },
+    { "proposedKey": "office-desk-monitor", "cell": [0, 1], "footprintCells": [2, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["work-front"], "roomThemes": ["office"] },
+    { "proposedKey": "office-chair-wheeled", "cell": [1, 1], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["seat"], "roomThemes": ["office"] },
+    { "proposedKey": "diner-booth-2seat", "cell": [2, 1], "footprintCells": [2, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["seat-left", "seat-right"], "roomThemes": ["restaurant"] },
+    { "proposedKey": "diner-service-counter", "cell": [3, 1], "footprintCells": [3, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["serve-front", "staff-back"], "roomThemes": ["restaurant", "retail"] },
+    { "proposedKey": "lobby-reception-desk", "cell": [0, 2], "footprintCells": [3, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["visitor-front", "staff-back"], "roomThemes": ["lobby", "clinic"] },
+    { "proposedKey": "elevator-door-double", "cell": [1, 2], "footprintCells": [2, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "portal", "interactionPoints": ["board-front"], "roomThemes": ["elevator-lobby"] },
+    { "proposedKey": "apartment-door-single", "cell": [2, 2], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "portal", "interactionPoints": ["enter-front"], "roomThemes": ["residential"] },
+    { "proposedKey": "wall-sconce-amber", "cell": [3, 2], "footprintCells": [1, 1], "anchor": "wall-center", "heightClass": "wall", "collisionMask": "none", "interactionPoints": [], "roomThemes": ["residential", "office", "lobby", "restaurant"] },
+    { "proposedKey": "compact-kitchenette", "cell": [0, 3], "footprintCells": [3, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "solid", "interactionPoints": ["cook-front"], "roomThemes": ["residential", "restaurant"] },
+    { "proposedKey": "office-filing-cabinet", "cell": [1, 3], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "medium", "collisionMask": "solid", "interactionPoints": ["file-front"], "roomThemes": ["office", "clinic", "maintenance"] },
+    { "proposedKey": "lobby-coat-rack", "cell": [2, 3], "footprintCells": [1, 1], "anchor": "bottom-center", "heightClass": "tall", "collisionMask": "solid", "interactionPoints": ["store-front"], "roomThemes": ["lobby", "office", "residential"] },
+    { "proposedKey": "residential-coffee-table", "cell": [3, 3], "footprintCells": [2, 1], "anchor": "bottom-center", "heightClass": "low", "collisionMask": "solid", "interactionPoints": [], "roomThemes": ["residential", "lobby"] }
+  ],
+  "integrationConstraints": [
+    "proposedKey is not a released ContentId; the content tool owns final immutable IDs.",
+    "Crop and inspect every cell independently before registry submission; generated sheet cells are an art-source starting point, not a final atlas.",
+    "Validate alpha, per-cell bounds, anchors, interaction points, perspective, and neighboring-room presentation before runtime use."
+  ]
+}

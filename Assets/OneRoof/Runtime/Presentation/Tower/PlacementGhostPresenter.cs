@@ -61,7 +61,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void ShowGhost(Vector3 worldPosition, Vector2 size, bool isValid)
+        public void ShowGhost(Vector3 worldPosition, Vector2 size, bool isValid, Color? customColor = null)
         {
             EnsureGhostObject();
             IsValid = isValid;
@@ -69,7 +69,7 @@ namespace OneRoof.Presentation.Tower
             _ghostObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, -0.5f);
             _ghostObject.transform.localScale = new Vector3(Math.Max(0.1f, size.x), Math.Max(0.1f, size.y), 1f);
 
-            var color = isValid ? ValidColor : InvalidColor;
+            var color = customColor ?? (isValid ? ValidColor : InvalidColor);
             _colorBlock.SetColor("_BaseColor", color);
             _colorBlock.SetColor("_Color", color);
             _ghostRenderer.SetPropertyBlock(_colorBlock);
@@ -90,36 +90,48 @@ namespace OneRoof.Presentation.Tower
 
         private void EnsureGhostObject()
         {
-            if (_ghostObject != null)
+            if (_colorBlock == null)
             {
-                return;
+                _colorBlock = new MaterialPropertyBlock();
             }
 
-            _ghostMaterial = CreateGhostMaterial();
-            _colorBlock = new MaterialPropertyBlock();
-
-            var existing = transform.Find("PlacementGhost");
-            if (existing != null)
+            if (_ghostMaterial == null)
             {
-                _ghostObject = existing.gameObject;
+                _ghostMaterial = CreateGhostMaterial();
             }
-            else
-            {
-                _ghostObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                _ghostObject.name = "PlacementGhost";
-                _ghostObject.transform.SetParent(transform, false);
 
-                var col = _ghostObject.GetComponent<Collider>();
-                if (col != null)
+            if (_ghostObject == null)
+            {
+                var existing = transform.Find("PlacementGhost");
+                if (existing != null)
                 {
-                    DestroyImmediate(col);
+                    _ghostObject = existing.gameObject;
                 }
+                else
+                {
+                    _ghostObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                    _ghostObject.name = "PlacementGhost";
+                    _ghostObject.transform.SetParent(transform, false);
+
+                    var col = _ghostObject.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        DestroyImmediate(col);
+                    }
+                }
+
+                _ghostObject.SetActive(false);
             }
 
-            _ghostRenderer = _ghostObject.GetComponent<MeshRenderer>();
-            _ghostRenderer.sharedMaterial = _ghostMaterial;
+            if (_ghostRenderer == null && _ghostObject != null)
+            {
+                _ghostRenderer = _ghostObject.GetComponent<MeshRenderer>();
+            }
 
-            _ghostObject.SetActive(false);
+            if (_ghostRenderer != null && _ghostRenderer.sharedMaterial == null)
+            {
+                _ghostRenderer.sharedMaterial = _ghostMaterial;
+            }
         }
 
         private static Material CreateGhostMaterial()

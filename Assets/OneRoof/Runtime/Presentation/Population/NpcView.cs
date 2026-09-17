@@ -15,6 +15,8 @@ namespace OneRoof.Presentation.Population
         private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
 
         private MeshRenderer _renderer;
+        private SpriteRenderer _spriteRenderer;
+        private NpcSkeletalHierarchy _skeletalHierarchy;
         private MaterialPropertyBlock _propertyBlock;
 
         public int? BoundEntityId { get; private set; }
@@ -24,6 +26,8 @@ namespace OneRoof.Presentation.Population
         public NpcProjection CurrentProjection { get; private set; }
 
         public MeshRenderer Renderer => _renderer != null ? _renderer : (_renderer = GetComponent<MeshRenderer>());
+        public SpriteRenderer SpriteRenderer => _spriteRenderer != null ? _spriteRenderer : (_spriteRenderer = GetComponent<SpriteRenderer>());
+        public NpcSkeletalHierarchy SkeletalHierarchy => _skeletalHierarchy != null ? _skeletalHierarchy : (_skeletalHierarchy = GetComponent<NpcSkeletalHierarchy>());
 
         private void Awake()
         {
@@ -70,16 +74,37 @@ namespace OneRoof.Presentation.Population
         {
             EnsureRendererAndPropertyBlock();
 
-            if (_renderer == null)
+            var color = ResolveNpcColor(projection);
+
+            if (_skeletalHierarchy != null)
             {
-                return;
+                _skeletalHierarchy.Initialize(projection.PersonId - 1);
+                if (_skeletalHierarchy.MainRenderer != null)
+                {
+                    _skeletalHierarchy.MainRenderer.color = Color.Lerp(Color.white, color, 0.35f);
+                }
+                if (_skeletalHierarchy.StatusPlateRenderer != null)
+                {
+                    _skeletalHierarchy.StatusPlateRenderer.color = color;
+                }
+            }
+            else if (_spriteRenderer != null)
+            {
+                var sprite = ResidentSpriteCatalog.GetResidentSprite(projection.PersonId - 1);
+                if (sprite != null)
+                {
+                    _spriteRenderer.sprite = sprite;
+                }
+                _spriteRenderer.color = Color.Lerp(Color.white, color, 0.35f);
             }
 
-            var color = ResolveNpcColor(projection);
-            _renderer.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor(BaseColorPropertyId, color);
-            _propertyBlock.SetColor(ColorPropertyId, color);
-            _renderer.SetPropertyBlock(_propertyBlock);
+            if (_renderer != null)
+            {
+                _renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetColor(BaseColorPropertyId, color);
+                _propertyBlock.SetColor(ColorPropertyId, color);
+                _renderer.SetPropertyBlock(_propertyBlock);
+            }
         }
 
         public static Color ResolveNpcColor(in NpcProjection projection)

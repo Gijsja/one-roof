@@ -4,6 +4,7 @@
   "references": [
     "OneRoof.Domain",
     "OneRoof.Application",
+    "OneRoof.Content",
     "OneRoof.UI",
     "Unity.InputSystem"
   ],

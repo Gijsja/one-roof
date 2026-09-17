@@ -191,6 +191,53 @@ namespace OneRoof.Domain
         public OneRoof.Domain.Commands.CommandResult DemolishRoom(OneRoof.Domain.Commands.DemolishRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+
+            if (Topology.Rooms.TryGetValue(cmd.RoomId, out var room))
+            {
+                var contentVal = room.ContentType.Value ?? "";
+                if (contentVal.Contains("lobby"))
+                {
+                    return OneRoof.Domain.Commands.CommandResult.Reject(new[]
+                    {
+                        new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:protected"), "Cannot demolish main reception lobby.")
+                    });
+                }
+
+                if (contentVal.Contains("elevator_shaft"))
+                {
+                    return OneRoof.Domain.Commands.CommandResult.Reject(new[]
+                    {
+                        new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:protected"), "Elevator shafts cannot be demolished with room bulldozer.")
+                    });
+                }
+
+                if (!cmd.Force && contentVal.StartsWith("residential:"))
+                {
+                    var households = Population.Households;
+                    for (var i = 0; i < households.Count; i++)
+                    {
+                        if (households[i].HomeRoomId.Equals(cmd.RoomId))
+                        {
+                            return OneRoof.Domain.Commands.CommandResult.Reject(new[]
+                            {
+                                new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:occupied"), "Cannot demolish occupied apartment with active tenants.")
+                            });
+                        }
+                    }
+                }
+
+                var cost = Economy.CalculateRoomCost(room.ContentType, room.Bounds);
+                var salvageRefund = cost / 2;
+
+                var result = Topology.Execute(cmd, Clock.CurrentTick);
+                if (result.Accepted && salvageRefund > 0)
+                {
+                    Economy.AddRevenue(salvageRefund);
+                }
+
+                return result;
+            }
+
             return Topology.Execute(cmd, Clock.CurrentTick);
         }
 

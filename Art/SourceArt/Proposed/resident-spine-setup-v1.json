@@ -1,0 +1,410 @@
+{
+  "skeleton": {
+    "hash": "one-roof-resident-spine-v1",
+    "spine": "4.2",
+    "x": -128.0,
+    "y": 0.0,
+    "width": 256.0,
+    "height": 512.0,
+    "images": "./images/",
+    "audio": ""
+  },
+  "bones": [
+    {
+      "name": "root",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "name": "hip",
+      "parent": "root",
+      "x": 0.0,
+      "y": 242.0,
+      "length": 70.0
+    },
+    {
+      "name": "spine",
+      "parent": "hip",
+      "x": 0.0,
+      "y": 70.0,
+      "length": 70.0
+    },
+    {
+      "name": "neck",
+      "parent": "spine",
+      "x": 0.0,
+      "y": 70.0,
+      "length": 20.0
+    },
+    {
+      "name": "head",
+      "parent": "neck",
+      "x": 0.0,
+      "y": 20.0,
+      "length": 90.0
+    },
+    {
+      "name": "arm_upper_L",
+      "parent": "spine",
+      "x": -45.0,
+      "y": 55.0,
+      "length": 60.0,
+      "rotation": -80.0
+    },
+    {
+      "name": "arm_lower_L",
+      "parent": "arm_upper_L",
+      "x": 60.0,
+      "y": 0.0,
+      "length": 55.0,
+      "rotation": -10.0
+    },
+    {
+      "name": "hand_L",
+      "parent": "arm_lower_L",
+      "x": 55.0,
+      "y": 0.0,
+      "length": 25.0,
+      "rotation": 0.0
+    },
+    {
+      "name": "arm_upper_R",
+      "parent": "spine",
+      "x": 45.0,
+      "y": 55.0,
+      "length": 60.0,
+      "rotation": -100.0
+    },
+    {
+      "name": "arm_lower_R",
+      "parent": "arm_upper_R",
+      "x": 60.0,
+      "y": 0.0,
+      "length": 55.0,
+      "rotation": 10.0
+    },
+    {
+      "name": "hand_R",
+      "parent": "arm_lower_R",
+      "x": 55.0,
+      "y": 0.0,
+      "length": 25.0,
+      "rotation": 0.0
+    },
+    {
+      "name": "leg_upper_L",
+      "parent": "hip",
+      "x": -22.0,
+      "y": -10.0,
+      "length": 95.0,
+      "rotation": -90.0
+    },
+    {
+      "name": "leg_lower_L",
+      "parent": "leg_upper_L",
+      "x": 95.0,
+      "y": 0.0,
+      "length": 95.0,
+      "rotation": 0.0
+    },
+    {
+      "name": "foot_L",
+      "parent": "leg_lower_L",
+      "x": 95.0,
+      "y": 0.0,
+      "length": 35.0,
+      "rotation": 90.0
+    },
+    {
+      "name": "leg_upper_R",
+      "parent": "hip",
+      "x": 22.0,
+      "y": -10.0,
+      "length": 95.0,
+      "rotation": -90.0
+    },
+    {
+      "name": "leg_lower_R",
+      "parent": "leg_upper_R",
+      "x": 95.0,
+      "y": 0.0,
+      "length": 95.0,
+      "rotation": 0.0
+    },
+    {
+      "name": "foot_R",
+      "parent": "leg_lower_R",
+      "x": 95.0,
+      "y": 0.0,
+      "length": 35.0,
+      "rotation": 90.0
+    }
+  ],
+  "slots": [
+    {
+      "name": "hair_back",
+      "bone": "head",
+      "attachment": "hair_back"
+    },
+    {
+      "name": "body_arm_upper_R",
+      "bone": "arm_upper_R",
+      "attachment": "body_arm_upper_R"
+    },
+    {
+      "name": "body_arm_lower_R",
+      "bone": "arm_lower_R",
+      "attachment": "body_arm_lower_R"
+    },
+    {
+      "name": "body_hand_R",
+      "bone": "hand_R",
+      "attachment": "body_hand_R"
+    },
+    {
+      "name": "body_leg_R",
+      "bone": "leg_upper_R",
+      "attachment": "body_leg_R"
+    },
+    {
+      "name": "footwear_R",
+      "bone": "foot_R",
+      "attachment": "footwear_R"
+    },
+    {
+      "name": "body_leg_L",
+      "bone": "leg_upper_L",
+      "attachment": "body_leg_L"
+    },
+    {
+      "name": "footwear_L",
+      "bone": "foot_L",
+      "attachment": "footwear_L"
+    },
+    {
+      "name": "lower_clothing",
+      "bone": "hip",
+      "attachment": "lower_clothing"
+    },
+    {
+      "name": "body_torso",
+      "bone": "spine",
+      "attachment": "body_torso"
+    },
+    {
+      "name": "upper_clothing",
+      "bone": "spine",
+      "attachment": "upper_clothing"
+    },
+    {
+      "name": "body_head",
+      "bone": "head",
+      "attachment": "body_head"
+    },
+    {
+      "name": "face",
+      "bone": "head",
+      "attachment": "face"
+    },
+    {
+      "name": "hair_front",
+      "bone": "head",
+      "attachment": "hair_front"
+    },
+    {
+      "name": "accessory",
+      "bone": "head",
+      "attachment": "accessory"
+    },
+    {
+      "name": "body_arm_upper_L",
+      "bone": "arm_upper_L",
+      "attachment": "body_arm_upper_L"
+    },
+    {
+      "name": "body_arm_lower_L",
+      "bone": "arm_lower_L",
+      "attachment": "body_arm_lower_L"
+    },
+    {
+      "name": "body_hand_L",
+      "bone": "hand_L",
+      "attachment": "body_hand_L"
+    },
+    {
+      "name": "carried_prop",
+      "bone": "hand_L",
+      "attachment": "carried_prop"
+    },
+    {
+      "name": "composite_full",
+      "bone": "root",
+      "attachment": "composite_full"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-01-barista",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_01_barista",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-02-executive",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_02_executive",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-03-creative",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_03_creative",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-04-senior",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_04_senior",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-05-student",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_05_student",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    },
+    {
+      "name": "resident-06-technician",
+      "attachments": {
+        "composite_full": {
+          "composite_full": {
+            "name": "resident_06_technician",
+            "x": 0.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 512.0
+          }
+        }
+      }
+    }
+  ],
+  "animations": {
+    "idle": {
+      "bones": {
+        "spine": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": 1.5
+            },
+            {
+              "time": 3.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": -1.0
+            },
+            {
+              "time": 3.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "queue-wait": {
+      "bones": {
+        "hip": {
+          "translate": [
+            {
+              "time": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "time": 2.0,
+              "x": -2.0,
+              "y": 0.0
+            },
+            {
+              "time": 4.0,
+              "x": 2.0,
+              "y": 0.0
+            },
+            {
+              "time": 6.0,
+              "x": 0.0,
+              "y": 0.0
+            }
+          ]
+        }
+      }
+    }
+  }
+}
