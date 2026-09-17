@@ -65,6 +65,27 @@ namespace OneRoof.Presentation.Tower
             _defaultOrthoSize = orthoSize;
         }
 
+        public static Camera EnsureTowerCamera(int floorCount, GridPlacementController gridPlacement = null)
+        {
+            var camObj = GameObject.Find("Tower Camera") ?? new GameObject("Tower Camera");
+            var cam = camObj.GetComponent<Camera>() ?? camObj.AddComponent<Camera>();
+            camObj.tag = "MainCamera";
+            if (gridPlacement != null) gridPlacement.Camera = cam;
+
+            var centerY = TowerStructurePresenter.FloorY(0) + (floorCount - 1) * 1.75f * 0.5f;
+            cam.orthographic = true;
+            cam.orthographicSize = Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
+            cam.transform.position = new Vector3(-1.6f, centerY, -10f);
+
+            var ctrl = camObj.GetComponent<TowerCameraController>() ?? camObj.AddComponent<TowerCameraController>();
+            ctrl.Camera = cam;
+            ctrl.SetOverviewDefaults(new Vector3(-1.6f, centerY, -10f), cam.orthographicSize);
+            ctrl.SetBounds(-16f, 16f, TowerStructurePresenter.FloorY(0) - 2f, TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
+            return cam;
+        }
+
         public void FocusOverview()
         {
             if (_camera == null) return;

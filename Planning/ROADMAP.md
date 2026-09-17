@@ -125,7 +125,7 @@ graph TD
 11. Create handoff: `Handoffs/Active/ARCH-001_delete-prototype-simulation.md`.
 </details>
 
-#### ARCH-002 — Deepen the God Presenter: split TowerPlayableController *(Strong · Highest churn)*
+#### ARCH-002 — Deepen the God Presenter: split TowerPlayableController *(DONE · Strong · Highest churn)*
 
 **Files:** `TowerPlayableController.cs` (1100+ lines, 8 changes — hottest file)
 **Problem:** Shallow module mixing UI lifecycle, domain init, input dispatch, floor slab quads, elevator shaft geometry, room rendering, NPC sync, and overlay toggling. Terrible locality.

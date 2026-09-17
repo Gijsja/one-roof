@@ -57,6 +57,20 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Controller_InitialState_InitializesFourDeepPresenters()
+        {
+            Assert.That(_controller.StructurePresenter, Is.Not.Null);
+            Assert.That(_controller.ElevatorPresenter, Is.Not.Null);
+            Assert.That(_controller.RoomPresenter, Is.Not.Null);
+            Assert.That(_controller.ResidentPresenter, Is.Not.Null);
+
+            Assert.That(_controller.StructurePresenter.RenderedFloorCount, Is.EqualTo(TowerStructurePresenter.InitialFloorCount));
+            Assert.That(_controller.ElevatorPresenter.RenderedShaftFloorCount, Is.EqualTo(TowerStructurePresenter.InitialFloorCount));
+            Assert.That(_controller.RoomPresenter.RenderedRoomIds.Count, Is.GreaterThan(0));
+            Assert.That(_controller.ResidentPresenter.ResidentCount, Is.EqualTo(TowerPlayableController.InitialResidentCount));
+        }
+
+        [Test]
         public void ToggleDataOverlay_EnablesOverlayInRealtime()
         {
             var overlay = _holder.GetComponent<ElevatorWaitOverlayPresenter>();
