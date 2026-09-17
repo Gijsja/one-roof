@@ -158,7 +158,7 @@ graph TD
 9. Create handoff: `Handoffs/Active/ARCH-002_split-god-presenter.md`.
 </details>
 
-#### ARCH-003 — Lift placement validation behind Domain CanExecute seam *(Strong · Ports & adapters)*
+#### ARCH-003 — Lift placement validation behind Domain CanExecute seam *(DONE · Strong · Ports & adapters)*
 
 **Files:** `GridPlacementController.cs`, `TowerSimulation.cs`, `BuildingTopologyState.cs`
 **Problem:** Presentation duplicates Domain placement rules (CanAfford, FloorSlab exists, room overlap) to tint the preview ghost — a leaky interface.

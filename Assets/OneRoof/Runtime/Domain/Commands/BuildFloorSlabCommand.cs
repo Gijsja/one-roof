@@ -5,7 +5,7 @@ namespace OneRoof.Domain.Commands
     /// <summary>
     /// Domain command to construct a horizontal concrete floor slab, establishing buildable cell range.
     /// </summary>
-    public sealed class BuildFloorSlabCommand
+    public sealed class BuildFloorSlabCommand : ICommand
     {
         public BuildFloorSlabCommand(int floorLevel, int minX, int maxX)
         {

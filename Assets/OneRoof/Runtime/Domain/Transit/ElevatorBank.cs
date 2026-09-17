@@ -8,6 +8,8 @@ namespace OneRoof.Domain.Transit
 {
     public sealed class ElevatorBank
     {
+        public const int MaxCarsPerBank = 4;
+
         private readonly List<ElevatorCar> _cars;
         private readonly Dictionary<int, Queue<ElevatorPassenger>> _floorQueues;
         private readonly List<ElevatorPassenger> _deliveredPassengers;

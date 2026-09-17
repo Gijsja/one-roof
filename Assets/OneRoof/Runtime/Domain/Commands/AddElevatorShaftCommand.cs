@@ -6,7 +6,7 @@ namespace OneRoof.Domain.Commands
     /// Domain command to construct an elevator shaft spanning a range of contiguous floors,
     /// creating shaft portals and updating the vertical transit network.
     /// </summary>
-    public sealed class AddElevatorShaftCommand
+    public sealed class AddElevatorShaftCommand : ICommand
     {
         public AddElevatorShaftCommand(
             int shaftMinX,

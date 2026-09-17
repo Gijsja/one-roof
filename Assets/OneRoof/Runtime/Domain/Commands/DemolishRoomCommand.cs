@@ -5,7 +5,7 @@ namespace OneRoof.Domain.Commands
     /// <summary>
     /// Domain command to demolish an existing room and its associated entrance portals.
     /// </summary>
-    public sealed class DemolishRoomCommand
+    public sealed class DemolishRoomCommand : ICommand
     {
         public DemolishRoomCommand(EntityId roomId, bool force = false)
         {

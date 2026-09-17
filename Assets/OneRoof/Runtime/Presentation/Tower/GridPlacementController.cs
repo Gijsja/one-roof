@@ -398,44 +398,32 @@ namespace OneRoof.Presentation.Tower
             return true;
         }
 
-        public bool ValidatePlacement(string toolId, int floor, int cellX, out string failureReason)
+        public bool TryCreateCommand(string toolId, int floor, int cellX, out ICommand command, out string failureReason)
         {
+            command = null;
             failureReason = null;
+
+            if (string.IsNullOrEmpty(toolId))
+            {
+                failureReason = "No active tool selected.";
+                return false;
+            }
+
             if (_simulationSession == null)
             {
                 failureReason = "No active simulation session.";
                 return false;
             }
 
-            var topology = _simulationSession.Topology;
-            var economy = _simulationSession.Economy;
-
             if (toolId.Equals("transit:elevator_car", StringComparison.OrdinalIgnoreCase))
             {
-                if (floor < 0 || floor >= topology.FloorCount)
-                {
-                    failureReason = $"Elevator car must be placed within active tower floors (0..{topology.FloorCount - 1}).";
-                    return false;
-                }
-
                 if (cellX < -3 || cellX > 3)
                 {
                     failureReason = "Elevator car must be placed within the central elevator shaft corridor.";
                     return false;
                 }
 
-                var congestion = _simulationSession.CongestionProjection();
-                if (congestion != null && congestion.Elevators.Count >= ElevatorPlacementPredictor.MaxCarsPerBank)
-                {
-                    failureReason = $"Elevator bank has reached maximum capacity ({ElevatorPlacementPredictor.MaxCarsPerBank} cars).";
-                    return false;
-                }
-
-                if (!economy.CanAfford(TowerEconomyState.ElevatorCarCost))
-                {
-                    failureReason = $"Insufficient funds for elevator car ({TowerEconomyState.ElevatorCarCost} required).";
-                    return false;
-                }
+                command = new AddElevatorCarCommand(startingFloor: floor);
                 return true;
             }
 
@@ -447,25 +435,8 @@ namespace OneRoof.Presentation.Tower
                     return false;
                 }
 
-                if (topology.FloorSlabs.ContainsKey(floor))
-                {
-                    failureReason = $"Floor {floor} slab already exists.";
-                    return false;
-                }
-
-                if (floor > 0 && !topology.FloorSlabs.ContainsKey(floor - 1))
-                {
-                    failureReason = $"Cannot construct floor {floor} slab without floor {floor - 1} slab below.";
-                    return false;
-                }
-
                 TryGetToolPlacementBounds(toolId, floor, cellX, out var slabBounds);
-                var cost = economy.CalculateFloorSlabCost(slabBounds);
-                if (!economy.CanAfford(cost))
-                {
-                    failureReason = $"Insufficient funds for floor slab ({cost} required).";
-                    return false;
-                }
+                command = new BuildFloorSlabCommand(floor, slabBounds.MinX, slabBounds.MaxX);
                 return true;
             }
 
@@ -483,208 +454,8 @@ namespace OneRoof.Presentation.Tower
                     return false;
                 }
 
-                if (!topology.FloorSlabs.ContainsKey(floor))
-                {
-                    failureReason = $"Floor {floor} has no slab. Build a floor slab first.";
-                    return false;
-                }
-
-                var existingRooms = topology.GetRoomsOnFloor(floor);
-                for (var i = 0; i < existingRooms.Count; i++)
-                {
-                    if (existingRooms[i].ContentType == new ContentId("transit:elevator_shaft"))
-                    {
-                        failureReason = $"Elevator shaft already exists on floor {floor}.";
-                        return false;
-                    }
-
-                    if (existingRooms[i].Bounds.Overlaps(new CellBounds(floor, 0, 1)))
-                    {
-                        failureReason = $"Elevator shaft overlaps existing room '{existingRooms[i].ContentType.Value}'.";
-                        return false;
-                    }
-                }
-
-                var cost = economy.CalculateElevatorShaftCost(Math.Max(1, floor + 1), 2);
-                if (!economy.CanAfford(cost))
-                {
-                    failureReason = $"Insufficient funds for elevator shaft ({cost} required).";
-                    return false;
-                }
+                command = new AddElevatorShaftCommand(0, 1, 0, floor);
                 return true;
-            }
-
-            if (toolId.Equals("demolish:room", StringComparison.OrdinalIgnoreCase))
-            {
-                var floorRooms = topology.GetRoomsOnFloor(floor);
-                Room targetRoom = null;
-                for (var i = 0; i < floorRooms.Count; i++)
-                {
-                    if (cellX >= floorRooms[i].Bounds.MinX && cellX <= floorRooms[i].Bounds.MaxX)
-                    {
-                        targetRoom = floorRooms[i];
-                        break;
-                    }
-                }
-
-                if (targetRoom == null)
-                {
-                    failureReason = "No room at hovered grid cell to demolish.";
-                    return false;
-                }
-
-                var contentVal = targetRoom.ContentType.Value ?? "";
-                if (contentVal.Contains("lobby"))
-                {
-                    failureReason = "Cannot demolish main reception lobby.";
-                    return false;
-                }
-
-                if (contentVal.Contains("elevator_shaft"))
-                {
-                    failureReason = "Elevator shafts cannot be demolished with room bulldozer.";
-                    return false;
-                }
-
-                if (contentVal.StartsWith("residential:"))
-                {
-                    var households = _simulationSession.Simulation.Population.Households;
-                    for (var i = 0; i < households.Count; i++)
-                    {
-                        if (households[i].HomeRoomId.Equals(targetRoom.Id))
-                        {
-                            failureReason = "Cannot demolish occupied apartment with active tenants.";
-                            return false;
-                        }
-                    }
-                }
-
-                return true;
-            }
-
-            if (toolId.Equals("transit:stairwell", StringComparison.OrdinalIgnoreCase))
-            {
-                if (topology.FloorCount < 2)
-                {
-                    failureReason = "Stairwell requires at least 2 tower floors.";
-                    return false;
-                }
-
-                var bottomFloor = (floor == topology.FloorCount - 1) ? floor - 1 : floor;
-                var topFloor = bottomFloor + 1;
-
-                if (!topology.FloorSlabs.TryGetValue(bottomFloor, out var bottomSlab))
-                {
-                    failureReason = $"Floor {bottomFloor} has no slab.";
-                    return false;
-                }
-
-                if (!topology.FloorSlabs.TryGetValue(topFloor, out var topSlab))
-                {
-                    failureReason = $"Floor {topFloor} has no slab.";
-                    return false;
-                }
-
-                if (cellX < bottomSlab.MinX || cellX + 1 > bottomSlab.MaxX ||
-                    cellX < topSlab.MinX || cellX + 1 > topSlab.MaxX)
-                {
-                    failureReason = "Stairwell must be fully contained within slabs of both floors.";
-                    return false;
-                }
-
-                if (cellX <= 1 && cellX + 1 >= 0)
-                {
-                    failureReason = "Stairwell cannot overlap central elevator shaft column [0..1].";
-                    return false;
-                }
-
-                var stairContentType = new ContentId("amenity:stairwell");
-                for (var f = bottomFloor; f <= topFloor; f++)
-                {
-                    var existingRooms = topology.GetRoomsOnFloor(f);
-                    for (var i = 0; i < existingRooms.Count; i++)
-                    {
-                        var existing = existingRooms[i];
-                        if (existing.Bounds.Overlaps(new CellBounds(f, cellX, cellX + 1)))
-                        {
-                            if (existing.ContentType == stairContentType && existing.Bounds.MinX == cellX && existing.Bounds.MaxX == cellX + 1)
-                            {
-                                continue;
-                            }
-
-                            failureReason = $"Stairwell overlaps existing room '{existing.ContentType.Value}' on floor {f}.";
-                            return false;
-                        }
-                    }
-                }
-
-                var cost = economy.CalculateStairwellCost(1, 2);
-                if (!economy.CanAfford(cost))
-                {
-                    failureReason = $"Insufficient funds for stairwell ({cost} required).";
-                    return false;
-                }
-
-                return true;
-            }
-
-            // Room placement
-            var roomWidth = GetToolWidthInCells(toolId);
-            var roomBounds = new CellBounds(floor, cellX, cellX + roomWidth - 1);
-
-            if (!topology.FloorSlabs.TryGetValue(floor, out var slab))
-            {
-                failureReason = $"Floor {floor} has no slab. Build a floor slab first.";
-                return false;
-            }
-
-            if (roomBounds.MinX < slab.MinX || roomBounds.MaxX > slab.MaxX)
-            {
-                failureReason = $"Room exceeds floor {floor} slab boundaries ({slab.MinX}..{slab.MaxX}).";
-                return false;
-            }
-
-            if (floor > 0)
-            {
-                if (!topology.FloorSlabs.TryGetValue(floor - 1, out var lowerSlab) ||
-                    roomBounds.MinX < lowerSlab.MinX || roomBounds.MaxX > lowerSlab.MaxX)
-                {
-                    failureReason = $"Room must be supported by continuous floor slab below on floor {floor - 1}.";
-                    return false;
-                }
-            }
-
-            var floorRoomsList = topology.GetRoomsOnFloor(floor);
-            for (var i = 0; i < floorRoomsList.Count; i++)
-            {
-                if (floorRoomsList[i].Bounds.Overlaps(roomBounds))
-                {
-                    failureReason = $"Overlaps existing room '{floorRoomsList[i].ContentType.Value}' at [{floorRoomsList[i].Bounds.MinX}..{floorRoomsList[i].Bounds.MaxX}].";
-                    return false;
-                }
-            }
-
-            var contentType = toolId.StartsWith("room:", StringComparison.OrdinalIgnoreCase)
-                ? new ContentId("residential:studio")
-                : new ContentId(toolId);
-
-            var roomCost = economy.CalculateRoomCost(contentType, roomBounds);
-            if (!economy.CanAfford(roomCost))
-            {
-                failureReason = $"Insufficient funds for room ({roomCost} required).";
-                return false;
-            }
-
-            return true;
-        }
-
-        public bool TryExecutePlacement(string toolId, int floor, int cellX, out CommandResult result)
-        {
-            if (!ValidatePlacement(toolId, floor, cellX, out var failureReason))
-            {
-                result = CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("placement:invalid"), failureReason) });
-                PlacementExecuted?.Invoke(result);
-                return false;
             }
 
             if (toolId.Equals("demolish:room", StringComparison.OrdinalIgnoreCase))
@@ -702,51 +473,28 @@ namespace OneRoof.Presentation.Tower
 
                 if (targetRoom == null)
                 {
-                    result = CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("demolish:no_room"), "No room at cursor to demolish.") });
-                    PlacementExecuted?.Invoke(result);
+                    failureReason = "No room at hovered grid cell to demolish.";
                     return false;
                 }
 
-                result = _simulationSession.DemolishRoom(new DemolishRoomCommand(targetRoom.Id));
-                PlacementExecuted?.Invoke(result);
-                return result.Accepted;
-            }
-
-            if (toolId.Equals("transit:elevator_car", StringComparison.OrdinalIgnoreCase))
-            {
-                _simulationSession.AddCapacity();
-                result = CommandResult.Accept();
-                PlacementExecuted?.Invoke(result);
+                command = new DemolishRoomCommand(targetRoom.Id);
                 return true;
-            }
-
-            if (toolId.Equals("floor:slab", StringComparison.OrdinalIgnoreCase))
-            {
-                TryGetToolPlacementBounds(toolId, floor, cellX, out var slabBounds);
-                var cmd = new BuildFloorSlabCommand(floor, slabBounds.MinX, slabBounds.MaxX);
-                result = _simulationSession.BuildFloorSlab(cmd);
-                PlacementExecuted?.Invoke(result);
-                return result.Accepted;
-            }
-
-            if (toolId.Equals("transit:elevator_shaft", StringComparison.OrdinalIgnoreCase))
-            {
-                var cmd = new AddElevatorShaftCommand(0, 1, 0, floor);
-                result = _simulationSession.AddElevatorShaft(cmd);
-                PlacementExecuted?.Invoke(result);
-                return result.Accepted;
             }
 
             if (toolId.Equals("transit:stairwell", StringComparison.OrdinalIgnoreCase))
             {
                 var topology = _simulationSession.Topology;
+                if (topology.FloorCount < 2)
+                {
+                    failureReason = "Stairwell requires at least 2 tower floors.";
+                    return false;
+                }
+
                 var bottomFloor = (floor == topology.FloorCount - 1) ? floor - 1 : floor;
                 var topFloor = bottomFloor + 1;
 
-                var cmd = new BuildStairwellCommand(cellX, cellX + 1, bottomFloor, topFloor);
-                result = _simulationSession.BuildStairwell(cmd);
-                PlacementExecuted?.Invoke(result);
-                return result.Accepted;
+                command = new BuildStairwellCommand(cellX, cellX + 1, bottomFloor, topFloor);
+                return true;
             }
 
             // Room placement
@@ -756,8 +504,38 @@ namespace OneRoof.Presentation.Tower
                 : new ContentId(toolId);
 
             var capacity = toolId.Equals("commercial:office", StringComparison.OrdinalIgnoreCase) ? 8 : 5;
-            var buildCmd = new BuildRoomCommand(floor, cellX, cellX + roomWidth - 1, contentType, capacity: capacity);
-            result = _simulationSession.BuildRoom(buildCmd);
+            command = new BuildRoomCommand(floor, cellX, cellX + roomWidth - 1, contentType, capacity: capacity);
+            return true;
+        }
+
+        public bool ValidatePlacement(string toolId, int floor, int cellX, out string failureReason)
+        {
+            if (!TryCreateCommand(toolId, floor, cellX, out var command, out failureReason))
+            {
+                return false;
+            }
+
+            var result = _simulationSession.CanExecute(command);
+            if (!result.Accepted)
+            {
+                failureReason = result.Rejections.Count > 0 ? result.Rejections[0].Message : "Placement invalid.";
+                return false;
+            }
+
+            failureReason = null;
+            return true;
+        }
+
+        public bool TryExecutePlacement(string toolId, int floor, int cellX, out CommandResult result)
+        {
+            if (!TryCreateCommand(toolId, floor, cellX, out var command, out var failureReason))
+            {
+                result = CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("placement:invalid"), failureReason) });
+                PlacementExecuted?.Invoke(result);
+                return false;
+            }
+
+            result = _simulationSession.ExecuteCommand(command);
             PlacementExecuted?.Invoke(result);
             return result.Accepted;
         }

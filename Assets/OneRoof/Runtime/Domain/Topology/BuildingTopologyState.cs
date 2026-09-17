@@ -123,9 +123,9 @@ namespace OneRoof.Domain.Topology
             InvalidateGraph();
         }
 
-        // ── Command Execution ──────────────────────────────────────────────────
+        // ── Command Execution & Validation ──────────────────────────────────────
 
-        public CommandResult Execute(BuildFloorSlabCommand cmd, Tick tick)
+        public CommandResult CanExecute(BuildFloorSlabCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
 
@@ -136,18 +136,26 @@ namespace OneRoof.Domain.Topology
 
             if (_floorSlabs.ContainsKey(cmd.FloorLevel))
             {
-                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:duplicate_floor"), $"Floor {cmd.FloorLevel} already exists.") });
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:duplicate_floor"), $"Floor {cmd.FloorLevel} slab already exists.") });
             }
 
             if (cmd.FloorLevel > 0 && !_floorSlabs.ContainsKey(cmd.FloorLevel - 1))
             {
-                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:unsupported_floor"), $"Cannot construct floor {cmd.FloorLevel} without floor {cmd.FloorLevel - 1} slab below.") });
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:unsupported_floor"), $"Cannot construct floor {cmd.FloorLevel} slab without floor {cmd.FloorLevel - 1} slab below.") });
             }
 
             if (cmd.MinX > cmd.MaxX)
             {
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:invalid_bounds"), "MinX cannot exceed MaxX.") });
             }
+
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(BuildFloorSlabCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
 
             _floorSlabs[cmd.FloorLevel] = cmd.Bounds;
             if (!_roomsByFloor.ContainsKey(cmd.FloorLevel))
@@ -166,25 +174,25 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
-        public CommandResult Execute(BuildRoomCommand cmd, Tick tick)
+        public CommandResult CanExecute(BuildRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
 
             if (!_floorSlabs.TryGetValue(cmd.Floor, out var slab))
             {
-                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:floor_not_found"), $"Floor {cmd.Floor} does not exist.") });
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:floor_not_found"), $"Floor {cmd.Floor} has no slab. Build a floor slab first.") });
             }
 
             if (cmd.MinX < slab.MinX || cmd.MaxX > slab.MaxX)
             {
-                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:outside_floor_slab"), $"Room bounds [{cmd.MinX}..{cmd.MaxX}] extend outside floor slab [{slab.MinX}..{slab.MaxX}].") });
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:outside_floor_slab"), $"Room exceeds floor {cmd.Floor} slab boundaries ({slab.MinX}..{slab.MaxX}).") });
             }
 
             if (cmd.Floor > 0)
             {
                 if (!_floorSlabs.TryGetValue(cmd.Floor - 1, out var lowerSlab) || cmd.MinX < lowerSlab.MinX || cmd.MaxX > lowerSlab.MaxX)
                 {
-                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:unsupported_room"), "Room must be supported by continuous floor slab below.") });
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:unsupported_room"), $"Room must be supported by continuous floor slab below on floor {cmd.Floor - 1}.") });
                 }
             }
 
@@ -194,13 +202,9 @@ namespace OneRoof.Domain.Topology
                 {
                     if (existing.Bounds.Overlaps(cmd.Bounds))
                     {
-                        return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:room_overlap"), $"Room bounds overlap with existing room {existing.Id} ({existing.ContentType}).") });
+                        return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:room_overlap"), $"Overlaps existing room '{existing.ContentType.Value}' at [{existing.Bounds.MinX}..{existing.Bounds.MaxX}].") });
                     }
                 }
-            }
-            else
-            {
-                _roomsByFloor[cmd.Floor] = new List<Room>();
             }
 
             if (cmd.Bounds.Width < 2 && cmd.ContentType != new ContentId("transit:elevator_shaft") && cmd.ContentType != new ContentId("amenity:stairwell"))
@@ -214,6 +218,20 @@ namespace OneRoof.Domain.Topology
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:portal_outside_room"), $"Portal position {portalX} must be within room bounds [{cmd.MinX}..{cmd.MaxX}].") });
             }
 
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(BuildRoomCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            if (!_roomsByFloor.ContainsKey(cmd.Floor))
+            {
+                _roomsByFloor[cmd.Floor] = new List<Room>();
+            }
+
+            var portalX = cmd.PortalX ?? cmd.MinX;
             var roomId = AllocateId();
             var portalId = AllocateId();
 
@@ -235,14 +253,24 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
-        public CommandResult Execute(DemolishRoomCommand cmd, Tick tick)
+        public CommandResult CanExecute(DemolishRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
 
-            if (!_roomsById.TryGetValue(cmd.RoomId, out var room))
+            if (!_roomsById.TryGetValue(cmd.RoomId, out _))
             {
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:room_not_found"), $"Room {cmd.RoomId} not found.") });
             }
+
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(DemolishRoomCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var room = _roomsById[cmd.RoomId];
 
             // Remove associated portals
             if (_portalsByFloor.TryGetValue(room.Floor, out var floorPortals))
@@ -269,7 +297,7 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
-        public CommandResult Execute(AddElevatorShaftCommand cmd, Tick tick)
+        public CommandResult CanExecute(AddElevatorShaftCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
 
@@ -306,6 +334,15 @@ namespace OneRoof.Domain.Topology
                 }
             }
 
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(AddElevatorShaftCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var shaftContentType = new ContentId("transit:elevator_shaft");
             var affectedIds = new List<EntityId>();
 
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
@@ -351,7 +388,7 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
-        public CommandResult Execute(BuildStairwellCommand cmd, Tick tick)
+        public CommandResult CanExecute(BuildStairwellCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
 
@@ -364,9 +401,14 @@ namespace OneRoof.Domain.Topology
 
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
             {
-                if (!_floorSlabs.ContainsKey(floor))
+                if (!_floorSlabs.TryGetValue(floor, out var slab))
                 {
                     return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:floor_not_found"), $"Floor {floor} missing for stairwell span.") });
+                }
+
+                if (cmd.StairMinX < slab.MinX || cmd.StairMaxX > slab.MaxX)
+                {
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:outside_floor_slab"), $"Stairwell bounds [{cmd.StairMinX}..{cmd.StairMaxX}] extend outside floor {floor} slab [{slab.MinX}..{slab.MaxX}].") });
                 }
 
                 var stairBounds = new CellBounds(floor, cmd.StairMinX, cmd.StairMaxX);
@@ -388,6 +430,15 @@ namespace OneRoof.Domain.Topology
                 }
             }
 
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(BuildStairwellCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var stairContentType = new ContentId("amenity:stairwell");
             var affectedIds = new List<EntityId>();
 
             for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)

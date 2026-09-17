@@ -6,7 +6,7 @@ namespace OneRoof.Domain.Commands
     /// Domain command to construct a stairwell column spanning a range of contiguous floors,
     /// creating stair landing portals and vertical walk edges.
     /// </summary>
-    public sealed class BuildStairwellCommand
+    public sealed class BuildStairwellCommand : ICommand
     {
         public BuildStairwellCommand(int stairMinX, int stairMaxX, int bottomFloor, int topFloor)
         {

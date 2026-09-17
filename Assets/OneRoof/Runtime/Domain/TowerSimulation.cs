@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Events;
 using OneRoof.Domain.Identity;
@@ -110,18 +111,186 @@ namespace OneRoof.Domain
             TripGenerator.UpdateTopology(Topology.ToSnapshot(), currentGraph, Planner);
         }
 
-        public OneRoof.Domain.Commands.CommandResult BuildFloorSlab(OneRoof.Domain.Commands.BuildFloorSlabCommand cmd)
+        // ── Command Seam & Validation ─────────────────────────────────────────
+
+        public CommandResult CanExecute(ICommand command)
+        {
+            if (command == null) throw new ArgumentNullException(nameof(command));
+
+            switch (command)
+            {
+                case BuildFloorSlabCommand slabCmd:
+                {
+                    var cost = Economy.CalculateFloorSlabCost(slabCmd.Bounds);
+                    if (!Economy.CanAfford(cost))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for floor slab ({cost} required, Treasury: {Economy.CashBalance}).")
+                        });
+                    }
+                    return Topology.CanExecute(slabCmd);
+                }
+
+                case BuildRoomCommand roomCmd:
+                {
+                    var cost = Economy.CalculateRoomCost(roomCmd.ContentType, roomCmd.Bounds);
+                    if (!Economy.CanAfford(cost))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for room ({cost} required, Treasury: {Economy.CashBalance}).")
+                        });
+                    }
+                    return Topology.CanExecute(roomCmd);
+                }
+
+                case AddElevatorShaftCommand shaftCmd:
+                {
+                    var cost = Economy.CalculateElevatorShaftCost(shaftCmd.FloorSpan, shaftCmd.ShaftMaxX - shaftCmd.ShaftMinX + 1);
+                    if (!Economy.CanAfford(cost))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for elevator shaft ({cost} required, Treasury: {Economy.CashBalance}).")
+                        });
+                    }
+                    return Topology.CanExecute(shaftCmd);
+                }
+
+                case BuildStairwellCommand stairCmd:
+                {
+                    var cost = Economy.CalculateStairwellCost(stairCmd.FloorSpan, stairCmd.StairMaxX - stairCmd.StairMinX + 1);
+                    if (!Economy.CanAfford(cost))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for stairwell ({cost} required, Treasury: {Economy.CashBalance}).")
+                        });
+                    }
+                    return Topology.CanExecute(stairCmd);
+                }
+
+                case DemolishRoomCommand demoCmd:
+                {
+                    if (!Topology.Rooms.TryGetValue(demoCmd.RoomId, out var room))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("topology:room_not_found"), $"Room {demoCmd.RoomId} not found.")
+                        });
+                    }
+
+                    var contentVal = room.ContentType.Value ?? "";
+                    if (contentVal.Contains("lobby"))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("demolish:protected"), "Cannot demolish main reception lobby.")
+                        });
+                    }
+
+                    if (contentVal.Contains("elevator_shaft"))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("demolish:protected"), "Elevator shafts cannot be demolished with room bulldozer.")
+                        });
+                    }
+
+                    if (!demoCmd.Force && contentVal.StartsWith("residential:"))
+                    {
+                        var households = Population.Households;
+                        for (var i = 0; i < households.Count; i++)
+                        {
+                            if (households[i].HomeRoomId.Equals(demoCmd.RoomId))
+                            {
+                                return CommandResult.Reject(new[]
+                                {
+                                    new CommandRejectionReason(new ContentId("demolish:occupied"), "Cannot demolish occupied apartment with active tenants.")
+                                });
+                            }
+                        }
+                    }
+
+                    return Topology.CanExecute(demoCmd);
+                }
+
+                case AddElevatorCarCommand carCmd:
+                {
+                    if (carCmd.StartingFloor < 0 || carCmd.StartingFloor >= Topology.FloorCount)
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("transit:invalid_floor"), $"Elevator car must be placed within active tower floors (0..{Topology.FloorCount - 1}).")
+                        });
+                    }
+
+                    if (ElevatorBank.Cars.Count >= ElevatorBank.MaxCarsPerBank)
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("transit:max_cars"), $"Elevator bank has reached maximum capacity ({ElevatorBank.MaxCarsPerBank} cars).")
+                        });
+                    }
+
+                    if (!Economy.CanAfford(TowerEconomyState.ElevatorCarCost))
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford elevator car ({TowerEconomyState.ElevatorCarCost} required).")
+                        });
+                    }
+
+                    return CommandResult.Success();
+                }
+
+                default:
+                    return CommandResult.Reject(new[]
+                    {
+                        new CommandRejectionReason(new ContentId("command:unknown"), $"Unsupported command type '{command.GetType().Name}'.")
+                    });
+            }
+        }
+
+        public CommandResult ExecuteCommand(ICommand command)
+        {
+            if (command == null) throw new ArgumentNullException(nameof(command));
+
+            switch (command)
+            {
+                case BuildFloorSlabCommand slabCmd:
+                    return BuildFloorSlab(slabCmd);
+                case BuildRoomCommand roomCmd:
+                    return BuildRoom(roomCmd);
+                case AddElevatorShaftCommand shaftCmd:
+                    return AddElevatorShaft(shaftCmd);
+                case BuildStairwellCommand stairCmd:
+                    return BuildStairwell(stairCmd);
+                case DemolishRoomCommand demoCmd:
+                    return DemolishRoom(demoCmd);
+                case AddElevatorCarCommand carCmd:
+                {
+                    var canExec = CanExecute(carCmd);
+                    if (!canExec.Accepted) return canExec;
+                    AddElevatorCar(carCmd.Capacity, carCmd.StartingFloor);
+                    return CommandResult.Success();
+                }
+                default:
+                    return CommandResult.Reject(new[]
+                    {
+                        new CommandRejectionReason(new ContentId("command:unknown"), $"Unsupported command type '{command.GetType().Name}'.")
+                    });
+            }
+        }
+
+        public CommandResult BuildFloorSlab(BuildFloorSlabCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
             var cost = Economy.CalculateFloorSlabCost(cmd.Bounds);
-            if (!Economy.CanAfford(cost))
-            {
-                return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                {
-                    new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford floor slab cost of {cost} (Treasury: {Economy.CashBalance}).")
-                });
-            }
-
             var result = Topology.Execute(cmd, Clock.CurrentTick);
             if (result.Accepted)
             {
@@ -132,18 +301,13 @@ namespace OneRoof.Domain
             return result;
         }
 
-        public OneRoof.Domain.Commands.CommandResult BuildRoom(OneRoof.Domain.Commands.BuildRoomCommand cmd)
+        public CommandResult BuildRoom(BuildRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
             var cost = Economy.CalculateRoomCost(cmd.ContentType, cmd.Bounds);
-            if (!Economy.CanAfford(cost))
-            {
-                return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                {
-                    new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford room cost of {cost} (Treasury: {Economy.CashBalance}).")
-                });
-            }
-
             var result = Topology.Execute(cmd, Clock.CurrentTick);
             if (result.Accepted)
             {
@@ -154,18 +318,13 @@ namespace OneRoof.Domain
             return result;
         }
 
-        public OneRoof.Domain.Commands.CommandResult AddElevatorShaft(OneRoof.Domain.Commands.AddElevatorShaftCommand cmd)
+        public CommandResult AddElevatorShaft(AddElevatorShaftCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
-            var cost = Economy.CalculateElevatorShaftCost(cmd.FloorSpan, cmd.ShaftMaxX - cmd.ShaftMinX + 1);
-            if (!Economy.CanAfford(cost))
-            {
-                return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                {
-                    new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford elevator shaft cost of {cost} (Treasury: {Economy.CashBalance}).")
-                });
-            }
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
 
+            var cost = Economy.CalculateElevatorShaftCost(cmd.FloorSpan, cmd.ShaftMaxX - cmd.ShaftMinX + 1);
             var result = Topology.Execute(cmd, Clock.CurrentTick);
             if (result.Accepted)
             {
@@ -177,18 +336,13 @@ namespace OneRoof.Domain
             return result;
         }
 
-        public OneRoof.Domain.Commands.CommandResult BuildStairwell(OneRoof.Domain.Commands.BuildStairwellCommand cmd)
+        public CommandResult BuildStairwell(BuildStairwellCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
-            var cost = Economy.CalculateStairwellCost(cmd.FloorSpan, cmd.StairMaxX - cmd.StairMinX + 1);
-            if (!Economy.CanAfford(cost))
-            {
-                return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                {
-                    new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford stairwell cost of {cost} (Treasury: {Economy.CashBalance}).")
-                });
-            }
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
 
+            var cost = Economy.CalculateStairwellCost(cmd.FloorSpan, cmd.StairMaxX - cmd.StairMinX + 1);
             var result = Topology.Execute(cmd, Clock.CurrentTick);
             if (result.Accepted)
             {
@@ -199,44 +353,14 @@ namespace OneRoof.Domain
             return result;
         }
 
-        public OneRoof.Domain.Commands.CommandResult DemolishRoom(OneRoof.Domain.Commands.DemolishRoomCommand cmd)
+        public CommandResult DemolishRoom(DemolishRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
 
             if (Topology.Rooms.TryGetValue(cmd.RoomId, out var room))
             {
-                var contentVal = room.ContentType.Value ?? "";
-                if (contentVal.Contains("lobby"))
-                {
-                    return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                    {
-                        new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:protected"), "Cannot demolish main reception lobby.")
-                    });
-                }
-
-                if (contentVal.Contains("elevator_shaft"))
-                {
-                    return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                    {
-                        new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:protected"), "Elevator shafts cannot be demolished with room bulldozer.")
-                    });
-                }
-
-                if (!cmd.Force && contentVal.StartsWith("residential:"))
-                {
-                    var households = Population.Households;
-                    for (var i = 0; i < households.Count; i++)
-                    {
-                        if (households[i].HomeRoomId.Equals(cmd.RoomId))
-                        {
-                            return OneRoof.Domain.Commands.CommandResult.Reject(new[]
-                            {
-                                new OneRoof.Domain.Commands.CommandRejectionReason(new ContentId("demolish:occupied"), "Cannot demolish occupied apartment with active tenants.")
-                            });
-                        }
-                    }
-                }
-
                 var cost = Economy.CalculateRoomCost(room.ContentType, room.Bounds);
                 var salvageRefund = cost / 2;
 

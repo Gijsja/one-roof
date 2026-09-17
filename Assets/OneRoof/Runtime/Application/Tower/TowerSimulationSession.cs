@@ -54,6 +54,18 @@ namespace OneRoof.Application.Tower
             _cachedTransitProjection = null;
         }
 
+        public CommandResult CanExecute(ICommand command) => _simulation.CanExecute(command);
+
+        public CommandResult ExecuteCommand(ICommand command)
+        {
+            var result = _simulation.ExecuteCommand(command);
+            if (result.Accepted)
+            {
+                _cachedTransitProjection = null;
+            }
+            return result;
+        }
+
         public CommandResult BuildFloorSlab(BuildFloorSlabCommand cmd)
         {
             var result = _simulation.BuildFloorSlab(cmd);

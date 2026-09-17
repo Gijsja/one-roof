@@ -7,7 +7,7 @@ namespace OneRoof.Domain.Commands
     /// <summary>
     /// Domain command to construct a functional room on a floor within valid slab bounds.
     /// </summary>
-    public sealed class BuildRoomCommand
+    public sealed class BuildRoomCommand : ICommand
     {
         public BuildRoomCommand(
             int floor,

@@ -16,10 +16,15 @@ namespace OneRoof.Domain.Commands
         }
 
         public bool Accepted { get; }
+        public bool Ok => Accepted;
 
         public IReadOnlyList<CommandRejectionReason> Rejections { get; }
+        public string Reason => Rejections.Count > 0 ? Rejections[0].Message : string.Empty;
 
         public IReadOnlyList<DomainEvent> Events { get; }
+
+        public static CommandResult Success() => Accept();
+        public static CommandResult Fail(string reason, string code = "domain:rejected") => Reject(new[] { new CommandRejectionReason(new OneRoof.Domain.Identity.ContentId(code), reason) });
 
         public static CommandResult Accept(IEnumerable<DomainEvent> events = null)
         {
