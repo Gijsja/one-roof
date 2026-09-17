@@ -667,13 +667,6 @@ namespace OneRoof.Presentation.Tower
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
                 }
-                else
-                {
-                    // Generic room fallback
-                    CreateQuad($"Room {room.Id} ({contentTypeStr})", new Color(0.18f, 0.24f, 0.32f), new Vector3(centerX, y, 0.6f), new Vector2(width - 0.08f, 1.4f), transform);
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), transform);
-                }
             }
         }
 
@@ -743,9 +736,10 @@ namespace OneRoof.Presentation.Tower
             }
 
             // Update resident views
-            var queueIndex = 0;
+            var queuedCountsPerFloor = new int[floorCount];
             var arrivedCountsPerFloor = new int[floorCount];
             var time = Time.time;
+            var topology = _simulationSession.Topology;
 
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
@@ -760,36 +754,138 @@ namespace OneRoof.Presentation.Tower
 
                 switch (resident.Status)
                 {
-                    case TransitResidentStatus.Queued:
+                    case TransitResidentStatus.InRoom:
+                    case TransitResidentStatus.Arrived:
                     {
-                        var queueX = -0.8f + (queueIndex % 16) * 0.35f;
-                        var queueY = FloorY(0) - 0.58f + (queueIndex / 16) * 0.42f;
-                        residentTransform.position = new Vector3(queueX, queueY, -0.2f);
-                        skeletal?.SetTransitStatus(TransitResidentStatus.Queued);
-                        queueIndex++;
+                        // Position resident inside their designated room (apartment, diner, office)
+                        var placedInRoom = false;
+                        if (resident.RoomId.HasValue && topology != null && topology.TryGetRoom(new OneRoof.Domain.Identity.EntityId(resident.RoomId.Value), out var room))
+                        {
+                            var worldLeft = -2.4f + room.Bounds.MinX * 0.5f;
+                            var worldRight = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+                            var roomWidth = worldRight - worldLeft;
+                            var interiorLeft = worldLeft + 0.35f;
+                            var interiorRight = worldRight - 0.35f;
+
+                            float roomX;
+                            if (roomWidth <= 1.2f)
+                            {
+                                roomX = (worldLeft + worldRight) * 0.5f;
+                            }
+                            else
+                            {
+                                var slot = resident.SlotInRoom;
+                                var step = (interiorRight - interiorLeft) / 3f;
+                                roomX = Mathf.Clamp(interiorLeft + (slot % 4) * step, interiorLeft, interiorRight);
+                            }
+
+                            var roomY = FloorY(room.Floor) - 0.58f;
+                            residentTransform.position = new Vector3(roomX, roomY, -0.15f);
+
+                            // Orient character facing slightly toward room center
+                            var roomCenterX = (worldLeft + worldRight) * 0.5f;
+                            var faceScaleX = (roomX < roomCenterX) ? 1f : -1f;
+                            residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
+
+                            skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
+                            placedInRoom = true;
+                        }
+
+                        if (!placedInRoom)
+                        {
+                            // Fallback if room not found
+                            var destFloor = resident.DestinationFloor;
+                            if (destFloor < 0 || destFloor >= floorCount) destFloor = 0;
+                            var slot = arrivedCountsPerFloor[destFloor]++;
+                            var arrivedX = -0.8f + (slot % 14) * 0.42f;
+                            var arrivedY = FloorY(destFloor) - 0.58f;
+                            residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
+                            skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
+                        }
                         break;
                     }
+
+                    case TransitResidentStatus.Walking:
+                    {
+                        // Resident actively walking along corridor between room door and elevator
+                        var walkX = -2.4f + resident.CellX * 0.5f + 0.25f;
+                        var walkFloor = resident.Floor;
+                        if (walkFloor < 0 || walkFloor >= floorCount) walkFloor = 0;
+                        var walkY = FloorY(walkFloor) - 0.58f;
+                        residentTransform.position = new Vector3(walkX, walkY, -0.2f);
+                        skeletal?.SetTransitStatus(TransitResidentStatus.Walking);
+                        break;
+                    }
+
+                    case TransitResidentStatus.Queued:
+                    {
+                        // Resident waiting at elevator landing on their specific floor
+                        var queueFloor = resident.Floor;
+                        if (queueFloor < 0 || queueFloor >= floorCount) queueFloor = 0;
+                        var slot = queuedCountsPerFloor[queueFloor]++;
+                        var queueX = -1.45f - (slot % 12) * 0.28f;
+                        var queueY = FloorY(queueFloor) - 0.58f;
+                        residentTransform.position = new Vector3(queueX, queueY, -0.2f);
+                        residentTransform.localScale = new Vector3(1f, 1f, 1f); // face right toward elevator doors
+                        skeletal?.SetTransitStatus(TransitResidentStatus.Queued);
+                        break;
+                    }
+
                     case TransitResidentStatus.Riding:
                     {
                         // Inside elevator car
                         var elevatorIndex = FindPassengerElevator(snapshot, resident.ResidentId);
+                        if (elevatorIndex >= snapshot.Elevators.Count) elevatorIndex = 0;
                         var carY = FloorY(snapshot.Elevators[elevatorIndex].Floor) - 0.25f;
                         var carX = snapshot.Elevators.Count == 1 ? -1.9f : (-2.15f + elevatorIndex * 0.5f);
                         residentTransform.position = new Vector3(carX + ((i % 2) - 0.5f) * 0.12f, carY, -0.3f);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Riding);
                         break;
                     }
-                    case TransitResidentStatus.Arrived:
+                }
+
+                // Evaluate emotional expression based on transit congestion or room activity
+                if (resident.Status == TransitResidentStatus.Queued)
+                {
+                    // Explanation chain symptom: Queue wait time threshold
+                    if (resident.WaitTicks >= 30)
                     {
-                        var destFloor = resident.DestinationFloor;
-                        if (destFloor < 0 || destFloor >= floorCount) destFloor = 0;
-                        var slot = arrivedCountsPerFloor[destFloor]++;
-                        var arrivedX = -0.8f + (slot % 14) * 0.42f;
-                        var arrivedY = FloorY(destFloor) - 0.58f;
-                        residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
-                        skeletal?.SetTransitStatus(TransitResidentStatus.Arrived);
-                        break;
+                        skeletal?.SetEmote(NpcEmoteKind.Anger);
                     }
+                    else if (resident.WaitTicks >= 15)
+                    {
+                        skeletal?.SetEmote(NpcEmoteKind.Sweat);
+                    }
+                    else if (resident.WaitTicks >= 5)
+                    {
+                        skeletal?.SetEmote(NpcEmoteKind.Ellipsis);
+                    }
+                    else
+                    {
+                        skeletal?.SetEmote(NpcEmoteKind.None);
+                    }
+                }
+                else if (resident.Status == TransitResidentStatus.InRoom)
+                {
+                    switch (resident.Activity)
+                    {
+                        case OneRoof.Domain.Population.ActivityKind.Sleeping:
+                            skeletal?.SetEmote(NpcEmoteKind.Sleeping);
+                            break;
+                        case OneRoof.Domain.Population.ActivityKind.Working:
+                            skeletal?.SetEmote(NpcEmoteKind.Lightbulb);
+                            break;
+                        case OneRoof.Domain.Population.ActivityKind.Leisure:
+                            skeletal?.SetEmote(NpcEmoteKind.MusicNote);
+                            break;
+                        default:
+                            skeletal?.SetEmote(NpcEmoteKind.None);
+                            break;
+                    }
+                }
+                else
+                {
+                    skeletal?.SetEmote(NpcEmoteKind.None);
                 }
 
                 skeletal?.ApplyProceduralAnimation(time);

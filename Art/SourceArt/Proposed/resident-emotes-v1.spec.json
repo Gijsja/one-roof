@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed-source-art",
+  "sourceFile": "resident-emotes-v1.png",
+  "sourceHashSha256": "54886858c55db1d9f7bee8601ec67194af1960f2bf77a9a4de8a705ea4ab627a",
+  "provenance": {
+    "method": "pixel-art 16x16 emote balloon sheet with 3-frame animation loops and dual framed/unframed representations",
+    "importedOn": "2026-09-17",
+    "referenceRole": "Resident emotional expression, congestion symptom alerts, routine indicators, and social sentiment feedback"
+  },
+  "sheet": {
+    "pixels": {
+      "width": 192,
+      "height": 208
+    },
+    "grid": {
+      "columns": 12,
+      "rows": 13,
+      "cellPixels": {
+        "width": 16,
+        "height": 16
+      }
+    },
+    "background": "transparent RGBA",
+    "pixelsPerUnit": 32,
+    "perspectiveProfile": "cutaway-orthographic-front",
+    "theme": "overhead-status-bubble"
+  },
+  "animationProfile": {
+    "framesPerEmote": 3,
+    "frameDurationSeconds": 0.15,
+    "defaultMode": "loop-while-active",
+    "bubbleTailAnchor": {
+      "x": 0.5,
+      "y": 0.0
+    }
+  },
+  "recommendedUnityImport": {
+    "textureType": "Sprite (2D and UI)",
+    "spriteMode": "Multiple",
+    "filterMode": "Point (no filter)",
+    "compression": "None",
+    "pixelsPerUnit": 32,
+    "spritePivot": {
+      "x": 0.5,
+      "y": 0.0
+    },
+    "packingTag": "one-roof-emotes"
+  },
+  "assets": [
+    {
+      "proposedKey": "emote-target-focus",
+      "category": "UXSelection",
+      "framedRow": 0,
+      "unframedRow": 1,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Crosshair target; active inspection lock or destination goal reached",
+      "simulationTrigger": "Inspector selection focus or transit destination arrival"
+    },
+    {
+      "proposedKey": "emote-frost-spark",
+      "category": "Environment",
+      "framedRow": 0,
+      "unframedRow": 1,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Cyan cold/shock burst; HVAC failure, power outage, or freezing room temperature",
+      "simulationTrigger": "Utility failure (power/HVAC) in current room"
+    },
+    {
+      "proposedKey": "emote-music-note",
+      "category": "Routine",
+      "framedRow": 0,
+      "unframedRow": 1,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Music notes; resident enjoying dining, cafe ambiance, or leisure time",
+      "simulationTrigger": "NpcActivityKind.Leisure or dining room occupancy"
+    },
+    {
+      "proposedKey": "emote-swirl-confused",
+      "category": "Transit",
+      "framedRow": 0,
+      "unframedRow": 1,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Tangled scribble; lost pathfinding, blocked corridor, or broken transit node",
+      "simulationTrigger": "Transit routing failure or disconnected floor"
+    },
+    {
+      "proposedKey": "emote-thumbs-up",
+      "category": "Satisfaction",
+      "framedRow": 2,
+      "unframedRow": 3,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Thumbs up; high satisfaction, lease renewed, positive response to building policy",
+      "simulationTrigger": "Household satisfaction > 80 or successful lease signing"
+    },
+    {
+      "proposedKey": "emote-thumbs-down",
+      "category": "Satisfaction",
+      "framedRow": 2,
+      "unframedRow": 3,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Thumbs down; rent grievance, dissatisfaction, poor room conditions",
+      "simulationTrigger": "Household satisfaction < 30 or rent hike complaint"
+    },
+    {
+      "proposedKey": "emote-sweat-drops",
+      "category": "Transit",
+      "framedRow": 2,
+      "unframedRow": 3,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Sweat droplets; commute fatigue from stair climbing or long elevator queue wait",
+      "simulationTrigger": "WaitTicks between 15 and 30 in elevator lobby"
+    },
+    {
+      "proposedKey": "emote-lightbulb-idea",
+      "category": "Routine",
+      "framedRow": 2,
+      "unframedRow": 3,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Glowing lightbulb; focused work, inspiration, business productivity",
+      "simulationTrigger": "NpcActivityKind.Working in commercial or office room"
+    },
+    {
+      "proposedKey": "emote-arrow-down-red",
+      "category": "Economic",
+      "framedRow": 4,
+      "unframedRow": 5,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Downward red arrow; declining funds, worsening commute, degrading satisfaction",
+      "simulationTrigger": "Negative delta in satisfaction or income"
+    },
+    {
+      "proposedKey": "emote-arrow-up-cyan",
+      "category": "Economic",
+      "framedRow": 4,
+      "unframedRow": 5,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Upward cyan arrow; commute improved, promotion, positive policy impact",
+      "simulationTrigger": "Positive delta in commute efficiency or household income"
+    },
+    {
+      "proposedKey": "emote-sleep-zzz",
+      "category": "Routine",
+      "framedRow": 4,
+      "unframedRow": 5,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Sleeping Zzz; resident resting in bed during night cycle",
+      "simulationTrigger": "NpcActivityKind.Sleeping in residential apartment"
+    },
+    {
+      "proposedKey": "emote-skull-danger",
+      "category": "Crisis",
+      "framedRow": 4,
+      "unframedRow": 5,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Shocked eye/skull; extreme crisis, hazard, catastrophic dissatisfaction",
+      "simulationTrigger": "Imminent vacancy abandonment or hazard zone"
+    },
+    {
+      "proposedKey": "emote-heart-love",
+      "category": "Social",
+      "framedRow": 6,
+      "unframedRow": 7,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Pulsing red heart; high affection, strong neighbor relationship, loved apartment",
+      "simulationTrigger": "Positive social interaction or top-tier room appeal"
+    },
+    {
+      "proposedKey": "emote-broken-heart",
+      "category": "Social",
+      "framedRow": 6,
+      "unframedRow": 7,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Broken heart; tenant eviction, move-out decision, fractured friendship",
+      "simulationTrigger": "Tenant departure or relationship dissolution"
+    },
+    {
+      "proposedKey": "emote-blush-stripes",
+      "category": "Social",
+      "framedRow": 6,
+      "unframedRow": 7,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Pink blush lines; flustered, elevator overcrowding contact, awkward encounter",
+      "simulationTrigger": "Elevator car crowded to maximum capacity (>6 passengers)"
+    },
+    {
+      "proposedKey": "emote-anger-vein",
+      "category": "Transit",
+      "framedRow": 6,
+      "unframedRow": 7,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Pulsing red anger cross; severe elevator wait bottleneck or skipped car",
+      "simulationTrigger": "WaitTicks > 30 in transit queue"
+    },
+    {
+      "proposedKey": "emote-exclamation-alert",
+      "category": "Alert",
+      "framedRow": 8,
+      "unframedRow": 9,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Black exclamation mark; alert, elevator arrived, sudden route recalculation",
+      "simulationTrigger": "Elevator car arrival or status change"
+    },
+    {
+      "proposedKey": "emote-question-mark",
+      "category": "Transit",
+      "framedRow": 8,
+      "unframedRow": 9,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Question mark; checking timetable, wondering when car arrives",
+      "simulationTrigger": "Entering transit queue (ticks 1 to 4)"
+    },
+    {
+      "proposedKey": "emote-impact-crest",
+      "category": "Social",
+      "framedRow": 8,
+      "unframedRow": 9,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Red impact shield; dispute between neighbors or faction friction",
+      "simulationTrigger": "Faction tension threshold crossed"
+    },
+    {
+      "proposedKey": "emote-steam-waves",
+      "category": "Environment",
+      "framedRow": 8,
+      "unframedRow": 9,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Steaming red waves; odor complaint, uncollected trash, unbearable heat",
+      "simulationTrigger": "Waste utility overflow or heat hazard"
+    },
+    {
+      "proposedKey": "emote-interrobang",
+      "category": "Alert",
+      "framedRow": 10,
+      "unframedRow": 11,
+      "cols": [
+        0,
+        1,
+        2
+      ],
+      "description": "Startled interrobang; emergency alarm, unexpected eviction, sudden tax increase",
+      "simulationTrigger": "Emergency alert or abrupt policy enforcement"
+    },
+    {
+      "proposedKey": "emote-ellipsis-wait",
+      "category": "Transit",
+      "framedRow": 10,
+      "unframedRow": 11,
+      "cols": [
+        3,
+        4,
+        5
+      ],
+      "description": "Three walking dots; patiently waiting in queue, thinking",
+      "simulationTrigger": "WaitTicks between 5 and 14 in elevator queue"
+    },
+    {
+      "proposedKey": "emote-sun-daytime",
+      "category": "Time",
+      "framedRow": 10,
+      "unframedRow": 11,
+      "cols": [
+        6,
+        7,
+        8
+      ],
+      "description": "Golden sun; morning wake-up routine, morning commute start",
+      "simulationTrigger": "Morning shift start (tick schedule transition)"
+    },
+    {
+      "proposedKey": "emote-moon-night",
+      "category": "Time",
+      "framedRow": 10,
+      "unframedRow": 11,
+      "cols": [
+        9,
+        10,
+        11
+      ],
+      "description": "Crescent moon with stars; evening commute return, bedtime winding down",
+      "simulationTrigger": "Evening shift end / night schedule transition"
+    },
+    {
+      "proposedKey": "bubble-shapes-and-tails",
+      "category": "Framing",
+      "framedRow": 12,
+      "unframedRow": 12,
+      "cols": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "description": "Empty speech bubble frames and descending thought bubble connection dots",
+      "simulationTrigger": "Custom text balloons or pop-in animation scaling"
+    }
+  ],
+  "integrationConstraints": [
+    "proposedKey is an authored candidate key; the content tool owns immutable ContentIds.",
+    "Point filtering (no anti-aliasing) required to preserve crisp pixel-art styling alongside orthographic cutaway.",
+    "Default anchor is bottom-center (0.5, 0.0) aligned with the tail of each bubble frame.",
+    "Must be anchored to Spine Head bone or overhead anchor in NpcSkeletalHierarchy."
+  ]
+}

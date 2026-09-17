@@ -21,9 +21,12 @@ namespace OneRoof.Presentation.Population
         // Renderers
         public SpriteRenderer MainRenderer { get; private set; }
         public SpriteRenderer StatusPlateRenderer { get; private set; }
+        public SpriteRenderer EmoteRenderer { get; private set; }
+        public Transform EmoteAnchor { get; private set; }
 
         public int ResidentIndex { get; private set; } = -1;
         public NpcContentRecord ContentRecord { get; private set; }
+        public NpcEmoteKind CurrentEmote { get; private set; } = NpcEmoteKind.None;
 
         private float _timeOffset;
 
@@ -46,6 +49,7 @@ namespace OneRoof.Presentation.Population
             }
 
             SetTransitStatus(TransitResidentStatus.Queued);
+            SetEmote(NpcEmoteKind.None);
         }
 
         public void EnsureHierarchy()
@@ -85,16 +89,37 @@ namespace OneRoof.Presentation.Population
                 StatusPlateRenderer.sprite = CreateDiscSprite();
                 StatusPlateRenderer.sortingOrder = 10;
             }
+
+            // 4. Overhead Emote Bubble Anchor & Renderer
+            var emoteGo = transform.Find("EmoteBubble")?.gameObject;
+            if (emoteGo == null)
+            {
+                emoteGo = new GameObject("EmoteBubble");
+                emoteGo.transform.SetParent(Head != null ? Head : transform, false);
+                emoteGo.transform.localPosition = new Vector3(0f, 0.18f, -0.05f);
+                emoteGo.transform.localScale = Vector3.one;
+            }
+
+            EmoteAnchor = emoteGo.transform;
+            EmoteRenderer = emoteGo.GetComponent<SpriteRenderer>();
+            if (EmoteRenderer == null)
+            {
+                EmoteRenderer = emoteGo.AddComponent<SpriteRenderer>();
+                EmoteRenderer.sortingOrder = 25;
+            }
         }
+
+        private TransitResidentStatus _currentStatus = TransitResidentStatus.Queued;
 
         public void SetTransitStatus(TransitResidentStatus status)
         {
             EnsureHierarchy();
+            _currentStatus = status;
 
             switch (status)
             {
                 case TransitResidentStatus.Queued:
-                    // Waiting in lobby: subtle warm amber status glow
+                    // Waiting in lobby / landing: subtle warm amber status glow
                     if (MainRenderer != null) MainRenderer.color = new Color(1f, 0.95f, 0.88f);
                     if (StatusPlateRenderer != null) StatusPlateRenderer.color = new Color(1f, 0.65f, 0.25f, 0.85f);
                     break;
@@ -105,11 +130,43 @@ namespace OneRoof.Presentation.Population
                     if (StatusPlateRenderer != null) StatusPlateRenderer.color = new Color(0.25f, 0.85f, 1f, 0.85f);
                     break;
 
+                case TransitResidentStatus.Walking:
+                    // Walking along corridor: crisp natural color with cyan locomotion plate
+                    if (MainRenderer != null) MainRenderer.color = new Color(0.95f, 0.98f, 1f);
+                    if (StatusPlateRenderer != null) StatusPlateRenderer.color = new Color(0.30f, 0.75f, 0.95f, 0.75f);
+                    break;
+
+                case TransitResidentStatus.InRoom:
                 case TransitResidentStatus.Arrived:
-                    // Arrived in room: natural full color with soft green settled shadow
+                default:
+                    // Settled inside room: natural full color with soft green settled shadow
                     if (MainRenderer != null) MainRenderer.color = Color.white;
                     if (StatusPlateRenderer != null) StatusPlateRenderer.color = new Color(0.28f, 0.65f, 0.40f, 0.55f);
                     break;
+            }
+        }
+
+        public void SetEmote(NpcEmoteKind emote)
+        {
+            EnsureHierarchy();
+            if (CurrentEmote == emote) return;
+
+            CurrentEmote = emote;
+            if (emote == NpcEmoteKind.None)
+            {
+                if (EmoteRenderer != null)
+                {
+                    EmoteRenderer.enabled = false;
+                    EmoteRenderer.sprite = null;
+                }
+            }
+            else
+            {
+                if (EmoteRenderer != null)
+                {
+                    EmoteRenderer.enabled = true;
+                    EmoteRenderer.sprite = EmoteSpriteCatalog.GetSprite(emote, 0);
+                }
             }
         }
 
@@ -118,10 +175,43 @@ namespace OneRoof.Presentation.Population
             if (Spine == null || Head == null) return;
 
             var t = globalTime + _timeOffset;
-            // Subtle breathing motion
-            var breatheAngle = Mathf.Sin(t * 2.1f) * 1.2f;
-            Spine.localRotation = Quaternion.Euler(0f, 0f, breatheAngle);
-            Head.localRotation = Quaternion.Euler(0f, 0f, -breatheAngle * 0.7f);
+
+            if (_currentStatus == TransitResidentStatus.Walking)
+            {
+                // Walking locomotion bob & swing
+                var walkSwing = Mathf.Sin(t * 8f);
+                Spine.localRotation = Quaternion.Euler(0f, 0f, walkSwing * 3.5f);
+                Head.localRotation = Quaternion.Euler(0f, 0f, -walkSwing * 1.5f);
+            }
+            else
+            {
+                // Subtle idle breathing motion
+                var breatheAngle = Mathf.Sin(t * 2.1f) * 1.2f;
+                Spine.localRotation = Quaternion.Euler(0f, 0f, breatheAngle);
+                Head.localRotation = Quaternion.Euler(0f, 0f, -breatheAngle * 0.7f);
+            }
+
+            // Emote bubble frame animation and subtle float
+            if (CurrentEmote != NpcEmoteKind.None && EmoteRenderer != null)
+            {
+                var frame = (int)((globalTime / 0.15f) % 3);
+                var sprite = EmoteSpriteCatalog.GetSprite(CurrentEmote, frame);
+                if (sprite != null)
+                {
+                    EmoteRenderer.sprite = sprite;
+                }
+                EmoteRenderer.enabled = true;
+
+                if (EmoteAnchor != null)
+                {
+                    var bob = Mathf.Sin((globalTime + _timeOffset) * 4f) * 0.015f;
+                    EmoteAnchor.localPosition = new Vector3(0f, 0.18f + bob, -0.05f);
+                }
+            }
+            else if (EmoteRenderer != null && EmoteRenderer.enabled)
+            {
+                EmoteRenderer.enabled = false;
+            }
         }
 
         private static Transform EnsureBone(Transform parent, string boneName, Vector3 localPos)

@@ -77,9 +77,16 @@ namespace OneRoof.Domain.Trips
                 var destinationRoomId = ResolveDestinationRoom(person, purpose.Value);
                 if (!destinationRoomId.HasValue) continue;
 
+                var originRoomId = person.CurrentRoomId.Value > 0 ? person.CurrentRoomId : person.HomeRoomId;
+                if (originRoomId.Equals(destinationRoomId.Value))
+                {
+                    person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
+                    continue;
+                }
+
                 var trip = BuildTrip(
                     person.Id,
-                    person.HomeRoomId,           // current location proxy = home for now
+                    originRoomId,
                     destinationRoomId.Value,
                     purpose.Value,
                     currentTick);

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using OneRoof.Application.Transit;
+using OneRoof.Content;
 using OneRoof.Presentation.Population;
 using UnityEngine;
 
@@ -79,6 +80,47 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 // Verify procedural animation executes cleanly
                 Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(1.5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SkeletalHierarchy_EmoteBubbleSetupAndAnimation()
+        {
+            var go = new GameObject("TestEmoteResident");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0);
+
+                Assert.That(skeletal.EmoteAnchor, Is.Not.Null);
+                Assert.That(skeletal.EmoteRenderer, Is.Not.Null);
+                Assert.That(skeletal.CurrentEmote, Is.EqualTo(NpcEmoteKind.None));
+                Assert.That(skeletal.EmoteRenderer.enabled, Is.False);
+
+                // Set anger emote (congestion wait bottleneck)
+                skeletal.SetEmote(NpcEmoteKind.Anger);
+                Assert.That(skeletal.CurrentEmote, Is.EqualTo(NpcEmoteKind.Anger));
+                Assert.That(skeletal.EmoteRenderer.enabled, Is.True);
+                Assert.That(skeletal.EmoteRenderer.sprite, Is.Not.Null);
+                Assert.That(skeletal.EmoteRenderer.sortingOrder, Is.EqualTo(25));
+
+                // Animate procedural frame advance and floating bob
+                Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(0.2f));
+                Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(0.4f));
+
+                // Switch to sweat drops
+                skeletal.SetEmote(NpcEmoteKind.Sweat);
+                Assert.That(skeletal.CurrentEmote, Is.EqualTo(NpcEmoteKind.Sweat));
+                Assert.That(skeletal.EmoteRenderer.enabled, Is.True);
+
+                // Clear emote
+                skeletal.SetEmote(NpcEmoteKind.None);
+                Assert.That(skeletal.CurrentEmote, Is.EqualTo(NpcEmoteKind.None));
+                Assert.That(skeletal.EmoteRenderer.enabled, Is.False);
             }
             finally
             {

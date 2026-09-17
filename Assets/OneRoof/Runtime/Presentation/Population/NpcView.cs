@@ -1,4 +1,5 @@
 using OneRoof.Application.Population;
+using OneRoof.Content;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Population
@@ -86,6 +87,36 @@ namespace OneRoof.Presentation.Population
                 if (_skeletalHierarchy.StatusPlateRenderer != null)
                 {
                     _skeletalHierarchy.StatusPlateRenderer.color = color;
+                }
+
+                if (projection.IsInTransit)
+                {
+                    if (projection.WaitTicks >= 30)
+                        _skeletalHierarchy.SetEmote(NpcEmoteKind.Anger);
+                    else if (projection.WaitTicks >= 15)
+                        _skeletalHierarchy.SetEmote(NpcEmoteKind.Sweat);
+                    else if (projection.WaitTicks >= 5)
+                        _skeletalHierarchy.SetEmote(NpcEmoteKind.Ellipsis);
+                    else
+                        _skeletalHierarchy.SetEmote(NpcEmoteKind.None);
+                }
+                else
+                {
+                    switch (projection.CurrentActivity)
+                    {
+                        case NpcActivityKind.Sleeping:
+                            _skeletalHierarchy.SetEmote(NpcEmoteKind.Sleeping);
+                            break;
+                        case NpcActivityKind.Working:
+                            _skeletalHierarchy.SetEmote(NpcEmoteKind.Lightbulb);
+                            break;
+                        case NpcActivityKind.Leisure:
+                            _skeletalHierarchy.SetEmote(NpcEmoteKind.MusicNote);
+                            break;
+                        default:
+                            _skeletalHierarchy.SetEmote(NpcEmoteKind.None);
+                            break;
+                    }
                 }
             }
             else if (_spriteRenderer != null)

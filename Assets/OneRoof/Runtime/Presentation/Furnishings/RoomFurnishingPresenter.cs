@@ -126,7 +126,7 @@ namespace OneRoof.Presentation.Furnishings
             {
                 if (_placedProps[i] != null)
                 {
-                    if (Application.isPlaying)
+                    if (UnityEngine.Application.isPlaying)
                     {
                         Destroy(_placedProps[i]);
                     }

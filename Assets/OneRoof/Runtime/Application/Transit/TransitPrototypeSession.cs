@@ -8,16 +8,33 @@ namespace OneRoof.Application.Transit
     {
         Queued,
         Riding,
-        Arrived
+        Arrived,
+        InRoom,
+        Walking
     }
 
     public readonly struct TransitResidentProjection
     {
-        public TransitResidentProjection(int residentId, int destinationFloor, TransitResidentStatus status)
+        public TransitResidentProjection(
+            int residentId,
+            int destinationFloor,
+            TransitResidentStatus status,
+            int floor = 0,
+            float cellX = 0f,
+            int? roomId = null,
+            OneRoof.Domain.Population.ActivityKind activity = OneRoof.Domain.Population.ActivityKind.Idle,
+            int slotInRoom = 0,
+            int waitTicks = 0)
         {
             ResidentId = residentId;
             DestinationFloor = destinationFloor;
             Status = status;
+            Floor = floor;
+            CellX = cellX;
+            RoomId = roomId;
+            Activity = activity;
+            SlotInRoom = slotInRoom;
+            WaitTicks = waitTicks;
         }
 
         public int ResidentId { get; }
@@ -25,6 +42,18 @@ namespace OneRoof.Application.Transit
         public int DestinationFloor { get; }
 
         public TransitResidentStatus Status { get; }
+
+        public int Floor { get; }
+
+        public float CellX { get; }
+
+        public int? RoomId { get; }
+
+        public OneRoof.Domain.Population.ActivityKind Activity { get; }
+
+        public int SlotInRoom { get; }
+
+        public int WaitTicks { get; }
     }
 
     public readonly struct ElevatorProjection
@@ -158,7 +187,16 @@ namespace OneRoof.Application.Transit
             var residents = new List<TransitResidentProjection>(snapshot.Residents.Count);
             foreach (var resident in snapshot.Residents)
             {
-                residents.Add(new TransitResidentProjection(resident.ResidentId.Value, resident.DestinationFloor, ToStatus(resident.Phase)));
+                residents.Add(new TransitResidentProjection(
+                    resident.ResidentId.Value,
+                    resident.DestinationFloor,
+                    ToStatus(resident.Phase),
+                    0,
+                    0f,
+                    null,
+                    OneRoof.Domain.Population.ActivityKind.Idle,
+                    0,
+                    (int)resident.WaitTicks));
             }
 
             var elevators = new List<ElevatorProjection>(snapshot.Elevators.Count);

@@ -8,15 +8,30 @@ using OneRoof.Domain.Trips;
 
 namespace OneRoof.Domain.Transit
 {
+    public enum ResidentMovementPhase
+    {
+        InRoom,
+        Walking,
+        Queued,
+        Riding
+    }
+
     public readonly struct ResidentSpatialPosition
     {
-        public ResidentSpatialPosition(EntityId residentId, int floor, float x, ActivityKind activity, EntityId? roomId)
+        public ResidentSpatialPosition(
+            EntityId residentId,
+            int floor,
+            float x,
+            ActivityKind activity,
+            EntityId? roomId,
+            ResidentMovementPhase phase = ResidentMovementPhase.InRoom)
         {
             ResidentId = residentId;
             Floor = floor;
             X = x;
             Activity = activity;
             RoomId = roomId;
+            Phase = phase;
         }
 
         public EntityId ResidentId { get; }
@@ -28,6 +43,8 @@ namespace OneRoof.Domain.Transit
         public ActivityKind Activity { get; }
 
         public EntityId? RoomId { get; }
+
+        public ResidentMovementPhase Phase { get; }
     }
 
     /// <summary>
@@ -299,12 +316,19 @@ namespace OneRoof.Domain.Transit
         {
             if (_activeTripsByPerson.TryGetValue(personId, out var execution))
             {
+                var phase = execution.IsQueuedInElevator
+                    ? ResidentMovementPhase.Queued
+                    : (execution.IsRidingElevator
+                        ? ResidentMovementPhase.Riding
+                        : ResidentMovementPhase.Walking);
+
                 return new ResidentSpatialPosition(
                     personId,
                     execution.CurrentFloor,
                     execution.CurrentX,
                     ActivityKind.Commuting,
-                    null);
+                    execution.Trip.DestinationRoomId,
+                    phase);
             }
 
             if (population != null && population.TryGetPerson(personId, out var person))
@@ -318,11 +342,12 @@ namespace OneRoof.Domain.Transit
                         room.Floor,
                         centerX,
                         person.CurrentActivity,
-                        roomId);
+                        roomId,
+                        ResidentMovementPhase.InRoom);
                 }
             }
 
-            return new ResidentSpatialPosition(personId, 0, 0f, ActivityKind.Idle, null);
+            return new ResidentSpatialPosition(personId, 0, 0f, ActivityKind.Idle, null, ResidentMovementPhase.InRoom);
         }
 
         public static ActivityKind PurposeToActivity(TripPurpose purpose)

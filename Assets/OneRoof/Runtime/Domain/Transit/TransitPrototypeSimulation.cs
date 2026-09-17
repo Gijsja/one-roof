@@ -15,11 +15,12 @@ namespace OneRoof.Domain.Transit
 
     public readonly struct TransitResidentSnapshot
     {
-        public TransitResidentSnapshot(EntityId residentId, int destinationFloor, ResidentTransitPhase phase)
+        public TransitResidentSnapshot(EntityId residentId, int destinationFloor, ResidentTransitPhase phase, long waitTicks = 0)
         {
             ResidentId = residentId;
             DestinationFloor = destinationFloor;
             Phase = phase;
+            WaitTicks = waitTicks;
         }
 
         public EntityId ResidentId { get; }
@@ -27,6 +28,8 @@ namespace OneRoof.Domain.Transit
         public int DestinationFloor { get; }
 
         public ResidentTransitPhase Phase { get; }
+
+        public long WaitTicks { get; }
     }
 
     public readonly struct ElevatorCarSnapshot
@@ -142,7 +145,7 @@ namespace OneRoof.Domain.Transit
             var queued = 0;
             foreach (var resident in _residents)
             {
-                residents.Add(new TransitResidentSnapshot(resident.Id, resident.DestinationFloor, resident.Phase));
+                residents.Add(new TransitResidentSnapshot(resident.Id, resident.DestinationFloor, resident.Phase, resident.WaitTicks));
                 if (resident.Phase == ResidentTransitPhase.Queued)
                 {
                     queued++;

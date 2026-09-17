@@ -191,49 +191,75 @@ namespace OneRoof.Application.Tower
                 }
             }
 
+            var roomOccupantCounts = new Dictionary<EntityId, int>();
             var residents = new List<TransitResidentProjection>(_simulation.ResidentCount);
             var arrivedCount = 0;
 
             foreach (var person in _simulation.Population.Persons)
             {
+                var spatial = _simulation.GetResidentPosition(person.Id);
                 TransitResidentStatus status;
-                int targetFloor;
+                var floor = spatial.Floor;
+                var cellX = spatial.X;
+                var roomId = spatial.RoomId;
+                var activity = spatial.Activity;
+                int targetFloor = floor;
+                int slotInRoom = 0;
+                int waitTicks = 0;
 
-                if (deliveredByPerson.TryGetValue(person.Id, out var delivered))
+                switch (spatial.Phase)
                 {
-                    status = TransitResidentStatus.Arrived;
-                    targetFloor = delivered.DestinationFloor;
-                }
-                else if (ridingByPerson.TryGetValue(person.Id, out var riding))
-                {
-                    status = TransitResidentStatus.Riding;
-                    targetFloor = riding.DestinationFloor;
-                }
-                else if (queuedByPerson.TryGetValue(person.Id, out var queued))
-                {
-                    status = TransitResidentStatus.Queued;
-                    targetFloor = queued.DestinationFloor;
-                }
-                else
-                {
-                    var spatial = _simulation.GetResidentPosition(person.Id);
-                    status = spatial.Activity == ActivityKind.Commuting
-                        ? TransitResidentStatus.Riding
-                        : (spatial.Activity == ActivityKind.Working || spatial.Activity == ActivityKind.Eating || spatial.Activity == ActivityKind.Sleeping
-                            ? TransitResidentStatus.Arrived
-                            : TransitResidentStatus.Queued);
-                    targetFloor = spatial.Floor;
-                }
+                    case ResidentMovementPhase.InRoom:
+                        status = TransitResidentStatus.InRoom;
+                        arrivedCount++;
+                        if (roomId.HasValue)
+                        {
+                            if (!roomOccupantCounts.TryGetValue(roomId.Value, out var count))
+                            {
+                                count = 0;
+                            }
+                            slotInRoom = count;
+                            roomOccupantCounts[roomId.Value] = count + 1;
+                        }
+                        break;
 
-                if (status == TransitResidentStatus.Arrived)
-                {
-                    arrivedCount++;
+                    case ResidentMovementPhase.Walking:
+                        status = TransitResidentStatus.Walking;
+                        break;
+
+                    case ResidentMovementPhase.Queued:
+                        status = TransitResidentStatus.Queued;
+                        if (queuedByPerson.TryGetValue(person.Id, out var qp))
+                        {
+                            targetFloor = qp.DestinationFloor;
+                            waitTicks = (int)qp.WaitTicks;
+                        }
+                        break;
+
+                    case ResidentMovementPhase.Riding:
+                        status = TransitResidentStatus.Riding;
+                        if (ridingByPerson.TryGetValue(person.Id, out var rp))
+                        {
+                            targetFloor = rp.DestinationFloor;
+                            waitTicks = (int)rp.WaitTicks;
+                        }
+                        break;
+
+                    default:
+                        status = TransitResidentStatus.InRoom;
+                        break;
                 }
 
                 residents.Add(new TransitResidentProjection(
                     person.Id.Value,
                     targetFloor,
-                    status));
+                    status,
+                    floor,
+                    cellX,
+                    roomId?.Value,
+                    activity,
+                    slotInRoom,
+                    waitTicks));
             }
 
             var elevators = new List<ElevatorProjection>(_simulation.ElevatorBank.Cars.Count);

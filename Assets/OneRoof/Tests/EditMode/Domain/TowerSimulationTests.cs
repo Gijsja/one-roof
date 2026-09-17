@@ -104,5 +104,52 @@ namespace OneRoof.Domain.Tests.EditMode
             // Elevator bank should have delivered passengers
             Assert.That(sim.ElevatorBank.DeliveredCount, Is.GreaterThan(0));
         }
+
+        [Test]
+        public void AllResidentsInitiallyLiveInTheirHomeRooms()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+
+            // At tick 0 before commute starts, all residents must be InRoom in their home apartment
+            for (var p = 0; p < sim.ResidentCount; p++)
+            {
+                var person = sim.Population.Persons[p];
+                var spatial = sim.GetResidentPosition(person.Id);
+
+                Assert.That(spatial.Phase, Is.EqualTo(ResidentMovementPhase.InRoom));
+                Assert.That(spatial.RoomId, Is.EqualTo(person.HomeRoomId));
+                Assert.That(spatial.Floor, Is.GreaterThan(0), "Home apartments in FiveFloor fixture are on floors 1-4.");
+                Assert.That(spatial.X, Is.Not.Zero);
+            }
+        }
+
+        [Test]
+        public void ActiveCommuteTransitionsThroughWalkingQueuedAndRidingPhases()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+
+            var observedWalking = false;
+            var observedQueued = false;
+            var observedRiding = false;
+
+            for (var tick = 0; tick < 60; tick++)
+            {
+                sim.AdvanceOneTick();
+
+                for (var p = 0; p < sim.ResidentCount; p++)
+                {
+                    var person = sim.Population.Persons[p];
+                    var spatial = sim.GetResidentPosition(person.Id);
+
+                    if (spatial.Phase == ResidentMovementPhase.Walking) observedWalking = true;
+                    if (spatial.Phase == ResidentMovementPhase.Queued) observedQueued = true;
+                    if (spatial.Phase == ResidentMovementPhase.Riding) observedRiding = true;
+                }
+            }
+
+            Assert.That(observedWalking, Is.True, "Should observe residents walking along corridors.");
+            Assert.That(observedQueued, Is.True, "Should observe residents queued at elevator.");
+            Assert.That(observedRiding, Is.True, "Should observe residents riding elevator car.");
+        }
     }
 }

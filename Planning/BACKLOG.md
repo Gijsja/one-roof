@@ -40,8 +40,26 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-518 | READY | M5.3 | Inspect mode selection and hover outline shader presenter | OR-517 | Selected and hovered rooms, residents, and elevator shafts render pixel-perfect outline and soft glow silhouettes |
 | OR-519 | READY | M5.3 | Demolition dissolve and construction scanline shader transitions | OR-511, OR-517 | Bulldozing rooms/slabs triggers animated dissolve shader effect; construction fades in with digital blueprint wireframe |
 | OR-520 | READY | M5.3 | Elevator congestion & resident agitation visual shader aura | OR-203, OR-517 | Residents waiting beyond congestion threshold and overcrowded elevator doors display pulsing agitation aura |
+| OR-521 | DONE | M5.3 | Resident room living & leg-by-leg corridor-elevator transit | OR-516, OR-502 | Residents live inside assigned apartments/rooms with interior slot spacing, walk along corridors, queue at floor-specific elevator landings, and enter rooms upon transit delivery |
+| OR-522 | READY | M5.4 | Presentation furniture anchor docking | OR-516, OR-521 | Residents visibly dock onto sofas, beds, desks, and booths using OR-516 interaction points |
+| OR-523 | READY | M5.4 | Inspect mode deep cards for residents, rooms, and elevator banks | OR-518, OR-521 | Clicking entities in Inspect mode opens comprehensive symptom/cause drill-down cards |
 | ART-003 | READY | M6.0 | Spine 2D skeletal animation & 8-layer wardrobe composition | ART-002 | Shared 17-bone rig animated with 6 clips; dynamic 8-layer wardrobe compositor operational |
+| OR-601 | READY | M6.1 | Resident needs & dynamic schedule arbitration | OR-521, ART-003 | Five core needs (Hunger, Energy, Social, Hygiene, Purpose) drive autonomous destination choices |
 | ART-004 | READY | M6.1 | AssetLab validation tooling & Addressables packaging | ART-003 | Standalone AssetLab scene runs automated seam, rig, and anchor checks; Addressables bundles build cleanly |
+| OR-602 | READY | M6.2 | Resident satisfaction scoring, grievances & satisfaction overlay | OR-601 | Satisfaction aggregates commute wait, crowding, noise, rent; persistent misery triggers move-out |
+| OR-603 | READY | M6.2 | Population density & demographic distribution overlay | OR-601 | Overlay 3 visualizes resident density and income/age demographics across the tower |
 | ART-005 | READY | M6.2 | Spatial audio soundscapes & environmental lighting atmosphere | ART-004 | Footstep surface audio, elevator mechanical foley, roomtones, and volumetric window lighting |
+| OR-701 | READY | M7.1 | Expanded commercial & service zoning | OR-513, OR-501 | Retail shops, clinics, maintenance workshops, and security stations added to building catalog |
+| OR-702 | READY | M7.2 | Commercial lease lifecycle & resident employment matching | OR-701, OR-503 | Businesses recruit resident workers, pay wages, collect customer revenue, and risk insolvency |
+| OR-703 | READY | M7.3 | Business health & foot traffic flow overlays | OR-702, OR-514 | Overlays 1 & 6 render pedestrian flow vectors and tenant financial solvency indicators |
+| OR-801 | READY | M8.1 | Physical electrical grid network | OR-501, OR-502 | Ground substation, vertical riser ducts, floor transformers, and voltage drop / brownouts |
+| OR-802 | READY | M8.1 | Plumbing water & gravity waste networks | OR-801 | Ground pumps, vertical pressure head, booster pumps, and gravity trash chute collection |
+| OR-803 | READY | M8.2 | Infrastructure degradation, technician jobs & utilities overlay | OR-801, OR-802 | Equipment wear, technician dispatch, failure disruption chains, and Overlay 8 utilities flow |
+| OR-901 | READY | M9.1 | Inter-resident relationship graph & 4 faction archetypes | OR-601, OR-702 | Friendship networks and 4 faction allegiances (Tenant Union, Corporate, Merchants, Eco Council) |
+| OR-902 | READY | M9.2 | Steward policy decree management panel | OR-901 | Player decrees for rent caps, transit subsidies, quiet hours, and commercial tax rates |
+| OR-903 | READY | M9.3 | Faction tension & noise overlays with civil action events | OR-901, OR-902 | Overlays 5 & 7 render acoustic contours and regional tension; protests/strikes on high tension |
+| OR-1001 | READY | M10.1 | Blueprints & rapid multi-floor expansion tooling | OR-505, OR-801 | Floor copy/paste blueprints and 30-floor scaling under strict 60 FPS / <4ms tick budget |
+| OR-1002 | READY | M10.2 | Six dynamic crisis event chains | OR-903, OR-803 | Multi-stage event chains (cable snap, fire, heatwave, epidemic, strike, city safety inspection) |
+| OR-1003 | READY | M10.3 | Beta boundary golden acceptance test (City Status) | OR-1001, OR-1002 | 30 floors, 300 residents running deterministically; sustains City Status for 30 in-game days |
 
 
