@@ -425,6 +425,11 @@ namespace OneRoof.Domain.Topology
                                 continue;
                             }
 
+                            if (existing.ContentType == FiveFloorTopologyFixture.ElevatorShaftContentId || (cmd.StairMinX <= 1 && cmd.StairMaxX >= 0))
+                            {
+                                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("transit:shaft_overlap"), $"Stairwell cannot overlap central elevator shaft column on floor {floor}.") });
+                            }
+
                             return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:stair_overlap"), $"Stairwell overlaps existing room {existing.Id} on floor {floor}.") });
                         }
                     }

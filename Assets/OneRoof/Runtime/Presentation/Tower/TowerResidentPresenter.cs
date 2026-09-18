@@ -7,6 +7,7 @@ using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Population;
 using UnityEngine;
+using EntityId = OneRoof.Domain.Identity.EntityId;
 
 namespace OneRoof.Presentation.Tower
 {

@@ -94,10 +94,10 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void TransitExecutionSystem_AdvancesWalkLegAndElevatorLeg()
         {
-            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var sim = TowerSimulation.CreateStandardFiveFloor(enqueueMorningRush: true);
 
             // Advance through morning rush hour to let residents complete full commutes
-            for (var tick = 0; tick < 70; tick++)
+            for (var tick = 0; tick < 100; tick++)
             {
                 sim.AdvanceOneTick();
             }
@@ -169,11 +169,11 @@ namespace OneRoof.Domain.Tests.EditMode
         {
             var sim = TowerSimulation.CreateStandardFiveFloor(new TowerEconomyState(50000));
 
-            // Build a second diner on Floor 0 at unoccupied cells [4..13]
+            // Build a second diner on Floor 0 at unoccupied cells [-14..-11]
             var buildCmd = new OneRoof.Domain.Commands.BuildRoomCommand(
                 0,
-                4,
-                13,
+                -14,
+                -11,
                 new ContentId("commercial:diner"),
                 capacity: 10);
 
@@ -184,7 +184,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Room newDiner = null;
             foreach (var r in sim.Topology.GetRoomsOnFloor(0))
             {
-                if (r.Bounds.MinX == 4 && r.Bounds.MaxX == 13)
+                if (r.Bounds.MinX == -14 && r.Bounds.MaxX == -11)
                 {
                     newDiner = r;
                     break;

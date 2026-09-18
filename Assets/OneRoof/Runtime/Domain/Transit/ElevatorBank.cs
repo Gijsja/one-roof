@@ -14,6 +14,8 @@ namespace OneRoof.Domain.Transit
         private readonly List<ElevatorCar> _cars;
         private readonly Dictionary<int, Queue<ElevatorPassenger>> _floorQueues;
         private readonly List<ElevatorPassenger> _deliveredPassengers;
+        private int _cumulativeDeliveredCount;
+        private long _cumulativeWaitTicks;
 
         public ElevatorBank(int minFloor, int maxFloor, IEnumerable<ElevatorCar> cars)
         {
@@ -106,7 +108,7 @@ namespace OneRoof.Domain.Transit
                 AverageWaitTicks);
         }
 
-        public int DeliveredCount => _deliveredPassengers.Count;
+        public int DeliveredCount => _cumulativeDeliveredCount + _deliveredPassengers.Count;
 
         public int TotalQueuedCount
         {
@@ -130,20 +132,22 @@ namespace OneRoof.Domain.Transit
             }
 
             _cars.Add(car);
+            RebalanceDispatches();
         }
 
         public float AverageWaitTicks
         {
             get
             {
-                if (_deliveredPassengers.Count == 0) return 0f;
-                long totalWait = 0;
+                var totalDelivered = _cumulativeDeliveredCount + _deliveredPassengers.Count;
+                if (totalDelivered == 0) return 0f;
+                long totalWait = _cumulativeWaitTicks;
                 foreach (var p in _deliveredPassengers)
                 {
                     totalWait += p.WaitTicks;
                 }
 
-                return (float)totalWait / _deliveredPassengers.Count;
+                return (float)totalWait / totalDelivered;
             }
         }
 
@@ -186,6 +190,8 @@ namespace OneRoof.Domain.Transit
                 if (_deliveredPassengers[i].PersonId.Equals(personId))
                 {
                     passenger = _deliveredPassengers[i];
+                    _cumulativeDeliveredCount++;
+                    _cumulativeWaitTicks += passenger.WaitTicks;
                     _deliveredPassengers.RemoveAt(i);
                     return true;
                 }
@@ -252,7 +258,7 @@ namespace OneRoof.Domain.Transit
             }
 
             queue.Enqueue(passenger);
-            DispatchCarToFloor(passenger.OriginFloor);
+            RebalanceDispatches();
         }
 
         public void Advance(Tick tick)
@@ -278,9 +284,6 @@ namespace OneRoof.Domain.Transit
             // 3. Advance each car and process loading/unloading
             foreach (var car in _cars)
             {
-                // If car is already in OpenLoading before tick, or reaches it during tick:
-                var wasOpenLoading = car.Phase == ElevatorCarPhase.OpenLoading;
-
                 car.Tick();
 
                 var isOpenLoading = car.Phase == ElevatorCarPhase.OpenLoading;
@@ -300,66 +303,112 @@ namespace OneRoof.Domain.Transit
                             car.Board(nextPassenger);
                         }
                     }
-                }
 
-                // If car becomes Idle and there are active queues, dispatch it
-                if (car.Phase == ElevatorCarPhase.Idle && !car.HasRequests)
-                {
-                    CheckForUnservicedCalls(car);
-                }
-            }
-        }
-
-        private void DispatchCarToFloor(int floor)
-        {
-            // Find best car: prefer nearest idle car, then nearest moving car
-            ElevatorCar bestCar = null;
-            var minDistance = int.MaxValue;
-
-            foreach (var car in _cars)
-            {
-                if (car.Phase == ElevatorCarPhase.Idle)
-                {
-                    var dist = Math.Abs(car.CurrentFloor - floor);
-                    if (dist < minDistance)
+                    if (car.Passengers.Count >= car.Capacity)
                     {
-                        minDistance = dist;
-                        bestCar = car;
+                        car.ClearPickupTargets();
                     }
                 }
             }
 
-            if (bestCar == null && _cars.Count > 0)
-            {
-                // Fallback: pick any car
-                bestCar = _cars[0];
-            }
-
-            bestCar?.RequestFloor(floor);
+            // 4. Rebalance unserviced floor calls to best available cars
+            RebalanceDispatches();
         }
 
-        private void CheckForUnservicedCalls(ElevatorCar car)
+        private void RebalanceDispatches()
         {
-            var nearestFloor = -1;
-            var minDelta = int.MaxValue;
-
+            var floorsWithQueues = new List<(int floor, long maxWait)>();
             foreach (var kvp in _floorQueues)
             {
                 if (kvp.Value.Count > 0)
                 {
-                    var delta = Math.Abs(kvp.Key - car.CurrentFloor);
-                    if (delta < minDelta)
+                    var (maxWait, _) = GetFloorWaitMetrics(kvp.Key);
+                    floorsWithQueues.Add((kvp.Key, maxWait));
+                }
+                else
+                {
+                    foreach (var car in _cars)
                     {
-                        minDelta = delta;
-                        nearestFloor = kvp.Key;
+                        car.RemoveTargetFloor(kvp.Key);
                     }
                 }
             }
 
-            if (nearestFloor >= 0)
+            floorsWithQueues.Sort((a, b) => b.maxWait.CompareTo(a.maxWait));
+
+            foreach (var item in floorsWithQueues)
             {
-                car.RequestFloor(nearestFloor);
+                var floor = item.floor;
+                var bestCar = FindBestCarForFloor(floor);
+                if (bestCar != null)
+                {
+                    bestCar.RequestFloor(floor);
+
+                    foreach (var other in _cars)
+                    {
+                        if (other != bestCar)
+                        {
+                            other.RemoveTargetFloor(floor);
+                        }
+                    }
+                }
             }
+        }
+
+        private ElevatorCar FindBestCarForFloor(int floor)
+        {
+            ElevatorCar bestCar = null;
+            var minCost = int.MaxValue;
+
+            foreach (var car in _cars)
+            {
+                if (car.Passengers.Count >= car.Capacity)
+                {
+                    continue;
+                }
+                var dist = Math.Abs(car.CurrentFloor - floor);
+                int cost;
+
+                if (car.Phase == ElevatorCarPhase.Idle)
+                {
+                    cost = dist * 4 + car.RequestCount * 10;
+                }
+                else
+                {
+                    var isAtFloor = (car.CurrentFloor == floor);
+                    var onTheWay = isAtFloor ||
+                                  (car.Direction == ElevatorDirection.Up && floor > car.CurrentFloor) ||
+                                  (car.Direction == ElevatorDirection.Down && floor < car.CurrentFloor);
+
+                    if (onTheWay && car.Passengers.Count < car.Capacity)
+                    {
+                        cost = dist * 4 + car.RequestCount * 3;
+                    }
+                    else
+                    {
+                        cost = dist * 4 + 30 + car.RequestCount * 10 + car.Passengers.Count * 5;
+                    }
+                }
+
+                if (car.HasTargetFloor(floor))
+                {
+                    cost -= 5;
+                }
+
+                if (cost < minCost)
+                {
+                    minCost = cost;
+                    bestCar = car;
+                }
+            }
+
+            return bestCar;
+        }
+
+        private void DispatchCarToFloor(int floor)
+        {
+            var bestCar = FindBestCarForFloor(floor);
+            bestCar?.RequestFloor(floor);
         }
 
         // ── Serialization ──────────────────────────────────────────────────────
@@ -429,7 +478,9 @@ namespace OneRoof.Domain.Transit
                 maxFloor = MaxFloor,
                 cars = carSaveList.ToArray(),
                 queuedPassengers = queuedPassengerList.ToArray(),
-                deliveredPassengers = deliveredPassengerList.ToArray()
+                deliveredPassengers = deliveredPassengerList.ToArray(),
+                cumulativeDeliveredCount = _cumulativeDeliveredCount,
+                cumulativeWaitTicks = _cumulativeWaitTicks
             };
         }
 
@@ -462,6 +513,8 @@ namespace OneRoof.Domain.Transit
             var minFloor = data?.minFloor ?? 0;
             var maxFloor = data?.maxFloor ?? 4;
             var elevatorBank = new ElevatorBank(minFloor, maxFloor, cars);
+            elevatorBank._cumulativeDeliveredCount = data?.cumulativeDeliveredCount ?? 0;
+            elevatorBank._cumulativeWaitTicks = data?.cumulativeWaitTicks ?? 0;
 
             if (data?.queuedPassengers != null)
             {

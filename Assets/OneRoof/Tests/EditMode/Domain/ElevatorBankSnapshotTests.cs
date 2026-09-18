@@ -11,14 +11,14 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void Snapshot_CapturesElevatorBankState_Accurately()
         {
-            var bank = new ElevatorBank(minFloor: 0, maxFloor: 5);
-            var car = new ElevatorCar(carId: 1, capacity: 4, speedFloorsPerTick: 1f);
-            bank.AddCar(car);
+            var timing = new ElevatorTimingConfig(2, 1, 1);
+            var car = new ElevatorCar(new EntityId(1), 0, 4, timing);
+            var bank = new ElevatorBank(0, 5, new[] { car });
 
             var p1 = new ElevatorPassenger(new EntityId(101), 1, 4);
             var p2 = new ElevatorPassenger(new EntityId(102), 2, 5);
-            bank.RequestRide(p1, requestTick: 10);
-            bank.RequestRide(p2, requestTick: 10);
+            bank.EnqueuePassenger(p1);
+            bank.EnqueuePassenger(p2);
 
             var pDelivered = new ElevatorPassenger(new EntityId(103), 0, 3) { WaitTicks = 5 };
             bank.RestoreDeliveredPassengers(new[] { pDelivered });
@@ -39,16 +39,19 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void Snapshot_IsIndependentOfSubsequentMutations()
         {
-            var bank = new ElevatorBank(minFloor: 0, maxFloor: 3);
+            var timing = new ElevatorTimingConfig(2, 1, 1);
+            var car = new ElevatorCar(new EntityId(1), 0, 4, timing);
+            var bank = new ElevatorBank(0, 3, new[] { car });
+
             var p1 = new ElevatorPassenger(new EntityId(1), 0, 2);
-            bank.RequestRide(p1, requestTick: 1);
+            bank.EnqueuePassenger(p1);
 
             var snapshot1 = bank.Snapshot();
             Assert.That(snapshot1.QueuedCount, Is.EqualTo(1));
 
             // Mutate bank after taking snapshot
             var p2 = new ElevatorPassenger(new EntityId(2), 0, 3);
-            bank.RequestRide(p2, requestTick: 2);
+            bank.EnqueuePassenger(p2);
 
             var snapshot2 = bank.Snapshot();
             Assert.That(snapshot1.QueuedCount, Is.EqualTo(1), "Previous snapshot must not be affected by bank queue mutations.");
@@ -60,14 +63,14 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void Snapshot_PassengerLookups_LocateQueuedRidingAndDeliveredCorrectly()
         {
-            var bank = new ElevatorBank(minFloor: 0, maxFloor: 4);
-            var car = new ElevatorCar(carId: 1, capacity: 4, speedFloorsPerTick: 1f);
+            var timing = new ElevatorTimingConfig(2, 1, 1);
+            var car = new ElevatorCar(new EntityId(1), 0, 4, timing);
             var ridingPassenger = new ElevatorPassenger(new EntityId(20), 0, 3);
-            car.AddPassenger(ridingPassenger);
-            bank.AddCar(car);
+            car.RestoreState(floor: 0, phase: ElevatorCarPhase.Idle, direction: ElevatorDirection.None, timerRemaining: 0, passengers: new[] { ridingPassenger });
+            var bank = new ElevatorBank(0, 4, new[] { car });
 
             var queuedPassenger = new ElevatorPassenger(new EntityId(10), 1, 4);
-            bank.RequestRide(queuedPassenger, requestTick: 1);
+            bank.EnqueuePassenger(queuedPassenger);
 
             var deliveredPassenger = new ElevatorPassenger(new EntityId(30), 0, 2);
             bank.RestoreDeliveredPassengers(new[] { deliveredPassenger });

@@ -197,6 +197,32 @@ namespace OneRoof.Domain.Transit
             if (topology == null) throw new ArgumentNullException(nameof(topology));
 
             var person = population?.TryGetPerson(trip.PersonId, out var p) == true ? p : null;
+            if (_activeTripsByPerson.ContainsKey(trip.PersonId))
+            {
+                return;
+            }
+
+            // Local trips complete immediately
+            if (trip.IsLocal)
+            {
+                if (trip.State == TripState.Planned)
+                {
+                    trip.Begin();
+                }
+
+                if (trip.State == TripState.InProgress)
+                {
+                    trip.Complete(currentTick);
+                }
+
+                if (person != null)
+                {
+                    person.UpdateLocation(trip.DestinationRoomId);
+                    person.UpdateActivity(PurposeToActivity(trip.Purpose));
+                }
+
+                return;
+            }
 
             // If trip has no planned route (unreachable), cancel it without teleporting
             if (trip.PlannedRoute == null)
@@ -208,8 +234,8 @@ namespace OneRoof.Domain.Transit
                 return;
             }
 
-            // Local trips or 0-leg routes complete immediately
-            if (trip.IsLocal || trip.PlannedRoute.Legs.Count == 0)
+            // 0-leg routes complete immediately
+            if (trip.PlannedRoute.Legs.Count == 0)
             {
                 if (trip.State == TripState.Planned)
                 {

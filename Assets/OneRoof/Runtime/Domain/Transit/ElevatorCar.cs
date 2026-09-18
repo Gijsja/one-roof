@@ -49,16 +49,61 @@ namespace OneRoof.Domain.Transit
 
         public bool HasRequests => _targetFloors.Count > 0;
 
+        public int RequestCount => _targetFloors.Count;
+
+        public IReadOnlyCollection<int> TargetFloors => _targetFloors;
+
+        public bool HasTargetFloor(int floor) => _targetFloors.Contains(floor);
+
         public void RequestFloor(int floor)
         {
-            if (floor == CurrentFloor && Phase == ElevatorCarPhase.Idle)
+            if (floor == CurrentFloor)
             {
-                Phase = ElevatorCarPhase.DoorsOpening;
-                TimerTicksRemaining = Timing.DoorCycleTicks;
+                if (Phase == ElevatorCarPhase.Idle)
+                {
+                    Phase = ElevatorCarPhase.DoorsOpening;
+                    TimerTicksRemaining = Timing.DoorCycleTicks;
+                }
                 return;
             }
 
             _targetFloors.Add(floor);
+        }
+
+        public void RemoveTargetFloor(int floor)
+        {
+            for (var i = 0; i < _passengers.Count; i++)
+            {
+                if (_passengers[i].DestinationFloor == floor)
+                {
+                    return;
+                }
+            }
+
+            _targetFloors.Remove(floor);
+        }
+
+        public void ClearPickupTargets()
+        {
+            var destinationFloors = new HashSet<int>();
+            for (var i = 0; i < _passengers.Count; i++)
+            {
+                destinationFloors.Add(_passengers[i].DestinationFloor);
+            }
+
+            var floorsToRemove = new List<int>();
+            foreach (var floor in _targetFloors)
+            {
+                if (!destinationFloors.Contains(floor))
+                {
+                    floorsToRemove.Add(floor);
+                }
+            }
+
+            for (var i = 0; i < floorsToRemove.Count; i++)
+            {
+                _targetFloors.Remove(floorsToRemove[i]);
+            }
         }
 
         public bool Board(ElevatorPassenger passenger)
@@ -271,6 +316,12 @@ namespace OneRoof.Domain.Transit
                 {
                     if (floor <= CurrentFloor) return floor;
                 }
+            }
+
+            // If car is at bottom floor heading up to collect calls, pick highest target floor
+            if (CurrentFloor == 0 && _targetFloors.Count > 0)
+            {
+                return _targetFloors.Max;
             }
 
             // Fallback to nearest

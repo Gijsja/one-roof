@@ -204,7 +204,7 @@ namespace OneRoof.Domain.Population
                 {
                     var traitKind = Enum.IsDefined(typeof(PersonTraitKind), p.trait) ? (PersonTraitKind)p.trait : PersonTraitKind.EarlyBird;
                     var trait = new PersonTrait(traitKind);
-                    var schedule = DailySchedule.Standard(trait, rng);
+                    var schedule = DailySchedule.Standard(trait, rng, baseSleepEnd: 15);
                     var needs = new[]
                     {
                         new NeedState(NeedKind.Hunger, p.hungerSatisfaction),

@@ -30,6 +30,12 @@ namespace OneRoof.Presentation.Tests.EditMode
             {
                 Object.DestroyImmediate(_holder);
             }
+
+            var cam = GameObject.Find("Tower Camera");
+            if (cam != null)
+            {
+                Object.DestroyImmediate(cam);
+            }
         }
 
         [Test]

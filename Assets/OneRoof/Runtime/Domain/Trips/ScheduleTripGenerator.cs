@@ -72,6 +72,8 @@ namespace OneRoof.Domain.Trips
 
             foreach (var person in population.Persons)
             {
+                if (person.CurrentActivity == ActivityKind.Commuting) continue;
+
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
                 var currentLabel  = person.Schedule.ActiveLabelAt(currentTick);
 

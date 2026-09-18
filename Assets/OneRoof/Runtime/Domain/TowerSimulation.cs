@@ -238,7 +238,7 @@ namespace OneRoof.Domain
                     {
                         return CommandResult.Reject(new[]
                         {
-                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Cannot afford elevator car ({TowerEconomyState.ElevatorCarCost} required).")
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for elevator car ({TowerEconomyState.ElevatorCarCost} required).")
                         });
                     }
 

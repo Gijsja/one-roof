@@ -67,8 +67,16 @@ namespace OneRoof.Presentation.Tower
 
         public static Camera EnsureTowerCamera(int floorCount, GridPlacementController gridPlacement = null)
         {
-            var camObj = GameObject.Find("Tower Camera") ?? new GameObject("Tower Camera");
-            var cam = camObj.GetComponent<Camera>() ?? camObj.AddComponent<Camera>();
+            var camObj = GameObject.Find("Tower Camera");
+            if (camObj == null)
+            {
+                camObj = new GameObject("Tower Camera");
+            }
+            var cam = camObj.GetComponent<Camera>();
+            if (cam == null)
+            {
+                cam = camObj.AddComponent<Camera>();
+            }
             camObj.tag = "MainCamera";
             if (gridPlacement != null) gridPlacement.Camera = cam;
 
@@ -79,7 +87,11 @@ namespace OneRoof.Presentation.Tower
             cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
             cam.transform.position = new Vector3(-1.6f, centerY, -10f);
 
-            var ctrl = camObj.GetComponent<TowerCameraController>() ?? camObj.AddComponent<TowerCameraController>();
+            var ctrl = camObj.GetComponent<TowerCameraController>();
+            if (ctrl == null)
+            {
+                ctrl = camObj.AddComponent<TowerCameraController>();
+            }
             ctrl.Camera = cam;
             ctrl.SetOverviewDefaults(new Vector3(-1.6f, centerY, -10f), cam.orthographicSize);
             ctrl.SetBounds(-16f, 16f, TowerStructurePresenter.FloorY(0) - 2f, TowerStructurePresenter.FloorY(floorCount - 1) + 4f);

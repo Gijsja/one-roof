@@ -58,11 +58,7 @@ namespace OneRoof.Presentation.Tower
                 _ghostTexture = null;
             }
 
-            if (_ghostMesh != null)
-            {
-                DestroyAsset(_ghostMesh);
-                _ghostMesh = null;
-            }
+            _ghostMesh = null;
 
             if (_ghostObject != null)
             {
@@ -217,7 +213,7 @@ namespace OneRoof.Presentation.Tower
                 _ghostMeshFilter = _ghostObject.GetComponent<MeshFilter>();
                 if (_ghostMeshFilter != null && _ghostMesh == null)
                 {
-                    _ghostMesh = _ghostMeshFilter.mesh;
+                    _ghostMesh = _ghostMeshFilter.sharedMesh;
                 }
             }
 

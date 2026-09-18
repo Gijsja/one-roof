@@ -24,7 +24,7 @@ namespace OneRoof.Presentation.Tower
         public const float DefaultCellWidth = 0.5f;
 
         public const int DefaultFloorSlabMinX = -14;
-        public const int DefaultFloorSlabMaxX = 16;
+        public const int DefaultFloorSlabMaxX = 17;
 
         [SerializeField] private float _floorOriginY = DefaultFloorOriginY;
         [SerializeField] private float _floorHeight = DefaultFloorHeight;
@@ -195,16 +195,19 @@ namespace OneRoof.Presentation.Tower
             }
 
             // Top-left HUD area
-            if (guiPoint.x >= 15 && guiPoint.x <= 420 && guiPoint.y >= 15 && guiPoint.y <= 300)
+            var hudWidth = Mathf.Min(420f, Screen.width * 0.35f);
+            var hudHeight = Mathf.Min(300f, Screen.height * 0.35f);
+            if (guiPoint.x >= 15 && guiPoint.x <= hudWidth && guiPoint.y >= 15 && guiPoint.y <= hudHeight)
             {
                 return true;
             }
 
             // Right side cards (Placement preview or Congestion inspector)
-            if (guiPoint.x >= Screen.width - 400 && guiPoint.x <= Screen.width - 15)
+            var cardWidth = Mathf.Min(400f, Screen.width * 0.35f);
+            if (guiPoint.x >= Screen.width - cardWidth && guiPoint.x <= Screen.width - 15)
             {
-                if (guiPoint.y >= 15 && guiPoint.y <= 360) return true; // Inspector
-                if (guiPoint.y >= Screen.height - 360 && guiPoint.y <= Screen.height - 15) return true; // Preview
+                if (guiPoint.y >= 15 && guiPoint.y <= Mathf.Min(360f, Screen.height * 0.45f)) return true; // Inspector
+                if (guiPoint.y >= Screen.height - Mathf.Min(360f, Screen.height * 0.45f) && guiPoint.y <= Screen.height - 15) return true; // Preview
             }
 
             return false;

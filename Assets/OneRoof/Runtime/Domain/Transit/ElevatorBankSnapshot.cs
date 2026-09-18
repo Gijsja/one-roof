@@ -79,6 +79,7 @@ namespace OneRoof.Domain.Transit
         public float AverageWaitTicks { get; }
 
         public int TotalQueuedCount => QueuedPassengers.Count;
+        public int QueuedCount => TotalQueuedCount;
         public int DeliveredCount => DeliveredPassengers.Count;
 
         public int GetQueueLength(int floor)

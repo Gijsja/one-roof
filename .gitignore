@@ -115,4 +115,5 @@ InitTestScene*.unity*
 
 # Pipeline test capture screenshots
 /[Aa]ssets/[Ss]creenshots*
+test-results.xml
 

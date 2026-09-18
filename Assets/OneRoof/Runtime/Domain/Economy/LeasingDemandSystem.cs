@@ -56,7 +56,7 @@ namespace OneRoof.Domain.Economy
                 {
                     vacantApartments.Add(room);
                 }
-                else if (content.StartsWith("commercial:") || content.StartsWith("workplace:") || content.StartsWith("amenity:"))
+                else if (content.StartsWith("commercial:") || content.StartsWith("workplace:"))
                 {
                     potentialWorkplaces.Add(room);
                 }
@@ -65,6 +65,26 @@ namespace OneRoof.Domain.Economy
             if (vacantApartments.Count == 0)
             {
                 return Array.Empty<PersonRecord>();
+            }
+
+            if (potentialWorkplaces.Count > 1)
+            {
+                var employeesPerWorkplace = new Dictionary<EntityId, int>();
+                foreach (var p in population.Persons)
+                {
+                    if (p.WorkplaceRoomId.IsValid)
+                    {
+                        employeesPerWorkplace.TryGetValue(p.WorkplaceRoomId, out var count);
+                        employeesPerWorkplace[p.WorkplaceRoomId] = count + 1;
+                    }
+                }
+
+                potentialWorkplaces.Sort((a, b) =>
+                {
+                    employeesPerWorkplace.TryGetValue(a.Id, out var countA);
+                    employeesPerWorkplace.TryGetValue(b.Id, out var countB);
+                    return countA.CompareTo(countB);
+                });
             }
 
             var fallbackWorkplaceId = potentialWorkplaces.Count > 0

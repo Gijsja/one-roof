@@ -5,6 +5,7 @@ using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Architecture;
 using OneRoof.Presentation.Furnishings;
 using UnityEngine;
+using EntityId = OneRoof.Domain.Identity.EntityId;
 
 namespace OneRoof.Presentation.Tower
 {

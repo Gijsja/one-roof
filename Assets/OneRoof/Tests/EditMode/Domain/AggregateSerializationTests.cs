@@ -69,13 +69,13 @@ namespace OneRoof.Domain.Tests.EditMode
                     new NeedState(NeedKind.Social, 0.9f)
                 },
                 new[] { new PersonTrait(PersonTraitKind.EarlyBird) });
-            person.UpdateActivity(ActivityKind.Dining);
+            person.UpdateActivity(ActivityKind.Eating);
 
             var household = new HouseholdRecord(
                 new EntityId(201),
                 new[] { new EntityId(101) },
                 new EntityId(301),
-                budget: 1500f,
+                budget: 0.75f,
                 satisfaction: 0.85f);
 
             var original = new PopulationState(new[] { person }, new[] { household });
@@ -91,17 +91,17 @@ namespace OneRoof.Domain.Tests.EditMode
 
             var restoredPerson = restored.GetPerson(new EntityId(101));
             Assert.That(restoredPerson.HouseholdId, Is.EqualTo(new EntityId(201)));
-            Assert.That(restoredPerson.CurrentActivity, Is.EqualTo(ActivityKind.Dining));
+            Assert.That(restoredPerson.CurrentActivity, Is.EqualTo(ActivityKind.Eating));
 
             var restoredHousehold = restored.GetHousehold(new EntityId(201));
-            Assert.That(restoredHousehold.Budget, Is.EqualTo(1500f));
+            Assert.That(restoredHousehold.Budget, Is.EqualTo(0.75f));
             Assert.That(restoredHousehold.Satisfaction, Is.EqualTo(0.85f));
         }
 
         [Test]
         public void ElevatorBank_ToSaveData_And_FromSaveData_RoundTripsAccurately()
         {
-            var car = new ElevatorCar(new EntityId(501), currentFloor: 2, capacity: 10);
+            var car = new ElevatorCar(new EntityId(501), startingFloor: 2, capacity: 10);
             var rider = new ElevatorPassenger(new EntityId(101), originFloor: 0, destinationFloor: 3)
             {
                 WaitTicks = 5,

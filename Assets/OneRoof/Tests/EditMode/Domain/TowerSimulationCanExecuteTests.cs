@@ -66,8 +66,8 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void CanExecute_BuildRoom_ValidVacantSpace_Accepted()
         {
-            // Floor 4 has open space at [10..15]
-            var cmd = new BuildRoomCommand(4, 10, 15, new ContentId("residential:studio"), 4);
+            // Floor 0 has open space at [-14..-11]
+            var cmd = new BuildRoomCommand(0, -14, -11, new ContentId("residential:studio"), 4);
             var result = _sim.CanExecute(cmd);
 
             Assert.That(result.Accepted, Is.True);
@@ -142,13 +142,13 @@ namespace OneRoof.Domain.Tests.EditMode
         public void ExecuteCommand_BuildRoom_SuccessfullyExecutesAndDeductsFunds()
         {
             var initialCash = _sim.Economy.CashBalance;
-            var cmd = new BuildRoomCommand(4, 10, 15, new ContentId("residential:studio"), 4);
+            var cmd = new BuildRoomCommand(0, -14, -11, new ContentId("residential:studio"), 4);
 
             var result = _sim.ExecuteCommand(cmd);
 
             Assert.That(result.Accepted, Is.True);
             Assert.That(_sim.Economy.CashBalance, Is.LessThan(initialCash));
-            Assert.That(_sim.Topology.GetRoomsOnFloor(4).Count, Is.GreaterThan(1));
+            Assert.That(_sim.Topology.GetRoomsOnFloor(0).Count, Is.GreaterThan(1));
         }
 
         [Test]

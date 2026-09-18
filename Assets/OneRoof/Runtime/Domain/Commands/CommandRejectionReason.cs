@@ -17,6 +17,8 @@ namespace OneRoof.Domain.Commands
 
         public string Detail { get; }
 
+        public string Message => string.IsNullOrEmpty(Detail) ? Code.Value : Detail;
+
         public bool Equals(CommandRejectionReason other) => other != null && Code == other.Code && StringComparer.Ordinal.Equals(Detail, other.Detail);
 
         public override bool Equals(object obj) => Equals(obj as CommandRejectionReason);

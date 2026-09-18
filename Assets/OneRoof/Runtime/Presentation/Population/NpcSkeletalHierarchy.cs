@@ -106,6 +106,11 @@ namespace OneRoof.Presentation.Population
             {
                 EmoteRenderer = emoteGo.AddComponent<SpriteRenderer>();
                 EmoteRenderer.sortingOrder = 25;
+                EmoteRenderer.enabled = false;
+            }
+            else
+            {
+                EmoteRenderer.enabled = CurrentEmote != NpcEmoteKind.None;
             }
         }
 

@@ -137,6 +137,8 @@ namespace OneRoof.Domain.Persistence
         public ElevatorCarSaveData[] cars;
         public ElevatorPassengerSaveData[] queuedPassengers;
         public ElevatorPassengerSaveData[] deliveredPassengers;
+        public int cumulativeDeliveredCount;
+        public long cumulativeWaitTicks;
     }
 
     [Serializable]

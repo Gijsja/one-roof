@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Domain;
 using OneRoof.Domain.Commands;

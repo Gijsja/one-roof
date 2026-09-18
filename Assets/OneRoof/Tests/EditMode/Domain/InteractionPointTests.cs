@@ -15,14 +15,14 @@ namespace OneRoof.Domain.Tests.EditMode
                 new EntityId(101),
                 new EntityId(5),
                 InteractionPointKind.Sleep,
-                new ContentId("prop.furniture.bed.v1"),
+                new ContentId("prop:furniture.bed.v1"),
                 localCellOffset: 1,
                 capacity: 2);
 
             Assert.That(pt.Id.Value, Is.EqualTo(101));
             Assert.That(pt.RoomId.Value, Is.EqualTo(5));
             Assert.That(pt.Kind, Is.EqualTo(InteractionPointKind.Sleep));
-            Assert.That(pt.PropContentId.Value, Is.EqualTo("prop.furniture.bed.v1"));
+            Assert.That(pt.PropContentId.Value, Is.EqualTo("prop:furniture.bed.v1"));
             Assert.That(pt.LocalCellOffset, Is.EqualTo(1));
             Assert.That(pt.Capacity, Is.EqualTo(2));
             Assert.That(pt.OccupantCount, Is.EqualTo(0));
@@ -36,7 +36,7 @@ namespace OneRoof.Domain.Tests.EditMode
                 new EntityId(101),
                 new EntityId(5),
                 InteractionPointKind.Seat,
-                new ContentId("prop.furniture.sofa.v1"),
+                new ContentId("prop:furniture.sofa.v1"),
                 localCellOffset: 0,
                 capacity: 2);
 
@@ -69,7 +69,7 @@ namespace OneRoof.Domain.Tests.EditMode
                 new EntityId(101),
                 new EntityId(5),
                 InteractionPointKind.Work,
-                new ContentId("prop.furniture.desk.v1"),
+                new ContentId("prop:furniture.desk.v1"),
                 localCellOffset: 0,
                 capacity: 1,
                 occupantIds: new[] { r1 });
@@ -88,8 +88,8 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void Room_TryGetAvailablePoint_FindsAvailableKind()
         {
-            var bed = new InteractionPoint(new EntityId(1), new EntityId(10), InteractionPointKind.Sleep, new ContentId("bed"), 0, 1);
-            var sofa = new InteractionPoint(new EntityId(2), new EntityId(10), InteractionPointKind.Seat, new ContentId("sofa"), 2, 1, new[] { new EntityId(50) });
+            var bed = new InteractionPoint(new EntityId(1), new EntityId(10), InteractionPointKind.Sleep, new ContentId("prop:bed"), 0, 1);
+            var sofa = new InteractionPoint(new EntityId(2), new EntityId(10), InteractionPointKind.Seat, new ContentId("prop:sofa"), 2, 1, new[] { new EntityId(50) });
 
             var room = new Room(
                 new EntityId(10),

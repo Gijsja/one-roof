@@ -69,7 +69,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(GridPlacementController.GetToolWidthInCells("transit:elevator_shaft"), Is.EqualTo(2));
             Assert.That(GridPlacementController.GetToolWidthInCells("transit:stairwell"), Is.EqualTo(2));
             Assert.That(GridPlacementController.GetToolWidthInCells("demolish:room"), Is.EqualTo(1));
-            Assert.That(GridPlacementController.GetToolWidthInCells("floor:slab"), Is.EqualTo(31));
+            Assert.That(GridPlacementController.GetToolWidthInCells("floor:slab"), Is.EqualTo(32));
         }
 
         [Test]
@@ -190,7 +190,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_session.FloorCount, Is.EqualTo(initialFloors + 1));
             Assert.That(_session.Topology.FloorSlabs.ContainsKey(5), Is.True);
             Assert.That(_session.Topology.FloorSlabs[5].MinX, Is.EqualTo(-14));
-            Assert.That(_session.Topology.FloorSlabs[5].MaxX, Is.EqualTo(16));
+            Assert.That(_session.Topology.FloorSlabs[5].MaxX, Is.EqualTo(17));
         }
 
         [Test]
@@ -200,8 +200,8 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(hasBounds, Is.True);
             Assert.That(bounds.MinX, Is.EqualTo(-14));
-            Assert.That(bounds.MaxX, Is.EqualTo(16));
-            Assert.That(bounds.Width, Is.EqualTo(31));
+            Assert.That(bounds.MaxX, Is.EqualTo(17));
+            Assert.That(bounds.Width, Is.EqualTo(32));
         }
 
         [Test]
@@ -312,7 +312,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(emptyReason, Does.Contain("No room"));
 
             // Reception lobby on floor 0
-            var validLobby = _gridPlacement.ValidatePlacement("demolish:room", floor: 0, cellX: -5, out var lobbyReason);
+            var validLobby = _gridPlacement.ValidatePlacement("demolish:room", floor: 0, cellX: 5, out var lobbyReason);
             Assert.That(validLobby, Is.False);
             Assert.That(lobbyReason, Does.Contain("Cannot demolish main reception lobby"));
         }

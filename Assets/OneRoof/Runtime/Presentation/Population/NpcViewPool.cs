@@ -149,10 +149,6 @@ namespace OneRoof.Presentation.Population
             var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
             skeletal.Initialize(index - 1);
 
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = GetOrCreateSharedMaterial();
-            renderer.enabled = false;
-
             var view = go.AddComponent<NpcView>();
             go.SetActive(false);
 

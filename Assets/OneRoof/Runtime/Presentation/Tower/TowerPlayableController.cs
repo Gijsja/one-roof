@@ -45,7 +45,7 @@ namespace OneRoof.Presentation.Tower
         public void Initialize()
         {
             if (_sim != null) return;
-            _sim = new TowerSimulationSession(); _mode = new ModeShellSession();
+            _sim = new TowerSimulationSession(); SeedMorningRush(); _mode = new ModeShellSession();
             _overlaySvc = new ElevatorWaitOverlayService(); _predictor = new ElevatorPlacementPredictor();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
@@ -83,7 +83,11 @@ namespace OneRoof.Presentation.Tower
             TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement);
         }
 
-        private T Ensure<T>() where T : Component => gameObject.GetComponent<T>() ?? gameObject.AddComponent<T>();
+        private T Ensure<T>() where T : Component
+        {
+            var comp = gameObject.GetComponent<T>();
+            return comp != null ? comp : gameObject.AddComponent<T>();
+        }
 
         private void OnModeChanged(ModeShellProjection p)
         {
@@ -135,10 +139,22 @@ namespace OneRoof.Presentation.Tower
 
         public void ResetCommuteSimulation()
         {
-            _sim.Reset(); if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
+            _sim.Reset(); SeedMorningRush(); if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
             _inspectorCard.Close(); _placementCard.Close();
             _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
             ClearWorldGeometry(); CreateWorldGeometry();
+        }
+
+        private void SeedMorningRush()
+        {
+            if (_sim != null && _sim.ElevatorBank.TotalQueuedCount == 0)
+            {
+                for (var i = 1; i <= InitialResidentCount; i++)
+                {
+                    var destinationFloor = 1 + ((i - 1) % 4);
+                    _sim.ElevatorBank.EnqueuePassenger(new OneRoof.Domain.Transit.ElevatorPassenger(new OneRoof.Domain.Identity.EntityId(i), 0, destinationFloor));
+                }
+            }
         }
 
         private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(); SyncPresenterGeometry(); }
