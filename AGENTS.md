@@ -1,83 +1,37 @@
-# AGENTS.md — One Roof
+# One Roof — Agent Guide
 
-## Mission
+## Project
 
-Build a vertical-city simulation in which the player shapes architecture, infrastructure, leases, and policy while autonomous residents form routines, relationships, businesses, neighborhoods, and factions.
+One Roof is a vertical-city simulation: the Steward changes systems, while autonomous residents respond. The five-floor, fifty-resident elevator-congestion loop is the baseline proof.
 
-The first proof is five floors and fifty residents. The player must be able to observe elevator congestion, understand it through an overlay, add capacity, and see measurable improvement.
+## Start here
 
-## Required reading order
+Read the relevant task in `Planning/BACKLOG.md`, its latest handoff, and the canonical docs that affect the work:
 
-1. `Docs/01_GAME_VISION.md`
-2. `Docs/02_ARCHITECTURE.md`
-3. `Docs/03_DATA_CONTRACTS.md`
-4. The task entry in `Planning/BACKLOG.md`
-5. The latest relevant file in `Handoffs/Active/`
+- `Docs/01_GAME_VISION.md` — product intent and scope
+- `Docs/02_ARCHITECTURE.md` and `Docs/03_DATA_CONTRACTS.md` — runtime boundaries and state
+- `Docs/04_UX_CONTRACT.md` and `Docs/09_CAUSE_CHAIN_INSPECTOR.md` — overlays, inspectors, and responses
+- `Docs/05_ASSET_PIPELINE.md` or `Docs/06_TEST_STRATEGY.md` when applicable
 
-Read `Docs/04_UX_CONTRACT.md`, `Docs/05_ASSET_PIPELINE.md`, or `Docs/06_TEST_STRATEGY.md` when the task touches those areas.
+Treat numbered docs as canonical. `Docs/review/` is only a temporary merge inbox.
 
-## Non-negotiable product rules
+## Working principles
 
-- The player shapes systems; they do not issue commands to individual NPCs.
-- Important failures must be explainable through world symptom → overlay → inspector cause → player response.
-- Simulation truth lives outside GameObjects and MonoBehaviours.
-- Visible NPCs are views of persistent simulation entities, not the entities themselves.
-- Beta scope must not expand until the five-floor slice meets its exit criteria.
-- Generative art never enters runtime content without validation and registry assignment.
+- Players influence systems, never individual residents directly.
+- Important failures should connect symptom → overlay → cause → systems-level response.
+- Keep simulation state independent of Unity views; presentation reads projections and binds them by stable IDs.
+- Preserve the pure-C# Domain boundary and avoid scene references in save data.
+- Keep beta work focused on the planned slice. Record meaningful architecture choices in `Docs/07_DECISION_LOG.md`.
+- Tone is optimistic but fragile: clear about hardship, never cartoon-villain or hopeless.
 
-## Technical boundaries
+## Unity workflow
 
-| Layer | May depend on | Must not depend on |
-| --- | --- | --- |
-| Domain | Plain C# and domain interfaces | UnityEngine, scenes, prefabs, UI |
-| Application | Domain, ports, use cases | Concrete Unity views |
-| Infrastructure | Domain interfaces, serialization, pathfinding adapters | UI presentation rules |
-| Presentation | Application APIs, read-only projections | Mutable domain internals |
-| Editor | Content schemas and validation APIs | Runtime-only scene state |
+- Target **Unity 6000.3 LTS**; the installed project version is `6000.3.24f1` (`ProjectSettings/ProjectVersion.txt`).
+- This project has both the **Unity CLI** and the connected **Unity Pipeline**. Prefer them for Editor inspection, scene/asset changes, recompiles, and tests when an Editor is available.
+- Start live-Editor work by checking `unity pipeline list`; use Pipeline commands for the edit → recompile → test loop. If the editor is unavailable or in Safe Mode, diagnose that first and use the narrowest safe fallback.
+- Use the Package Manager API for package changes. Prefer Unity tooling over hand-editing serialized Unity assets.
+- Keep generated Unity folders and secrets out of version control; include `.meta` files with new assets.
 
-Use stable integer IDs across layers. Do not store GameObject, Transform, MonoBehaviour, or scene references in save-state records.
+## Finish well
 
-## Unity rules
-
-- Target Unity 6 LTS and URP after the exact installed version is recorded in `ProjectSettings/ProjectVersion.txt`.
-- Never guess package versions or hand-edit `Packages/manifest.json`; use Unity's Package Manager API.
-- Do not hand-edit `.unity`, `.prefab`, `.asset`, or `.meta` YAML unless the task explicitly requires text serialization and validation.
-- Commit every asset with its `.meta` file.
-- Never commit `Library/`, `Temp/`, `Obj/`, `Logs/`, `Build/`, or `Builds/`.
-- Prefer additive scenes and prefabs over a monolithic scene.
-- New runtime systems require assembly definitions and tests.
-- Avoid global mutable singletons. Bootstrap composition may own service lifetimes.
-
-## Change protocol
-
-Before editing:
-
-1. Confirm the task ID and acceptance criteria.
-2. List the files you expect to own in the handoff.
-3. Check `Handoffs/Active/` for overlapping work.
-
-During work:
-
-- Keep the task narrow; record discovered work in `Planning/BACKLOG.md` instead of absorbing it.
-- Preserve user changes and unrelated work.
-- Add or update tests with behavior changes.
-- Record architectural choices in `Docs/07_DECISION_LOG.md`.
-
-Before handoff:
-
-1. Run the validation relevant to the task.
-2. Record exact commands and results.
-3. List changed files, known risks, and the next safe action.
-4. Do not claim success if Unity compilation or tests were not run; say `NOT RUN` and why.
-5. Create `Handoffs/Active/<TASK-ID>_<short-name>.md` from the template.
-
-## Definition of done
-
-- Acceptance criteria are demonstrated by tests, profiler evidence, or a reproducible Editor check.
-- Unity compiles without new warnings.
-- Relevant Edit Mode and Play Mode tests pass.
-- Save data remains versioned and migratable.
-- Domain code can run in tests without loading a scene.
-- No generated folders or secrets are committed.
-- Documentation and handoff accurately reflect the result.
-
+Keep changes scoped, preserve unrelated work, run the relevant validation, and write a concise handoff with commands, results, risks, and the next safe action. For documentation-only changes, state that Unity validation was not run.

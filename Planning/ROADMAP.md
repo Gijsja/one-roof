@@ -267,7 +267,7 @@ graph TD
 ---
 
 ### M6 — Living Society, Resident Psychology & Character Pipeline *(PLANNED)*
-**Goal:** Replace static schedule transitions with dynamic resident needs, psychology, satisfaction, and fluid 2D skeletal character animation.
+**Goal:** Establish readable resident wellbeing, external pressure, and soft specialist roles alongside the character pipeline.
 
 - **`ART-003` (Milestone 6.0 — Spine 2D Skeletal Animation & Wardrobe Compositor):**
   - Shared 17-bone humanoid rig (`rig.npc.humanoid.2d.v1`).
@@ -277,16 +277,23 @@ graph TD
 - **`OR-601` (Milestone 6.1 — Resident Needs & Autonomous Schedule Arbitration):**
   - Five core needs: **Hunger**, **Energy/Rest**, **Social**, **Hygiene**, **Purpose**.
   - Dynamic destination decision-making: Hungry residents seek diners; exhausted residents return home to sleep; social residents seek lounges or skylobbies.
-- **`OR-602` (Milestone 6.2 — Satisfaction Scoring, Grievances & Satisfaction Overlay):**
-  - Satisfaction calculated from commute wait friction, noise, crowding, need deprivation, and rent burden.
-  - Grievance accumulation: Persistent dissatisfaction leads to tenant complaints, withholding rent, and eventual move-out.
-  - **Overlay 4: Satisfaction Overlay** displaying green-to-red contentment across tower zones.
+- **`OR-601B` (Milestone 6.1 — Personality Facets):**
+  - Four to eight high-impact facets filter thought strength and long-term Strain; never a large opaque trait matrix.
+- **`OR-602` (Milestone 6.2 — Satisfaction, Grievances, Strain & Overlay):**
+  - Satisfaction calculated from commute wait friction, noise, crowding, need deprivation, rent burden, service access, and recent events.
+  - Low satisfaction creates Grievances; personality-filtered Strain accumulates and can lead to move-out or mental-strain events.
+  - **Overlay 4: Satisfaction Overlay** provides non-colour encoding and drills into its contributor explanation.
 - **`OR-603` (Milestone 6.2 — Population Density & Demographics Overlay):**
   - **Overlay 3: Population Overlay** visualizing resident density and income/age demographics.
 - **`ART-004` (Milestone 6.1 — AssetLab Validation Tooling & Addressables):**
   - Automated seam testing runner, rig validation, and Addressables bundle packaging.
+- **`OR-604` (Milestone 6.3 — Scrutiny):**
+  - Wider-city attention rises with expansion speed, inequality, unresolved crises, and aggressive policy; balanced service and crisis responses reduce it.
+  - High Scrutiny modulates external-event pressure and can temporarily constrain expansion without turning into a cartoon-invasion loop.
+- **`OR-605` (Milestone 6.3 — Soft Specialist Roles & Training):**
+  - Training and service capacity let residents acquire Maintenance, Security, Service, and later Knowledge roles without individual assignment.
 
-**Exit Criteria:** Residents autonomously resolve needs; dissatisfaction generates grievances; Spine 2D animated characters replace static sprites; Satisfaction and Population overlays operational.
+**Exit Criteria:** Residents autonomously resolve needs; wellbeing contributors and grievances are inspectable; personality-filtered Strain, Scrutiny, and soft specialist roles are deterministic and readable; Spine 2D characters replace static sprites; Satisfaction and Population overlays link to the cause chain.
 
 ---
 
@@ -299,7 +306,7 @@ graph TD
   - **Operations:** Maintenance workshop, security station.
 - **`OR-702` (Commercial Lease Lifecycle & Employment Matching):**
   - Commercial leases: Base rent + revenue share, foot traffic requirements, operational expenses.
-  - Local hiring: Businesses recruit resident workers matching skill/proximity; employee wage payouts fund household budgets.
+  - Local hiring emerges from systems rather than direct orders; employee wage payouts fund household budgets and specialist roles are preferred where relevant.
   - Solvency & bankruptcy: Low customer traffic or high transit congestion causes business insolvency and lease default.
 - **`OR-703` (Business Health & Foot Traffic Overlays):**
   - **Overlay 1: Foot Traffic Flow Overlay** showing pedestrian transit vectors and commute density.
@@ -319,7 +326,7 @@ graph TD
   - Municipal water intake, ground pressure pumps, booster pumps required every 8 floors for adequate pressure.
   - Gravity trash chutes, basement compactors, waste accumulation when service is interrupted.
 - **`OR-803` (Infrastructure Wear, Technician Jobs & Utilities Overlay):**
-  - Equipment wear over time; maintenance technicians dispatched from workshops to repair aging infrastructure.
+  - Equipment wear over time; training-derived maintenance specialists respond from workshops to repair aging infrastructure.
   - Failure chains: Power outage halts elevator banks; water outage closes diners/clinics.
   - **Overlay 8: Utilities Flow & Pressure Overlay** visualizing power load, water pressure head, and waste capacity.
 
@@ -332,31 +339,31 @@ graph TD
 
 - **`OR-901` (Relationship Graph & 4 Faction Archetypes):**
   - Affinity formation: Residents build friendships through shared workplaces, neighboring apartments, and elevator encounters.
-  - Four distinct factions ([Docs/01_GAME_VISION.md](file:///home/geisha/Vibecode/UnityAI/one-roof/Docs/01_GAME_VISION.md)):
+  - Four distinct factions ([Docs/01_GAME_VISION.md](../Docs/01_GAME_VISION.md)), shaped by shared grievances and Strain:
     1. **Tenant Union:** Residential working class focused on affordable rent, elevator speed, and living conditions.
     2. **Corporate Coalition:** Commercial office executives demanding reliable power, priority transit, and high-income amenities.
     3. **Merchant Guild:** Retail and restaurant owners focused on customer foot traffic and low commercial tax.
     4. **Civic & Eco Council:** Environmentalists demanding low waste, noise control, and green public spaces.
 - **`OR-902` (Manage Mode: Steward Policy & Decree Panel):**
   - Player enacts policies: Rent caps, transit subsidies, quiet hours, express elevator lanes, commercial tax adjustments.
-  - Faction approval reacts to policies and living standards.
+  - Faction approval reacts to policies and living standards; policies also affect Satisfaction, Strain, and Scrutiny.
 - **`OR-903` (Faction Tension & Noise Overlays / Civil Actions):**
   - **Overlay 5: Noise Overlay** displaying acoustic bleed from elevators, workshops, and diners into residential units.
   - **Overlay 7: Faction Tension Overlay** exposing regional dissatisfaction hot-spots.
-  - Faction civil actions: Rent strikes, lobby protests, work slowdowns.
+  - Faction civil actions: Rent strikes, lobby protests, and work slowdowns emerge from faction strain plus scrutiny thresholds.
 
 **Exit Criteria:** 4 factions form and track member allegiance; Steward decree panel functional; policy changes alter faction relations; protests/strikes occur upon severe tension; Noise and Faction Tension overlays operational.
 
 ---
 
 ### M10 — Tower Scaling, Blueprints & Beta Exit (City Status) *(PLANNED)*
-**Goal:** Scale the simulation to the full Beta Boundary (30 floors, 300 persistent residents) with scaling tools, crisis event chains, and campaign progression.
+**Goal:** Scale the simulation to the full Beta Boundary (30 floors, 300 persistent residents) with scaling tools, adaptive crisis pressure, and campaign progression.
 
 - **`OR-1001` (Blueprints & Rapid Expansion Tooling):**
   - Floor copy/paste blueprints, multi-room zoning templates, and slab batch construction.
   - Performance budgets enforced: 300 persistent entities, 60 pooled visible views, <4ms tick budget, 60 FPS presentation.
-- **`OR-1002` (Six Dynamic Crisis Event Chains):**
-  - Multi-stage event chains testing player response:
+- **`OR-1002` (Adaptive Crisis Pressure & Personal Consequences):**
+  - Systems-driven crises, modulated by Scrutiny, test player response and create consequences through individual Needs and Strain:
     1. *Elevator Cable Failure:* Major shaft outage requiring emergency stairs and evacuation.
     2. *Electrical Substation Fire:* Cascading blackout shutting down pumps and lights.
     3. *Summer Heatwave:* HVAC overload causing extreme resident agitation.
@@ -370,7 +377,7 @@ graph TD
 - **`ART-005` (Milestone 6.2 — Audio Soundscapes & Environmental Atmosphere):**
   - Surface-reactive corridor footsteps, elevator mechanical foley, roomtones, and volumetric window lighting.
 
-**Exit Criteria:** 30 floors and 300 persistent residents running deterministically; all 8 overlays and 6 event chains operational; City Status achieved; performance budgets verified on reference hardware.
+**Exit Criteria:** 30 floors and 300 persistent residents running deterministically; all 8 overlays and adaptive crisis pressure are operational; City Status achieved; performance budgets verified on reference hardware.
 
 ---
 
@@ -381,10 +388,10 @@ graph TD
 | 1 | **Elevator Wait** *(DONE)* | Animated flow paths & queue bars | `ElevatorBankCongestionProjection` | Shaft capacity shortage, floor bottlenecks |
 | 2 | **Foot Traffic** | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
 | 3 | **Population** | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
-| 4 | **Satisfaction** | Soft regional glow (emerald → ruby) | `SatisfactionService` | Commute friction, need deprivation, high rent |
+| 4 | **Satisfaction** | Soft regional glow plus value/pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, high rent |
 | 5 | **Noise** | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into bedrooms |
 | 6 | **Business Health** | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, excessive commercial rent |
-| 7 | **Faction Tension** | Regional tension contour map | `FactionState` | Policy grievances, strike and protest risk |
+| 7 | **Faction Tension** | Regional tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
 | 8 | **Utilities** | Network pipe/cable flow pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
 
 ---

@@ -1,4 +1,4 @@
-# One Roof — Agent Instructions
+# One Roof — Gemini Instructions
 
 Follow [AGENTS.md](./AGENTS.md) as the shared project guide. It defines the canonical docs, architecture boundaries, Unity workflow, and handoff expectations.
 

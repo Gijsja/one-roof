@@ -19,6 +19,8 @@ Every important problem must support:
 4. A direct route to a build, management, or policy response.
 5. Feedback showing whether the response worked.
 
+The inspector is a cause chain, not a flat stat dump: it names the symptom, exposes the relevant contributing data, and offers only contextual systems-level levers. See `Docs/09_CAUSE_CHAIN_INSPECTOR.md` for the canonical interaction contract.
+
 ## Beta overlays
 
 - Foot traffic
@@ -42,4 +44,4 @@ A preview must show cost, invalid conditions, footprint, utility connections, an
 - Simulation speed and pause are keyboard accessible.
 - UI scaling and remappable controls are planned from the first playable.
 - Critical event information is available as text and audio-independent feedback.
-
+- Wellbeing, pressure, and overlay states use a non-colour channel and expose their contributing causes.
