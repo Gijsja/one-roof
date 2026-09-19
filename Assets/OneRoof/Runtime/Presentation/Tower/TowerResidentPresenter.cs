@@ -105,7 +105,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateResidentPositions(TowerProjection snapshot, BuildingTopologyState topology, float time)
+        public void UpdateResidentPositions(TowerProjection snapshot, BuildingTopologyState topology, float time, RoomPresenter roomPresenter = null)
         {
             if (snapshot == null) return;
 
@@ -150,11 +150,14 @@ namespace OneRoof.Presentation.Tower
                                 roomX = Mathf.Clamp(interiorLeft + (slot % 4) * step, interiorLeft, interiorRight);
                             }
 
-                            var roomY = TowerStructurePresenter.FloorY(room.Floor) - 0.58f;
-                            residentTransform.position = new Vector3(roomX, roomY, -0.15f);
+                            var dockKind = resident.Activity == ActivityKind.Sleeping ? InteractionPointKind.Sleep :
+                                resident.Activity == ActivityKind.Working ? InteractionPointKind.Work : InteractionPointKind.Seat;
+                            if (roomPresenter == null || !roomPresenter.TryGetInteractionDock(room, dockKind, resident.SlotInRoom, out var dockPosition))
+                                dockPosition = new Vector3(roomX, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, -0.15f);
+                            residentTransform.position = dockPosition;
 
                             var roomCenterX = (worldLeft + worldRight) * 0.5f;
-                            var faceScaleX = (roomX < roomCenterX) ? 1f : -1f;
+                            var faceScaleX = (residentTransform.position.x < roomCenterX) ? 1f : -1f;
                             residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
@@ -240,6 +243,16 @@ namespace OneRoof.Presentation.Tower
                 {
                     skeletal?.SetEmote(NpcEmoteKind.None);
                 }
+
+                // Waiting is the person-scale half of the congestion explanation chain.
+                // The aura starts only after a legible delay and reaches full intensity at 30 ticks.
+                var agitation = resident.Status == TransitResidentStatus.Queued
+                    ? Mathf.Clamp01((resident.WaitTicks - 10f) / 20f)
+                    : 0f;
+                var effects = skeletal != null
+                    ? skeletal.GetComponent<VisualEffectsPresenter>() ?? skeletal.gameObject.AddComponent<VisualEffectsPresenter>()
+                    : null;
+                effects?.SetAgitation(agitation);
 
                 skeletal?.ApplyProceduralAnimation(time);
             }

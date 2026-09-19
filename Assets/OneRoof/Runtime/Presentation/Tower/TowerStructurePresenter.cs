@@ -59,7 +59,8 @@ namespace OneRoof.Presentation.Tower
                 var centerX = (worldLeft + worldRight) * 0.5f;
 
                 // Main floor slab background
-                CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(centerX, y, 1f), new Vector2(width, 1.55f));
+                var slabRenderer = CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(centerX, y, 1f), new Vector2(width, 1.55f));
+                slabRenderer.gameObject.AddComponent<VisualEffectsPresenter>().BeginConstruction();
 
                 // Floor baseline dividers - split around elevator shaft [-2.40f, -1.40f] so the shaft remains an open vertical chute
                 const float shaftLeft = -2.40f;

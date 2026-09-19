@@ -182,6 +182,15 @@ namespace OneRoof.Presentation.Tower
                     ? new Color(0.3f, 0.95f, 0.7f)
                     : new Color(0.18f, 0.65f, 0.5f);
                 SetRendererColor(_elevatorViews[i], carColor);
+
+                // A nearly-full car is a visible crowding symptom; the pulse is deliberately
+                // presentation-only and derives solely from the immutable projection.
+                var severity = elevator.Capacity > 0
+                    ? Mathf.Clamp01(((float)elevator.PassengerCount / elevator.Capacity - 0.65f) / 0.35f)
+                    : 0f;
+                var effects = _elevatorViews[i].GetComponent<VisualEffectsPresenter>()
+                    ?? _elevatorViews[i].gameObject.AddComponent<VisualEffectsPresenter>();
+                effects.SetAgitation(severity);
             }
         }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using OneRoof.Content;
+using OneRoof.Domain.Topology;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Furnishings
@@ -13,6 +14,37 @@ namespace OneRoof.Presentation.Furnishings
         private readonly List<GameObject> _placedProps = new List<GameObject>();
 
         public IReadOnlyList<GameObject> PlacedProps => _placedProps;
+
+        public bool TryGetDockPosition(InteractionPointKind kind, int slot, out Vector3 worldPosition)
+        {
+            var match = kind == InteractionPointKind.Sleep ? "bed" :
+                kind == InteractionPointKind.Work ? "desk" :
+                kind == InteractionPointKind.Seat ? "sofa" : "booth";
+            var matchCount = 0;
+            for (var i = 0; i < _placedProps.Count; i++)
+            {
+                var prop = _placedProps[i];
+                if (prop != null && prop.name.ToLowerInvariant().Contains(match))
+                {
+                    matchCount++;
+                }
+            }
+            if (matchCount > 0)
+            {
+                var selected = Mathf.Abs(slot) % matchCount;
+                for (var i = 0; i < _placedProps.Count; i++)
+                {
+                    var prop = _placedProps[i];
+                    if (prop != null && prop.name.ToLowerInvariant().Contains(match) && selected-- == 0)
+                    {
+                        worldPosition = prop.transform.position + new Vector3(0f, 0.06f, -0.2f);
+                        return true;
+                    }
+                }
+            }
+            worldPosition = default;
+            return false;
+        }
 
         public void FurnishRoom(string roomTheme, float width, float height, bool isWestSide)
         {

@@ -22,6 +22,7 @@ namespace OneRoof.Presentation.Tower
         private readonly HashSet<EntityId> _renderedRoomIds = new HashSet<EntityId>();
         private readonly List<GameObject> _roomObjects = new List<GameObject>();
         private readonly Dictionary<EntityId, GameObject> _roomRoots = new Dictionary<EntityId, GameObject>();
+        private readonly Dictionary<EntityId, RoomFurnishingPresenter> _furnishings = new Dictionary<EntityId, RoomFurnishingPresenter>();
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
 
@@ -108,7 +109,11 @@ namespace OneRoof.Presentation.Tower
                     if (_roomRoots.TryGetValue(id, out var root) && root != null)
                     {
                         _roomObjects.Remove(root);
-                        if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(root);
+                        if (UnityEngine.Application.isPlaying)
+                        {
+                            root.name = $"DemolishingRoom_{id}";
+                            root.AddComponent<VisualEffectsPresenter>().BeginDemolition();
+                        }
                         else UnityEngine.Object.DestroyImmediate(root);
                     }
                     else if (_parent != null)
@@ -127,6 +132,7 @@ namespace OneRoof.Presentation.Tower
             {
                 _renderedRoomIds.Remove(id);
                 _roomRoots.Remove(id);
+                _furnishings.Remove(id);
             }
 
             foreach (var room in topology.Rooms.Values)
@@ -158,6 +164,7 @@ namespace OneRoof.Presentation.Tower
                 roomRoot.transform.position = new Vector3(centerX, y, 0f);
                 _roomRoots[room.Id] = roomRoot;
                 _roomObjects.Add(roomRoot);
+                roomRoot.AddComponent<VisualEffectsPresenter>().BeginConstruction();
 
                 if (isResidential || isOffice || isDiner || isLobby)
                 {
@@ -166,6 +173,7 @@ namespace OneRoof.Presentation.Tower
 
                     var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
                     furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
+                    _furnishings[room.Id] = furnishingPresenter;
                 }
 
                 if (isResidential)
@@ -227,7 +235,29 @@ namespace OneRoof.Presentation.Tower
 
             _roomObjects.Clear();
             _roomRoots.Clear();
+            _furnishings.Clear();
             _renderedRoomIds.Clear();
+        }
+
+        public bool TryGetInteractionDock(Room room, InteractionPointKind kind, int slot, out Vector3 worldPosition)
+        {
+            if (room != null)
+            {
+                var matching = new List<InteractionPoint>();
+                for (var i = 0; i < room.InteractionPoints.Count; i++)
+                    if (room.InteractionPoints[i].Kind == kind) matching.Add(room.InteractionPoints[i]);
+                if (matching.Count > 0)
+                {
+                    var point = matching[Mathf.Abs(slot) % matching.Count];
+                    var x = -2.4f + (room.Bounds.MinX + point.LocalCellOffset + 0.5f) * 0.5f;
+                    worldPosition = new Vector3(x, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, -0.2f);
+                    return true;
+                }
+                if (_furnishings.TryGetValue(room.Id, out var furnishings) && furnishings != null && furnishings.TryGetDockPosition(kind, slot, out worldPosition))
+                    return true;
+            }
+            worldPosition = default;
+            return false;
         }
 
         private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size, Transform parent = null)

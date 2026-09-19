@@ -143,7 +143,7 @@ namespace OneRoof.Presentation.Tower
         private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); }
         private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
         private void ClearWorldGeometry() { _structure.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); }
-        private void RenderVisualSnapshot() { SyncPresenterGeometry(); _elevator.UpdateElevatorPositions(_sim.Projection()); _resident.UpdateResidentPositions(_sim.Projection(), _sim.Topology, Time.time); }
+        private void RenderVisualSnapshot() { SyncPresenterGeometry(); _elevator.UpdateElevatorPositions(_sim.Projection()); _resident.UpdateResidentPositions(_sim.Projection(), _sim.Topology, Time.time, _room); }
         private static Material CreateWorldMaterial() => new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default") ?? throw new MissingReferenceException("No unlit shader found."));
     }
 }

@@ -142,5 +142,21 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_holder.transform.Find($"RoomView_{targetRoom.Id}"), Is.Null);
             Assert.That(_holder.transform.childCount, Is.LessThan(initialChildCount));
         }
+
+        [Test]
+        public void EnsureRoomViews_NewRoomsReceiveConstructionTransition()
+        {
+            var session = new TowerSimulationSession();
+            _presenter.EnsureRoomViews(session.Topology);
+
+            Transform root = null;
+            for (var i = 0; i < _holder.transform.childCount; i++)
+            {
+                var candidate = _holder.transform.GetChild(i);
+                if (candidate.name.StartsWith("RoomView_")) { root = candidate; break; }
+            }
+            Assert.That(root, Is.Not.Null);
+            Assert.That(root.GetComponent<VisualEffectsPresenter>(), Is.Not.Null);
+        }
     }
 }
