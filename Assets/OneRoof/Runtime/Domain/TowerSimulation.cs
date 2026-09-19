@@ -44,6 +44,7 @@ namespace OneRoof.Domain
             Transit = new TransitExecutionSystem();
             Leasing = new LeasingDemandSystem();
             Needs = new ResidentNeedsSystem();
+            Wellbeing = new ResidentWellbeingSystem();
         }
 
         public SimulationClock Clock { get; }
@@ -67,6 +68,7 @@ namespace OneRoof.Domain
         public TransitExecutionSystem Transit { get; }
 
         public ResidentNeedsSystem Needs { get; }
+        public ResidentWellbeingSystem Wellbeing { get; }
 
         public long CurrentTick => Clock.CurrentTick.Value;
 
@@ -86,6 +88,7 @@ namespace OneRoof.Domain
 
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
+            Wellbeing.Advance(Population, ElevatorBank);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)

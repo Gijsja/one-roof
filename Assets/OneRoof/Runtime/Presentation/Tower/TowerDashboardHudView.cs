@@ -63,6 +63,7 @@ namespace OneRoof.Presentation.Tower
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Inspect Bottleneck [I]", _hudButtonStyle, GUILayout.Height(28))) _controller.InspectBottleneck();
             if (GUILayout.Button("Flow Overlay [D]", _hudButtonStyle, GUILayout.Height(28))) _controller.ToggleDataOverlay();
+            if (GUILayout.Button("Satisfaction", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowSatisfactionOverlay();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();

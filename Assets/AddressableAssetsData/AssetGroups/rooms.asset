@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: rooms
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: rooms
+  m_GUID: 40926558c6e9defbc8a05703d8aa6cbc
+  m_SerializeEntries:
+  - m_GUID: 025c6c50c9419fd34eb7a4414aad2132
+    m_Address: Rooms/backdrop_residential_studio
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3b46c3ac76b733cda62be18bd7dab780
+    m_Address: Rooms/backdrop_diner_terracotta
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 425217851f602b36aac4cd02a3bd220e
+    m_Address: Rooms/backdrop_office_acoustic
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 939564dd37c98c34ba31397ff21bfd18
+    m_Address: Rooms/backdrop_lobby_navy
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fcafc23d48903310d8492ef4cc75a37e, type: 2}
+  m_SchemaSet:
+    m_Schemas: []
+    m_SchemaDisplayOrder: []
+  m_IncludeInBuild: 1
+  m_IncludeInBuildMigrated: 1

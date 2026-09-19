@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: architecture
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: architecture
+  m_GUID: c7d759ccc1961ea708344cbb9fdb10f3
+  m_SerializeEntries:
+  - m_GUID: 1f58b2f4b013d525d5802cc13a98da06
+    m_Address: Architecture/door_elevator_double
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6fd972aa8e51aa0105506faf614147c8
+    m_Address: Architecture/window_residential_mullion
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9275388cc79344fc1b80da1000d44063
+    m_Address: Architecture/sconce_amber_wall
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a71194e0a2fbf87e7c61a87116d500bd
+    m_Address: Architecture/door_apartment_single
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fcafc23d48903310d8492ef4cc75a37e, type: 2}
+  m_SchemaSet:
+    m_Schemas: []
+    m_SchemaDisplayOrder: []
+  m_IncludeInBuild: 1
+  m_IncludeInBuildMigrated: 1

@@ -22,7 +22,8 @@ namespace OneRoof.Domain.Population
             EntityId workplaceRoomId,
             DailySchedule schedule,
             IEnumerable<NeedState> needs,
-            IEnumerable<PersonTrait> traits)
+            IEnumerable<PersonTrait> traits,
+            IEnumerable<PersonalityFacet> personalityFacets = null)
         {
             id.EnsureValid();
             householdId.EnsureValid();
@@ -44,6 +45,10 @@ namespace OneRoof.Domain.Population
             Traits = traits != null
                 ? new ReadOnlyCollection<PersonTrait>(new List<PersonTrait>(traits))
                 : new ReadOnlyCollection<PersonTrait>(new List<PersonTrait>());
+            PersonalityFacets = personalityFacets != null
+                ? new ReadOnlyCollection<PersonalityFacet>(new List<PersonalityFacet>(personalityFacets))
+                : new ReadOnlyCollection<PersonalityFacet>(DeriveFacets(Traits));
+            Wellbeing = new ResidentWellbeingState();
 
             _currentActivity = ActivityKind.Idle;
             _currentRoomId = homeRoomId;
@@ -74,6 +79,8 @@ namespace OneRoof.Domain.Population
         public IReadOnlyList<NeedState> Needs { get; }
 
         public IReadOnlyList<PersonTrait> Traits { get; }
+        public IReadOnlyList<PersonalityFacet> PersonalityFacets { get; }
+        public ResidentWellbeingState Wellbeing { get; }
 
         // ── Mutation methods (called by simulation systems only) ──────────────
 
@@ -142,5 +149,21 @@ namespace OneRoof.Domain.Population
 
         public override string ToString() =>
             $"Person {Id} (Household {HouseholdId}, Home {HomeRoomId}, Work {WorkplaceRoomId}, Activity {_currentActivity})";
+
+        private static List<PersonalityFacet> DeriveFacets(IReadOnlyList<PersonTrait> traits)
+        {
+            var result = new List<PersonalityFacet>();
+            if (traits == null || traits.Count == 0) return result;
+            switch (traits[0].Kind)
+            {
+                case PersonTraitKind.EarlyBird: result.Add(new PersonalityFacet(PersonalityFacetKind.CommuteSensitive)); break;
+                case PersonTraitKind.NightOwl: result.Add(new PersonalityFacet(PersonalityFacetKind.PrivacySeeking)); break;
+                case PersonTraitKind.Introvert: result.Add(new PersonalityFacet(PersonalityFacetKind.Resilient)); break;
+                case PersonTraitKind.Extrovert: result.Add(new PersonalityFacet(PersonalityFacetKind.CommunityRooted)); break;
+                case PersonTraitKind.Frugal: result.Add(new PersonalityFacet(PersonalityFacetKind.FinanciallyCautious)); break;
+                case PersonTraitKind.Spendthrift: result.Add(new PersonalityFacet(PersonalityFacetKind.ServiceExpectant)); break;
+            }
+            return result;
+        }
     }
 }

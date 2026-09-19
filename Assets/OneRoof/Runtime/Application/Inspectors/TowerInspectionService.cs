@@ -32,6 +32,12 @@ namespace OneRoof.Application.Inspectors
             };
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
+            details.Add($"Satisfaction: {person.Wellbeing.Satisfaction:P0}");
+            details.Add($"Strain: {person.Wellbeing.Strain:P0}");
+            details.Add($"Commute quality: {person.Wellbeing.Commute:P0}");
+            details.Add($"Rent burden: {person.Wellbeing.RentBurden:P0}");
+            foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
+            foreach (var grievance in person.Wellbeing.Grievances) details.Add($"Grievance: {grievance}");
 
             var symptom = !resident.HasValue
                 ? "Resident location is not currently available."
@@ -40,7 +46,7 @@ namespace OneRoof.Application.Inspectors
 
             return new InspectorDetailProjection(
                 $"Resident #{residentId}", symptom, details,
-                resident.HasValue && resident.Value.WaitTicks > 0 ? "Inspect elevator capacity and wait-time overlay." : "Observe needs and activity before changing tower systems.");
+                person.Wellbeing.Grievances.Count > 0 ? "Open the Satisfaction overlay, then respond through transit capacity, services, or leasing." : "Observe needs and activity before changing tower systems.");
         }
 
         public InspectorDetailProjection InspectRoom(int roomId)

@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: props
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: props
+  m_GUID: 5daa4e661c0d1943d930f36f844e471d
+  m_SerializeEntries:
+  - m_GUID: 045cfa07f40824fedb308b81b09f4b1c
+    m_Address: Props/prop_residential_coffee_table
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 126cc708c16d560ee5e18a0820be32d9
+    m_Address: Props/prop_compact_kitchenette
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 25daf7cf0fe4a93fc1fa275e236b756a
+    m_Address: Props/prop_interior_monstera_planter
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 39ba6aad6363666675fba66aaf0eefea
+    m_Address: Props/prop_wall_sconce_amber
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3b7fc6f527acfa368ccaf2e834739f9e
+    m_Address: Props/prop_diner_booth_2seat
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5a5fc5682668278ca9d35cb91b791f29
+    m_Address: Props/prop_office_chair_wheeled
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5b5fe55b5128f4bde26f28ba9face598
+    m_Address: Props/prop_apartment_door_single
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5d1bc81d4df88f67db588945bec177ef
+    m_Address: Props/prop_office_desk_monitor
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 86149ee998f26e002274ba1cf3c19122
+    m_Address: Props/prop_lobby_coat_rack
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 91e39de49ceb83f65809e60a773742e1
+    m_Address: Props/prop_residential_double_bed
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d3f2cb8b122a4f614e5613f90170d5d0
+    m_Address: Props/prop_elevator_door_double
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d630466a84a79e15dee0526edbea9292
+    m_Address: Props/prop_lobby_reception_desk
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e372d0ec55801e07408691bebd7df7d5
+    m_Address: Props/prop_residential_sofa_2seat
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: edbfc62d141b096028bfa6ede28d3364
+    m_Address: Props/prop_diner_service_counter
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f5ed30c14a8c5857acc23d5984f37ff8
+    m_Address: Props/prop_residential_bookcase_tall
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ff4df0b78edd1ccc6daa105771771820
+    m_Address: Props/prop_office_filing_cabinet
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fcafc23d48903310d8492ef4cc75a37e, type: 2}
+  m_SchemaSet:
+    m_Schemas: []
+    m_SchemaDisplayOrder: []
+  m_IncludeInBuild: 1
+  m_IncludeInBuildMigrated: 1

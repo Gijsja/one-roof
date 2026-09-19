@@ -124,6 +124,9 @@ namespace OneRoof.Domain.Persistence
         public int currentRoomId;
         public int currentActivity;
         public int trait;
+        public int[] personalityFacets;
+        public float wellbeingSatisfaction;
+        public float wellbeingStrain;
         public float hungerSatisfaction;
         public float restSatisfaction;
         public float energySatisfaction;

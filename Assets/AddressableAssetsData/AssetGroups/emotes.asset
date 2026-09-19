@@ -1,0 +1,509 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: emotes
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: emotes
+  m_GUID: 99be5933217e8799aa33ce24700f9aec
+  m_SerializeEntries:
+  - m_GUID: 01655dcc238c48e69088a41f7ccdb3e0
+    m_Address: Emotes/emote_swirl_confused_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 01742a44eb7b45a381f2376edf9c03f7
+    m_Address: Emotes/emote_blush_stripes_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0271c1e971c84b2989cea679fdda60c4
+    m_Address: Emotes/emote_sun_daytime
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0926f5f230aa4e8f836d2d9747407780
+    m_Address: Emotes/emote_thumbs_down
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0b3650eb0e134410b787dd086ece18bb
+    m_Address: Emotes/emote_skull_danger_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0cd2bdc59607430087a450a10449a636
+    m_Address: Emotes/emote_target_focus_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0d2808f75aec4a60a1fa50095cbc9b9d
+    m_Address: Emotes/emote_skull_danger_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 12957eb22e45479d9acf1f8c34ab4780
+    m_Address: Emotes/emote_moon_night_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 161516ad97524141ae2d5048db2fd63d
+    m_Address: Emotes/emote_anger_vein
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 177bfacf7ada4fc681040bbae221d287
+    m_Address: Emotes/emote_arrow_up_cyan_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 21bfa0e3d92a4d3b9ef33e775f88d42c
+    m_Address: Emotes/emote_question_mark_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 23ce29a89ffe49e98bac33e3f0235ff6
+    m_Address: Emotes/emote_blush_stripes_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2e1a279fc70c47198803ef261568acff
+    m_Address: Emotes/emote_frost_spark_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 318311dd80354894bcca96c7d17887e9
+    m_Address: Emotes/emote_lightbulb_idea
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 318690174f6d4f2bbf9ddbcaf5fe92bb
+    m_Address: Emotes/emote_frost_spark_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 318b5b0f96ce47929a427cc2e23cba0d
+    m_Address: Emotes/emote_steam_waves
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 351def80ec914d088ca98f12f32d4248
+    m_Address: Emotes/emote_impact_crest_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 35239f2846dc4ba9b90948b0ce96a7d3
+    m_Address: Emotes/emote_arrow_down_red_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3604fa0146c7410d98366cb33a873178
+    m_Address: Emotes/emote_sun_daytime_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38ab4983151149bd8f0d69207b243789
+    m_Address: Emotes/emote_sleep_zzz_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3904aca8cba043b18136433e8a75121e
+    m_Address: Emotes/emote_arrow_down_red_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3dbaa8b5b9344ca7b1324fd9cdf354ac
+    m_Address: Emotes/emote_thumbs_down_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 443e30327b0d4c0688cf4dbf9cd2dd64
+    m_Address: Emotes/emote_thumbs_up_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 45ee05d3ae114b4792225d597853aeb8
+    m_Address: Emotes/emote_music_note_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 480560a5521c4b9396b4b17d42728be3
+    m_Address: Emotes/emote_anger_vein_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 48442d76d3cc4069a60b0bbd604bb52a
+    m_Address: Emotes/emote_broken_heart
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4c34c3defc034805a9e763c87b1037a2
+    m_Address: Emotes/emote_impact_crest_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4c6c5d5ee0c84d868bbac50c5163f277
+    m_Address: Emotes/emote_sleep_zzz_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4eaa17b7704f4436af7b38cd24451bd8
+    m_Address: Emotes/emote_thumbs_down_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4efc794394834888852645d934655734
+    m_Address: Emotes/emote_target_focus
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5078654c4d8f4598bcda8c43ef98d419
+    m_Address: Emotes/emote_swirl_confused
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5267639a2b89416a9beb160d63746090
+    m_Address: Emotes/emote_steam_waves_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5609f3557b4240d681e6ee2a78e1406b
+    m_Address: Emotes/emote_exclamation_alert_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 57930629c1fd47199641ef13198a1514
+    m_Address: Emotes/emote_interrobang_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5af5ff8c98174dc6b73cee3d43f8c660
+    m_Address: Emotes/emote_question_mark_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5e4de363f65a4754aa8385e0e9f10e13
+    m_Address: Emotes/emote_heart_love_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6079afef4c5d4bfbbb686046877e61af
+    m_Address: Emotes/emote_sun_daytime_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 60bf4f634338465387378471157178b1
+    m_Address: Emotes/emote_moon_night
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 633750bc3fcb488d819e03b989a5924e
+    m_Address: Emotes/emote_heart_love_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63cb3798a996454c92d972d0160334a9
+    m_Address: Emotes/emote_interrobang_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 64abd564d88b4413917c348c14f5359c
+    m_Address: Emotes/emote_music_note_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 66bab2a35a1749dfa9d1f9e63a64281d
+    m_Address: Emotes/emote_thumbs_up_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6704d7283870464e82f41332d9f8b5a2
+    m_Address: Emotes/emote_music_note
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 690d568443104e078ecd169aec75c5fe
+    m_Address: Emotes/emote_blush_stripes
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 69dae19da3934e09a9ca192036efa2c3
+    m_Address: Emotes/emote_thumbs_down_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6accb63c92d54f19bdca0d07e24be17e
+    m_Address: Emotes/emote_arrow_up_cyan
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d52f16bc0ed43f9ae44f3bb18e31c21
+    m_Address: Emotes/emote_ellipsis_wait_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6e5a8140924445bead0ebd61dac81f04
+    m_Address: Emotes/emote_frost_spark
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70d942c0fb774b949c00c7c08535f8a6
+    m_Address: Emotes/emote_question_mark
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70f8cd9908dc432a84a86444451fcfcb
+    m_Address: Emotes/emote_skull_danger
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 71f32c6229ef439d967ed914dc667e6c
+    m_Address: Emotes/emote_broken_heart_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 72f9650f0dec48e4a9e1ab37f5d31def
+    m_Address: Emotes/emote_sweat_drops_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 733800c9260b417196bdc9eb7f71259a
+    m_Address: Emotes/emote_steam_waves_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7af9fcbbaa064a76aab2e9680cfb2823
+    m_Address: Emotes/emote_broken_heart_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7b0a0d3ec3194767a4ed8df465b8d697
+    m_Address: Emotes/emote_sleep_zzz
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 804e7dbb852649a2a1fab93635325c41
+    m_Address: Emotes/emote_sleep_zzz_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 850d4900eb4f40389a72cd4520d4fbeb
+    m_Address: Emotes/emote_question_mark_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8d9ab420104f4050aa3373bb23c01572
+    m_Address: Emotes/emote_swirl_confused_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 91d7179ead9046acb1170cf8911c3eb0
+    m_Address: Emotes/emotes_sheet
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92581650b67b4baf8c9bacad06828f57
+    m_Address: Emotes/emote_interrobang
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9eccde3540f84861b25a54b6d80b741c
+    m_Address: Emotes/emote_anger_vein_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9ef0a50c87c74673918fff38aa5a99dc
+    m_Address: Emotes/emote_thumbs_up
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f41d467bfe645208db5e34b2b08d24d
+    m_Address: Emotes/emote_music_note_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f5e69ae63834724809f203cbd45b4c5
+    m_Address: Emotes/emote_impact_crest
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a6d6e777b8964c22815b43bcc32f2df5
+    m_Address: Emotes/emote_moon_night_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae6c774172a04b93a24febb0e2992ffe
+    m_Address: Emotes/emote_interrobang_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b8431e1f90d941d3b273540f24de4d77
+    m_Address: Emotes/emote_blush_stripes_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b9d682902b72432aa1ffb6087c4ba581
+    m_Address: Emotes/emote_skull_danger_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c15623be562a49adb80934b0dce12023
+    m_Address: Emotes/emote_steam_waves_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c2bd69d97f384ae8b8ba57130dbc1fb7
+    m_Address: Emotes/emote_arrow_down_red_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c3eec7fffef541a18ec5f6a6da2b2fe1
+    m_Address: Emotes/emote_lightbulb_idea_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c6455f7e66a546d783918cfe03bd7c23
+    m_Address: Emotes/emote_exclamation_alert_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c8dd9e7932c84faaa4a55dbc36a3239b
+    m_Address: Emotes/emote_exclamation_alert
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cad2c646a5c5455da3a20a026ce33295
+    m_Address: Emotes/emote_sweat_drops_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cb5692fa5d7f440e89de176678a71c83
+    m_Address: Emotes/emote_ellipsis_wait_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cc94afcdbd094e02acd2d2cc7b087034
+    m_Address: Emotes/emote_heart_love
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d080035d87ba44c8b54d6b6ae9719d0c
+    m_Address: Emotes/emote_exclamation_alert_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d14f8e3ab49246e297a7bf03c818acf3
+    m_Address: Emotes/emote_heart_love_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d40c27451985423f8246350912835619
+    m_Address: Emotes/emote_target_focus_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d4e0cba9029a42369117f357e8e0889d
+    m_Address: Emotes/emote_sun_daytime_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d4e9e9fa8d674e61a001a2bb12bc93af
+    m_Address: Emotes/emote_anger_vein_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: db6715dcb7234f6d8a6641d9850dbce0
+    m_Address: Emotes/emote_sweat_drops
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dea3a955587b49c8a1361e350d01130d
+    m_Address: Emotes/emote_impact_crest_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e28202c2d99e4ad7860a0319206dadbd
+    m_Address: Emotes/emote_moon_night_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e32ad218ab724ab1bd69d2674c8a7d0d
+    m_Address: Emotes/emote_frost_spark_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e8cf49dd9c764496b6daffa922d8588d
+    m_Address: Emotes/emote_ellipsis_wait
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ebd7bdb851734fa991c5228b014f8427
+    m_Address: Emotes/emote_sweat_drops_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec94fe651c6d4c51867259214681a203
+    m_Address: Emotes/emote_broken_heart_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f18bfaf8d1da4a20959f9b21f842a434
+    m_Address: Emotes/emote_target_focus_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f23977e53dc54c7d92618a1a0a3f6695
+    m_Address: Emotes/emote_arrow_up_cyan_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f292200598cd4c058a516006ddc60a93
+    m_Address: Emotes/emote_arrow_up_cyan_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f652f1547ade4800aa24c3e6fda05fb1
+    m_Address: Emotes/emote_lightbulb_idea_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f79e77db5885492d88d0d6c4bce27102
+    m_Address: Emotes/emote_thumbs_up_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fae4cb46ed544deb8cd87e140ead5714
+    m_Address: Emotes/emote_arrow_down_red
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fbadbadc746845409cf6941c04276ac8
+    m_Address: Emotes/emote_swirl_confused_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fbf2cd0a46f74a48a5fbeb50de871311
+    m_Address: Emotes/emote_ellipsis_wait_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fdea8665ea7e44c9b05ccc47d605f61f
+    m_Address: Emotes/emote_lightbulb_idea_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fcafc23d48903310d8492ef4cc75a37e, type: 2}
+  m_SchemaSet:
+    m_Schemas: []
+    m_SchemaDisplayOrder: []
+  m_IncludeInBuild: 1
+  m_IncludeInBuildMigrated: 1

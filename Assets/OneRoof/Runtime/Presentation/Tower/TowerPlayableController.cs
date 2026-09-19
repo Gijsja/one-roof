@@ -22,6 +22,7 @@ namespace OneRoof.Presentation.Tower
         private TowerSimulationSession _sim; private ModeShellSession _mode;
         private ElevatorWaitOverlayService _overlaySvc; private ElevatorPlacementPredictor _predictor;
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
+        private SatisfactionOverlayService _satisfactionService; private SatisfactionOverlayPresenter _satisfactionPresenter;
         private CongestionInspectorCardView _inspectorCard; private PlacementPreviewCardView _placementCard;
         private GridPlacementController _gridPlacement; private PlacementGhostPresenter _ghostPresenter;
         private InspectSelectionController _inspectSelection; private InspectOutlinePresenter _inspectOutline;
@@ -38,6 +39,7 @@ namespace OneRoof.Presentation.Tower
         public TowerSimulationSession SimulationSession => _sim; public TowerSimulationSession TransitSession => _sim;
         public ModeShellSession ModeSession => _mode; public ElevatorWaitOverlayService OverlayService => _overlaySvc;
         public ElevatorWaitOverlayPresenter OverlayPresenter => _overlayPresenter; public ElevatorPlacementPredictor Predictor => _predictor;
+        public SatisfactionOverlayPresenter SatisfactionPresenter => _satisfactionPresenter;
         public GridPlacementController GridPlacement => _gridPlacement; public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
         public InspectSelectionController InspectSelection => _inspectSelection; public InspectOutlinePresenter InspectOutline => _inspectOutline;
         public TowerStructurePresenter StructurePresenter => _structure; public ElevatorBankPresenter ElevatorPresenter => _elevator;
@@ -49,6 +51,7 @@ namespace OneRoof.Presentation.Tower
             if (_sim != null) return;
             _sim = new TowerSimulationSession(); SeedMorningRush(); _mode = new ModeShellSession();
             _overlaySvc = new ElevatorWaitOverlayService(); _predictor = new ElevatorPlacementPredictor();
+            _satisfactionService = new SatisfactionOverlayService();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
             _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
@@ -74,6 +77,7 @@ namespace OneRoof.Presentation.Tower
         {
             (_modeBar = Ensure<ModeShellBarController>()).Session = _mode;
             (_overlayPresenter = Ensure<ElevatorWaitOverlayPresenter>()).SetVisible(false);
+            (_satisfactionPresenter = Ensure<SatisfactionOverlayPresenter>()).SetVisible(false);
             (_inspectorCard = Ensure<CongestionInspectorCardView>()).Session = _mode;
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
@@ -89,8 +93,10 @@ namespace OneRoof.Presentation.Tower
 
         private void OnModeChanged(ModeShellProjection p)
         {
-            _overlayPresenter.SetVisible(p.IsDataMode);
-            if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_overlaySvc.CreateOverlay(_sim.CongestionProjection()));
+            var satisfaction = p.IsDataMode && p.ActiveOverlayId == "overlay:satisfaction";
+            _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction); _satisfactionPresenter.SetVisible(satisfaction);
+            if (satisfaction) _satisfactionPresenter.UpdateOverlay(_satisfactionService.CreateOverlay(_sim));
+            else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_overlaySvc.CreateOverlay(_sim.CongestionProjection()));
             if (p.IsBuildMode && p.SelectedBuildTool == "transit:elevator_car") UpdatePlacementCard();
             else if (!p.IsBuildMode && _placementCard.IsOpen) _placementCard.Close();
             if (!p.IsInspectMode && _inspectorCard.IsOpen) _inspectorCard.Close();
@@ -121,12 +127,14 @@ namespace OneRoof.Presentation.Tower
         {
             var c = _sim.CongestionProjection();
             if (_overlayPresenter.IsVisible) _overlayPresenter.UpdateOverlay(_overlaySvc.CreateOverlay(c));
+            if (_satisfactionPresenter.IsVisible) _satisfactionPresenter.UpdateOverlay(_satisfactionService.CreateOverlay(_sim));
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
         public void InspectBottleneck() { _mode.SwitchMode(InteractionMode.Inspect); var c = _sim.CongestionProjection(); var ov = _overlaySvc.CreateOverlay(c); _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car")); }
 
         public void ToggleDataOverlay() { if (_mode.CurrentMode == InteractionMode.Data) _mode.SwitchMode(InteractionMode.Inspect); else { _mode.SwitchMode(InteractionMode.Data); _mode.SetActiveOverlay("overlay:elevator_wait"); } }
+        public void ShowSatisfactionOverlay() { _mode.SetActiveOverlay("overlay:satisfaction"); }
         private void UpdatePlacementCard() => _placementCard.SetPreview(_predictor.PredictAddition(_sim.CongestionProjection()), OnConfirmElevatorPlacement);
         public void ShowPlacementPreview() { if (_mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build); if (_mode.Projection().SelectedBuildTool != "transit:elevator_car") _mode.SelectBuildTool("transit:elevator_car"); UpdatePlacementCard(); }
         public void OnConfirmElevatorPlacement() { _sim.AddCapacity(); _placementCard.Close(); _elevator.EnsureElevatorViews(_sim.ElevatorBank.Cars.Count); }

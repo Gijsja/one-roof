@@ -169,6 +169,9 @@ namespace OneRoof.Domain.Population
                     currentRoomId = p.CurrentRoomId.Value,
                     currentActivity = (int)p.CurrentActivity,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
+                    personalityFacets = FacetIds(p),
+                    wellbeingSatisfaction = p.Wellbeing.Satisfaction,
+                    wellbeingStrain = p.Wellbeing.Strain,
                     hungerSatisfaction = hunger,
                     restSatisfaction = energy,
                     energySatisfaction = energy,
@@ -224,6 +227,7 @@ namespace OneRoof.Domain.Population
                         new NeedState(NeedKind.Purpose, purpose)
                     };
                     var traits = new[] { trait };
+                    var facets = p.personalityFacets == null ? null : RestoreFacets(p.personalityFacets);
                     var person = new PersonRecord(
                         new EntityId(p.id),
                         new EntityId(p.householdId),
@@ -231,15 +235,32 @@ namespace OneRoof.Domain.Population
                         new EntityId(p.workplaceRoomId),
                         schedule,
                         needs,
-                        traits);
+                        traits, facets);
 
                     person.UpdateLocation(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId));
                     person.UpdateActivity((ActivityKind)p.currentActivity);
+                    person.Wellbeing.Update(p.wellbeingSatisfaction, p.wellbeingStrain, 1f, 1f, 1f, 1f, 1f, 1f, null);
                     persons.Add(person);
                 }
             }
 
             return new PopulationState(persons, households);
+        }
+
+        private static int[] FacetIds(PersonRecord person)
+        {
+            var result = new int[person.PersonalityFacets.Count];
+            for (var i = 0; i < result.Length; i++) result[i] = (int)person.PersonalityFacets[i].Kind;
+            return result;
+        }
+
+        private static PersonalityFacet[] RestoreFacets(int[] ids)
+        {
+            if (ids == null) return Array.Empty<PersonalityFacet>();
+            var result = new List<PersonalityFacet>();
+            foreach (var id in ids)
+                if (Enum.IsDefined(typeof(PersonalityFacetKind), id)) result.Add(new PersonalityFacet((PersonalityFacetKind)id));
+            return result.ToArray();
         }
     }
 }
