@@ -81,5 +81,19 @@ namespace OneRoof.Content.Tests.EditMode
                 Assert.That(record, Is.SameAs(NpcContentRegistry.AllRecords[i % 6]));
             }
         }
+
+        [Test]
+        public void WardrobeLoadout_ResolvesAllEightCompatibleLayers()
+        {
+            var loadout = NpcWardrobeLoadout.FromRecord(NpcContentRegistry.GetByIndex(0));
+
+            Assert.That(loadout.RigId, Is.EqualTo(NpcRigDefinition.RigId));
+            Assert.That(loadout.Layers.Count, Is.EqualTo(8));
+            foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
+            {
+                Assert.That(loadout.GetLayerId(layer), Does.StartWith("npc.wardrobe."));
+                Assert.That(loadout.GetLayerId(layer), Does.EndWith(".v1"));
+            }
+        }
     }
 }

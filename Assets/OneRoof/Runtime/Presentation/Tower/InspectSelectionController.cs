@@ -1,8 +1,10 @@
 using System;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Inspectors;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
+using OneRoof.UI.Inspectors;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -30,6 +32,7 @@ namespace OneRoof.Presentation.Tower
         private ElevatorBankPresenter _elevatorPresenter;
         private TowerResidentPresenter _residentPresenter;
         private InspectOutlinePresenter _outlinePresenter;
+        private DeepInspectionCardView _detailCard;
         private Camera _camera;
 
         public ModeShellSession ModeSession
@@ -98,6 +101,12 @@ namespace OneRoof.Presentation.Tower
         public InspectTargetKind SelectedKind { get; private set; } = InspectTargetKind.None;
         public int? SelectedId { get; private set; }
 
+        public DeepInspectionCardView DetailCard
+        {
+            get => _detailCard ?? (_detailCard = GetComponent<DeepInspectionCardView>() ?? gameObject.AddComponent<DeepInspectionCardView>());
+            set => _detailCard = value;
+        }
+
         private void OnDisable()
         {
             if (_modeSession != null) _modeSession.ModeChanged -= OnModeChanged;
@@ -118,12 +127,14 @@ namespace OneRoof.Presentation.Tower
                 SelectedKind = InspectTargetKind.None;
                 SelectedId = null;
                 if (OutlinePresenter != null) OutlinePresenter.ClearAll();
+                if (DetailCard != null) DetailCard.Close();
             }
             else if (!projection.SelectedEntityId.HasValue)
             {
                 SelectedKind = InspectTargetKind.None;
                 SelectedId = null;
                 if (OutlinePresenter != null) OutlinePresenter.ClearSelection();
+                if (DetailCard != null) DetailCard.Close();
             }
         }
 
@@ -152,6 +163,7 @@ namespace OneRoof.Presentation.Tower
                 SelectedKind = InspectTargetKind.None;
                 SelectedId = null;
                 OutlinePresenter.ClearSelection();
+                DetailCard.Close();
                 return;
             }
 
@@ -210,6 +222,7 @@ namespace OneRoof.Presentation.Tower
                         {
                             OutlinePresenter.HighlightSelectBox(bounds);
                         }
+                        ShowDetails(kind, id);
                     }
                     else
                     {
@@ -218,6 +231,7 @@ namespace OneRoof.Presentation.Tower
                         SelectedKind = InspectTargetKind.None;
                         SelectedId = null;
                         OutlinePresenter.ClearSelection();
+                        DetailCard.Close();
                     }
                 }
             }
@@ -236,7 +250,12 @@ namespace OneRoof.Presentation.Tower
             if (_residentPresenter != null && _residentPresenter.TryGetResidentAt(worldPos, 0.45f, out var resIdx, out var resBounds, out var resSprite, out var resTr))
             {
                 kind = InspectTargetKind.Resident;
-                id = resIdx + 1; // 1-based resident ID
+                var residents = _simulationSession?.TransitProjection().Residents;
+                if (residents == null || resIdx < 0 || resIdx >= residents.Count)
+                {
+                    return false;
+                }
+                id = residents[resIdx].ResidentId;
                 bounds = resBounds;
                 sprite = resSprite;
                 tr = resTr;
@@ -268,6 +287,25 @@ namespace OneRoof.Presentation.Tower
             }
 
             return false;
+        }
+
+        /// <summary>Opens the appropriate drill-down card for a selected presentation target.</summary>
+        public void ShowDetails(InspectTargetKind kind, int id)
+        {
+            if (_simulationSession == null) return;
+            var service = new TowerInspectionService(_simulationSession);
+            switch (kind)
+            {
+                case InspectTargetKind.Resident:
+                    DetailCard.Inspect(service.InspectResident(id));
+                    break;
+                case InspectTargetKind.Room:
+                    DetailCard.Inspect(service.InspectRoom(id));
+                    break;
+                case InspectTargetKind.ElevatorShaft:
+                    DetailCard.Inspect(service.InspectElevatorBank());
+                    break;
+            }
         }
 
         private static bool IsPointerOverUI(Vector2 screenPos)

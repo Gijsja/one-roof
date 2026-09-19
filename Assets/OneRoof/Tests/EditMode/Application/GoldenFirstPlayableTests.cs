@@ -85,7 +85,7 @@ namespace OneRoof.Application.Tests.EditMode
             var preview = predictor.PredictAddition(initialCongestion);
 
             Assert.That(preview.IsValid, Is.True);
-            Assert.That(preview.Cost, Is.EqualTo(500));
+            Assert.That(preview.Cost, Is.EqualTo(ElevatorPlacementPredictor.DefaultElevatorCost));
             Assert.That(preview.CurrentCarCount, Is.EqualTo(1));
             Assert.That(preview.PredictedCarCount, Is.EqualTo(2));
             Assert.That(preview.EstimatedImprovementPercentage, Is.GreaterThanOrEqualTo(40f),

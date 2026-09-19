@@ -119,7 +119,7 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(hit, Is.True);
             Assert.That(kind, Is.EqualTo(InspectTargetKind.Resident));
-            Assert.That(id, Is.EqualTo(1));
+            Assert.That(id, Is.EqualTo(_simSession.Population.Persons[0].Id.Value));
             Assert.That(tr, Is.Not.Null);
             Assert.That(sprite, Is.Not.Null);
         }
@@ -145,6 +145,31 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_controller.SelectedKind, Is.EqualTo(InspectTargetKind.None));
             Assert.That(_controller.SelectedId, Is.Null);
             Assert.That(_outlinePresenter.HasSelectionTarget, Is.False);
+        }
+
+        [Test]
+        public void ShowDetails_ForElevatorShaft_OpensBankCardFromSnapshot()
+        {
+            _simSession.SeedMorningRush();
+
+            _controller.ShowDetails(InspectTargetKind.ElevatorShaft, 0);
+
+            Assert.That(_controller.DetailCard.IsOpen, Is.True);
+            Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo("Elevator Bank"));
+            Assert.That(_controller.DetailCard.CurrentProjection.Details, Has.Some.Contains("Queued residents:"));
+        }
+
+        [Test]
+        public void ShowDetails_ForResidentAndRoom_UsesStableEntityIds()
+        {
+            var residentId = _simSession.Population.Persons[0].Id.Value;
+            var roomId = _simSession.Population.Persons[0].HomeRoomId.Value;
+
+            _controller.ShowDetails(InspectTargetKind.Resident, residentId);
+            Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo($"Resident #{residentId}"));
+
+            _controller.ShowDetails(InspectTargetKind.Room, roomId);
+            Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo($"Room #{roomId}"));
         }
     }
 }

@@ -62,6 +62,9 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(skeletal.Spine, Is.Not.Null);
                 Assert.That(skeletal.Neck, Is.Not.Null);
                 Assert.That(skeletal.Head, Is.Not.Null);
+                Assert.That(skeletal.Bones.Count, Is.EqualTo(17));
+                Assert.That(skeletal.WardrobeSlots.Count, Is.EqualTo(8));
+                Assert.That(skeletal.Wardrobe, Is.Not.Null);
 
                 Assert.That(skeletal.MainRenderer, Is.Not.Null);
                 Assert.That(skeletal.MainRenderer.sprite, Is.Not.Null);
@@ -80,6 +83,11 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 // Verify procedural animation executes cleanly
                 Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(1.5f));
+
+                skeletal.SetAnimationClip(NpcAnimationClip.Sleep);
+                Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(2f));
+                skeletal.SetAnimationClip(NpcAnimationClip.Sit);
+                Assert.DoesNotThrow(() => skeletal.ApplyProceduralAnimation(2.5f));
             }
             finally
             {

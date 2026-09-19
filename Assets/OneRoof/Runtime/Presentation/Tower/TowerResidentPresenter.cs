@@ -161,6 +161,8 @@ namespace OneRoof.Presentation.Tower
                             residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
+                            skeletal?.SetAnimationClip(resident.Activity == ActivityKind.Sleeping ? NpcAnimationClip.Sleep :
+                                resident.Activity == ActivityKind.Working || resident.Activity == ActivityKind.Leisure ? NpcAnimationClip.Sit : NpcAnimationClip.Idle);
                             placedInRoom = true;
                         }
 
@@ -173,6 +175,7 @@ namespace OneRoof.Presentation.Tower
                             var arrivedY = TowerStructurePresenter.FloorY(destFloor) - 0.58f;
                             residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
+                            skeletal?.SetAnimationClip(NpcAnimationClip.Idle);
                         }
                         break;
                     }
