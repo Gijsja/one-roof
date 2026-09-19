@@ -24,6 +24,64 @@ namespace OneRoof.Presentation.Tower
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
 
+        public static bool TryCalculateRoomBounds(Room room, out Bounds bounds)
+        {
+            if (room == null)
+            {
+                bounds = default;
+                return false;
+            }
+
+            var worldLeft = -2.4f + room.Bounds.MinX * 0.5f;
+            var worldRight = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+            var width = worldRight - worldLeft;
+            var centerX = (worldLeft + worldRight) * 0.5f;
+            var y = TowerStructurePresenter.FloorY(room.Floor);
+            bounds = new Bounds(new Vector3(centerX, y, 0f), new Vector3(width, 1.48f, 1f));
+            return true;
+        }
+
+        public bool TryGetRoomBounds(EntityId roomId, BuildingTopologyState topology, out Bounds bounds)
+        {
+            if (topology != null && topology.TryGetRoom(roomId, out var room))
+            {
+                return TryCalculateRoomBounds(room, out bounds);
+            }
+
+            bounds = default;
+            return false;
+        }
+
+        public bool TryGetRoomAt(Vector2 worldPos, BuildingTopologyState topology, out EntityId roomId, out Bounds bounds)
+        {
+            if (topology != null)
+            {
+                foreach (var room in topology.Rooms.Values)
+                {
+                    var contentType = room.ContentType.Value ?? "";
+                    if (contentType.Equals("transit:elevator_shaft") || contentType.Equals("elevator_shaft"))
+                    {
+                        continue;
+                    }
+
+                    if (TryCalculateRoomBounds(room, out var b))
+                    {
+                        if (worldPos.x >= b.min.x && worldPos.x <= b.max.x &&
+                            worldPos.y >= b.min.y && worldPos.y <= b.max.y)
+                        {
+                            roomId = room.Id;
+                            bounds = b;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            roomId = default;
+            bounds = default;
+            return false;
+        }
+
         public void Initialize(Transform parent, Material worldMaterial, MaterialPropertyBlock colorBlock)
         {
             _parent = parent;

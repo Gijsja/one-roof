@@ -83,6 +83,12 @@ namespace OneRoof.Application.Modes
             ExecuteCommand(new SetInteractionModeCommand(InteractionMode.Inspect, entityId: entityId, targetFloor: floor));
         }
 
+        public void ClearSelection()
+        {
+            _state.ClearSelection();
+            ModeChanged?.Invoke(Projection());
+        }
+
         public void SetActiveOverlay(string overlayId)
         {
             ExecuteCommand(new SetInteractionModeCommand(InteractionMode.Data, overlayId: overlayId));

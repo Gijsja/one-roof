@@ -65,5 +65,21 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.ResidentCount, Is.EqualTo(0));
             Assert.That(_holder.transform.childCount, Is.EqualTo(0));
         }
+
+        [Test]
+        public void TryGetResidentView_And_TryGetResidentAt_FindsPositionedResident()
+        {
+            _presenter.EnsureResidentViews(3);
+
+            var viewFound = _presenter.TryGetResidentView(1, out var bounds, out var sprite, out var tr);
+            Assert.That(viewFound, Is.True);
+            Assert.That(tr, Is.Not.Null);
+
+            tr.position = new Vector3(3.5f, 1.2f, -0.2f);
+            var hitFound = _presenter.TryGetResidentAt(new Vector2(3.5f, 1.55f), 0.45f, out var hitIdx, out var hitBounds, out _, out _);
+            Assert.That(hitFound, Is.True);
+            Assert.That(hitIdx, Is.EqualTo(1));
+            Assert.That(hitBounds.size.x, Is.GreaterThan(0f));
+        }
     }
 }

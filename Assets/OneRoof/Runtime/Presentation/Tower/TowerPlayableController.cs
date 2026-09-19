@@ -24,6 +24,7 @@ namespace OneRoof.Presentation.Tower
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
         private CongestionInspectorCardView _inspectorCard; private PlacementPreviewCardView _placementCard;
         private GridPlacementController _gridPlacement; private PlacementGhostPresenter _ghostPresenter;
+        private InspectSelectionController _inspectSelection; private InspectOutlinePresenter _inspectOutline;
         private TowerDashboardHudView _hudView;
 
         private readonly TowerStructurePresenter _structure = new TowerStructurePresenter();
@@ -38,6 +39,7 @@ namespace OneRoof.Presentation.Tower
         public ModeShellSession ModeSession => _mode; public ElevatorWaitOverlayService OverlayService => _overlaySvc;
         public ElevatorWaitOverlayPresenter OverlayPresenter => _overlayPresenter; public ElevatorPlacementPredictor Predictor => _predictor;
         public GridPlacementController GridPlacement => _gridPlacement; public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
+        public InspectSelectionController InspectSelection => _inspectSelection; public InspectOutlinePresenter InspectOutline => _inspectOutline;
         public TowerStructurePresenter StructurePresenter => _structure; public ElevatorBankPresenter ElevatorPresenter => _elevator;
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
@@ -49,11 +51,8 @@ namespace OneRoof.Presentation.Tower
             _overlaySvc = new ElevatorWaitOverlayService(); _predictor = new ElevatorPlacementPredictor();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
-            _structure.Initialize(transform, _worldMat, _colorBlock);
-            _elevator.Initialize(transform, _worldMat, _colorBlock);
-            _room.Initialize(transform, _worldMat, _colorBlock);
-            _resident.Initialize(transform);
-
+            _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
+            _room.Initialize(transform, _worldMat, _colorBlock); _resident.Initialize(transform);
             InitSubcomponents(); _mode.ModeChanged += OnModeChanged; CreateWorldGeometry();
         }
 
@@ -80,14 +79,13 @@ namespace OneRoof.Presentation.Tower
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
             _gridPlacement.SimulationSession = _sim; _gridPlacement.GhostPresenter = _ghostPresenter;
             _gridPlacement.PlacementExecuted += OnPlacement; (_hudView = Ensure<TowerDashboardHudView>()).Controller = this;
-            TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement);
+            _inspectOutline = Ensure<InspectOutlinePresenter>(); (_inspectSelection = Ensure<InspectSelectionController>()).ModeSession = _mode;
+            _inspectSelection.SimulationSession = _sim; _inspectSelection.RoomPresenter = _room; _inspectSelection.ElevatorPresenter = _elevator;
+            _inspectSelection.ResidentPresenter = _resident; _inspectSelection.OutlinePresenter = _inspectOutline;
+            TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
         }
 
-        private T Ensure<T>() where T : Component
-        {
-            var comp = gameObject.GetComponent<T>();
-            return comp != null ? comp : gameObject.AddComponent<T>();
-        }
+        private T Ensure<T>() where T : Component => GetComponent<T>() ?? gameObject.AddComponent<T>();
 
         private void OnModeChanged(ModeShellProjection p)
         {
@@ -98,14 +96,13 @@ namespace OneRoof.Presentation.Tower
             if (!p.IsInspectMode && _inspectorCard.IsOpen) _inspectorCard.Close();
         }
 
-        private void OnPlacement(CommandResult r) { if (r.Accepted) { UpdateCamera(); SyncPresenterGeometry(); } }
+        private void OnPlacement(CommandResult r) { if (r.Accepted) { UpdateCamera(resetView: false); SyncPresenterGeometry(); } }
 
         public void SyncPresenterGeometry()
         {
             var topo = _sim?.Topology; var fl = topo != null ? topo.FloorCount : InitialFloorCount;
             _elevator.EnsureShaftViews(fl); _structure.EnsureFloorViews(topo); _room.EnsureRoomViews(topo);
-            _elevator.EnsureElevatorViews(_sim?.ElevatorBank.Cars.Count ?? 1);
-            _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
+            _elevator.EnsureElevatorViews(_sim?.ElevatorBank.Cars.Count ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
         }
 
         private void HandleKeyboard()
@@ -125,12 +122,7 @@ namespace OneRoof.Presentation.Tower
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
-        public void InspectBottleneck()
-        {
-            _mode.SwitchMode(InteractionMode.Inspect);
-            var c = _sim.CongestionProjection(); var ov = _overlaySvc.CreateOverlay(c);
-            _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car"));
-        }
+        public void InspectBottleneck() { _mode.SwitchMode(InteractionMode.Inspect); var c = _sim.CongestionProjection(); var ov = _overlaySvc.CreateOverlay(c); _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car")); }
 
         public void ToggleDataOverlay() { if (_mode.CurrentMode == InteractionMode.Data) _mode.SwitchMode(InteractionMode.Inspect); else { _mode.SwitchMode(InteractionMode.Data); _mode.SetActiveOverlay("overlay:elevator_wait"); } }
         private void UpdatePlacementCard() => _placementCard.SetPreview(_predictor.PredictAddition(_sim.CongestionProjection()), OnConfirmElevatorPlacement);
@@ -140,27 +132,16 @@ namespace OneRoof.Presentation.Tower
         public void ResetCommuteSimulation()
         {
             _sim.Reset(); SeedMorningRush(); if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
-            _inspectorCard.Close(); _placementCard.Close();
-            _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
+            if (_inspectSelection != null) _inspectSelection.SimulationSession = _sim;
+            _inspectorCard.Close(); _placementCard.Close(); _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
             ClearWorldGeometry(); CreateWorldGeometry();
         }
 
-        private void SeedMorningRush()
-        {
-            if (_sim != null && _sim.ElevatorBank.TotalQueuedCount == 0)
-            {
-                for (var i = 1; i <= InitialResidentCount; i++)
-                {
-                    var destinationFloor = 1 + ((i - 1) % 4);
-                    _sim.ElevatorBank.EnqueuePassenger(new OneRoof.Domain.Transit.ElevatorPassenger(new OneRoof.Domain.Identity.EntityId(i), 0, destinationFloor));
-                }
-            }
-        }
-
-        private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(); SyncPresenterGeometry(); }
-        private void UpdateCamera() => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement);
+        private void SeedMorningRush() => _sim?.SeedMorningRush();
+        private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); }
+        private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
         private void ClearWorldGeometry() { _structure.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); }
-        private void RenderVisualSnapshot() { SyncPresenterGeometry(); UpdateCamera(); _elevator.UpdateElevatorPositions(_sim.Projection()); _resident.UpdateResidentPositions(_sim.Projection(), _sim.Topology, Time.time); }
+        private void RenderVisualSnapshot() { SyncPresenterGeometry(); _elevator.UpdateElevatorPositions(_sim.Projection()); _resident.UpdateResidentPositions(_sim.Projection(), _sim.Topology, Time.time); }
         private static Material CreateWorldMaterial() => new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default") ?? throw new MissingReferenceException("No unlit shader found."));
     }
 }

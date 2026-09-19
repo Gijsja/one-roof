@@ -26,6 +26,59 @@ namespace OneRoof.Presentation.Tower
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
         public int ResidentCount => _residentViews.Count;
 
+        public bool TryGetResidentView(int residentIndex, out Bounds bounds, out Sprite sprite, out Transform residentTransform)
+        {
+            if (residentIndex >= 0 && residentIndex < _residentSkeletons.Count)
+            {
+                var skeletal = _residentSkeletons[residentIndex];
+                if (skeletal != null && skeletal.MainRenderer != null)
+                {
+                    sprite = skeletal.MainRenderer.sprite;
+                    residentTransform = skeletal.transform;
+                    var pos = residentTransform.position;
+                    bounds = new Bounds(new Vector3(pos.x, pos.y + 0.35f, pos.z), new Vector3(0.5f, 0.75f, 1f));
+                    return true;
+                }
+            }
+
+            bounds = default;
+            sprite = null;
+            residentTransform = null;
+            return false;
+        }
+
+        public bool TryGetResidentAt(Vector2 worldPos, float hitRadius, out int residentIndex, out Bounds bounds, out Sprite sprite, out Transform residentTransform)
+        {
+            var closestDistSqr = hitRadius * hitRadius;
+            var foundIndex = -1;
+
+            for (var i = 0; i < _residentSkeletons.Count; i++)
+            {
+                var skeletal = _residentSkeletons[i];
+                if (skeletal == null || skeletal.transform == null) continue;
+
+                var pos = (Vector2)skeletal.transform.position + new Vector2(0f, 0.35f);
+                var distSqr = (pos - worldPos).sqrMagnitude;
+                if (distSqr <= closestDistSqr)
+                {
+                    closestDistSqr = distSqr;
+                    foundIndex = i;
+                }
+            }
+
+            if (foundIndex >= 0)
+            {
+                residentIndex = foundIndex;
+                return TryGetResidentView(foundIndex, out bounds, out sprite, out residentTransform);
+            }
+
+            residentIndex = -1;
+            bounds = default;
+            sprite = null;
+            residentTransform = null;
+            return false;
+        }
+
         public void Initialize(Transform parent)
         {
             _parent = parent;

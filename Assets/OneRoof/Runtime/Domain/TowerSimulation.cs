@@ -410,6 +410,33 @@ namespace OneRoof.Domain
             return ElevatorBank.GetQueueLength(floor);
         }
 
+        /// <summary>
+        /// Seeds the elevator bank with a synthetic morning-rush queue (one passenger per floor cycle)
+        /// using entity IDs allocated from the simulation's own counter so they cannot collide with
+        /// real <see cref="PopulationState"/> person IDs.  Only runs when the bank queue is empty;
+        /// calling it multiple times is safe.
+        /// </summary>
+        public void SeedMorningRush()
+        {
+            if (ElevatorBank.TotalQueuedCount > 0)
+            {
+                return;
+            }
+
+            var floorRange = ElevatorBank.MaxFloor - ElevatorBank.MinFloor;
+            if (floorRange <= 0) return;
+
+            const int residentCount = 50;
+            for (var i = 0; i < residentCount; i++)
+            {
+                var passengerEntityId = new EntityId(_nextEntityId++);
+                var destinationFloor = ElevatorBank.MinFloor + 1 + (i % floorRange);
+                ElevatorBank.EnqueuePassenger(
+                    new ElevatorPassenger(passengerEntityId, ElevatorBank.MinFloor, destinationFloor));
+            }
+        }
+
+
         public static TowerSimulation CreateStandardFiveFloor(TowerEconomyState economy = null, IRandomStream randomStream = null, bool enqueueMorningRush = false)
         {
             var clock = new SimulationClock(new Tick(0));

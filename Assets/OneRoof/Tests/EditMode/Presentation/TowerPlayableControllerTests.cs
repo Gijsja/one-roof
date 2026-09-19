@@ -60,6 +60,10 @@ namespace OneRoof.Presentation.Tests.EditMode
             var placement = _holder.GetComponent<PlacementPreviewCardView>();
             Assert.That(placement, Is.Not.Null);
             Assert.That(placement.IsOpen, Is.False);
+
+            Assert.That(_controller.InspectOutline, Is.Not.Null);
+            Assert.That(_controller.InspectSelection, Is.Not.Null);
+            Assert.That(_controller.InspectSelection.ModeSession, Is.SameAs(_controller.ModeSession));
         }
 
         [Test]

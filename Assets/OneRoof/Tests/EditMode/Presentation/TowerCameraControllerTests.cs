@@ -96,5 +96,66 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Object.DestroyImmediate(go);
             }
         }
+
+        [Test]
+        public void EnsureTowerCamera_PreservesPositionAndZoom_WhenResetViewIsFalse()
+        {
+            Camera cam = null;
+            try
+            {
+                cam = TowerCameraController.EnsureTowerCamera(5, null, resetView: true);
+                var ctrl = cam.GetComponent<TowerCameraController>();
+                var initialBoundsY = ctrl.BoundsY.y;
+
+                // User pans and zooms
+                cam.transform.position = new Vector3(4.0f, 6.0f, -10f);
+                cam.orthographicSize = 4.2f;
+
+                // Subsequent call (e.g. per-frame or building expansion) with resetView: false
+                TowerCameraController.EnsureTowerCamera(7, null, resetView: false);
+
+                // View must remain intact
+                Assert.That(cam.transform.position.x, Is.EqualTo(4.0f).Within(0.001f));
+                Assert.That(cam.transform.position.y, Is.EqualTo(6.0f).Within(0.001f));
+                Assert.That(cam.orthographicSize, Is.EqualTo(4.2f).Within(0.001f));
+
+                // But bounds must have expanded for 7 floors
+                Assert.That(ctrl.BoundsY.y, Is.GreaterThan(initialBoundsY));
+            }
+            finally
+            {
+                if (cam != null)
+                {
+                    Object.DestroyImmediate(cam.gameObject);
+                }
+            }
+        }
+
+        [Test]
+        public void EnsureTowerCamera_ResetsPositionAndZoom_WhenResetViewIsTrue()
+        {
+            Camera cam = null;
+            try
+            {
+                cam = TowerCameraController.EnsureTowerCamera(5, null, resetView: true);
+
+                // User pans and zooms
+                cam.transform.position = new Vector3(4.0f, 6.0f, -10f);
+                cam.orthographicSize = 4.2f;
+
+                // Reset view (e.g. simulation reset or focus)
+                TowerCameraController.EnsureTowerCamera(5, null, resetView: true);
+
+                Assert.That(cam.transform.position.x, Is.EqualTo(-1.6f).Within(0.001f));
+                Assert.That(cam.orthographicSize, Is.EqualTo(Mathf.Max(6.8f, 6 * 1.15f)).Within(0.001f));
+            }
+            finally
+            {
+                if (cam != null)
+                {
+                    Object.DestroyImmediate(cam.gameObject);
+                }
+            }
+        }
     }
 }

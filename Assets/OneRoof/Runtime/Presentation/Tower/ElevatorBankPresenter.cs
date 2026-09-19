@@ -29,6 +29,23 @@ namespace OneRoof.Presentation.Tower
         public IReadOnlyList<MeshRenderer> ElevatorViews => _elevatorViews;
         public int RenderedShaftFloorCount => _renderedShaftFloorCount;
 
+        public Bounds GetShaftBounds()
+        {
+            var floorCount = Mathf.Max(1, _renderedShaftFloorCount);
+            var bottomY = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var topY = TowerStructurePresenter.FloorY(floorCount - 1) + 0.74f;
+            var shaftHeight = topY - bottomY;
+            var centerY = (bottomY + topY) * 0.5f;
+            return new Bounds(new Vector3(-1.90f, centerY, 0f), new Vector3(1.06f, shaftHeight, 1f));
+        }
+
+        public bool IsPointerInShaft(Vector2 worldPos, out Bounds bounds)
+        {
+            bounds = GetShaftBounds();
+            return worldPos.x >= bounds.min.x && worldPos.x <= bounds.max.x &&
+                   worldPos.y >= bounds.min.y && worldPos.y <= bounds.max.y;
+        }
+
         public void Initialize(Transform parent, Material worldMaterial, MaterialPropertyBlock colorBlock)
         {
             _parent = parent;

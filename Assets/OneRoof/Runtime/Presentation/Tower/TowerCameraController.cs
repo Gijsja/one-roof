@@ -65,27 +65,28 @@ namespace OneRoof.Presentation.Tower
             _defaultOrthoSize = orthoSize;
         }
 
-        public static Camera EnsureTowerCamera(int floorCount, GridPlacementController gridPlacement = null)
+        public static Camera EnsureTowerCamera(int floorCount, GridPlacementController gridPlacement = null, bool resetView = false)
         {
             var camObj = GameObject.Find("Tower Camera");
+            var isNew = false;
             if (camObj == null)
             {
                 camObj = new GameObject("Tower Camera");
+                isNew = true;
             }
             var cam = camObj.GetComponent<Camera>();
             if (cam == null)
             {
                 cam = camObj.AddComponent<Camera>();
+                isNew = true;
             }
             camObj.tag = "MainCamera";
             if (gridPlacement != null) gridPlacement.Camera = cam;
 
             var centerY = TowerStructurePresenter.FloorY(0) + (floorCount - 1) * 1.75f * 0.5f;
             cam.orthographic = true;
-            cam.orthographicSize = Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.04f, 0.06f, 0.09f);
-            cam.transform.position = new Vector3(-1.6f, centerY, -10f);
 
             var ctrl = camObj.GetComponent<TowerCameraController>();
             if (ctrl == null)
@@ -93,8 +94,18 @@ namespace OneRoof.Presentation.Tower
                 ctrl = camObj.AddComponent<TowerCameraController>();
             }
             ctrl.Camera = cam;
-            ctrl.SetOverviewDefaults(new Vector3(-1.6f, centerY, -10f), cam.orthographicSize);
+
+            var defaultOrtho = Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
+            var defaultPos = new Vector3(-1.6f, centerY, -10f);
+            ctrl.SetOverviewDefaults(defaultPos, defaultOrtho);
             ctrl.SetBounds(-16f, 16f, TowerStructurePresenter.FloorY(0) - 2f, TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
+
+            if (isNew || resetView)
+            {
+                cam.orthographicSize = defaultOrtho;
+                cam.transform.position = defaultPos;
+            }
+
             return cam;
         }
 

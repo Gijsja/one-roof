@@ -405,12 +405,6 @@ namespace OneRoof.Domain.Transit
             return bestCar;
         }
 
-        private void DispatchCarToFloor(int floor)
-        {
-            var bestCar = FindBestCarForFloor(floor);
-            bestCar?.RequestFloor(floor);
-        }
-
         // ── Serialization ──────────────────────────────────────────────────────
 
         public ElevatorBankSaveData ToSaveData()

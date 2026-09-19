@@ -60,5 +60,20 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.RenderedShaftFloorCount, Is.EqualTo(0));
             Assert.That(_presenter.ElevatorViews.Count, Is.EqualTo(0));
         }
+
+        [Test]
+        public void GetShaftBounds_And_IsPointerInShaft_DetectsShaftInterior()
+        {
+            _presenter.EnsureShaftViews(5);
+
+            var bounds = _presenter.GetShaftBounds();
+            Assert.That(bounds.size.x, Is.GreaterThan(0.9f));
+            Assert.That(bounds.size.y, Is.GreaterThan(5.0f));
+
+            Assert.That(_presenter.IsPointerInShaft(new Vector2(-1.9f, 0f), out var hitBounds), Is.True);
+            Assert.That(hitBounds, Is.EqualTo(bounds));
+
+            Assert.That(_presenter.IsPointerInShaft(new Vector2(5.0f, 0f), out _), Is.False);
+        }
     }
 }

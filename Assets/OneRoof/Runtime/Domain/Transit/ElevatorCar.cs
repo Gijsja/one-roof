@@ -318,8 +318,10 @@ namespace OneRoof.Domain.Transit
                 }
             }
 
-            // If car is at bottom floor heading up to collect calls, pick highest target floor
-            if (CurrentFloor == 0 && _targetFloors.Count > 0)
+            // If car is idle or heading up from the bottom floor, pick the highest target so it
+            // sweeps all floors on the way down instead of fixating on the nearest low floor.
+            if (CurrentFloor == 0 && _targetFloors.Count > 0
+                && (Direction == ElevatorDirection.None || Direction == ElevatorDirection.Up))
             {
                 return _targetFloors.Max;
             }

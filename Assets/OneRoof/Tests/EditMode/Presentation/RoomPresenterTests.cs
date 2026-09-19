@@ -4,6 +4,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
+using EntityId = OneRoof.Domain.Identity.EntityId;
 
 namespace OneRoof.Presentation.Tests.EditMode
 {
@@ -65,6 +66,49 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(_presenter.RenderedRoomIds.Count, Is.EqualTo(0));
             Assert.That(_holder.transform.childCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TryGetRoomBounds_WithValidRoom_ReturnsTrueAndValidBounds()
+        {
+            var session = new TowerSimulationSession();
+            var topo = session.Topology;
+            Assert.That(topo.Rooms.Count, Is.GreaterThan(0));
+            var firstRoom = System.Linq.Enumerable.First(topo.Rooms.Values);
+
+            var found = _presenter.TryGetRoomBounds(firstRoom.Id, topo, out var bounds);
+
+            Assert.That(found, Is.True);
+            Assert.That(bounds.size.x, Is.GreaterThan(0f));
+            Assert.That(bounds.size.y, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void TryGetRoomAt_WhenWithinBounds_ReturnsRoomId()
+        {
+            var session = new TowerSimulationSession();
+            var topo = session.Topology;
+            Room firstRoom = null;
+            foreach (var r in topo.Rooms.Values)
+            {
+                var ct = r.ContentType.Value ?? "";
+                if (!ct.Contains("elevator_shaft"))
+                {
+                    firstRoom = r;
+                    break;
+                }
+            }
+            Assert.That(firstRoom, Is.Not.Null);
+
+            var roomLeft = -2.4f + firstRoom.Bounds.MinX * 0.5f;
+            var roomRight = -2.4f + (firstRoom.Bounds.MaxX + 1) * 0.5f;
+            var pos = new Vector2((roomLeft + roomRight) * 0.5f, TowerStructurePresenter.FloorY(firstRoom.Floor));
+
+            var found = _presenter.TryGetRoomAt(pos, topo, out var hitId, out var bounds);
+
+            Assert.That(found, Is.True);
+            Assert.That(hitId, Is.EqualTo(firstRoom.Id));
+            Assert.That(bounds.Contains(new Vector3(pos.x, pos.y, 0f)), Is.True);
         }
     }
 }

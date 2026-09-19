@@ -108,6 +108,13 @@ namespace OneRoof.Application.Tower
             _cachedTick = -1;
         }
 
+        /// <summary>
+        /// Seeds the elevator bank with morning-rush passengers for the standard five-floor scenario.
+        /// Only seeds if the bank is empty so it is idempotent on reset or reload.
+        /// </summary>
+        public void SeedMorningRush() => _simulation.SeedMorningRush();
+
+
         public ElevatorBankCongestionProjection CongestionProjection()
         {
             var floorCount = _simulation.Topology.FloorCount;
