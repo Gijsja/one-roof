@@ -135,7 +135,8 @@ namespace OneRoof.Presentation.Tests.EditMode
             }
             Assert.That(targetRoom, Is.Not.Null);
 
-            session.ExecuteCommand(new OneRoof.Domain.Commands.DemolishRoomCommand(targetRoom.Id));
+            var demolishResult = session.ExecuteCommand(new OneRoof.Domain.Commands.DemolishRoomCommand(targetRoom.Id, force: true));
+            Assert.That(demolishResult.Accepted, Is.True);
             _presenter.EnsureRoomViews(session.Topology);
 
             Assert.That(_presenter.RenderedRoomIds.Contains(targetRoom.Id), Is.False);

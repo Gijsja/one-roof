@@ -4,6 +4,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
+using EntityId = OneRoof.Domain.Identity.EntityId;
 
 namespace OneRoof.Presentation.Tests.EditMode
 {

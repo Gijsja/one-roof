@@ -120,7 +120,11 @@ namespace OneRoof.Presentation.Tower
             _auraObject.transform.localPosition = new Vector3(0f, 0.2f, 0.12f);
             _auraObject.transform.localScale = new Vector3(0.72f, 0.92f, 1f);
             var collider = _auraObject.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            if (collider != null)
+            {
+                if (UnityEngine.Application.isPlaying) Destroy(collider);
+                else DestroyImmediate(collider);
+            }
             _auraRenderer = _auraObject.GetComponent<MeshRenderer>();
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
             if (shader != null)
@@ -137,7 +141,11 @@ namespace OneRoof.Presentation.Tower
 
         private void OnDestroy()
         {
-            if (_auraMaterial != null) Destroy(_auraMaterial);
+            if (_auraMaterial != null)
+            {
+                if (UnityEngine.Application.isPlaying) Destroy(_auraMaterial);
+                else DestroyImmediate(_auraMaterial);
+            }
         }
     }
 }
