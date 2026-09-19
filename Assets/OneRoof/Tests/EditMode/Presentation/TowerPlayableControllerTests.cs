@@ -96,6 +96,34 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void ShowPopulationOverlay_ProjectsDensityAndDrillsIntoFloorEvidence()
+        {
+            _controller.ShowPopulationOverlay();
+
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Data));
+            Assert.That(_controller.PopulationPresenter.IsVisible, Is.True);
+            Assert.That(_controller.PopulationPresenter.CurrentOverlay.ResidentCount, Is.EqualTo(50));
+
+            _controller.InspectPopulationFloor(1);
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Inspect));
+            Assert.That(_controller.InspectSelection.DetailCard.CurrentProjection.Title, Is.EqualTo("Floor 1 Population"));
+        }
+
+        [Test]
+        public void ShowScrutinyOverlay_ProjectsExternalPressureAndDrillsIntoCauseChain()
+        {
+            _controller.ShowScrutinyOverlay();
+
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Data));
+            Assert.That(_controller.ScrutinyPresenter.IsVisible, Is.True);
+            Assert.That(_controller.ScrutinyPresenter.CurrentOverlay, Is.Not.Null);
+
+            _controller.InspectScrutiny();
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Inspect));
+            Assert.That(_controller.InspectSelection.DetailCard.CurrentProjection.Title, Is.EqualTo("Tower Scrutiny"));
+        }
+
+        [Test]
         public void InspectBottleneck_OpensInspectorCardWithCauses()
         {
             var inspector = _holder.GetComponent<CongestionInspectorCardView>();

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
+using OneRoof.Application.Overlays;
 using OneRoof.Domain.Identity;
 
 namespace OneRoof.Application.Inspectors
@@ -89,6 +90,41 @@ namespace OneRoof.Application.Inspectors
                 ? $"{snapshot.TotalQueuedCount} resident(s) are waiting for elevator service."
                 : "No residents are currently waiting for elevator service.";
             return new InspectorDetailProjection("Elevator Bank", symptom, details, "Open Build mode to add elevator capacity, then compare the wait-time overlay.");
+        }
+
+        /// <summary>Provides the overlay's floor-level demographic evidence as an immutable cause-chain card.</summary>
+        public InspectorDetailProjection InspectPopulationFloor(int floor)
+        {
+            var overlay = new PopulationOverlayService().CreateOverlay(_session);
+            if (!overlay.TryGetFloor(floor, out var population)) return null;
+            var details = new List<string>
+            {
+                $"Residents present: {population.ResidentCount} / {population.Capacity} capacity",
+                $"Density: {population.Density:P0} ({population.DensityTier})",
+                $"Age 18–29: {population.YoungAdultCount}; 30–49: {population.AdultCount}; 50+: {population.OlderAdultCount}",
+                $"Household resources — limited: {population.LimitedResourceCount}; stable: {population.StableResourceCount}; comfortable: {population.ComfortableResourceCount}"
+            };
+            var symptom = population.DensityTier == PopulationDensityTier.Dense
+                ? "This floor is densely occupied and may need more shared capacity or circulation space."
+                : "This floor's population distribution is within its current space capacity.";
+            return new InspectorDetailProjection($"Floor {floor} Population", symptom, details, "Use Build, leasing, and service decisions to change capacity and household conditions; residents remain autonomous.");
+        }
+
+        public InspectorDetailProjection InspectScrutiny()
+        {
+            var overlay = new ScrutinyOverlayService().CreateOverlay(_session);
+            var details = new List<string>
+            {
+                $"Current scrutiny: {overlay.Value:P0}",
+                $"Trend: {overlay.Trend}",
+                $"External-event pressure: {overlay.ExternalEventPressure:P0}",
+                $"Expansion status: {(overlay.IsExpansionConstrained ? "Temporarily constrained" : "Available")}"
+            };
+            foreach (var cause in overlay.ContributingFactors) details.Add($"Driver: {cause}");
+            var symptom = overlay.IsExpansionConstrained
+                ? "External attention is temporarily constraining new expansion."
+                : "External attention is being monitored; expansion remains available.";
+            return new InspectorDetailProjection("Tower Scrutiny", symptom, details, "Respond through capacity and service investment, balanced household conditions, and time for pressure to recede.");
         }
 
         private static TransitResidentProjection? FindResident(TowerProjection projection, int residentId)

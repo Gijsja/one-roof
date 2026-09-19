@@ -283,7 +283,7 @@ graph TD
   - Satisfaction calculated from commute wait friction, noise, crowding, need deprivation, rent burden, service access, and recent events.
   - Low satisfaction creates Grievances; personality-filtered Strain accumulates and can lead to move-out or mental-strain events.
   - **Overlay 4: Satisfaction Overlay** provides non-colour encoding and drills into its contributor explanation.
-- **`OR-603` (Milestone 6.2 — Population Density & Demographics Overlay):**
+- [ ] **`OR-603` (Milestone 6.2 — Population Density & Demographics Overlay):**
   - **Overlay 3: Population Overlay** visualizing resident density and income/age demographics.
 - **`ART-004` (Milestone 6.1 — AssetLab Validation Tooling & Addressables):**
   - Automated seam testing runner, rig validation, and Addressables bundle packaging.

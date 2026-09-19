@@ -36,6 +36,8 @@ namespace OneRoof.Application.Tower
 
         public TowerEconomyState Economy => _simulation.Economy;
 
+        public OneRoof.Domain.Scrutiny.ScrutinyState Scrutiny => _simulation.Scrutiny;
+
         public long CurrentTick => _simulation.CurrentTick;
 
         public int ResidentCount => _simulation.ResidentCount;

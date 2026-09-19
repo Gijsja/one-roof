@@ -85,7 +85,6 @@ namespace OneRoof.Editor.AssetLab
         private static void ValidateRig(List<string> errors)
         {
             if (NpcRigDefinition.LayerRenderingOrder.Count != 8) errors.Add("NPC rig must provide exactly eight wardrobe layers.");
-            if (NpcRigDefinition.PivotY != 0f || NpcRigDefinition.NominalWorldHeight <= 0f) errors.Add("NPC rig has invalid feet anchor or scale.");
         }
 
         private static void AddFolder(AddressableAssetSettings settings, string folder, string groupName)

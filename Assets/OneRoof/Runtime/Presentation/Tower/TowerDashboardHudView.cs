@@ -43,7 +43,7 @@ namespace OneRoof.Presentation.Tower
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
 
-            var hudRect = new Rect(20, 20, 380, 220);
+            var hudRect = new Rect(20, 20, 480, 220);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
@@ -64,6 +64,8 @@ namespace OneRoof.Presentation.Tower
             if (GUILayout.Button("Inspect Bottleneck [I]", _hudButtonStyle, GUILayout.Height(28))) _controller.InspectBottleneck();
             if (GUILayout.Button("Flow Overlay [D]", _hudButtonStyle, GUILayout.Height(28))) _controller.ToggleDataOverlay();
             if (GUILayout.Button("Satisfaction", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowSatisfactionOverlay();
+            if (GUILayout.Button("Population", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowPopulationOverlay();
+            if (GUILayout.Button("Scrutiny", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowScrutinyOverlay();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();

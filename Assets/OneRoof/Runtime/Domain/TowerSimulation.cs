@@ -7,6 +7,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
+using OneRoof.Domain.Scrutiny;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
@@ -30,7 +31,8 @@ namespace OneRoof.Domain
             PopulationState population,
             ElevatorBank elevatorBank,
             TowerEconomyState economy = null,
-            IRandomStream randomStream = null)
+            IRandomStream randomStream = null,
+            ScrutinyState scrutiny = null)
         {
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
             Topology = topology ?? throw new ArgumentNullException(nameof(topology));
@@ -45,6 +47,7 @@ namespace OneRoof.Domain
             Leasing = new LeasingDemandSystem();
             Needs = new ResidentNeedsSystem();
             Wellbeing = new ResidentWellbeingSystem();
+            Scrutiny = scrutiny ?? new ScrutinyState();
         }
 
         public SimulationClock Clock { get; }
@@ -69,6 +72,7 @@ namespace OneRoof.Domain
 
         public ResidentNeedsSystem Needs { get; }
         public ResidentWellbeingSystem Wellbeing { get; }
+        public ScrutinyState Scrutiny { get; }
 
         public long CurrentTick => Clock.CurrentTick.Value;
 
@@ -89,6 +93,7 @@ namespace OneRoof.Domain
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
             Wellbeing.Advance(Population, ElevatorBank);
+            Scrutiny.Advance(Topology, Population);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)
@@ -125,6 +130,14 @@ namespace OneRoof.Domain
         public CommandResult CanExecute(ICommand command)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+
+            if (Scrutiny.IsExpansionConstrained && (command is BuildFloorSlabCommand || command is BuildRoomCommand || command is AddElevatorShaftCommand || command is BuildStairwellCommand))
+            {
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("scrutiny:expansion_constrained"), "External scrutiny is temporarily constraining further expansion. Improve capacity or household conditions, then allow pressure to recede.")
+                });
+            }
 
             switch (command)
             {
@@ -304,6 +317,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                Scrutiny.RecordExpansion(cmd.Bounds.Width);
                 SyncTransitServices();
             }
 
@@ -321,6 +335,9 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                Scrutiny.RecordExpansion(cmd.Bounds.Width);
+                var content = cmd.ContentType.Value ?? string.Empty;
+                if (content.Contains("diner") || content.Contains("amenity") || content.Contains("service")) Scrutiny.RecordCapacityOrServiceInvestment();
                 SyncTransitServices();
             }
 
@@ -338,6 +355,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                Scrutiny.RecordExpansion(cmd.FloorSpan);
                 ElevatorBank.ExpandFloorRange(cmd.BottomFloor, cmd.TopFloor);
                 SyncTransitServices();
             }
@@ -356,6 +374,7 @@ namespace OneRoof.Domain
             if (result.Accepted)
             {
                 Economy.TryDeduct(cost);
+                Scrutiny.RecordExpansion(cmd.FloorSpan);
                 SyncTransitServices();
             }
 
@@ -402,6 +421,7 @@ namespace OneRoof.Domain
             var car = new ElevatorCar(carId, startingFloor, capacity);
             ElevatorBank.AddCar(car);
             Economy.TryDeduct(TowerEconomyState.ElevatorCarCost);
+            Scrutiny.RecordCapacityOrServiceInvestment();
         }
 
         public ResidentSpatialPosition GetResidentPosition(EntityId personId)
@@ -521,6 +541,7 @@ namespace OneRoof.Domain
             data.SetPopulationSaveData(Population.ToSaveData());
             data.elevatorBank = ElevatorBank.ToSaveData();
             data.activeTrips = Transit.ToSaveData();
+            data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
 
             return data;
         }
@@ -534,8 +555,9 @@ namespace OneRoof.Domain
             var population = PopulationState.FromSaveData(data.GetPopulationSaveData(), randomStream);
             var elevatorBank = ElevatorBank.FromSaveData(data.elevatorBank);
             var economy = TowerEconomyState.FromSaveData(data.GetEconomySaveData());
+            var scrutiny = data.scrutiny == null ? new ScrutinyState() : new ScrutinyState(data.scrutiny.value, data.scrutiny.previousValue, data.scrutiny.recentExpansionPressure, data.scrutiny.recentPolicyPressure);
 
-            var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream);
+            var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 

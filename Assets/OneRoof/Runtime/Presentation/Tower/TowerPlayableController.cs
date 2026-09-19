@@ -23,6 +23,8 @@ namespace OneRoof.Presentation.Tower
         private ElevatorWaitOverlayService _overlaySvc; private ElevatorPlacementPredictor _predictor;
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
         private SatisfactionOverlayService _satisfactionService; private SatisfactionOverlayPresenter _satisfactionPresenter;
+        private PopulationOverlayService _populationService; private PopulationOverlayPresenter _populationPresenter;
+        private ScrutinyOverlayService _scrutinyService; private ScrutinyOverlayPresenter _scrutinyPresenter;
         private CongestionInspectorCardView _inspectorCard; private PlacementPreviewCardView _placementCard;
         private GridPlacementController _gridPlacement; private PlacementGhostPresenter _ghostPresenter;
         private InspectSelectionController _inspectSelection; private InspectOutlinePresenter _inspectOutline;
@@ -40,6 +42,8 @@ namespace OneRoof.Presentation.Tower
         public ModeShellSession ModeSession => _mode; public ElevatorWaitOverlayService OverlayService => _overlaySvc;
         public ElevatorWaitOverlayPresenter OverlayPresenter => _overlayPresenter; public ElevatorPlacementPredictor Predictor => _predictor;
         public SatisfactionOverlayPresenter SatisfactionPresenter => _satisfactionPresenter;
+        public PopulationOverlayPresenter PopulationPresenter => _populationPresenter;
+        public ScrutinyOverlayPresenter ScrutinyPresenter => _scrutinyPresenter;
         public GridPlacementController GridPlacement => _gridPlacement; public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
         public InspectSelectionController InspectSelection => _inspectSelection; public InspectOutlinePresenter InspectOutline => _inspectOutline;
         public TowerStructurePresenter StructurePresenter => _structure; public ElevatorBankPresenter ElevatorPresenter => _elevator;
@@ -52,6 +56,8 @@ namespace OneRoof.Presentation.Tower
             _sim = new TowerSimulationSession(); SeedMorningRush(); _mode = new ModeShellSession();
             _overlaySvc = new ElevatorWaitOverlayService(); _predictor = new ElevatorPlacementPredictor();
             _satisfactionService = new SatisfactionOverlayService();
+            _populationService = new PopulationOverlayService();
+            _scrutinyService = new ScrutinyOverlayService();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
             _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
@@ -60,7 +66,7 @@ namespace OneRoof.Presentation.Tower
         }
 
         private void Awake() => Initialize(); private void OnEnable() => Initialize();
-        private void OnDisable() { if (_mode != null) _mode.ModeChanged -= OnModeChanged; if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement; }
+        private void OnDisable() { if (_mode != null) _mode.ModeChanged -= OnModeChanged; if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement; if (_populationPresenter != null) _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor; if (_scrutinyPresenter != null) _scrutinyPresenter.InspectionRequested -= InspectScrutiny; }
         private void OnDestroy() { OnDisable(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
         private void Update()
@@ -78,6 +84,10 @@ namespace OneRoof.Presentation.Tower
             (_modeBar = Ensure<ModeShellBarController>()).Session = _mode;
             (_overlayPresenter = Ensure<ElevatorWaitOverlayPresenter>()).SetVisible(false);
             (_satisfactionPresenter = Ensure<SatisfactionOverlayPresenter>()).SetVisible(false);
+            (_populationPresenter = Ensure<PopulationOverlayPresenter>()).SetVisible(false);
+            _populationPresenter.FloorInspectionRequested += InspectPopulationFloor;
+            (_scrutinyPresenter = Ensure<ScrutinyOverlayPresenter>()).SetVisible(false);
+            _scrutinyPresenter.InspectionRequested += InspectScrutiny;
             (_inspectorCard = Ensure<CongestionInspectorCardView>()).Session = _mode;
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
@@ -94,8 +104,12 @@ namespace OneRoof.Presentation.Tower
         private void OnModeChanged(ModeShellProjection p)
         {
             var satisfaction = p.IsDataMode && p.ActiveOverlayId == "overlay:satisfaction";
-            _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction); _satisfactionPresenter.SetVisible(satisfaction);
+            var population = p.IsDataMode && p.ActiveOverlayId == "overlay:population";
+            var scrutiny = p.IsDataMode && p.ActiveOverlayId == "overlay:scrutiny";
+            _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction && !population && !scrutiny); _satisfactionPresenter.SetVisible(satisfaction); _populationPresenter.SetVisible(population); _scrutinyPresenter.SetVisible(scrutiny);
             if (satisfaction) _satisfactionPresenter.UpdateOverlay(_satisfactionService.CreateOverlay(_sim));
+            else if (population) _populationPresenter.UpdateOverlay(_populationService.CreateOverlay(_sim));
+            else if (scrutiny) _scrutinyPresenter.UpdateOverlay(_scrutinyService.CreateOverlay(_sim));
             else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_overlaySvc.CreateOverlay(_sim.CongestionProjection()));
             if (p.IsBuildMode && p.SelectedBuildTool == "transit:elevator_car") UpdatePlacementCard();
             else if (!p.IsBuildMode && _placementCard.IsOpen) _placementCard.Close();
@@ -128,6 +142,8 @@ namespace OneRoof.Presentation.Tower
             var c = _sim.CongestionProjection();
             if (_overlayPresenter.IsVisible) _overlayPresenter.UpdateOverlay(_overlaySvc.CreateOverlay(c));
             if (_satisfactionPresenter.IsVisible) _satisfactionPresenter.UpdateOverlay(_satisfactionService.CreateOverlay(_sim));
+            if (_populationPresenter.IsVisible) _populationPresenter.UpdateOverlay(_populationService.CreateOverlay(_sim));
+            if (_scrutinyPresenter.IsVisible) _scrutinyPresenter.UpdateOverlay(_scrutinyService.CreateOverlay(_sim));
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
@@ -135,6 +151,18 @@ namespace OneRoof.Presentation.Tower
 
         public void ToggleDataOverlay() { if (_mode.CurrentMode == InteractionMode.Data) _mode.SwitchMode(InteractionMode.Inspect); else { _mode.SwitchMode(InteractionMode.Data); _mode.SetActiveOverlay("overlay:elevator_wait"); } }
         public void ShowSatisfactionOverlay() { _mode.SetActiveOverlay("overlay:satisfaction"); }
+        public void ShowPopulationOverlay() { _mode.SetActiveOverlay("overlay:population"); }
+        public void ShowScrutinyOverlay() { _mode.SetActiveOverlay("overlay:scrutiny"); }
+        public void InspectPopulationFloor(int floor)
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.DetailCard.Inspect(new TowerInspectionService(_sim).InspectPopulationFloor(floor));
+        }
+        public void InspectScrutiny()
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.DetailCard.Inspect(new TowerInspectionService(_sim).InspectScrutiny());
+        }
         private void UpdatePlacementCard() => _placementCard.SetPreview(_predictor.PredictAddition(_sim.CongestionProjection()), OnConfirmElevatorPlacement);
         public void ShowPlacementPreview() { if (_mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build); if (_mode.Projection().SelectedBuildTool != "transit:elevator_car") _mode.SelectBuildTool("transit:elevator_car"); UpdatePlacementCard(); }
         public void OnConfirmElevatorPlacement() { _sim.AddCapacity(); _placementCard.Close(); _elevator.EnsureElevatorViews(_sim.ElevatorBank.Cars.Count); }

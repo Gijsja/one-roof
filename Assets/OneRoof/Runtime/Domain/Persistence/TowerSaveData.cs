@@ -26,6 +26,7 @@ namespace OneRoof.Domain.Persistence
 
         public ElevatorBankSaveData elevatorBank;
         public ActiveTripSaveData[] activeTrips;
+        public ScrutinySaveData scrutiny;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData
         {
@@ -71,6 +72,15 @@ namespace OneRoof.Domain.Persistence
                 totalExpenses = econ.totalExpenses;
             }
         }
+    }
+
+    [Serializable]
+    public sealed class ScrutinySaveData
+    {
+        public float value;
+        public float previousValue;
+        public float recentExpansionPressure;
+        public float recentPolicyPressure;
     }
 
     [Serializable]
