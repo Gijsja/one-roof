@@ -141,5 +141,29 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(edges[0].Mode, Is.EqualTo(TransitMode.Walk), "Stair vertical edge must be Walk mode");
             Assert.That(edges[0].Cost, Is.GreaterThan(0), "Stair vertical edge must have positive cost");
         }
+
+        [Test]
+        public void DisconnectedStairwellPortals_DoNotReceiveDirectVerticalWalkEdges()
+        {
+            // Floor 0 and Floor 2 have stair landings, but Floor 1 is missing
+            var stairRoom0 = new Room(new EntityId(20), new ContentId("transit:stair"), new CellBounds(0, 5, 5), new[] { new EntityId(21) }, 5);
+            var stairPortal0 = new Portal(new EntityId(21), PortalType.StairwellDoor, new CellCoordinate(5, 0), new EntityId(20));
+            var floor0 = new FloorTopology(0, new[] { stairRoom0 }, new[] { stairPortal0 });
+
+            var stairRoom2 = new Room(new EntityId(22), new ContentId("transit:stair"), new CellBounds(2, 5, 5), new[] { new EntityId(23) }, 5);
+            var stairPortal2 = new Portal(new EntityId(23), PortalType.StairwellDoor, new CellCoordinate(5, 2), new EntityId(22));
+            var floor2 = new FloorTopology(2, new[] { stairRoom2 }, new[] { stairPortal2 });
+
+            var topology = new BuildingTopology(new[] { floor0, floor2 });
+            var graph = HierarchicalTransitGraph.FromBuildingTopology(topology);
+
+            var stairNode0 = graph.GetNodeAt(new CellCoordinate(5, 0));
+            var stairNode2 = graph.GetNodeAt(new CellCoordinate(5, 2));
+            Assert.That(stairNode0, Is.Not.Null);
+            Assert.That(stairNode2, Is.Not.Null);
+
+            var edges0 = graph.GetOutgoingEdges(stairNode0.Id);
+            Assert.That(edges0, Has.Count.EqualTo(0), "Non-adjacent stair landings must not have direct vertical edges");
+        }
     }
 }

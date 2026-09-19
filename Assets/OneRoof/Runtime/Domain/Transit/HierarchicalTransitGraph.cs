@@ -192,15 +192,15 @@ namespace OneRoof.Domain.Transit
 
             foreach (var column in stairLandingsByColumn.Values)
             {
-                for (var i = 0; i < column.Count; i++)
-                {
-                    for (var j = i + 1; j < column.Count; j++)
-                    {
-                        var a = column[i];
-                        var b = column[j];
-                        var floorDelta = Math.Abs(a.Floor - b.Floor);
-                        var stairCost = floorDelta * VerticalStairFloorCost;
+                column.Sort((a, b) => a.Floor.CompareTo(b.Floor));
 
+                for (var i = 0; i < column.Count - 1; i++)
+                {
+                    var a = column[i];
+                    var b = column[i + 1];
+                    if (Math.Abs(a.Floor - b.Floor) == 1)
+                    {
+                        var stairCost = VerticalStairFloorCost;
                         edges.Add(new TransitEdge(a.Id, b.Id, stairCost, TransitMode.Walk));
                         edges.Add(new TransitEdge(b.Id, a.Id, stairCost, TransitMode.Walk));
                     }

@@ -12,7 +12,7 @@ namespace OneRoof.Application.Prediction
     /// </summary>
     public sealed class ElevatorPlacementPredictor
     {
-        public const int DefaultElevatorCost = 500;
+        public const int DefaultElevatorCost = 2500;
         public const int MaxCarsPerBank = 4;
         public const int StandardCarCapacity = 8;
 

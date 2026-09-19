@@ -251,6 +251,21 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void BuildRoom_OverlappingElevatorShaft_Rejected()
+        {
+            _state.Execute(new BuildFloorSlabCommand(0, -20, 20), _testTick);
+            _state.Execute(new BuildFloorSlabCommand(1, -20, 20), _testTick);
+            _state.Execute(new AddElevatorShaftCommand(0, 1, 0, 1), _testTick);
+
+            // Room at [0..5] on floor 1 overlaps the elevator shaft at [0..1]
+            var cmd = new BuildRoomCommand(1, 0, 5, new ContentId("residential:apartment"), 4);
+            var result = _state.Execute(cmd, _testTick);
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("transit:shaft_overlap")));
+        }
+
+        [Test]
         public void BuildStairwell_ValidSpan_CreatesStairLandingsAndVerticalWalkEdges()
         {
             _state.Execute(new BuildFloorSlabCommand(0, -20, 20), _testTick);

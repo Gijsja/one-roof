@@ -75,5 +75,37 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(_presenter.IsPointerInShaft(new Vector2(5.0f, 0f), out _), Is.False);
         }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        public void CalculateCarLayout_KeepsAllCarsInsideShaftBoundary(int carCount)
+        {
+            const float shaftInternalLeft = -2.36f;
+            const float shaftInternalRight = -1.44f;
+
+            for (var i = 0; i < carCount; i++)
+            {
+                ElevatorBankPresenter.CalculateCarLayout(i, carCount, out var x, out var width);
+
+                var carLeft = x - width * 0.5f;
+                var carRight = x + width * 0.5f;
+
+                Assert.That(carLeft, Is.GreaterThanOrEqualTo(shaftInternalLeft - 0.001f), $"Car {i}/{carCount} left edge {carLeft} must be >= {shaftInternalLeft}");
+                Assert.That(carRight, Is.LessThanOrEqualTo(shaftInternalRight + 0.001f), $"Car {i}/{carCount} right edge {carRight} must be <= {shaftInternalRight}");
+                Assert.That(width, Is.GreaterThan(0.15f), $"Car {i}/{carCount} width must be positive and legible");
+            }
+        }
+
+        [Test]
+        public void EnsureShaftViews_WithMinAndMaxFloor_SetsCorrectSpan()
+        {
+            _presenter.EnsureShaftViews(2, 6);
+
+            Assert.That(_presenter.RenderedShaftFloorCount, Is.EqualTo(5));
+            var bounds = _presenter.GetShaftBounds();
+            Assert.That(bounds.center.y, Is.EqualTo(TowerStructurePresenter.FloorY(4)).Within(0.01f));
+        }
     }
 }

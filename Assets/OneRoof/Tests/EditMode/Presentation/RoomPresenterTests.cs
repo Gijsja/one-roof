@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Identity;
@@ -109,6 +110,37 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(found, Is.True);
             Assert.That(hitId, Is.EqualTo(firstRoom.Id));
             Assert.That(bounds.Contains(new Vector3(pos.x, pos.y, 0f)), Is.True);
+        }
+
+        [Test]
+        public void EnsureRoomViews_WhenRoomDemolished_DestroysRoomAndAllChildrenWithoutOrphans()
+        {
+            var session = new TowerSimulationSession();
+            var topo = session.Topology;
+
+            _presenter.EnsureRoomViews(topo);
+            var initialChildCount = _holder.transform.childCount;
+            Assert.That(initialChildCount, Is.GreaterThan(0));
+
+            // Demolish one room from simulation
+            Room targetRoom = null;
+            foreach (var r in topo.Rooms.Values)
+            {
+                var ct = r.ContentType.Value ?? "";
+                if (ct.StartsWith("residential"))
+                {
+                    targetRoom = r;
+                    break;
+                }
+            }
+            Assert.That(targetRoom, Is.Not.Null);
+
+            session.ExecuteCommand(new OneRoof.Domain.Commands.DemolishRoomCommand(targetRoom.Id));
+            _presenter.EnsureRoomViews(session.Topology);
+
+            Assert.That(_presenter.RenderedRoomIds.Contains(targetRoom.Id), Is.False);
+            Assert.That(_holder.transform.Find($"RoomView_{targetRoom.Id}"), Is.Null);
+            Assert.That(_holder.transform.childCount, Is.LessThan(initialChildCount));
         }
     }
 }

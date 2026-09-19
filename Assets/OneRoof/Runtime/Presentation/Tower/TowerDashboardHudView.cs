@@ -43,8 +43,7 @@ namespace OneRoof.Presentation.Tower
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
 
-            var hudHeight = mode.CurrentMode == InteractionMode.Build ? 260 : 220;
-            var hudRect = new Rect(20, 20, 380, hudHeight);
+            var hudRect = new Rect(20, 20, 380, 220);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
@@ -72,19 +71,8 @@ namespace OneRoof.Presentation.Tower
             if (GUILayout.Button("Reset [R]", _hudButtonStyle, GUILayout.Height(28))) _controller.ResetCommuteSimulation();
             GUILayout.EndHorizontal();
 
-            if (mode.CurrentMode == InteractionMode.Build)
-            {
-                GUILayout.Space(4);
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("+ Apt", _hudButtonStyle, GUILayout.Height(24))) mode.SelectBuildTool("residential:apartment");
-                if (GUILayout.Button("+ Diner", _hudButtonStyle, GUILayout.Height(24))) mode.SelectBuildTool("commercial:diner");
-                if (GUILayout.Button("+ Shaft", _hudButtonStyle, GUILayout.Height(24))) mode.SelectBuildTool("transit:elevator_shaft");
-                if (GUILayout.Button("+ Slab", _hudButtonStyle, GUILayout.Height(24))) mode.SelectBuildTool("floor:slab");
-                GUILayout.EndHorizontal();
-            }
-
             GUILayout.Space(4);
-            GUILayout.Label("Shortcuts: [Space] Pause  [1] Build  [2] Inspect  [3] Data  [R-Click / Esc] Cancel", _hudHelpStyle);
+            GUILayout.Label("Shortcuts: [Space] Pause  [1/B] Build  [2/I] Inspect  [3/D] Data  [4/M] Manage  [Esc] Cancel", _hudHelpStyle);
             GUILayout.EndArea();
         }
 

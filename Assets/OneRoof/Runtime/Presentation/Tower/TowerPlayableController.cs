@@ -101,7 +101,9 @@ namespace OneRoof.Presentation.Tower
         public void SyncPresenterGeometry()
         {
             var topo = _sim?.Topology; var fl = topo != null ? topo.FloorCount : InitialFloorCount;
-            _elevator.EnsureShaftViews(fl); _structure.EnsureFloorViews(topo); _room.EnsureRoomViews(topo);
+            var minFloor = _sim?.ElevatorBank?.MinFloor ?? 0;
+            var maxFloor = _sim?.ElevatorBank?.MaxFloor ?? (fl - 1);
+            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _room.EnsureRoomViews(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorBank.Cars.Count ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
         }
 

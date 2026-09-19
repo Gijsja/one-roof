@@ -21,6 +21,7 @@ namespace OneRoof.Presentation.Tower
 
         private readonly HashSet<EntityId> _renderedRoomIds = new HashSet<EntityId>();
         private readonly List<GameObject> _roomObjects = new List<GameObject>();
+        private readonly Dictionary<EntityId, GameObject> _roomRoots = new Dictionary<EntityId, GameObject>();
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
 
@@ -89,6 +90,7 @@ namespace OneRoof.Presentation.Tower
             _colorBlock = colorBlock;
             _renderedRoomIds.Clear();
             _roomObjects.Clear();
+            _roomRoots.Clear();
         }
 
         public void EnsureRoomViews(BuildingTopologyState topology)
@@ -103,7 +105,13 @@ namespace OneRoof.Presentation.Tower
                 if (!activeRoomIds.Contains(id))
                 {
                     demolishedIds.Add(id);
-                    if (_parent != null)
+                    if (_roomRoots.TryGetValue(id, out var root) && root != null)
+                    {
+                        _roomObjects.Remove(root);
+                        if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(root);
+                        else UnityEngine.Object.DestroyImmediate(root);
+                    }
+                    else if (_parent != null)
                     {
                         var child = _parent.Find($"RoomView_{id}");
                         if (child != null)
@@ -118,6 +126,7 @@ namespace OneRoof.Presentation.Tower
             foreach (var id in demolishedIds)
             {
                 _renderedRoomIds.Remove(id);
+                _roomRoots.Remove(id);
             }
 
             foreach (var room in topology.Rooms.Values)
@@ -144,62 +153,62 @@ namespace OneRoof.Presentation.Tower
                 var isLobby = contentTypeStr.Contains("lobby");
                 var isWestSide = centerX < -1.9f;
 
+                var roomRoot = new GameObject($"RoomView_{room.Id}");
+                if (_parent != null) roomRoot.transform.SetParent(_parent, false);
+                roomRoot.transform.position = new Vector3(centerX, y, 0f);
+                _roomRoots[room.Id] = roomRoot;
+                _roomObjects.Add(roomRoot);
+
                 if (isResidential || isOffice || isDiner || isLobby)
                 {
-                    var roomObj = new GameObject($"RoomView_{room.Id}");
-                    if (_parent != null) roomObj.transform.SetParent(_parent, false);
-                    roomObj.transform.position = new Vector3(centerX, y, 0f);
-
-                    var backdropPresenter = roomObj.AddComponent<RoomBackdropPresenter>();
+                    var backdropPresenter = roomRoot.AddComponent<RoomBackdropPresenter>();
                     backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
 
-                    var furnishingPresenter = roomObj.AddComponent<RoomFurnishingPresenter>();
+                    var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
                     furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
-
-                    _roomObjects.Add(roomObj);
                 }
 
                 if (isResidential)
                 {
                     var doorX = isWestSide ? (worldRight - 0.35f) : (worldLeft + 0.35f);
-                    CreateQuad($"Apt Tag {room.Id}", new Color(0.30f, 0.42f, 0.56f), new Vector3(doorX, y + 0.25f, 0.42f), new Vector2(0.28f, 0.09f));
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f));
+                    CreateQuad($"Apt Tag {room.Id}", new Color(0.30f, 0.42f, 0.56f), new Vector3(doorX, y + 0.25f, 0.42f), new Vector2(0.28f, 0.09f), roomRoot.transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.38f, 0.48f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else if (isOffice)
                 {
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f));
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else if (isDiner)
                 {
-                    CreateQuad($"Diner Awning {room.Id}", new Color(0.85f, 0.42f, 0.25f), new Vector3(centerX, y + 0.58f, 0.55f), new Vector2(1.3f, 0.16f));
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f));
+                    CreateQuad($"Diner Awning {room.Id}", new Color(0.85f, 0.42f, 0.25f), new Vector3(centerX, y + 0.58f, 0.55f), new Vector2(1.3f, 0.16f), roomRoot.transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else if (isStairwell)
                 {
-                    CreateQuad($"Stair Bg {room.Id}", new Color(0.12f, 0.16f, 0.22f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.04f, 1.45f));
-                    CreateQuad($"Stair Tread 1 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.30f, y - 0.45f, 0.55f), new Vector2(0.35f, 0.06f));
-                    CreateQuad($"Stair Tread 2 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.10f, y - 0.15f, 0.55f), new Vector2(0.35f, 0.06f));
-                    CreateQuad($"Stair Tread 3 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.10f, y + 0.15f, 0.55f), new Vector2(0.35f, 0.06f));
-                    CreateQuad($"Stair Tread 4 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.30f, y + 0.45f, 0.55f), new Vector2(0.35f, 0.06f));
-                    CreateQuad($"Stair Rail {room.Id}", new Color(0.88f, 0.76f, 0.30f), new Vector3(centerX, y, 0.50f), new Vector2(width * 0.75f, 0.04f));
-                    CreateQuad($"Stair Exit Sign {room.Id}", new Color(0.20f, 0.85f, 0.45f), new Vector3(centerX, y + 0.58f, 0.48f), new Vector2(0.26f, 0.10f));
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f));
+                    CreateQuad($"Stair Bg {room.Id}", new Color(0.12f, 0.16f, 0.22f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.04f, 1.45f), roomRoot.transform);
+                    CreateQuad($"Stair Tread 1 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.30f, y - 0.45f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
+                    CreateQuad($"Stair Tread 2 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.10f, y - 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
+                    CreateQuad($"Stair Tread 3 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.10f, y + 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
+                    CreateQuad($"Stair Tread 4 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.30f, y + 0.45f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
+                    CreateQuad($"Stair Rail {room.Id}", new Color(0.88f, 0.76f, 0.30f), new Vector3(centerX, y, 0.50f), new Vector2(width * 0.75f, 0.04f), roomRoot.transform);
+                    CreateQuad($"Stair Exit Sign {room.Id}", new Color(0.20f, 0.85f, 0.45f), new Vector3(centerX, y + 0.58f, 0.48f), new Vector2(0.26f, 0.10f), roomRoot.transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else if (isLobby)
                 {
-                    CreateQuad($"Lobby Desk {room.Id}", new Color(0.48f, 0.58f, 0.70f), new Vector3(centerX - 1.2f, y - 0.46f, 0.55f), new Vector2(1.2f, 0.30f));
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f));
+                    CreateQuad($"Lobby Desk {room.Id}", new Color(0.48f, 0.58f, 0.70f), new Vector3(centerX - 1.2f, y - 0.46f, 0.55f), new Vector2(1.2f, 0.30f), roomRoot.transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else
                 {
-                    CreateQuad($"Room {room.Id} ({contentTypeStr})", new Color(0.18f, 0.24f, 0.32f), new Vector3(centerX, y, 0.6f), new Vector2(width - 0.08f, 1.4f));
-                    CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f));
-                    CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f));
+                    CreateQuad($"Room {room.Id} ({contentTypeStr})", new Color(0.18f, 0.24f, 0.32f), new Vector3(centerX, y, 0.6f), new Vector2(width - 0.08f, 1.4f), roomRoot.transform);
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.45f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), roomRoot.transform);
                 }
             }
         }
@@ -217,14 +226,16 @@ namespace OneRoof.Presentation.Tower
             }
 
             _roomObjects.Clear();
+            _roomRoots.Clear();
             _renderedRoomIds.Clear();
         }
 
-        private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size)
+        private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size, Transform parent = null)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
             go.name = name;
-            if (_parent != null) go.transform.SetParent(_parent, false);
+            var targetParent = parent ?? _parent;
+            if (targetParent != null) go.transform.SetParent(targetParent, true);
             go.transform.position = position;
             go.transform.localScale = new Vector3(size.x, size.y, 1f);
 
