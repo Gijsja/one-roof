@@ -17,5 +17,8 @@ namespace OneRoof.Domain.Trips
 
         /// <summary>Travelling to a social or amenity room (Eat → Leisure transition).</summary>
         Leisure,
+
+        /// <summary>Returning to home apartment or bathroom to freshen up when hygiene is low.</summary>
+        Hygiene,
     }
 }

@@ -150,12 +150,14 @@ namespace OneRoof.Domain.Population
             var personList = new List<PersonSaveData>(_personList.Count);
             foreach (var p in _personList)
             {
-                float hunger = 1f, rest = 1f, social = 1f;
+                float hunger = 1f, energy = 1f, social = 1f, hygiene = 1f, purpose = 1f;
                 foreach (var need in p.Needs)
                 {
                     if (need.Kind == NeedKind.Hunger) hunger = need.Satisfaction;
-                    else if (need.Kind == NeedKind.Rest) rest = need.Satisfaction;
+                    else if (need.Kind == NeedKind.Energy) energy = need.Satisfaction;
                     else if (need.Kind == NeedKind.Social) social = need.Satisfaction;
+                    else if (need.Kind == NeedKind.Hygiene) hygiene = need.Satisfaction;
+                    else if (need.Kind == NeedKind.Purpose) purpose = need.Satisfaction;
                 }
 
                 personList.Add(new PersonSaveData
@@ -168,8 +170,11 @@ namespace OneRoof.Domain.Population
                     currentActivity = (int)p.CurrentActivity,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
                     hungerSatisfaction = hunger,
-                    restSatisfaction = rest,
-                    socialSatisfaction = social
+                    restSatisfaction = energy,
+                    energySatisfaction = energy,
+                    socialSatisfaction = social,
+                    hygieneSatisfaction = hygiene,
+                    purposeSatisfaction = purpose
                 });
             }
 
@@ -205,11 +210,18 @@ namespace OneRoof.Domain.Population
                     var traitKind = Enum.IsDefined(typeof(PersonTraitKind), p.trait) ? (PersonTraitKind)p.trait : PersonTraitKind.EarlyBird;
                     var trait = new PersonTrait(traitKind);
                     var schedule = DailySchedule.Standard(trait, rng, baseSleepEnd: 15);
+
+                    var energy = p.energySatisfaction > 0f ? p.energySatisfaction : (p.restSatisfaction > 0f ? p.restSatisfaction : 1f);
+                    var hygiene = p.hygieneSatisfaction > 0f ? p.hygieneSatisfaction : 1f;
+                    var purpose = p.purposeSatisfaction > 0f ? p.purposeSatisfaction : 1f;
+
                     var needs = new[]
                     {
-                        new NeedState(NeedKind.Hunger, p.hungerSatisfaction),
-                        new NeedState(NeedKind.Rest, p.restSatisfaction),
-                        new NeedState(NeedKind.Social, p.socialSatisfaction)
+                        new NeedState(NeedKind.Hunger, p.hungerSatisfaction > 0f ? p.hungerSatisfaction : 1f),
+                        new NeedState(NeedKind.Energy, energy),
+                        new NeedState(NeedKind.Social, p.socialSatisfaction > 0f ? p.socialSatisfaction : 1f),
+                        new NeedState(NeedKind.Hygiene, hygiene),
+                        new NeedState(NeedKind.Purpose, purpose)
                     };
                     var traits = new[] { trait };
                     var person = new PersonRecord(

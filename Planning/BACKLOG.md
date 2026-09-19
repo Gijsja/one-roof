@@ -49,7 +49,7 @@ Status values: `READY`, `ACTIVE`, `BLOCKED`, `DONE`. One agent owns one task at 
 | OR-522 | DONE | M5.4 | Presentation furniture anchor docking | OR-516, OR-521, **ARCH-002** | Residents visibly dock onto sofas, beds, desks, and booths using OR-516 interaction points *(targets split presenters)* |
 | OR-523 | DONE | M5.4 | Inspect mode deep cards for residents, rooms, and elevator banks | OR-518, OR-521, **ARCH-005** | Clicking entities in Inspect mode opens comprehensive symptom/cause drill-down cards *(uses `ElevatorBankSnapshot` for elevator card data)* |
 | ART-003 | DONE | M6.0 | Spine 2D skeletal animation & 8-layer wardrobe composition | ART-002 | Shared 17-bone rig animated with 6 clips; dynamic 8-layer wardrobe compositor operational |
-| OR-601 | READY | M6.1 | Resident needs & dynamic schedule arbitration | OR-521, ART-003 | Five core needs (Hunger, Energy, Social, Hygiene, Purpose) drive autonomous destination choices |
+| OR-601 | DONE | M6.1 | Resident needs & dynamic schedule arbitration | OR-521, ART-003 | Five core needs (Hunger, Energy, Social, Hygiene, Purpose) drive autonomous destination choices |
 | ART-004 | READY | M6.1 | AssetLab validation tooling & Addressables packaging | ART-003 | Standalone AssetLab scene runs automated seam, rig, and anchor checks; Addressables bundles build cleanly |
 | OR-602 | READY | M6.2 | Resident satisfaction scoring, grievances & satisfaction overlay | OR-601 | Satisfaction aggregates commute wait, crowding, noise, rent; persistent misery triggers move-out |
 | OR-603 | READY | M6.2 | Population density & demographic distribution overlay | OR-601 | Overlay 3 visualizes resident density and income/age demographics across the tower |

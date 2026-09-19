@@ -43,6 +43,7 @@ namespace OneRoof.Domain
             TripGenerator = new ScheduleTripGenerator(Topology.ToSnapshot(), Topology.TransitGraph, Planner);
             Transit = new TransitExecutionSystem();
             Leasing = new LeasingDemandSystem();
+            Needs = new ResidentNeedsSystem();
         }
 
         public SimulationClock Clock { get; }
@@ -65,6 +66,8 @@ namespace OneRoof.Domain
 
         public TransitExecutionSystem Transit { get; }
 
+        public ResidentNeedsSystem Needs { get; }
+
         public long CurrentTick => Clock.CurrentTick.Value;
 
         public int ResidentCount => Population.ResidentCount;
@@ -80,6 +83,9 @@ namespace OneRoof.Domain
             var previousTick = Clock.CurrentTick;
             Clock.Advance();
             var currentTick = Clock.CurrentTick;
+
+            // 0. Advance resident needs (decay and replenishment based on activity)
+            Needs.Advance(Population, currentTick);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)

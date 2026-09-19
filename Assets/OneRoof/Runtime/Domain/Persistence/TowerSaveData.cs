@@ -126,7 +126,10 @@ namespace OneRoof.Domain.Persistence
         public int trait;
         public float hungerSatisfaction;
         public float restSatisfaction;
+        public float energySatisfaction;
         public float socialSatisfaction;
+        public float hygieneSatisfaction;
+        public float purposeSatisfaction;
     }
 
     [Serializable]

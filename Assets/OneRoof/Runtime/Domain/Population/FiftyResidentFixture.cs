@@ -106,9 +106,10 @@ namespace OneRoof.Domain.Population
                 var needs = new[]
                 {
                     new NeedState(NeedKind.Hunger,  1f),
-                    new NeedState(NeedKind.Rest,    1f),
+                    new NeedState(NeedKind.Energy,  1f),
                     new NeedState(NeedKind.Social,  1f),
-                    new NeedState(NeedKind.Comfort, 1f),
+                    new NeedState(NeedKind.Hygiene, 1f),
+                    new NeedState(NeedKind.Purpose, 1f),
                 };
 
                 persons.Add(new PersonRecord(

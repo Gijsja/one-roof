@@ -65,8 +65,10 @@ namespace OneRoof.Domain.Tests.EditMode
                 new[]
                 {
                     new NeedState(NeedKind.Hunger, 0.8f),
-                    new NeedState(NeedKind.Rest, 0.6f),
-                    new NeedState(NeedKind.Social, 0.9f)
+                    new NeedState(NeedKind.Energy, 0.6f),
+                    new NeedState(NeedKind.Social, 0.9f),
+                    new NeedState(NeedKind.Hygiene, 0.7f),
+                    new NeedState(NeedKind.Purpose, 0.85f)
                 },
                 new[] { new PersonTrait(PersonTraitKind.EarlyBird) });
             person.UpdateActivity(ActivityKind.Eating);
@@ -92,6 +94,11 @@ namespace OneRoof.Domain.Tests.EditMode
             var restoredPerson = restored.GetPerson(new EntityId(101));
             Assert.That(restoredPerson.HouseholdId, Is.EqualTo(new EntityId(201)));
             Assert.That(restoredPerson.CurrentActivity, Is.EqualTo(ActivityKind.Eating));
+            Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Hunger), Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Energy), Is.EqualTo(0.6f).Within(0.001f));
+            Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Social), Is.EqualTo(0.9f).Within(0.001f));
+            Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Hygiene), Is.EqualTo(0.7f).Within(0.001f));
+            Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Purpose), Is.EqualTo(0.85f).Within(0.001f));
 
             var restoredHousehold = restored.GetHousehold(new EntityId(201));
             Assert.That(restoredHousehold.Budget, Is.EqualTo(0.75f));

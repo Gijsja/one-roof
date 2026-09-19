@@ -108,6 +108,38 @@ namespace OneRoof.Domain.Population
             _needs.Add(new NeedState(kind, satisfaction));
         }
 
+        /// <summary>
+        /// Gets the current satisfaction for <paramref name="kind"/>, defaulting to 1f if untracked.
+        /// </summary>
+        public float GetNeedSatisfaction(NeedKind kind)
+        {
+            for (var i = 0; i < _needs.Count; i++)
+            {
+                if (_needs[i].Kind == kind)
+                {
+                    return _needs[i].Satisfaction;
+                }
+            }
+
+            return 1f;
+        }
+
+        /// <summary>
+        /// Returns true if this person tracks <paramref name="kind"/>.
+        /// </summary>
+        public bool HasNeed(NeedKind kind)
+        {
+            for (var i = 0; i < _needs.Count; i++)
+            {
+                if (_needs[i].Kind == kind)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public override string ToString() =>
             $"Person {Id} (Household {HouseholdId}, Home {HomeRoomId}, Work {WorkplaceRoomId}, Activity {_currentActivity})";
     }

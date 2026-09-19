@@ -466,6 +466,7 @@ namespace OneRoof.Domain.Transit
                 TripPurpose.Food => ActivityKind.Eating,
                 TripPurpose.Home => ActivityKind.Sleeping,
                 TripPurpose.Leisure => ActivityKind.Leisure,
+                TripPurpose.Hygiene => ActivityKind.Idle,
                 _ => ActivityKind.Idle
             };
         }

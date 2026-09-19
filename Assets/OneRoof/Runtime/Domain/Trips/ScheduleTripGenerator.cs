@@ -25,6 +25,7 @@ namespace OneRoof.Domain.Trips
         private HierarchicalTransitGraph _graph;
         private TransitRoutePlanner _planner;
 
+        private readonly DynamicScheduleArbitrator _arbitrator = new DynamicScheduleArbitrator();
         private int _nextTripId;
 
         /// <param name="topology">The building topology for room lookups.</param>
@@ -58,8 +59,9 @@ namespace OneRoof.Domain.Trips
 
         /// <summary>
         /// Generates trips for all residents whose schedule block changed between
-        /// <paramref name="previousTick"/> and <paramref name="currentTick"/>.
-        /// Returns an empty list when no transitions occur (e.g. mid-block ticks).
+        /// <paramref name="previousTick"/> and <paramref name="currentTick"/> or who
+        /// have an urgent physiological or social need requiring destination arbitration (ADR-047).
+        /// Returns an empty list when no transitions or need overrides occur.
         /// </summary>
         public IReadOnlyList<TripRecord> GenerateTripsForTick(
             Tick previousTick,
@@ -76,11 +78,12 @@ namespace OneRoof.Domain.Trips
 
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
                 var currentLabel  = person.Schedule.ActiveLabelAt(currentTick);
+                var blockChanged  = previousLabel != currentLabel;
 
-                // No transition — skip.
-                if (previousLabel == currentLabel) continue;
+                TripPurpose? purpose = blockChanged
+                    ? (_arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: true) ?? LabelToPurpose(currentLabel))
+                    : _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: false);
 
-                var purpose = LabelToPurpose(currentLabel);
                 if (purpose == null) continue;
 
                 var destinationRoomId = ResolveDestinationRoom(person, purpose.Value);
@@ -102,6 +105,7 @@ namespace OneRoof.Domain.Trips
 
                 if (trip != null)
                 {
+                    person.UpdateActivity(ActivityKind.Commuting);
                     trips.Add(trip);
                 }
             }
@@ -161,6 +165,7 @@ namespace OneRoof.Domain.Trips
                     return person.WorkplaceRoomId;
 
                 case TripPurpose.Home:
+                case TripPurpose.Hygiene:
                     return person.HomeRoomId;
 
                 case TripPurpose.Food:

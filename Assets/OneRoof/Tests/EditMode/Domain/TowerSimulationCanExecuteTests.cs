@@ -55,8 +55,8 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void CanExecute_BuildRoom_OverlappingExisting_Rejected()
         {
-            // Lobby is at floor 0, [-2..2]
-            var cmd = new BuildRoomCommand(0, -2, 4, new ContentId("commercial:cafe"), 10);
+            // Lobby is at floor 0, [2..14]
+            var cmd = new BuildRoomCommand(0, 3, 8, new ContentId("commercial:cafe"), 10);
             var result = _sim.CanExecute(cmd);
 
             Assert.That(result.Accepted, Is.False);
