@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Collections.Generic;
 using OneRoof.Application.Transit;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
@@ -106,6 +107,22 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.RenderedShaftFloorCount, Is.EqualTo(5));
             var bounds = _presenter.GetShaftBounds();
             Assert.That(bounds.center.y, Is.EqualTo(TowerStructurePresenter.FloorY(4)).Within(0.01f));
+        }
+
+        [Test]
+        public void UpdateElevatorPositions_OvercrowdedCarGetsAgitationAura()
+        {
+            _presenter.EnsureElevatorViews(1);
+            var snapshot = new TowerProjection(0, 0, 0, 0f,
+                new List<TransitResidentProjection>(),
+                new List<ElevatorProjection> { new ElevatorProjection(1, 0, 8, 8, new List<int>()) });
+
+            _presenter.UpdateElevatorPositions(snapshot);
+
+            var effects = _presenter.ElevatorViews[0].GetComponent<VisualEffectsPresenter>();
+            Assert.That(effects, Is.Not.Null);
+            Assert.That(effects.Severity, Is.GreaterThan(0f));
+            Assert.That(_presenter.ElevatorViews[0].transform.Find("CongestionAgitationAura"), Is.Not.Null);
         }
     }
 }
