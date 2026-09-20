@@ -283,11 +283,11 @@ graph TD
   - Satisfaction calculated from commute wait friction, noise, crowding, need deprivation, rent burden, service access, and recent events.
   - Low satisfaction creates Grievances; personality-filtered Strain accumulates and can lead to move-out or mental-strain events.
   - **Overlay 4: Satisfaction Overlay** provides non-colour encoding and drills into its contributor explanation.
-- [ ] **`OR-603` (Milestone 6.2 — Population Density & Demographics Overlay):**
+- [x] **`OR-603` (Milestone 6.2 — Population Density & Demographics Overlay):**
   - **Overlay 3: Population Overlay** visualizing resident density and income/age demographics.
 - **`ART-004` (Milestone 6.1 — AssetLab Validation Tooling & Addressables):**
   - Automated seam testing runner, rig validation, and Addressables bundle packaging.
-- **`OR-604` (Milestone 6.3 — Scrutiny):**
+- [x] **`OR-604` (Milestone 6.3 — Scrutiny):**
   - Wider-city attention rises with expansion speed, inequality, unresolved crises, and aggressive policy; balanced service and crisis responses reduce it.
   - High Scrutiny modulates external-event pressure and can temporarily constrain expansion without turning into a cartoon-invasion loop.
 - **`OR-605` (Milestone 6.3 — Soft Specialist Roles & Training):**

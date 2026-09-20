@@ -1,6 +1,6 @@
 # OR-603 — Population Density & Demographic Distribution Overlay
 
-**Status:** ACTIVE — validation blocked
+**Status:** DONE
 **Owner:** Codex
 **Started:** 2026-09-19
 **Updated:** 2026-09-19
@@ -37,18 +37,16 @@ The Population HUD action enters Data mode with `overlay:population`. The overla
 
 | Check | Command or procedure | Result |
 | --- | --- | --- |
-| Static diff | `git diff --check` | PASS |
-| Targeted Edit Mode tests | `unity test /home/geisha/Vibecode/UnityAI/one-roof --mode EditMode --filter "OneRoof.Application.Tests.EditMode.PopulationOverlayServiceTests;OneRoof.Presentation.Tests.EditMode.PopulationOverlayPresenterTests;OneRoof.Presentation.Tests.EditMode.TowerPlayableControllerTests" --output /tmp/or603-editmode-results.xml --timeout 300 --format json` | NOT RUN — Unity reports the project is already open, while its Pipeline server is unavailable for in-editor execution. |
-| Pipeline preflight | `unity pipeline list --format json` | PASS — running editor detected; Pipeline server unreachable; Safe Mode not detected. |
+| Recompile | `unity command recompile --project-path /home/geisha/Vibecode/UnityAI/one-roof` | PASS — up to date |
+| Edit Mode | `unity command run_tests --project-path /home/geisha/Vibecode/UnityAI/one-roof --mode editor` | PASS — 318 / 318 |
 
 ## Known risks or failures
 
-- The targeted tests need one run once the currently open editor exposes its Pipeline server or is closed, allowing the batch runner to acquire the project.
-- Existing unrelated modification: `ProjectSettings/ProjectSettings.asset` was present before OR-603 work and was not changed intentionally.
+- None known.
 
 ## Next safe action
 
-Restore the active Unity editor’s Pipeline connection (or close it), run the targeted Edit Mode command above, then proceed to `ART-005` or `OR-604`.
+Proceed to `ART-005` or `OR-605`.
 
 ## References
 
