@@ -4,6 +4,7 @@ using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Application.Overlays;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Population;
 
 namespace OneRoof.Application.Inspectors
 {
@@ -29,7 +30,10 @@ namespace OneRoof.Application.Inspectors
                 $"Activity: {person.CurrentActivity}",
                 $"Household: #{person.HouseholdId.Value}",
                 $"Home: room #{person.HomeRoomId.Value}",
-                $"Workplace: room #{person.WorkplaceRoomId.Value}"
+                $"Workplace: room #{person.WorkplaceRoomId.Value}",
+                person.Specialization.Role == SpecialistRole.None
+                    ? (person.Specialization.IsTraining ? $"Training: {person.Specialization.TrainingRole} ({person.Specialization.TrainingProgress:P0})" : "Specialist role: none yet")
+                    : $"Specialist role: {person.Specialization.Role}"
             };
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");

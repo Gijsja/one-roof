@@ -18,6 +18,7 @@ namespace OneRoof.Application.Tests.EditMode
             Assert.That(projection.Title, Is.EqualTo($"Resident #{residentId}"));
             Assert.That(projection.Details, Has.Some.Contains("Household:"));
             Assert.That(projection.Details, Has.Some.Contains("Hunger:"));
+            Assert.That(projection.Details, Has.Some.Contains("Specialist role:"));
         }
 
         [Test]

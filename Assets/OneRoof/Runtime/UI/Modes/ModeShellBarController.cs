@@ -134,7 +134,7 @@ namespace OneRoof.UI.Modes
 
         private void DrawBuildPalette(ModeShellProjection projection)
         {
-            var paletteRect = new Rect(20, Screen.height - 162, 620, 90);
+            var paletteRect = new Rect(20, Screen.height - 206, 620, 134);
             GUILayout.BeginArea(paletteRect, GUI.skin.box);
 
             // Row 1: Zoning & Structure
@@ -147,7 +147,17 @@ namespace OneRoof.UI.Modes
 
             GUILayout.Space(2);
 
-            // Row 2: Transit & Demolition
+            // Row 2: Services
+            GUILayout.BeginHorizontal();
+            DrawToolButton("Retail Shop\n$2.1k (6c)", "commercial:retail", projection.SelectedBuildTool == "commercial:retail");
+            DrawToolButton("Clinic\n$1.2k (8c)", "service:clinic", projection.SelectedBuildTool == "service:clinic");
+            DrawToolButton("Workshop\n$1.2k (8c)", "service:maintenance_workshop", projection.SelectedBuildTool == "service:maintenance_workshop");
+            DrawToolButton("Security\n$900 (6c)", "service:security_station", projection.SelectedBuildTool == "service:security_station");
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(2);
+
+            // Row 3: Transit & Demolition
             GUILayout.BeginHorizontal();
             DrawToolButton("Stairs\n$500 (2c)", "transit:stairwell", projection.SelectedBuildTool == "transit:stairwell");
             DrawToolButton("Shaft\n$1k/fl (2c)", "transit:elevator_shaft", projection.SelectedBuildTool == "transit:elevator_shaft");

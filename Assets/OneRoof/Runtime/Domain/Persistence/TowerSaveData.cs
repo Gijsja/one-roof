@@ -27,6 +27,7 @@ namespace OneRoof.Domain.Persistence
         public ElevatorBankSaveData elevatorBank;
         public ActiveTripSaveData[] activeTrips;
         public ScrutinySaveData scrutiny;
+        public BusinessSaveData[] businesses;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData
         {
@@ -81,6 +82,19 @@ namespace OneRoof.Domain.Persistence
         public float previousValue;
         public float recentExpansionPressure;
         public float recentPolicyPressure;
+    }
+
+    [Serializable]
+    public sealed class BusinessSaveData
+    {
+        public int id;
+        public int roomId;
+        public string contentType;
+        public int[] employeeIds;
+        public long cashBalance;
+        public long lastCustomerRevenue;
+        public long lastWages;
+        public bool isInsolvent;
     }
 
     [Serializable]
@@ -143,6 +157,9 @@ namespace OneRoof.Domain.Persistence
         public float socialSatisfaction;
         public float hygieneSatisfaction;
         public float purposeSatisfaction;
+        public int specialistRole;
+        public int specialistTrainingRole;
+        public float specialistTrainingProgress;
     }
 
     [Serializable]

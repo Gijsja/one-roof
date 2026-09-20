@@ -188,7 +188,9 @@ namespace OneRoof.Presentation.Tower
             var guiY = Screen.height - screenPos.y;
             var guiPoint = new Vector2(screenPos.x, guiY);
 
-            // Bottom UI area (Mode bar, context overlay, 2-row build palette)
+            // Bottom UI area (Mode bar, context overlay, 3-row build palette).
+            // The third row begins at Screen.height - 206, which remains inside this
+            // deliberately padded hit region without consuming the low-resolution center.
             if (guiPoint.x >= 15 && guiPoint.x <= 650 && guiPoint.y >= Screen.height - 215 && guiPoint.y <= Screen.height - 15)
             {
                 return true;
@@ -305,6 +307,11 @@ namespace OneRoof.Presentation.Tower
         public static int GetToolWidthInCells(string toolId)
         {
             if (string.IsNullOrEmpty(toolId)) return 1;
+
+            if (BuildingCatalog.TryGetRoomDefinition(toolId, out var roomDefinition))
+            {
+                return roomDefinition.WidthInCells;
+            }
 
             if (toolId.Equals("demolish:room", StringComparison.OrdinalIgnoreCase))
             {
@@ -500,7 +507,19 @@ namespace OneRoof.Presentation.Tower
                 return true;
             }
 
-            // Room placement
+            // Room placement. Catalogued zones keep their authored footprint and capacity;
+            // unknown future room tools retain the existing generic placement behavior.
+            if (BuildingCatalog.TryGetRoomDefinition(toolId, out var roomDefinition))
+            {
+                command = new BuildRoomCommand(
+                    floor,
+                    cellX,
+                    cellX + roomDefinition.WidthInCells - 1,
+                    roomDefinition.ContentType,
+                    capacity: roomDefinition.Capacity);
+                return true;
+            }
+
             var roomWidth = GetToolWidthInCells(toolId);
             var contentType = toolId.StartsWith("room:", StringComparison.OrdinalIgnoreCase)
                 ? new ContentId("residential:studio")

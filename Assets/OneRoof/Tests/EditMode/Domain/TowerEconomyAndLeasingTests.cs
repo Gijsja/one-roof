@@ -230,5 +230,98 @@ namespace OneRoof.Domain.Tests.EditMode
 
             Assert.That(employedAtOffice, Is.True, "Expected at least one newly leased resident to be employed at the office.");
         }
+
+        [Test]
+        public void ServiceZoning_LeasingDemand_EmploysNewResidentsAtClinic()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            sim.BuildFloorSlab(new BuildFloorSlabCommand(5, -30, 30));
+            var clinicResult = sim.BuildRoom(new BuildRoomCommand(5, 5, 12, new ContentId("service:clinic"), 12));
+            var apartmentResult = sim.BuildRoom(new BuildRoomCommand(5, -10, -5, new ContentId("residential:apartment"), 4));
+
+            Assert.That(clinicResult.Accepted, Is.True);
+            Assert.That(apartmentResult.Accepted, Is.True);
+
+            Room clinic = null;
+            var rooms = sim.Topology.GetRoomsOnFloor(5);
+            for (var i = 0; i < rooms.Count; i++)
+            {
+                if (rooms[i].ContentType.Value == "service:clinic")
+                {
+                    clinic = rooms[i];
+                    break;
+                }
+            }
+            Assert.That(clinic, Is.Not.Null);
+
+            for (var tick = 0; tick < 15; tick++) sim.AdvanceOneTick();
+
+            Assert.That(sim.Population.Persons.Any(person => person.WorkplaceRoomId.Equals(clinic.Id)), Is.True,
+                "Expected demand-driven leasing to match a resident to the new clinic workplace.");
+        }
+
+        [Test]
+        public void BusinessCycle_ReconcilesLeaseStaffAndPaysWagesFromCustomerRevenue()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var budgetBefore = sim.Population.Households[0].Budget;
+
+            for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
+
+            var diner = sim.Businesses.Businesses.FirstOrDefault(business => business.ContentType.Value == "commercial:diner");
+            Assert.That(diner, Is.Not.Null);
+            Assert.That(diner.EmployeeIds.Count, Is.EqualTo(20), "Diner staffing must not exceed room capacity.");
+            Assert.That(diner.LastCustomerRevenue, Is.GreaterThan(0));
+            Assert.That(diner.LastWages, Is.GreaterThan(0));
+            Assert.That(diner.CashBalance, Is.EqualTo(diner.LastCustomerRevenue - diner.LastWages - 35));
+            Assert.That(sim.Population.Households[0].Budget, Is.GreaterThan(budgetBefore));
+        }
+
+        [Test]
+        public void BusinessState_SaveRoundTrip_PreservesTenantFinancesAndMembership()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
+
+            var save = sim.ExportSaveData();
+            var restored = TowerSimulation.RestoreFromSaveData(save);
+
+            Assert.That(restored.Businesses.Businesses.Count, Is.EqualTo(sim.Businesses.Businesses.Count));
+            var original = sim.Businesses.Businesses[0];
+            var restoredBusiness = restored.Businesses.Businesses[0];
+            Assert.That(restoredBusiness.RoomId, Is.EqualTo(original.RoomId));
+            Assert.That(restoredBusiness.CashBalance, Is.EqualTo(original.CashBalance));
+            Assert.That(restoredBusiness.EmployeeIds.Select(id => id.Value), Is.EqualTo(original.EmployeeIds.Select(id => id.Value)));
+        }
+
+        [Test]
+        public void BusinessCycle_PrefersCompletedRelevantSpecialistsBeforeIdFallback()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var specialist = sim.Population.Persons[sim.Population.Persons.Count - 1];
+            specialist.Specialization.AdvanceTowards(SpecialistRole.Service, 1f);
+
+            var businesses = new BusinessState();
+            var nextBusinessId = 9000;
+            businesses.Advance(sim.Topology, sim.Population, ref nextBusinessId);
+
+            var diner = businesses.Businesses.First(business => business.ContentType.Value == "commercial:diner");
+            Assert.That(diner.EmployeeIds[0], Is.EqualTo(specialist.Id),
+                "Completed Service specialists should be recruited before lower-ID generalists.");
+        }
+
+        [Test]
+        public void BusinessCycle_UnstaffedTenantBecomesInsolventAfterSustainedOperatingLosses()
+        {
+            var population = FiftyResidentFixture.Create();
+            var business = new BusinessRecord(new EntityId(9000), new EntityId(9001), new ContentId("service:clinic"));
+
+            business.ProcessCycle(population);
+            business.ProcessCycle(population);
+            business.ProcessCycle(population);
+
+            Assert.That(business.CashBalance, Is.EqualTo(-105));
+            Assert.That(business.IsInsolvent, Is.True);
+        }
     }
 }

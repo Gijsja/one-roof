@@ -46,6 +46,8 @@ namespace OneRoof.Domain
             Transit = new TransitExecutionSystem();
             Leasing = new LeasingDemandSystem();
             Needs = new ResidentNeedsSystem();
+            Specialists = new SpecialistRoleSystem();
+            Businesses = new BusinessState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
         }
@@ -71,6 +73,8 @@ namespace OneRoof.Domain
         public TransitExecutionSystem Transit { get; }
 
         public ResidentNeedsSystem Needs { get; }
+        public SpecialistRoleSystem Specialists { get; }
+        public BusinessState Businesses { get; private set; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
 
@@ -92,19 +96,22 @@ namespace OneRoof.Domain
 
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
-            Wellbeing.Advance(Population, ElevatorBank);
-            Scrutiny.Advance(Topology, Population);
+            Specialists.Advance(Population, Topology, currentTick);
+            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier);
+            Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)
             {
                 Leasing.EvaluateLeasingDemand(Topology, Population, ElevatorBank, RandomStream, currentTick, ref _nextEntityId);
+                Businesses.Advance(Topology, Population, ref _nextEntityId);
             }
 
             // 2. Periodic rental collection cycle (every 50 ticks)
             if (currentTick.Value % 50 == 0)
             {
                 Economy.ProcessRentCycle(Topology, Population);
+                Businesses.ProcessBusinessCycle(Population);
             }
 
             // 3. Generate scheduled routine trips when schedule blocks transition
@@ -542,6 +549,7 @@ namespace OneRoof.Domain
             data.elevatorBank = ElevatorBank.ToSaveData();
             data.activeTrips = Transit.ToSaveData();
             data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
+            data.businesses = Businesses.ToSaveData();
 
             return data;
         }
@@ -558,6 +566,7 @@ namespace OneRoof.Domain
             var scrutiny = data.scrutiny == null ? new ScrutinyState() : new ScrutinyState(data.scrutiny.value, data.scrutiny.previousValue, data.scrutiny.recentExpansionPressure, data.scrutiny.recentPolicyPressure);
 
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
+            sim.Businesses = BusinessState.FromSaveData(data.businesses);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 

@@ -72,6 +72,7 @@ namespace OneRoof.Domain.Tests.EditMode
                 },
                 new[] { new PersonTrait(PersonTraitKind.EarlyBird) });
             person.UpdateActivity(ActivityKind.Eating);
+            person.Specialization.AdvanceTowards(SpecialistRole.Service, 1f);
 
             var household = new HouseholdRecord(
                 new EntityId(201),
@@ -99,6 +100,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Social), Is.EqualTo(0.9f).Within(0.001f));
             Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Hygiene), Is.EqualTo(0.7f).Within(0.001f));
             Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Purpose), Is.EqualTo(0.85f).Within(0.001f));
+            Assert.That(restoredPerson.Specialization.Role, Is.EqualTo(SpecialistRole.Service));
 
             var restoredHousehold = restored.GetHousehold(new EntityId(201));
             Assert.That(restoredHousehold.Budget, Is.EqualTo(0.75f));

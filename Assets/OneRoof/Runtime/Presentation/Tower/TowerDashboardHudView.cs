@@ -66,6 +66,8 @@ namespace OneRoof.Presentation.Tower
             if (GUILayout.Button("Satisfaction", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowSatisfactionOverlay();
             if (GUILayout.Button("Population", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowPopulationOverlay();
             if (GUILayout.Button("Scrutiny", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowScrutinyOverlay();
+            if (GUILayout.Button("Foot Traffic", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowFootTrafficOverlay();
+            if (GUILayout.Button("Business Health", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowBusinessHealthOverlay();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();

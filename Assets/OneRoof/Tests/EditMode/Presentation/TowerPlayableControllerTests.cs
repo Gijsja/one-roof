@@ -81,6 +81,18 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Controller_InitialState_BindsSpatialRoomtonesAndWindowAtmosphere()
+        {
+            var atmosphere = _controller.AtmospherePresenter;
+
+            Assert.That(atmosphere, Is.Not.Null);
+            Assert.That(atmosphere.RoomToneSourceCount, Is.GreaterThan(0));
+            Assert.That(atmosphere.WindowLightCount, Is.EqualTo(atmosphere.RoomToneSourceCount));
+            Assert.That(atmosphere.ElevatorFoley.spatialBlend, Is.EqualTo(1f));
+            Assert.That(atmosphere.FootstepFoley.spatialBlend, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void ToggleDataOverlay_EnablesOverlayInRealtime()
         {
             var overlay = _holder.GetComponent<ElevatorWaitOverlayPresenter>();

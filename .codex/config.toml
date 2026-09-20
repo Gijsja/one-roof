@@ -1,4 +1,10 @@
 
+sandbox_mode = "workspace-write"
+model_verbosity = "low"
+model_reasoning_summary = "none"
 [mcp_servers.unity]
 command = "/home/geisha/.local/bin/unity"
 args = ["mcp"]
+
+[sandbox_workspace_write]
+network_access = true

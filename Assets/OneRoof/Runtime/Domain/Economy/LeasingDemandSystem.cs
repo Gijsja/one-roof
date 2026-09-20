@@ -56,7 +56,9 @@ namespace OneRoof.Domain.Economy
                 {
                     vacantApartments.Add(room);
                 }
-                else if (content.StartsWith("commercial:") || content.StartsWith("workplace:"))
+                else if (content.StartsWith("commercial:") ||
+                         content.StartsWith("service:") ||
+                         content.StartsWith("workplace:"))
                 {
                     potentialWorkplaces.Add(room);
                 }

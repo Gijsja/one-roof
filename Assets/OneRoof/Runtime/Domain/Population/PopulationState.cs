@@ -177,7 +177,10 @@ namespace OneRoof.Domain.Population
                     energySatisfaction = energy,
                     socialSatisfaction = social,
                     hygieneSatisfaction = hygiene,
-                    purposeSatisfaction = purpose
+                    purposeSatisfaction = purpose,
+                    specialistRole = (int)p.Specialization.Role,
+                    specialistTrainingRole = (int)p.Specialization.TrainingRole,
+                    specialistTrainingProgress = p.Specialization.TrainingProgress
                 });
             }
 
@@ -239,6 +242,9 @@ namespace OneRoof.Domain.Population
 
                     person.UpdateLocation(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId));
                     person.UpdateActivity((ActivityKind)p.currentActivity);
+                    var role = Enum.IsDefined(typeof(SpecialistRole), p.specialistRole) ? (SpecialistRole)p.specialistRole : SpecialistRole.None;
+                    var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
+                    person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);
                     person.Wellbeing.Update(p.wellbeingSatisfaction, p.wellbeingStrain, 1f, 1f, 1f, 1f, 1f, 1f, null);
                     persons.Add(person);
                 }

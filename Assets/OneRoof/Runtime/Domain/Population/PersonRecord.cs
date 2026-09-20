@@ -49,6 +49,7 @@ namespace OneRoof.Domain.Population
                 ? new ReadOnlyCollection<PersonalityFacet>(new List<PersonalityFacet>(personalityFacets))
                 : new ReadOnlyCollection<PersonalityFacet>(DeriveFacets(Traits));
             Wellbeing = new ResidentWellbeingState();
+            Specialization = new SpecialistRoleState();
 
             _currentActivity = ActivityKind.Idle;
             _currentRoomId = homeRoomId;
@@ -81,6 +82,7 @@ namespace OneRoof.Domain.Population
         public IReadOnlyList<PersonTrait> Traits { get; }
         public IReadOnlyList<PersonalityFacet> PersonalityFacets { get; }
         public ResidentWellbeingState Wellbeing { get; }
+        public SpecialistRoleState Specialization { get; }
 
         // ── Mutation methods (called by simulation systems only) ──────────────
 
@@ -113,6 +115,12 @@ namespace OneRoof.Domain.Population
             }
 
             _needs.Add(new NeedState(kind, satisfaction));
+        }
+
+        /// <summary>Restores a persisted emergent role state; only aggregate loading calls this.</summary>
+        public void RestoreSpecialization(SpecialistRole role, SpecialistRole trainingRole, float trainingProgress)
+        {
+            Specialization.Restore(role, trainingRole, trainingProgress);
         }
 
         /// <summary>

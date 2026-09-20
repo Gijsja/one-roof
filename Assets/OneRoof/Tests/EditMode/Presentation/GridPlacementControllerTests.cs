@@ -65,6 +65,10 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(GridPlacementController.GetToolWidthInCells("room:apartment"), Is.EqualTo(6));
             Assert.That(GridPlacementController.GetToolWidthInCells("commercial:office"), Is.EqualTo(8));
             Assert.That(GridPlacementController.GetToolWidthInCells("commercial:diner"), Is.EqualTo(10));
+            Assert.That(GridPlacementController.GetToolWidthInCells("commercial:retail"), Is.EqualTo(6));
+            Assert.That(GridPlacementController.GetToolWidthInCells("service:clinic"), Is.EqualTo(8));
+            Assert.That(GridPlacementController.GetToolWidthInCells("service:maintenance_workshop"), Is.EqualTo(8));
+            Assert.That(GridPlacementController.GetToolWidthInCells("service:security_station"), Is.EqualTo(6));
             Assert.That(GridPlacementController.GetToolWidthInCells("transit:elevator_car"), Is.EqualTo(2));
             Assert.That(GridPlacementController.GetToolWidthInCells("transit:elevator_shaft"), Is.EqualTo(2));
             Assert.That(GridPlacementController.GetToolWidthInCells("transit:stairwell"), Is.EqualTo(2));
@@ -227,6 +231,22 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
             Assert.That(_session.Topology.Rooms.Count, Is.EqualTo(initialRooms + 1));
+        }
+
+        [TestCase("commercial:retail", 6, 6)]
+        [TestCase("service:clinic", 8, 12)]
+        [TestCase("service:maintenance_workshop", 8, 6)]
+        [TestCase("service:security_station", 6, 4)]
+        public void TryCreateCommand_CataloguedServiceZonesUseAuthoredFootprintAndCapacity(string toolId, int expectedWidth, int expectedCapacity)
+        {
+            var created = _gridPlacement.TryCreateCommand(toolId, floor: 1, cellX: -14, out var command, out var reason);
+
+            Assert.That(created, Is.True, reason);
+            Assert.That(command, Is.TypeOf<OneRoof.Domain.Commands.BuildRoomCommand>());
+            var roomCommand = (OneRoof.Domain.Commands.BuildRoomCommand)command;
+            Assert.That(roomCommand.Bounds.Width, Is.EqualTo(expectedWidth));
+            Assert.That(roomCommand.Capacity, Is.EqualTo(expectedCapacity));
+            Assert.That(roomCommand.ContentType.Value, Is.EqualTo(toolId));
         }
 
         [Test]

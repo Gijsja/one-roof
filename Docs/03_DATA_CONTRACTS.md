@@ -15,7 +15,7 @@ SchemaVersion integer save/content version
 
 | Record | Required fields |
 | --- | --- |
-| Person | ID, household, home, workplace, schedule, needs, focus, satisfaction, grievances, strain, personality facets, relationships, affiliations, current activity |
+| Person | ID, household, home, workplace, schedule, needs, focus, satisfaction, grievances, strain, personality facets, specialist role/training progress, relationships, affiliations, current activity |
 | Household | ID, members, home, budget, preferences, satisfaction |
 | Room | ID, content type, floor, bounds, portals, capacity, owner/tenant, service state |
 | Business | ID, archetype, leased rooms, employees, finances, demand, reputation |
@@ -29,6 +29,7 @@ SchemaVersion integer save/content version
 - Satisfaction projections expose deterministic contributors: commute quality, crowding, noise, rent burden, service access, and recent events. Low satisfaction may create time-bounded grievances.
 - Strain is a long-term, cumulative projection. Its drivers and personality-facet multipliers must be available to the inspector; personality is a small high-impact set, not an unbounded trait matrix.
 - Scrutiny is tower-level state with a current value, trend, deterministic contributing factors, and externally visible consequences.
+- Specialist roles are person-owned, saveable domain state. Training capacity comes from rooms and residents acquire roles autonomously; no command assigns a role to an individual.
 - Presentation receives explanation-ready, immutable projections. It must not recompute wellbeing or query mutable domain state when an inspector opens.
 
 ## Command rules

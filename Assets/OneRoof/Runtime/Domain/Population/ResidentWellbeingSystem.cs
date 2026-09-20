@@ -8,7 +8,7 @@ namespace OneRoof.Domain.Population
     {
         public const float GrievanceThreshold = 0.48f;
 
-        public void Advance(PopulationState population, ElevatorBank elevatorBank)
+        public void Advance(PopulationState population, ElevatorBank elevatorBank, float serviceEfficiencyMultiplier = 1f)
         {
             if (population == null) return;
             var averageWait = elevatorBank == null ? 0f : elevatorBank.AverageWaitTicks;
@@ -19,7 +19,7 @@ namespace OneRoof.Domain.Population
                 var crowding = 0.82f;
                 var noise = person.CurrentActivity == ActivityKind.Commuting ? 0.70f : 0.88f;
                 var rent = Clamp(household.Budget);
-                var service = 0.80f;
+                var service = Clamp(0.80f * serviceEfficiencyMultiplier);
                 var events = 1f;
                 var satisfaction = (commute + crowding + noise + rent + service + events) / 6f;
                 var grievances = new List<string>();

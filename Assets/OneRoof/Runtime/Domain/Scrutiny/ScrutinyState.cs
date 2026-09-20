@@ -53,7 +53,7 @@ namespace OneRoof.Domain.Scrutiny
             _recentPolicyPressure = Clamp(_recentPolicyPressure + severity);
         }
 
-        public void Advance(BuildingTopologyState topology, PopulationState population)
+        public void Advance(BuildingTopologyState topology, PopulationState population, float crisisResponseMultiplier = 1f)
         {
             PreviousValue = Value;
             _contributingFactors.Clear();
@@ -88,7 +88,8 @@ namespace OneRoof.Domain.Scrutiny
             var expansion = _recentExpansionPressure;
             var policy = _recentPolicyPressure;
             var pressure = expansion * .42f + inequality * .22f + unresolvedPressure * .30f + policy * .25f;
-            var relief = wellbeing * .035f + Math.Min(.04f, serviceInvestment * .01f);
+            var responseReadiness = Math.Max(0f, crisisResponseMultiplier - 1f);
+            var relief = wellbeing * .035f + Math.Min(.04f, serviceInvestment * .01f) + Math.Min(.02f, responseReadiness * .10f);
             Value = Clamp(Value + (pressure * .45f) - relief);
             _recentExpansionPressure = Clamp(_recentExpansionPressure - .02f);
             _recentPolicyPressure = Clamp(_recentPolicyPressure - .01f);
@@ -98,6 +99,7 @@ namespace OneRoof.Domain.Scrutiny
             if (unresolvedPressure > .15f) _contributingFactors.Add("Unresolved grievances and strain are sustaining pressure.");
             if (policy > .05f) _contributingFactors.Add("An aggressive tower policy is increasing external attention.");
             if (serviceInvestment > 0) _contributingFactors.Add($"{serviceInvestment} service space(s) are helping to reduce pressure.");
+            if (responseReadiness > .001f) _contributingFactors.Add("Trained specialists are strengthening crisis-response readiness.");
             if (_contributingFactors.Count == 0) _contributingFactors.Add("Conditions are balanced; external attention remains low.");
         }
 
