@@ -24,7 +24,7 @@
 | Input | Input System 1.20.0 | Confirmed | `Packages/manifest.json`, `TowerPlayableController.cs` |
 | Content | Addressables 4.0.1 | Confirmed | `Packages/manifest.json`, `Docs/02_ARCHITECTURE.md` |
 | Tests | Unity Test Framework 1.6.0 with EditMode and PlayMode assemblies | Confirmed | `Packages/manifest.json`, `Assets/OneRoof/Tests/` |
-| Live tooling | `com.unity.pipeline` 0.7.0-exp.1 is present; its current server is unreachable | Confirmed | manifest, `unity pipeline list` |
+| Unity tooling | One-shot headless Unity 6000.3.24f1 compile and test runs | Confirmed | `Docs/10_DEVELOPMENT_WORKFLOW.md` |
 
 ## Directory Structure
 
@@ -79,13 +79,11 @@
 
 | Capability | Status | Evidence |
 | --- | --- | --- |
-| `unity.connection.status` | unavailable | Pipeline Editor server is unreachable |
-| `unity.console.read` | unavailable | Pipeline Editor server is unreachable |
-| `unity.scene.inspect` | unavailable | Pipeline Editor server is unreachable |
+| Live Editor control | intentionally unavailable | Project uses isolated headless validation |
 | `unity.buildsettings.read` | available from serialized settings | `ProjectSettings/EditorBuildSettings.asset` |
 | `unity.asset.search` | available from repository | workspace filesystem |
 | `unity.package.read` | available from repository | `Packages/manifest.json` |
-| `unity.tests.run` | unavailable currently | Pipeline Editor server is unreachable |
+| `unity.tests.run` | available headlessly | Unity built-in batch test runner |
 
 ## Important Constraints
 
@@ -96,7 +94,7 @@
 
 ## Unknowns And Confidence
 
-- Live Editor console, scene hierarchy, and test execution are currently unknown because the Editor Pipeline server is not reachable, despite the process being present and not in Safe Mode.
+- Live Editor control is intentionally out of scope; compilation and tests run headlessly in isolated worktrees.
 - No first-party networking usage was found in the inspected assemblies; the installed multiplayer-center package alone is not treated as a multiplayer implementation.
 
 ## Source Files Inspected

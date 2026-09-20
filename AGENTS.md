@@ -27,8 +27,8 @@ Treat numbered docs as canonical. `Docs/review/` is only a temporary merge inbox
 ## Unity workflow
 
 - Target **Unity 6000.3 LTS**; the installed project version is `6000.3.24f1` (`ProjectSettings/ProjectVersion.txt`).
-- This project has both the **Unity CLI** and the connected **Unity Pipeline**. Prefer them for Editor inspection, scene/asset changes, recompiles, and tests when an Editor is available.
-- Start live-Editor work by checking `unity pipeline list`; use Pipeline commands for the edit → recompile → test loop. If the editor is unavailable or in Safe Mode, diagnose that first and use the narrowest safe fallback.
+- This project uses a **headless Unity workflow**. Do not start a persistent Editor, use `unity pipeline`, `unity command`, or add `com.unity.pipeline`.
+- Validate from an isolated worktree with the installed Unity executable in one-shot `-batchmode -nographics -quit` runs. See `Docs/10_DEVELOPMENT_WORKFLOW.md` for the required compile and test commands.
 - Use the Package Manager API for package changes. Prefer Unity tooling over hand-editing serialized Unity assets.
 - Keep generated Unity folders and secrets out of version control; include `.meta` files with new assets.
 

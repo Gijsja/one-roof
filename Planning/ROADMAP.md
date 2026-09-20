@@ -119,7 +119,7 @@ graph TD
 5. Update `Testbed_Transit` scene composition (or its bootstrap script) to instantiate `TowerSimulationSession` using `FiftyResidentFixture` instead of the prototype session.
 6. Update or delete any tests in `Assets/OneRoof/Tests/` that reference the prototype. Replace with equivalent tests against `TowerSimulationSession`.
 7. Delete `TransitPrototypeSimulation.cs`, `TransitPrototypeSession.cs`, and their `.meta` files.
-8. Compile: `unity -projectPath . -batchmode -nographics -logFile - -quit` or use the unity-pipeline skill's recompile loop.
+8. Compile in an isolated worktree: `unity -projectPath . -batchmode -nographics -logFile - -quit`.
 9. Run all tests: EditMode and PlayMode. All 173+ must pass.
 10. Record ADR-036 in `Docs/07_DECISION_LOG.md`: "Delete TransitPrototypeSimulation; TowerSimulationSession is the single session module."
 11. Create handoff: `Handoffs/Active/ARCH-001_delete-prototype-simulation.md`.
