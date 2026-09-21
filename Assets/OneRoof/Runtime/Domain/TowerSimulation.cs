@@ -50,6 +50,7 @@ namespace OneRoof.Domain
             Specialists = new SpecialistRoleSystem();
             Businesses = new BusinessState();
             ElectricalGrid = new ElectricalGridState();
+            WaterWasteNetwork = new WaterWasteNetworkState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
         }
@@ -78,6 +79,7 @@ namespace OneRoof.Domain
         public SpecialistRoleSystem Specialists { get; }
         public BusinessState Businesses { get; private set; }
         public ElectricalGridState ElectricalGrid { get; }
+        public WaterWasteNetworkState WaterWasteNetwork { get; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
 
@@ -93,6 +95,9 @@ namespace OneRoof.Domain
 
         /// <summary>Immutable electrical state derived from the authoritative topology at the time of request.</summary>
         public ElectricalGridSnapshot ElectricalGridSnapshot() => ElectricalGrid.Evaluate(Topology);
+
+        /// <summary>Immutable water pressure and gravity-waste collection state derived from the authoritative topology.</summary>
+        public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() => WaterWasteNetwork.Evaluate(Topology);
 
         public void AdvanceOneTick()
         {

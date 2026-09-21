@@ -48,6 +48,9 @@ namespace OneRoof.Application.Tower
         /// <summary>Application-facing immutable power network projection for future utility UI and inspectors.</summary>
         public ElectricalGridSnapshot ElectricalGridProjection() => _simulation.ElectricalGridSnapshot();
 
+        /// <summary>Application-facing immutable water and waste network projection for utility UI and inspectors.</summary>
+        public WaterWasteNetworkSnapshot WaterWasteNetworkProjection() => _simulation.WaterWasteNetworkSnapshot();
+
         public void AdvanceOneTick()
         {
             _simulation.AdvanceOneTick();

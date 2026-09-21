@@ -20,6 +20,11 @@ namespace OneRoof.Domain.Topology
         public static readonly BuildingRoomDefinition ElectricalSubstation = new BuildingRoomDefinition("utility:electrical_substation", 4, 120);
         public static readonly BuildingRoomDefinition ElectricalRiser = new BuildingRoomDefinition("utility:electrical_riser", 2, 0);
         public static readonly BuildingRoomDefinition FloorTransformer = new BuildingRoomDefinition("utility:floor_transformer", 2, 0);
+        public static readonly BuildingRoomDefinition WaterPump = new BuildingRoomDefinition("utility:water_pump", 4, 120);
+        public static readonly BuildingRoomDefinition WaterRiser = new BuildingRoomDefinition("utility:water_riser", 2, 0);
+        public static readonly BuildingRoomDefinition BoosterPump = new BuildingRoomDefinition("utility:water_booster", 2, 0);
+        public static readonly BuildingRoomDefinition WasteChute = new BuildingRoomDefinition("utility:waste_chute", 2, 0);
+        public static readonly BuildingRoomDefinition WasteCollection = new BuildingRoomDefinition("utility:waste_collection", 4, 120);
 
         private static readonly BuildingRoomDefinition[] RoomDefinitions =
         {
@@ -32,7 +37,12 @@ namespace OneRoof.Domain.Topology
             SecurityStation,
             ElectricalSubstation,
             ElectricalRiser,
-            FloorTransformer
+            FloorTransformer,
+            WaterPump,
+            WaterRiser,
+            BoosterPump,
+            WasteChute,
+            WasteCollection
         };
 
         public static bool TryGetRoomDefinition(string toolId, out BuildingRoomDefinition definition)

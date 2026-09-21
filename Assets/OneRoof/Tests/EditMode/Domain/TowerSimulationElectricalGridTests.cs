@@ -38,6 +38,16 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("utility:substation_requires_ground")));
         }
 
+        [Test]
+        public void BuildRoom_UpperFloorWaterPump_IsRejectedAtDomainBoundary()
+        {
+            var simulation = CreateSimulation();
+            var result = simulation.BuildRoom(new BuildRoomCommand(1, 0, 3, WaterWasteNetworkState.WaterPumpContentId, 120));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("utility:ground_infrastructure_required")));
+        }
+
         private static TowerSimulation CreateSimulation()
         {
             var topology = new BuildingTopologyState();

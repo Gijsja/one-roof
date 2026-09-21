@@ -189,6 +189,11 @@ namespace OneRoof.Domain.Topology
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("utility:substation_requires_ground"), "Electrical substations must be constructed on the ground floor.") });
             }
 
+            if ((cmd.ContentType == new ContentId("utility:water_pump") || cmd.ContentType == new ContentId("utility:waste_collection")) && cmd.Floor != 0)
+            {
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("utility:ground_infrastructure_required"), "Water pumps and waste collection must be constructed on the ground floor.") });
+            }
+
             if (cmd.MinX < slab.MinX || cmd.MaxX > slab.MaxX)
             {
                 return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:outside_floor_slab"), $"Room exceeds floor {cmd.Floor} slab boundaries ({slab.MinX}..{slab.MaxX}).") });
