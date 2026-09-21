@@ -18,6 +18,7 @@ namespace OneRoof.Domain.Economy
         public const int CostPerAmenityCell = 150;
         public const int CostPerShaftCell = 500;
         public const int CostPerStairCell = 250;
+        public const int CostPerUtilityCell = 400;
         public const int ElevatorCarCost = 2500;
 
         public const int RentPerResidentCycle = 25;
@@ -98,6 +99,10 @@ namespace OneRoof.Domain.Economy
             else if (value.StartsWith("transit:"))
             {
                 rate = CostPerShaftCell;
+            }
+            else if (value.StartsWith("utility:"))
+            {
+                rate = CostPerUtilityCell;
             }
 
             return bounds.Width * rate;

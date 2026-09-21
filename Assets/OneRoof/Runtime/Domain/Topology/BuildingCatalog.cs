@@ -17,6 +17,9 @@ namespace OneRoof.Domain.Topology
         public static readonly BuildingRoomDefinition Clinic = new BuildingRoomDefinition("service:clinic", 8, 12);
         public static readonly BuildingRoomDefinition MaintenanceWorkshop = new BuildingRoomDefinition("service:maintenance_workshop", 8, 6);
         public static readonly BuildingRoomDefinition SecurityStation = new BuildingRoomDefinition("service:security_station", 6, 4);
+        public static readonly BuildingRoomDefinition ElectricalSubstation = new BuildingRoomDefinition("utility:electrical_substation", 4, 120);
+        public static readonly BuildingRoomDefinition ElectricalRiser = new BuildingRoomDefinition("utility:electrical_riser", 2, 0);
+        public static readonly BuildingRoomDefinition FloorTransformer = new BuildingRoomDefinition("utility:floor_transformer", 2, 0);
 
         private static readonly BuildingRoomDefinition[] RoomDefinitions =
         {
@@ -26,7 +29,10 @@ namespace OneRoof.Domain.Topology
             RetailShop,
             Clinic,
             MaintenanceWorkshop,
-            SecurityStation
+            SecurityStation,
+            ElectricalSubstation,
+            ElectricalRiser,
+            FloorTransformer
         };
 
         public static bool TryGetRoomDefinition(string toolId, out BuildingRoomDefinition definition)

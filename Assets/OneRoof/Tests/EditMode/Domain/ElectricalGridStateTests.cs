@@ -1,29 +1,78 @@
 using NUnit.Framework;
+using OneRoof.Domain.Commands;
+using OneRoof.Domain.Identity;
 using OneRoof.Domain.Infrastructure;
+using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 
 namespace OneRoof.Domain.Tests.EditMode
 {
     public sealed class ElectricalGridStateTests
     {
-        [Test]
-        public void Evaluate_HigherFloorsHaveLowerVoltageFromVerticalRiserLoss()
-        {
-            var grid = new ElectricalGridState(substationCapacity: 500f, riserLossPerFloor: .1f);
-            var snapshot = grid.Evaluate(BuildingTopologyState.CreateWithFixture());
+        private static readonly Tick TestTick = new Tick(1);
 
-            Assert.That(snapshot.Floors[4].Voltage, Is.LessThan(snapshot.Floors[0].Voltage));
-            Assert.That(snapshot.Floors[0].IsBrownout, Is.False);
+        [Test]
+        public void Evaluate_ContinuousRiserAndTransformers_PowersFloorsWithHeightLoss()
+        {
+            var topology = CreateTwoFloorElectricalTopology(substationCapacity: 500);
+            var snapshot = new ElectricalGridState(riserLossPerFloor: .1f).Evaluate(topology);
+
+            Assert.That(snapshot.Floors[0].Voltage, Is.EqualTo(1f));
+            Assert.That(snapshot.Floors[1].Voltage, Is.EqualTo(.9f));
+            Assert.That(snapshot.Floors[1].IsBrownout, Is.False);
+            Assert.That(snapshot.Floors[1].RiserColumn, Is.EqualTo(10));
         }
 
         [Test]
-        public void Evaluate_OverloadedSubstationMarksBrownout()
+        public void Evaluate_GapInRiser_OnlyDisconnectsFloorsAboveGap()
         {
-            var grid = new ElectricalGridState(substationCapacity: 1f, riserLossPerFloor: 0f);
-            var snapshot = grid.Evaluate(BuildingTopologyState.CreateWithFixture());
+            var topology = CreateTwoFloorElectricalTopology(substationCapacity: 500, includeUpperRiser: false);
+            var snapshot = new ElectricalGridState().Evaluate(topology);
 
-            Assert.That(snapshot.TotalDemand, Is.GreaterThan(snapshot.SubstationCapacity));
-            Assert.That(snapshot.Floors[0].IsBrownout, Is.True);
+            Assert.That(snapshot.Floors[0].IsBrownout, Is.False);
+            Assert.That(snapshot.Floors[1].BrownoutReason, Is.EqualTo(ElectricalBrownoutReason.DisconnectedRiser));
+            Assert.That(snapshot.Floors[1].Voltage, Is.Zero);
+        }
+
+        [Test]
+        public void Evaluate_OverloadedSubstation_ReportsVoltageBrownoutForConnectedFloor()
+        {
+            var topology = CreateTwoFloorElectricalTopology(substationCapacity: 1);
+            var snapshot = new ElectricalGridState(riserLossPerFloor: 0f).Evaluate(topology);
+
+            Assert.That(snapshot.IsSubstationOverloaded, Is.True);
+            Assert.That(snapshot.Floors[0].BrownoutReason, Is.EqualTo(ElectricalBrownoutReason.InsufficientVoltage));
+            Assert.That(snapshot.Floors[1].IsBrownout, Is.True);
+        }
+
+        [Test]
+        public void Evaluate_MissingTransformer_IdentifiesTheRepairableCause()
+        {
+            var topology = CreateTwoFloorElectricalTopology(substationCapacity: 500, includeUpperTransformer: false);
+            var snapshot = new ElectricalGridState().Evaluate(topology);
+
+            Assert.That(snapshot.Floors[1].BrownoutReason, Is.EqualTo(ElectricalBrownoutReason.MissingTransformer));
+        }
+
+        private static BuildingTopologyState CreateTwoFloorElectricalTopology(int substationCapacity, bool includeUpperRiser = true, bool includeUpperTransformer = true)
+        {
+            var topology = new BuildingTopologyState();
+            topology.Execute(new BuildFloorSlabCommand(0, 0, 30), TestTick);
+            topology.Execute(new BuildFloorSlabCommand(1, 0, 30), TestTick);
+            Build(topology, 0, 0, 3, ElectricalGridState.SubstationContentId, substationCapacity);
+            Build(topology, 0, 10, 11, ElectricalGridState.RiserContentId, 0);
+            Build(topology, 0, 14, 15, ElectricalGridState.TransformerContentId, 0);
+            Build(topology, 0, 20, 25, new ContentId("residential:apartment"), 5);
+            if (includeUpperRiser) Build(topology, 1, 10, 11, ElectricalGridState.RiserContentId, 0);
+            if (includeUpperTransformer) Build(topology, 1, 14, 15, ElectricalGridState.TransformerContentId, 0);
+            Build(topology, 1, 20, 25, new ContentId("residential:apartment"), 5);
+            return topology;
+        }
+
+        private static void Build(BuildingTopologyState topology, int floor, int minX, int maxX, ContentId type, int capacity)
+        {
+            var result = topology.Execute(new BuildRoomCommand(floor, minX, maxX, type, capacity), TestTick);
+            Assert.That(result.Accepted, Is.True, type.Value);
         }
     }
 }
