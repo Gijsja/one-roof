@@ -103,11 +103,26 @@ namespace OneRoof.Presentation.Tower
                 if (IsTransitRoom(room)) continue;
                 if (!_roomTones.TryGetValue(room.Id, out var source) || source == null)
                 {
-                    source = CreateSpatialSource($"Roomtone {room.Id}", RoomVolume(room), 7f);
-                    source.clip = CreateTone($"roomtone-{room.Id}", RoomFrequency(room), 1.6f, RoomVolume(room));
-                    source.loop = true;
+                    var authoredTone = transform.Find($"Roomtone {room.Id}");
+                    source = authoredTone != null ? authoredTone.GetComponent<AudioSource>() : null;
+                    if (source == null)
+                    {
+                        source = CreateSpatialSource($"Roomtone {room.Id}", RoomVolume(room), 7f);
+                        source.clip = CreateTone($"roomtone-{room.Id}", RoomFrequency(room), 1.6f, RoomVolume(room));
+                        source.loop = true;
+                        CreateWindowVolume(room);
+                    }
+                    else
+                    {
+                        var authoredLight = transform.Find($"Volumetric Window Light {room.Id}");
+                        var renderer = authoredLight != null ? authoredLight.GetComponent<MeshRenderer>() : null;
+                        if (renderer != null)
+                        {
+                            _windowVolumes.Add(authoredLight.gameObject);
+                            _windowLightRenderers.Add(renderer);
+                        }
+                    }
                     _roomTones[room.Id] = source;
-                    CreateWindowVolume(room);
                 }
                 source.transform.position = RoomCenter(room, -0.05f);
                 if (UnityApplication.isPlaying && !source.isPlaying) source.Play();

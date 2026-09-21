@@ -57,6 +57,23 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void EnsureRoomViews_AdoptsAuthoredRoomInsteadOfCreatingDuplicate()
+        {
+            var session = new TowerSimulationSession();
+            var room = System.Linq.Enumerable.First(session.Topology.Rooms.Values);
+            var authored = new GameObject($"RoomView_{room.Id}");
+            authored.transform.SetParent(_holder.transform, false);
+
+            _presenter.EnsureRoomViews(session.Topology);
+
+            Assert.That(_holder.transform.Find($"RoomView_{room.Id}"), Is.SameAs(authored.transform));
+            var matching = 0;
+            for (var i = 0; i < _holder.transform.childCount; i++)
+                if (_holder.transform.GetChild(i).name == authored.name) matching++;
+            Assert.That(matching, Is.EqualTo(1));
+        }
+
+        [Test]
         public void Clear_DestroysRoomObjectsAndClearsTrackedIds()
         {
             var session = new TowerSimulationSession();

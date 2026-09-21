@@ -17,6 +17,7 @@ namespace OneRoof.Presentation.Tower
         private Material _worldMaterial;
         private MaterialPropertyBlock _colorBlock;
         private readonly List<GameObject> _structureObjects = new List<GameObject>();
+        private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
         private int _renderedFloorCount;
 
         public int RenderedFloorCount => _renderedFloorCount;
@@ -30,6 +31,15 @@ namespace OneRoof.Presentation.Tower
             _worldMaterial = worldMaterial;
             _colorBlock = colorBlock;
             _renderedFloorCount = 0;
+            _structureObjects.Clear();
+            _authoredObjects.Clear();
+            while (_parent != null && _parent.Find($"Floor Slab {_renderedFloorCount}") != null)
+            {
+                Adopt($"Floor Slab {_renderedFloorCount}");
+                Adopt($"Floor Line L {_renderedFloorCount}");
+                Adopt($"Floor Line R {_renderedFloorCount}");
+                _renderedFloorCount++;
+            }
         }
 
         public void EnsureFloorViews(BuildingTopologyState topology)
@@ -91,7 +101,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _structureObjects.Count; i++)
             {
                 var go = _structureObjects[i];
-                if (go != null)
+                if (go != null && !_authoredObjects.Contains(go))
                 {
                     if (UnityEngine.Application.isPlaying) Object.Destroy(go);
                     else Object.DestroyImmediate(go);
@@ -99,7 +109,16 @@ namespace OneRoof.Presentation.Tower
             }
 
             _structureObjects.Clear();
+            _authoredObjects.Clear();
             _renderedFloorCount = 0;
+        }
+
+        private void Adopt(string name)
+        {
+            var child = _parent.Find(name);
+            if (child == null) return;
+            _structureObjects.Add(child.gameObject);
+            _authoredObjects.Add(child.gameObject);
         }
 
         private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size)

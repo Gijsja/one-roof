@@ -12,6 +12,41 @@ namespace OneRoof.Tests.PlayMode
     public sealed class GoldenExpansionPlayModeTests
     {
         [UnityTest]
+        public IEnumerator BuildMode_FloorSlabPreviewAndConfirmation_ExtendsTheRenderedTower()
+        {
+            var holder = new GameObject("Floor Slab Interaction Tower");
+            try
+            {
+                var controller = holder.AddComponent<TowerPlayableController>();
+                yield return null;
+
+                var nextFloor = controller.SimulationSession.FloorCount;
+                controller.ModeSession.SelectBuildTool("floor:slab");
+                controller.ModeSession.SetPlacementTarget(nextFloor, 0);
+
+                Assert.That(controller.GridPlacement.ValidatePlacement("floor:slab", nextFloor, 0, out var reason), Is.True, reason);
+                Assert.That(controller.GridPlacement.TryGetToolPlacementBounds("floor:slab", nextFloor, 0, out var bounds), Is.True);
+                controller.GhostPresenter.ShowGhost(
+                    controller.GridPlacement.CellToWorld(nextFloor, bounds.MinX, bounds.Width),
+                    new Vector2(bounds.Width * controller.GridPlacement.CellWidth, controller.GridPlacement.FloorHeight * 0.9f),
+                    isValid: true);
+                Assert.That(controller.GhostPresenter.IsVisible, Is.True);
+
+                Assert.That(controller.GridPlacement.TryExecutePlacement("floor:slab", nextFloor, 0, out var result), Is.True);
+                Assert.That(result.Accepted, Is.True);
+                Assert.That(controller.SimulationSession.Topology.FloorSlabs.ContainsKey(nextFloor), Is.True);
+                Assert.That(controller.StructurePresenter.RenderedFloorCount, Is.EqualTo(nextFloor + 1));
+                Assert.That(holder.transform.Find($"Floor Slab {nextFloor}"), Is.Not.Null);
+            }
+            finally
+            {
+                Object.Destroy(holder);
+                var camera = GameObject.Find("Tower Camera");
+                if (camera != null) Object.Destroy(camera);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator GoldenExpansionPlayMode_FullLifecycle_ExpandsTowerAndIntervenes()
         {
             var holder = new GameObject("Test_PlayMode_Tower");

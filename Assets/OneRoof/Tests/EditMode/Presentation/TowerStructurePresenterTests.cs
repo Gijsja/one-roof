@@ -39,6 +39,25 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Initialize_AdoptsContiguousAuthoredFloorSlabs()
+        {
+            Object.DestroyImmediate(_holder);
+            _holder = new GameObject("Authored Structure Holder");
+            for (var floor = 0; floor < 2; floor++)
+            {
+                new GameObject($"Floor Slab {floor}").transform.SetParent(_holder.transform, false);
+                new GameObject($"Floor Line L {floor}").transform.SetParent(_holder.transform, false);
+                new GameObject($"Floor Line R {floor}").transform.SetParent(_holder.transform, false);
+            }
+            _presenter.Initialize(_holder.transform, _material, _colorBlock);
+
+            Assert.That(_presenter.RenderedFloorCount, Is.EqualTo(2));
+            _presenter.EnsureFloorViews(null);
+            Assert.That(_holder.transform.Find("Floor Slab 0"), Is.Not.Null);
+            Assert.That(_holder.transform.childCount, Is.EqualTo(15));
+        }
+
+        [Test]
         public void FloorY_ComputesDeterministicHeights()
         {
             var y0 = TowerStructurePresenter.FloorY(0);

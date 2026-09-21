@@ -23,6 +23,7 @@ namespace OneRoof.Presentation.Tower
         private readonly List<GameObject> _roomObjects = new List<GameObject>();
         private readonly Dictionary<EntityId, GameObject> _roomRoots = new Dictionary<EntityId, GameObject>();
         private readonly Dictionary<EntityId, RoomFurnishingPresenter> _furnishings = new Dictionary<EntityId, RoomFurnishingPresenter>();
+        private readonly HashSet<EntityId> _authoredRoomIds = new HashSet<EntityId>();
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
 
@@ -92,6 +93,7 @@ namespace OneRoof.Presentation.Tower
             _renderedRoomIds.Clear();
             _roomObjects.Clear();
             _roomRoots.Clear();
+            _authoredRoomIds.Clear();
         }
 
         public void EnsureRoomViews(BuildingTopologyState topology)
@@ -144,6 +146,17 @@ namespace OneRoof.Presentation.Tower
                 if (contentTypeStr.Equals("transit:elevator_shaft") || contentTypeStr.Equals("elevator_shaft"))
                 {
                     continue; // shaft rendered via ElevatorBankPresenter
+                }
+
+                var authoredRoot = _parent != null ? _parent.Find($"RoomView_{room.Id}") : null;
+                if (authoredRoot != null)
+                {
+                    _roomRoots[room.Id] = authoredRoot.gameObject;
+                    _roomObjects.Add(authoredRoot.gameObject);
+                    _authoredRoomIds.Add(room.Id);
+                    var authoredFurnishings = authoredRoot.GetComponent<RoomFurnishingPresenter>();
+                    if (authoredFurnishings != null) _furnishings[room.Id] = authoredFurnishings;
+                    continue;
                 }
 
                 var worldLeft = -2.4f + room.Bounds.MinX * 0.5f;
@@ -226,7 +239,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _roomObjects.Count; i++)
             {
                 var go = _roomObjects[i];
-                if (go != null)
+                if (go != null && !_authoredRoomIds.Contains(GetRoomId(go.name)))
                 {
                     if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(go);
                     else UnityEngine.Object.DestroyImmediate(go);
@@ -237,6 +250,13 @@ namespace OneRoof.Presentation.Tower
             _roomRoots.Clear();
             _furnishings.Clear();
             _renderedRoomIds.Clear();
+            _authoredRoomIds.Clear();
+        }
+
+        private static EntityId GetRoomId(string name)
+        {
+            return name.StartsWith("RoomView_") && int.TryParse(name.Substring("RoomView_".Length), out var value)
+                ? new EntityId(value) : default;
         }
 
         public bool TryGetInteractionDock(Room room, InteractionPointKind kind, int slot, out Vector3 worldPosition)

@@ -25,6 +25,7 @@ namespace OneRoof.Presentation.Tower
 
         private readonly List<MeshRenderer> _elevatorViews = new List<MeshRenderer>();
         private readonly List<GameObject> _shaftObjects = new List<GameObject>();
+        private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
 
         public IReadOnlyList<MeshRenderer> ElevatorViews => _elevatorViews;
         public int RenderedShaftFloorCount => _renderedShaftFloorCount;
@@ -77,7 +78,25 @@ namespace OneRoof.Presentation.Tower
             _renderedShaftFloorCount = 0;
             _renderedMinFloor = 0;
             _renderedMaxFloor = 0;
-            CleanupOrphanedObjects();
+            _shaftObjects.Clear();
+            _elevatorViews.Clear();
+            _authoredObjects.Clear();
+            _shaftCavity = Adopt("Elevator Shaft Cavity");
+            _shaftRailLeft = Adopt("Shaft Rail Left");
+            _shaftRailRight = Adopt("Shaft Rail Right");
+            _shaftColumnLeft = Adopt("Shaft Column Left");
+            _shaftColumnRight = Adopt("Shaft Column Right");
+            _shaftPenthouse = Adopt("Shaft Penthouse Cap");
+            _shaftPitBuffer = Adopt("Shaft Pit Buffer");
+            for (var index = 0; _parent != null; index++)
+            {
+                var child = _parent.Find($"Elevator Car {index}");
+                if (child == null) break;
+                var renderer = child.GetComponent<MeshRenderer>();
+                if (renderer == null) break;
+                _elevatorViews.Add(renderer);
+                _authoredObjects.Add(child.gameObject);
+            }
         }
 
         public void EnsureShaftViews(int floorCount) => EnsureShaftViews(0, Mathf.Max(0, floorCount - 1));
@@ -199,7 +218,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _shaftObjects.Count; i++)
             {
                 var go = _shaftObjects[i];
-                if (go != null)
+                if (go != null && !_authoredObjects.Contains(go))
                 {
                     if (UnityEngine.Application.isPlaying) Object.Destroy(go);
                     else Object.DestroyImmediate(go);
@@ -210,15 +229,13 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _elevatorViews.Count; i++)
             {
                 var view = _elevatorViews[i];
-                if (view != null)
+                if (view != null && !_authoredObjects.Contains(view.gameObject))
                 {
                     if (UnityEngine.Application.isPlaying) Object.Destroy(view.gameObject);
                     else Object.DestroyImmediate(view.gameObject);
                 }
             }
             _elevatorViews.Clear();
-
-            CleanupOrphanedObjects();
 
             _shaftCavity = null;
             _shaftRailLeft = null;
@@ -230,6 +247,7 @@ namespace OneRoof.Presentation.Tower
             _renderedShaftFloorCount = 0;
             _renderedMinFloor = 0;
             _renderedMaxFloor = 0;
+            _authoredObjects.Clear();
         }
 
         private void CleanupOrphanedObjects()
@@ -297,6 +315,15 @@ namespace OneRoof.Presentation.Tower
                 _colorBlock.SetColor("_Color", color);
                 renderer.SetPropertyBlock(_colorBlock);
             }
+        }
+
+        private GameObject Adopt(string name)
+        {
+            var child = _parent != null ? _parent.Find(name) : null;
+            if (child == null) return null;
+            _shaftObjects.Add(child.gameObject);
+            _authoredObjects.Add(child.gameObject);
+            return child.gameObject;
         }
     }
 }

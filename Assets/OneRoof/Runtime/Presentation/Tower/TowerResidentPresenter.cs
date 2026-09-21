@@ -21,6 +21,7 @@ namespace OneRoof.Presentation.Tower
         private readonly List<Renderer> _residentViews = new List<Renderer>();
         private readonly List<NpcSkeletalHierarchy> _residentSkeletons = new List<NpcSkeletalHierarchy>();
         private readonly List<GameObject> _residentObjects = new List<GameObject>();
+        private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
@@ -85,6 +86,18 @@ namespace OneRoof.Presentation.Tower
             _residentViews.Clear();
             _residentSkeletons.Clear();
             _residentObjects.Clear();
+            _authoredObjects.Clear();
+            for (var index = 1; _parent != null; index++)
+            {
+                var child = _parent.Find($"Resident View {index}");
+                if (child == null) break;
+                var skeletal = child.GetComponent<NpcSkeletalHierarchy>();
+                if (skeletal == null || skeletal.MainRenderer == null) break;
+                _residentViews.Add(skeletal.MainRenderer);
+                _residentSkeletons.Add(skeletal);
+                _residentObjects.Add(child.gameObject);
+                _authoredObjects.Add(child.gameObject);
+            }
         }
 
         public void EnsureResidentViews(int targetCount)
@@ -266,7 +279,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _residentObjects.Count; i++)
             {
                 var go = _residentObjects[i];
-                if (go != null)
+                if (go != null && !_authoredObjects.Contains(go))
                 {
                     if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(go);
                     else UnityEngine.Object.DestroyImmediate(go);
@@ -276,6 +289,7 @@ namespace OneRoof.Presentation.Tower
             _residentObjects.Clear();
             _residentViews.Clear();
             _residentSkeletons.Clear();
+            _authoredObjects.Clear();
         }
 
         private static int FindPassengerElevator(TowerProjection snapshot, int residentId)
