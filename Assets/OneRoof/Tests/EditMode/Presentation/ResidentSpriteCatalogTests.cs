@@ -64,6 +64,11 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(skeletal.Head, Is.Not.Null);
                 Assert.That(skeletal.Bones.Count, Is.EqualTo(17));
                 Assert.That(skeletal.WardrobeSlots.Count, Is.EqualTo(8));
+                Assert.That(skeletal.LimbRenderers.Count, Is.EqualTo(10));
+                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneArmUpperL].transform.parent,
+                    Is.SameAs(skeletal.Bones[NpcRigDefinition.BoneArmUpperL]));
+                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegUpperR].transform.parent,
+                    Is.SameAs(skeletal.Bones[NpcRigDefinition.BoneLegUpperR]));
                 Assert.That(skeletal.Wardrobe, Is.Not.Null);
 
                 Assert.That(skeletal.MainRenderer, Is.Not.Null);
