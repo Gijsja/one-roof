@@ -80,7 +80,6 @@ namespace OneRoof.Presentation.Tests.EditMode
         [TestCase(1)]
         [TestCase(2)]
         [TestCase(3)]
-        [TestCase(4)]
         public void CalculateCarLayout_KeepsAllCarsInsideShaftBoundary(int carCount)
         {
             const float shaftInternalLeft = -2.36f;

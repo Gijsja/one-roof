@@ -13,7 +13,7 @@ namespace OneRoof.Application.Prediction
     public sealed class ElevatorPlacementPredictor
     {
         public const int DefaultElevatorCost = 2500;
-        public const int MaxCarsPerBank = 4;
+        public const int MaxCarsPerBank = ElevatorBank.MaxCarsPerBank;
         public const int StandardCarCapacity = 8;
 
         public ElevatorPlacementPreviewProjection PredictAddition(ElevatorBankCongestionProjection currentCongestion)

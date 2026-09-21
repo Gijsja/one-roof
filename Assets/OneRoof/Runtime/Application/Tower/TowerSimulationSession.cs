@@ -50,10 +50,14 @@ namespace OneRoof.Application.Tower
             _cachedTransitProjection = null;
         }
 
-        public void AddCapacity()
+        public CommandResult AddCapacity()
         {
-            _simulation.AddElevatorCar();
-            _cachedTransitProjection = null;
+            var result = _simulation.AddElevatorCar();
+            if (result.Accepted)
+            {
+                _cachedTransitProjection = null;
+            }
+            return result;
         }
 
         public CommandResult CanExecute(ICommand command) => _simulation.CanExecute(command);

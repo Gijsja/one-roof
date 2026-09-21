@@ -27,7 +27,42 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(presenter.FootstepFoley.transform.position.y, Is.EqualTo(TowerStructurePresenter.FloorY(2) - 0.58f).Within(0.001f));
                 Assert.That(presenter.ElevatorFoley.clip, Is.Not.Null);
             }
-            finally { Object.DestroyImmediate(root); }
+            finally
+            {
+                root.GetComponent<TowerAtmospherePresenter>()?.Clear();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void UpdateSoundscape_NonTransitRooms_CreateVisibleTransparentWindowLightCones()
+        {
+            var root = new GameObject("Window Light Test");
+            try
+            {
+                var presenter = root.AddComponent<TowerAtmospherePresenter>();
+                var session = new TowerSimulationSession();
+                presenter.UpdateSoundscape(new TowerProjection(0, 0, 0, 0f,
+                    new List<TransitResidentProjection>(), new List<ElevatorProjection>()), session.Topology);
+
+                var expectedRoomCount = 0;
+                foreach (var room in session.Topology.Rooms.Values)
+                    if (!room.ContentType.Value.Contains("elevator_shaft")) expectedRoomCount++;
+
+                Assert.That(presenter.WindowLightCount, Is.EqualTo(expectedRoomCount));
+                foreach (var renderer in presenter.WindowLightRenderers)
+                {
+                    Assert.That(renderer, Is.Not.Null);
+                    Assert.That(renderer.transform.position.z, Is.LessThan(0.7f));
+                    Assert.That(renderer.sharedMaterial.GetTag("RenderType", false), Is.EqualTo("Transparent"));
+                    Assert.That(renderer.sharedMaterial.renderQueue, Is.EqualTo((int)UnityEngine.Rendering.RenderQueue.Transparent));
+                }
+            }
+            finally
+            {
+                root.GetComponent<TowerAtmospherePresenter>()?.Clear();
+                Object.DestroyImmediate(root);
+            }
         }
     }
 }

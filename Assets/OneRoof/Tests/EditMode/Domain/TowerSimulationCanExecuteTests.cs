@@ -114,7 +114,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void CanExecute_AddElevatorCar_ExceedingMax_Rejected()
         {
-            // Standard tower has 1 car. Add cars up to MaxCarsPerBank (4).
+            // Standard tower has 1 car. Add cars up to the three-car bank maximum.
             while (_sim.ElevatorBank.Cars.Count < ElevatorBank.MaxCarsPerBank)
             {
                 _sim.AddElevatorCar();
@@ -125,6 +125,24 @@ namespace OneRoof.Domain.Tests.EditMode
 
             Assert.That(result.Accepted, Is.False);
             Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("transit:max_cars")));
+        }
+
+        [Test]
+        public void AddElevatorCar_AtThreeCarLimit_RejectsWithoutChangingBankOrTreasury()
+        {
+            while (_sim.ElevatorBank.Cars.Count < ElevatorBank.MaxCarsPerBank)
+            {
+                Assert.That(_sim.AddElevatorCar().Accepted, Is.True);
+            }
+
+            var carsBefore = _sim.ElevatorBank.Cars.Count;
+            var cashBefore = _sim.Economy.CashBalance;
+            var result = _sim.AddElevatorCar();
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("transit:max_cars")));
+            Assert.That(_sim.ElevatorBank.Cars.Count, Is.EqualTo(carsBefore));
+            Assert.That(_sim.Economy.CashBalance, Is.EqualTo(cashBefore));
         }
 
         [Test]

@@ -19,7 +19,9 @@ namespace OneRoof.Presentation.Tower
     {
         private readonly Dictionary<EntityId, AudioSource> _roomTones = new Dictionary<EntityId, AudioSource>();
         private readonly List<GameObject> _windowVolumes = new List<GameObject>();
+        private readonly List<MeshRenderer> _windowLightRenderers = new List<MeshRenderer>();
         private readonly List<Material> _windowMaterials = new List<Material>();
+        private readonly List<Mesh> _generatedMeshes = new List<Mesh>();
         private readonly List<AudioClip> _generatedClips = new List<AudioClip>();
         private readonly Dictionary<int, int> _lastElevatorFloor = new Dictionary<int, int>();
 
@@ -31,9 +33,12 @@ namespace OneRoof.Presentation.Tower
 
         public int RoomToneSourceCount => _roomTones.Count;
         public int WindowLightCount => _windowVolumes.Count;
+        public IReadOnlyList<MeshRenderer> WindowLightRenderers => _windowLightRenderers;
         public int LastFootstepResidentId { get; private set; } = -1;
         public AudioSource ElevatorFoley => _elevatorFoley;
         public AudioSource FootstepFoley => _footstepFoley;
+
+        private void OnDestroy() => Clear();
 
         public void Initialize()
         {
@@ -62,8 +67,11 @@ namespace OneRoof.Presentation.Tower
             _roomTones.Clear();
             foreach (var volume in _windowVolumes) DestroyUnityObject(volume);
             _windowVolumes.Clear();
+            _windowLightRenderers.Clear();
             foreach (var material in _windowMaterials) DestroyUnityObject(material);
             _windowMaterials.Clear();
+            foreach (var mesh in _generatedMeshes) DestroyUnityObject(mesh);
+            _generatedMeshes.Clear();
             DestroyUnityObject(_elevatorFoley != null ? _elevatorFoley.gameObject : null);
             DestroyUnityObject(_footstepFoley != null ? _footstepFoley.gameObject : null);
             _elevatorFoley = null;
@@ -137,20 +145,22 @@ namespace OneRoof.Presentation.Tower
 
         private void CreateWindowVolume(Room room)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            var go = new GameObject($"Volumetric Window Light {room.Id}");
             go.name = $"Volumetric Window Light {room.Id}";
             go.transform.SetParent(transform, false);
-            var center = RoomCenter(room, 0.76f);
-            go.transform.position = center;
-            go.transform.localScale = new Vector3(Mathf.Min(1.1f, room.Bounds.Width * 0.32f), 0.42f, 1f);
-            var collider = go.GetComponent<Collider>();
-            if (collider != null) DestroyUnityObject(collider);
-            var renderer = go.GetComponent<MeshRenderer>();
+            // The camera looks along +Z. Keep the cone in front of the backdrop
+            // (z=0.7) so its transparent light cannot be hidden by room geometry.
+            go.transform.position = new Vector3(0f, 0f, 0.18f);
+            var mesh = CreateWindowLightCone(room);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
             if (shader == null) throw new MissingReferenceException("No unlit shader found for window-light volume.");
             var material = new Material(shader);
             material.color = new Color(1f, 0.77f, 0.36f, 0.34f);
             material.SetOverrideTag("RenderType", "Transparent");
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
             material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
             material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             material.SetInt("_ZWrite", 0);
@@ -158,6 +168,31 @@ namespace OneRoof.Presentation.Tower
             renderer.sharedMaterial = material;
             _windowMaterials.Add(material);
             _windowVolumes.Add(go);
+            _windowLightRenderers.Add(renderer);
+            _generatedMeshes.Add(mesh);
+        }
+
+        private static Mesh CreateWindowLightCone(Room room)
+        {
+            var worldLeft = -2.4f + room.Bounds.MinX * 0.5f;
+            var worldRight = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+            var centerY = TowerStructurePresenter.FloorY(room.Floor);
+            var isWestSide = (worldLeft + worldRight) * 0.5f < -1.9f;
+            var windowX = isWestSide ? worldLeft + 0.55f : worldRight - 0.55f;
+            var inwardDirection = isWestSide ? 1f : -1f;
+            var depth = Mathf.Min(1.25f, room.Bounds.Width * 0.22f);
+
+            var mesh = new Mesh { name = $"WindowLightCone_{room.Id}" };
+            mesh.vertices = new[]
+            {
+                new Vector3(windowX - 0.20f, centerY + 0.22f, 0f),
+                new Vector3(windowX + 0.20f, centerY + 0.22f, 0f),
+                new Vector3(windowX + inwardDirection * depth + 0.62f, centerY - 0.56f, 0f),
+                new Vector3(windowX + inwardDirection * depth - 0.62f, centerY - 0.56f, 0f)
+            };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            return mesh;
         }
 
         private AudioSource CreateSpatialSource(string name, float volume, float maxDistance)

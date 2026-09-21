@@ -9,7 +9,9 @@ namespace OneRoof.Domain.Transit
 {
     public sealed class ElevatorBank
     {
-        public const int MaxCarsPerBank = 4;
+        // The current shaft art has room for three legible cars. Keep this at the
+        // domain boundary so commands, saves, predictions, and presentation agree.
+        public const int MaxCarsPerBank = 3;
 
         private readonly List<ElevatorCar> _cars;
         private readonly Dictionary<int, Queue<ElevatorPassenger>> _floorQueues;
@@ -27,6 +29,10 @@ namespace OneRoof.Domain.Transit
             MinFloor = minFloor;
             MaxFloor = maxFloor;
             _cars = new List<ElevatorCar>(cars ?? Array.Empty<ElevatorCar>());
+            if (_cars.Count > MaxCarsPerBank)
+            {
+                throw new ArgumentException($"An elevator bank cannot contain more than {MaxCarsPerBank} cars.", nameof(cars));
+            }
             _floorQueues = new Dictionary<int, Queue<ElevatorPassenger>>();
             _deliveredPassengers = new List<ElevatorPassenger>();
 
@@ -129,6 +135,11 @@ namespace OneRoof.Domain.Transit
             if (car == null)
             {
                 throw new ArgumentNullException(nameof(car));
+            }
+
+            if (_cars.Count >= MaxCarsPerBank)
+            {
+                throw new InvalidOperationException($"An elevator bank cannot contain more than {MaxCarsPerBank} cars.");
             }
 
             _cars.Add(car);

@@ -302,7 +302,7 @@ namespace OneRoof.Domain
                 {
                     var canExec = CanExecute(carCmd);
                     if (!canExec.Accepted) return canExec;
-                    AddElevatorCar(carCmd.Capacity, carCmd.StartingFloor);
+                    AddElevatorCarUnchecked(carCmd.Capacity, carCmd.StartingFloor);
                     return CommandResult.Success();
                 }
                 default:
@@ -422,7 +422,12 @@ namespace OneRoof.Domain
             return fallbackResult;
         }
 
-        public void AddElevatorCar(int capacity = 10, int startingFloor = 0)
+        public CommandResult AddElevatorCar(int capacity = 10, int startingFloor = 0)
+        {
+            return ExecuteCommand(new AddElevatorCarCommand(capacity, startingFloor));
+        }
+
+        private void AddElevatorCarUnchecked(int capacity, int startingFloor)
         {
             var carId = new EntityId(_nextElevatorCarId++);
             var car = new ElevatorCar(carId, startingFloor, capacity);

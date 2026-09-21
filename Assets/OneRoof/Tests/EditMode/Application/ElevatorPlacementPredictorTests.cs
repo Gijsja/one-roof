@@ -10,6 +10,13 @@ namespace OneRoof.Application.Tests.EditMode
     public sealed class ElevatorPlacementPredictorTests
     {
         [Test]
+        public void MaxCarsPerBank_MatchesTheDomainThreeCarShaftLimit()
+        {
+            Assert.That(ElevatorPlacementPredictor.MaxCarsPerBank, Is.EqualTo(3));
+            Assert.That(ElevatorPlacementPredictor.MaxCarsPerBank, Is.EqualTo(ElevatorBank.MaxCarsPerBank));
+        }
+
+        [Test]
         public void PredictAddition_SingleCarCongestedScenario_PredictsSignificantWaitReduction()
         {
             var scenario = new CongestedElevatorScenario(carCount: 1);

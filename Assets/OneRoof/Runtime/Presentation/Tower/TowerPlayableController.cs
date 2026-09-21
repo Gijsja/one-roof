@@ -181,7 +181,12 @@ namespace OneRoof.Presentation.Tower
         }
         private void UpdatePlacementCard() => _placementCard.SetPreview(_predictor.PredictAddition(_sim.CongestionProjection()), OnConfirmElevatorPlacement);
         public void ShowPlacementPreview() { if (_mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build); if (_mode.Projection().SelectedBuildTool != "transit:elevator_car") _mode.SelectBuildTool("transit:elevator_car"); UpdatePlacementCard(); }
-        public void OnConfirmElevatorPlacement() { _sim.AddCapacity(); _placementCard.Close(); _elevator.EnsureElevatorViews(_sim.ElevatorBank.Cars.Count); }
+        public void OnConfirmElevatorPlacement()
+        {
+            var result = _sim.AddCapacity();
+            _placementCard.Close();
+            if (result.Accepted) _elevator.EnsureElevatorViews(_sim.ElevatorBank.Cars.Count);
+        }
 
         public void ResetCommuteSimulation()
         {

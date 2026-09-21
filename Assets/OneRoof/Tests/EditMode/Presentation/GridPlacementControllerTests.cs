@@ -145,8 +145,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void ValidatePlacement_RejectsElevatorCar_WhenBankAtMaxCapacity()
         {
-            // Initial fixture has 1 car; add 3 more to reach 4 (MaxCarsPerBank)
-            _session.AddCapacity();
+            // Initial fixture has 1 car; add 2 more to reach the three-car maximum.
             _session.AddCapacity();
             _session.AddCapacity();
 

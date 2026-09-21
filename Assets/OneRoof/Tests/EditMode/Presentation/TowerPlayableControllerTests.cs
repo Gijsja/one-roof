@@ -186,6 +186,23 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void OnConfirmElevatorPlacement_AtThreeCarLimit_DoesNotAddAClippingFourthCar()
+        {
+            Assert.That(_controller.TransitSession.AddCapacity().Accepted, Is.True);
+            Assert.That(_controller.TransitSession.AddCapacity().Accepted, Is.True);
+            Assert.That(_controller.TransitSession.Projection().Elevators.Count, Is.EqualTo(3));
+
+            _controller.ShowPlacementPreview();
+            var placement = _holder.GetComponent<PlacementPreviewCardView>();
+            Assert.That(placement.CurrentProjection.IsValid, Is.False);
+
+            _controller.OnConfirmElevatorPlacement();
+
+            Assert.That(_controller.TransitSession.Projection().Elevators.Count, Is.EqualTo(3));
+            Assert.That(placement.IsOpen, Is.False);
+        }
+
+        [Test]
         public void ResetCommuteSimulation_ResetsStateAndClosesCards()
         {
             _controller.InspectBottleneck();
