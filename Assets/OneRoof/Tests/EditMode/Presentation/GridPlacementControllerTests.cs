@@ -218,6 +218,43 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void GroundExpansionTool_ExpandsGroundSlabOnHoveredSide()
+        {
+            Assert.That(_session.Topology.TryGetFloorSlab(0, out var ground), Is.True);
+            var floor = _gridPlacement.ResolvePlacementFloor("floor:ground_expansion", hoveredFloor: 4);
+
+            var success = _gridPlacement.TryExecutePlacement("floor:ground_expansion", floor, ground.MaxX + 4, out var result);
+
+            Assert.That(success, Is.True, result.Rejections.Count > 0 ? result.Rejections[0].Message : "Ground expansion was rejected.");
+            Assert.That(_session.Topology.TryGetFloorSlab(0, out var expanded), Is.True);
+            Assert.That(expanded.MaxX, Is.EqualTo(ground.MaxX + GridPlacementController.GroundSlabExpansionWidth));
+        }
+
+        [Test]
+        public void ResolvePlacementFloor_ElevatorShaftPrefersHoveredFloorAndFallsBackToNewest()
+        {
+            _gridPlacement.TryExecutePlacement("floor:slab", _session.FloorCount, 0, out _);
+            var newestFloor = _session.FloorCount - 1;
+
+            // Hovering the overview above the tower still targets the newest floor
+            // for the common top-extension case.
+            var extensionFloor = _gridPlacement.ResolvePlacementFloor("transit:elevator_shaft", hoveredFloor: 99);
+            Assert.That(extensionFloor, Is.EqualTo(newestFloor));
+
+            var success = _gridPlacement.TryExecutePlacement("transit:elevator_shaft", extensionFloor, 0, out var result);
+            Assert.That(success, Is.True, result.Rejections.Count > 0 ? result.Rejections[0].Message : "Shaft extension was rejected.");
+            Assert.That(result.Accepted, Is.True);
+
+            // Hovering an in-range lower floor keeps player control there; the
+            // span is already fully built, so it rejects as a duplicate instead
+            // of charging for zero new construction.
+            var hoveredFloor = _gridPlacement.ResolvePlacementFloor("transit:elevator_shaft", hoveredFloor: 1);
+            Assert.That(hoveredFloor, Is.EqualTo(1));
+            Assert.That(_gridPlacement.TryExecutePlacement("transit:elevator_shaft", hoveredFloor, 0, out var duplicate), Is.False);
+            Assert.That(duplicate.Rejections[0].Code.Value, Does.Contain("shaft_exists"));
+        }
+
+        [Test]
         public void TryGetToolPlacementBounds_SnapsShaftToCentralColumn()
         {
             var hasBounds = _gridPlacement.TryGetToolPlacementBounds("transit:elevator_shaft", floor: 2, cellX: 1, out var bounds);
@@ -300,6 +337,26 @@ namespace OneRoof.Presentation.Tests.EditMode
             // Center of screen (world area)
             var centerScreenPos = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
             Assert.That(GridPlacementController.IsPointerOverUI(centerScreenPos), Is.False);
+        }
+
+        [Test]
+        public void IsPointerOverUI_ProtectsEveryBuildPaletteRow()
+        {
+            // Input coordinates originate at the lower-left; the upper palette row
+            // therefore has a larger Y than the mode bar below it.
+            var upperPaletteRow = new Vector3(100f, 330f, 0f);
+            var lowerPaletteRow = new Vector3(100f, 90f, 0f);
+
+            Assert.That(GridPlacementController.IsPointerOverUI(upperPaletteRow), Is.True);
+            Assert.That(GridPlacementController.IsPointerOverUI(lowerPaletteRow), Is.True);
+        }
+
+        [Test]
+        public void IsPointerOverUI_DoesNotReservePaletteAreaAfterToolSelection()
+        {
+            var palettePosition = new Vector3(100f, 330f, 0f);
+
+            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false), Is.False);
         }
 
         [Test]
@@ -398,6 +455,19 @@ namespace OneRoof.Presentation.Tests.EditMode
                 }
             }
             Assert.That(hasStairF0, Is.True, "Expected amenity:stairwell room on floor 0");
+        }
+
+        [Test]
+        public void StairwellTool_SnapsToAnOpenSharedSpanWhenHoveredCellsAreOccupied()
+        {
+            _gridPlacement.TryExecutePlacement("floor:slab", _session.FloorCount, 0, out _);
+            var topFloor = _session.FloorCount - 1;
+
+            var resolvedCell = _gridPlacement.ResolvePlacementCell("transit:stairwell", topFloor, hoveredCellX: 0);
+
+            Assert.That(resolvedCell, Is.Not.EqualTo(0));
+            Assert.That(_gridPlacement.TryExecutePlacement("transit:stairwell", topFloor, resolvedCell, out var result), Is.True);
+            Assert.That(result.Accepted, Is.True);
         }
 
         [Test]

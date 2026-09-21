@@ -78,9 +78,34 @@ namespace OneRoof.Domain.Economy
             TotalRevenue += amount;
         }
 
+        /// <summary>
+        /// Reverses a previous <see cref="TryDeduct"/> (e.g. command validation passed but
+        /// topology execution failed). Restores the ledger without polluting revenue.
+        /// </summary>
+        public void RefundExpense(long amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "Refund amount cannot be negative.");
+            }
+
+            if (amount == 0) return;
+            if (!SandboxMode)
+            {
+                CashBalance += amount;
+            }
+
+            TotalExpenses = Math.Max(0, TotalExpenses - amount);
+        }
+
         public int CalculateFloorSlabCost(CellBounds bounds)
         {
             return bounds.Width * CostPerSlabCell;
+        }
+
+        public int CalculateGroundSlabExpansionCost(CellBounds existingBounds, CellBounds expandedBounds)
+        {
+            return Math.Max(0, expandedBounds.Width - existingBounds.Width) * CostPerSlabCell;
         }
 
         public int CalculateRoomCost(ContentId contentType, CellBounds bounds)

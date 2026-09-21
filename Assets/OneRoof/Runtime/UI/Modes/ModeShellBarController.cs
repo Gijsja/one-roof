@@ -91,17 +91,26 @@ namespace OneRoof.UI.Modes
 
         public void OnBuildModeRequested()
         {
-            if (Session.CurrentMode != InteractionMode.Build)
+            if (Session.CurrentMode == InteractionMode.Build)
             {
                 if (string.IsNullOrEmpty(Session.Projection().SelectedBuildTool))
                 {
-                    Session.SelectBuildTool("residential:apartment");
+                    // Palette is already open; a second press exits Build mode so
+                    // the button toggles instead of trapping the player in Build.
+                    Session.SwitchMode(InteractionMode.Inspect);
+                    return;
                 }
-                else
-                {
-                    Session.SwitchMode(InteractionMode.Build);
-                }
+
+                // Build is also the palette toggle. Reopen it without cancelling the
+                // mode so a player can choose a different tool after a placement.
+                Session.SelectBuildTool(null);
+                return;
             }
+
+            // Do not preselect a room: the player must first see and choose from the
+            // complete build list. Once chosen, the palette closes to free the tower
+            // viewport for placement.
+            Session.SwitchMode(InteractionMode.Build);
         }
 
         private void OnGUI()
@@ -110,8 +119,9 @@ namespace OneRoof.UI.Modes
 
             var projection = CurrentProjection;
 
-            // Draw Build Palette above mode bar when in Build mode
-            if (projection.IsBuildMode)
+            // Keep the world clickable after selecting a tool. The palette is a
+            // chooser, not a permanent overlay; right-click or Build reopens it.
+            if (projection.IsBuildMode && string.IsNullOrEmpty(projection.SelectedBuildTool))
             {
                 DrawBuildPalette(projection);
             }
@@ -142,23 +152,24 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Studio Apt\n$1.5k (6c)", "residential:apartment", projection.SelectedBuildTool == "residential:apartment");
             DrawToolButton("Office\n$2.8k (8c)", "commercial:office", projection.SelectedBuildTool == "commercial:office");
             DrawToolButton("Diner\n$3.5k (10c)", "commercial:diner", projection.SelectedBuildTool == "commercial:diner");
-            DrawToolButton("Floor Slab\n$3.1k (31c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
+            DrawToolButton("New Floor\n$3.1k (31c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
 
             // Row 2: Services
             GUILayout.BeginHorizontal();
+            DrawToolButton("Ground Expand\n$600 (6c)", "floor:ground_expansion", projection.SelectedBuildTool == "floor:ground_expansion");
             DrawToolButton("Retail Shop\n$2.1k (6c)", "commercial:retail", projection.SelectedBuildTool == "commercial:retail");
             DrawToolButton("Clinic\n$1.2k (8c)", "service:clinic", projection.SelectedBuildTool == "service:clinic");
             DrawToolButton("Workshop\n$1.2k (8c)", "service:maintenance_workshop", projection.SelectedBuildTool == "service:maintenance_workshop");
-            DrawToolButton("Security\n$900 (6c)", "service:security_station", projection.SelectedBuildTool == "service:security_station");
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
 
             // Row 3: Physical utilities
             GUILayout.BeginHorizontal();
+            DrawToolButton("Security\n$900 (6c)", "service:security_station", projection.SelectedBuildTool == "service:security_station");
             DrawToolButton("Substation\n$1.6k (4c)", "utility:electrical_substation", projection.SelectedBuildTool == "utility:electrical_substation");
             DrawToolButton("Riser Duct\n$800 (2c)", "utility:electrical_riser", projection.SelectedBuildTool == "utility:electrical_riser");
             DrawToolButton("Transformer\n$800 (2c)", "utility:floor_transformer", projection.SelectedBuildTool == "utility:floor_transformer");

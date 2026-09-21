@@ -59,7 +59,7 @@ namespace OneRoof.UI.Tests.EditMode
         }
 
         [Test]
-        public void Controller_OnBuildModeRequested_AutoSelectsApartmentWhenNoToolSelected()
+        public void Controller_OnBuildModeRequested_OpensPaletteWithoutPreselectingTool()
         {
             Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
             Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
@@ -67,11 +67,11 @@ namespace OneRoof.UI.Tests.EditMode
             _controller.OnBuildModeRequested();
 
             Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Build));
-            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("residential:apartment"));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
         }
 
         [Test]
-        public void Controller_OnBuildModeRequested_PreservesExistingToolSelection()
+        public void Controller_OnBuildModeRequested_ReopensPaletteByClearingExistingToolSelection()
         {
             _controller.Session.SelectBuildTool("commercial:diner");
             Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("commercial:diner"));
@@ -79,7 +79,19 @@ namespace OneRoof.UI.Tests.EditMode
             _controller.OnBuildModeRequested();
 
             Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Build));
-            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.EqualTo("commercial:diner"));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
+        }
+
+        [Test]
+        public void Controller_OnBuildModeRequested_ExitsBuildWhenPaletteAlreadyOpen()
+        {
+            _controller.OnBuildModeRequested();
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Build));
+            Assert.That(_controller.CurrentProjection.SelectedBuildTool, Is.Null);
+
+            _controller.OnBuildModeRequested();
+
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
         }
     }
 }

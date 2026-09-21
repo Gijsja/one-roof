@@ -87,12 +87,31 @@ namespace OneRoof.Presentation.Tower
             _residentSkeletons.Clear();
             _residentObjects.Clear();
             _authoredObjects.Clear();
-            for (var index = 1; _parent != null; index++)
+            // Tolerate gaps and unrigged children: skip instead of breaking so
+            // one unprepared child cannot orphan every higher-index resident.
+            // Cap consecutive misses to avoid unbounded hierarchy scans.
+            var consecutiveMisses = 0;
+            for (var index = 1; _parent != null && consecutiveMisses < 4 && index <= 256; index++)
             {
                 var child = _parent.Find($"Resident View {index}");
-                if (child == null) break;
+                if (child == null)
+                {
+                    consecutiveMisses++;
+                    continue;
+                }
                 var skeletal = child.GetComponent<NpcSkeletalHierarchy>();
-                if (skeletal == null || skeletal.MainRenderer == null) break;
+                if (skeletal == null || skeletal.MainRenderer == null)
+                {
+                    consecutiveMisses++;
+                    continue;
+                }
+                consecutiveMisses = 0;
+
+                // Scene-authored residents can carry the pre-rig composite sprite
+                // from an earlier presentation pass. Reapply the canonical skeletal
+                // setup so that composite is disabled and only current wardrobe/layer
+                // sprites remain visible.
+                skeletal.Initialize(index - 1);
                 _residentViews.Add(skeletal.MainRenderer);
                 _residentSkeletons.Add(skeletal);
                 _residentObjects.Add(child.gameObject);

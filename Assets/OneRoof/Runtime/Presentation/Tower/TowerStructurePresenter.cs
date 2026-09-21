@@ -18,6 +18,7 @@ namespace OneRoof.Presentation.Tower
         private MaterialPropertyBlock _colorBlock;
         private readonly List<GameObject> _structureObjects = new List<GameObject>();
         private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
+        private readonly Dictionary<int, CellBounds> _appliedSlabs = new Dictionary<int, CellBounds>();
         private int _renderedFloorCount;
 
         public int RenderedFloorCount => _renderedFloorCount;
@@ -33,6 +34,7 @@ namespace OneRoof.Presentation.Tower
             _renderedFloorCount = 0;
             _structureObjects.Clear();
             _authoredObjects.Clear();
+            _appliedSlabs.Clear();
             while (_parent != null && _parent.Find($"Floor Slab {_renderedFloorCount}") != null)
             {
                 Adopt($"Floor Slab {_renderedFloorCount}");
@@ -40,6 +42,7 @@ namespace OneRoof.Presentation.Tower
                 Adopt($"Floor Line R {_renderedFloorCount}");
                 _renderedFloorCount++;
             }
+
         }
 
         public void EnsureFloorViews(BuildingTopologyState topology)
@@ -92,7 +95,32 @@ namespace OneRoof.Presentation.Tower
                     CreateQuad($"Floor Line R {floor}", floorLineColor, new Vector3(rightSegCenter, floorLineY, 0.05f), new Vector2(rightSegWidth, 0.05f));
                 }
 
+                if (topology != null && topology.TryGetFloorSlab(floor, out var builtSlab))
+                {
+                    _appliedSlabs[floor] = builtSlab;
+                }
+                else
+                {
+                    _appliedSlabs[floor] = new CellBounds(floor, (int)minX, (int)maxX);
+                }
+
                 _renderedFloorCount++;
+            }
+
+            if (topology != null)
+            {
+                // Only rewrite quads whose slab bounds actually changed (e.g.
+                // ground expansion). Unconditional rewrites fight the
+                // construction/dissolve scale animations on every Ensure call.
+                foreach (var pair in topology.FloorSlabs)
+                {
+                    if (_appliedSlabs.TryGetValue(pair.Key, out var applied) && applied.Equals(pair.Value))
+                    {
+                        continue;
+                    }
+                    ApplyFloorGeometry(pair.Key, pair.Value);
+                    _appliedSlabs[pair.Key] = pair.Value;
+                }
             }
         }
 
@@ -110,6 +138,7 @@ namespace OneRoof.Presentation.Tower
 
             _structureObjects.Clear();
             _authoredObjects.Clear();
+            _appliedSlabs.Clear();
             _renderedFloorCount = 0;
         }
 
@@ -121,12 +150,36 @@ namespace OneRoof.Presentation.Tower
             _authoredObjects.Add(child.gameObject);
         }
 
+        private void ApplyFloorGeometry(int floor, CellBounds slab)
+        {
+            var worldLeft = -2.4f + slab.MinX * 0.5f;
+            var worldRight = -2.4f + (slab.MaxX + 1) * 0.5f;
+            var width = worldRight - worldLeft;
+            var centerX = (worldLeft + worldRight) * 0.5f;
+            var floorY = FloorY(floor);
+            UpdateQuad($"Floor Slab {floor}", new Vector3(centerX, floorY, 1f), new Vector2(width, 1.55f));
+            const float shaftLeft = -2.40f;
+            const float shaftRight = -1.40f;
+            var lineY = floorY - 0.74f;
+            UpdateQuad($"Floor Line L {floor}", new Vector3((worldLeft + shaftLeft) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, shaftLeft - worldLeft), 0.05f));
+            UpdateQuad($"Floor Line R {floor}", new Vector3((shaftRight + worldRight) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, worldRight - shaftRight), 0.05f));
+        }
+
+        private void UpdateQuad(string name, Vector3 position, Vector2 size)
+        {
+            var child = _parent != null ? _parent.Find(name) : null;
+            if (child == null) return;
+            child.gameObject.SetActive(size.x > 0f);
+            child.localPosition = position;
+            child.localScale = new Vector3(size.x, size.y, 1f);
+        }
+
         private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
             go.name = name;
             if (_parent != null) go.transform.SetParent(_parent, false);
-            go.transform.position = position;
+            go.transform.localPosition = position;
             go.transform.localScale = new Vector3(size.x, size.y, 1f);
 
             var col = go.GetComponent<Collider>();

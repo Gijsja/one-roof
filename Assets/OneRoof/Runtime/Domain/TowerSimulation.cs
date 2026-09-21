@@ -155,7 +155,7 @@ namespace OneRoof.Domain
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
 
-            if (Scrutiny.IsExpansionConstrained && (command is BuildFloorSlabCommand || command is BuildRoomCommand || command is AddElevatorShaftCommand || command is BuildStairwellCommand))
+            if (Scrutiny.IsExpansionConstrained && (command is BuildFloorSlabCommand || command is ExpandGroundSlabCommand || command is BuildRoomCommand || command is AddElevatorShaftCommand || command is BuildStairwellCommand))
             {
                 return CommandResult.Reject(new[]
                 {
@@ -178,6 +178,15 @@ namespace OneRoof.Domain
                     return Topology.CanExecute(slabCmd);
                 }
 
+                case ExpandGroundSlabCommand groundExpansionCmd:
+                {
+                    if (!Topology.TryGetFloorSlab(0, out var existingGround)) return Topology.CanExecute(groundExpansionCmd);
+                    var cost = Economy.CalculateGroundSlabExpansionCost(existingGround, groundExpansionCmd.Bounds);
+                    if (!Economy.CanAfford(cost))
+                        return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for ground slab expansion ({cost} required, Treasury: {Economy.CashBalance}).") });
+                    return Topology.CanExecute(groundExpansionCmd);
+                }
+
                 case BuildRoomCommand roomCmd:
                 {
                     var cost = Economy.CalculateRoomCost(roomCmd.ContentType, roomCmd.Bounds);
@@ -193,7 +202,15 @@ namespace OneRoof.Domain
 
                 case AddElevatorShaftCommand shaftCmd:
                 {
-                    var cost = Economy.CalculateElevatorShaftCost(shaftCmd.FloorSpan, shaftCmd.ShaftMaxX - shaftCmd.ShaftMinX + 1);
+                    var newFloors = CountNewShaftFloors(shaftCmd);
+                    if (newFloors <= 0)
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("transit:shaft_exists"), "An identical elevator shaft already spans these floors.")
+                        });
+                    }
+                    var cost = Economy.CalculateElevatorShaftCost(newFloors, shaftCmd.ShaftMaxX - shaftCmd.ShaftMinX + 1);
                     if (!Economy.CanAfford(cost))
                     {
                         return CommandResult.Reject(new[]
@@ -206,7 +223,15 @@ namespace OneRoof.Domain
 
                 case BuildStairwellCommand stairCmd:
                 {
-                    var cost = Economy.CalculateStairwellCost(stairCmd.FloorSpan, stairCmd.StairMaxX - stairCmd.StairMinX + 1);
+                    var newFloors = CountNewStairFloors(stairCmd);
+                    if (newFloors <= 0)
+                    {
+                        return CommandResult.Reject(new[]
+                        {
+                            new CommandRejectionReason(new ContentId("transit:stair_exists"), "An identical stairwell already spans these floors.")
+                        });
+                    }
+                    var cost = Economy.CalculateStairwellCost(newFloors, stairCmd.StairMaxX - stairCmd.StairMinX + 1);
                     if (!Economy.CanAfford(cost))
                     {
                         return CommandResult.Reject(new[]
@@ -307,6 +332,8 @@ namespace OneRoof.Domain
             {
                 case BuildFloorSlabCommand slabCmd:
                     return BuildFloorSlab(slabCmd);
+                case ExpandGroundSlabCommand groundExpansionCmd:
+                    return ExpandGroundSlab(groundExpansionCmd);
                 case BuildRoomCommand roomCmd:
                     return BuildRoom(roomCmd);
                 case AddElevatorShaftCommand shaftCmd:
@@ -337,14 +364,51 @@ namespace OneRoof.Domain
             if (!validation.Accepted) return validation;
 
             var cost = Economy.CalculateFloorSlabCost(cmd.Bounds);
-            var result = Topology.Execute(cmd, Clock.CurrentTick);
-            if (result.Accepted)
+            if (!Economy.TryDeduct(cost))
             {
-                Economy.TryDeduct(cost);
-                Scrutiny.RecordExpansion(cmd.Bounds.Width);
-                SyncTransitServices();
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for floor slab ({cost} required, Treasury: {Economy.CashBalance}).")
+                });
             }
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(cmd.Bounds.Width);
+            SyncTransitServices();
 
+            return result;
+        }
+
+        public CommandResult ExpandGroundSlab(ExpandGroundSlabCommand cmd)
+        {
+            if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+            if (!Topology.TryGetFloorSlab(0, out var existingGround))
+            {
+                return validation.Accepted ? Topology.CanExecute(cmd) : validation;
+            }
+            var cost = Economy.CalculateGroundSlabExpansionCost(existingGround, cmd.Bounds);
+            var addedCells = Math.Max(0, cmd.Bounds.Width - existingGround.Width);
+            if (!Economy.TryDeduct(cost))
+            {
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for ground slab expansion ({cost} required, Treasury: {Economy.CashBalance}).")
+                });
+            }
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(addedCells);
+            SyncTransitServices();
             return result;
         }
 
@@ -355,15 +419,23 @@ namespace OneRoof.Domain
             if (!validation.Accepted) return validation;
 
             var cost = Economy.CalculateRoomCost(cmd.ContentType, cmd.Bounds);
-            var result = Topology.Execute(cmd, Clock.CurrentTick);
-            if (result.Accepted)
+            if (!Economy.TryDeduct(cost))
             {
-                Economy.TryDeduct(cost);
-                Scrutiny.RecordExpansion(cmd.Bounds.Width);
-                var content = cmd.ContentType.Value ?? string.Empty;
-                if (content.Contains("diner") || content.Contains("amenity") || content.Contains("service")) Scrutiny.RecordCapacityOrServiceInvestment();
-                SyncTransitServices();
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for room ({cost} required, Treasury: {Economy.CashBalance}).")
+                });
             }
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(cmd.Bounds.Width);
+            var content = cmd.ContentType.Value ?? string.Empty;
+            if (content.Contains("diner") || content.Contains("amenity") || content.Contains("service")) Scrutiny.RecordCapacityOrServiceInvestment();
+            SyncTransitServices();
 
             return result;
         }
@@ -374,15 +446,23 @@ namespace OneRoof.Domain
             var validation = CanExecute(cmd);
             if (!validation.Accepted) return validation;
 
-            var cost = Economy.CalculateElevatorShaftCost(cmd.FloorSpan, cmd.ShaftMaxX - cmd.ShaftMinX + 1);
-            var result = Topology.Execute(cmd, Clock.CurrentTick);
-            if (result.Accepted)
+            var cost = Economy.CalculateElevatorShaftCost(Math.Max(1, CountNewShaftFloors(cmd)), cmd.ShaftMaxX - cmd.ShaftMinX + 1);
+            if (!Economy.TryDeduct(cost))
             {
-                Economy.TryDeduct(cost);
-                Scrutiny.RecordExpansion(cmd.FloorSpan);
-                ElevatorBank.ExpandFloorRange(cmd.BottomFloor, cmd.TopFloor);
-                SyncTransitServices();
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for elevator shaft ({cost} required, Treasury: {Economy.CashBalance}).")
+                });
             }
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(cmd.FloorSpan);
+            ElevatorBank.ExpandFloorRange(cmd.BottomFloor, cmd.TopFloor);
+            SyncTransitServices();
 
             return result;
         }
@@ -393,14 +473,22 @@ namespace OneRoof.Domain
             var validation = CanExecute(cmd);
             if (!validation.Accepted) return validation;
 
-            var cost = Economy.CalculateStairwellCost(cmd.FloorSpan, cmd.StairMaxX - cmd.StairMinX + 1);
-            var result = Topology.Execute(cmd, Clock.CurrentTick);
-            if (result.Accepted)
+            var cost = Economy.CalculateStairwellCost(Math.Max(1, CountNewStairFloors(cmd)), cmd.StairMaxX - cmd.StairMinX + 1);
+            if (!Economy.TryDeduct(cost))
             {
-                Economy.TryDeduct(cost);
-                Scrutiny.RecordExpansion(cmd.FloorSpan);
-                SyncTransitServices();
+                return CommandResult.Reject(new[]
+                {
+                    new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for stairwell ({cost} required, Treasury: {Economy.CashBalance}).")
+                });
             }
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(cmd.FloorSpan);
+            SyncTransitServices();
 
             return result;
         }
@@ -451,6 +539,56 @@ namespace OneRoof.Domain
             ElevatorBank.AddCar(car);
             Economy.TryDeduct(TowerEconomyState.ElevatorCarCost);
             Scrutiny.RecordCapacityOrServiceInvestment();
+        }
+
+        /// <summary>
+        /// Counts floors in the shaft span that lack an identical shaft room, so
+        /// extensions only charge for new construction instead of the full span.
+        /// </summary>
+        private int CountNewShaftFloors(AddElevatorShaftCommand cmd)
+        {
+            var shaftContentType = new ContentId("transit:elevator_shaft");
+            var count = 0;
+            for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
+            {
+                var rooms = Topology.GetRoomsOnFloor(floor);
+                var hasIdentical = false;
+                for (var i = 0; i < rooms.Count; i++)
+                {
+                    if (rooms[i].ContentType == shaftContentType &&
+                        rooms[i].Bounds.MinX == cmd.ShaftMinX &&
+                        rooms[i].Bounds.MaxX == cmd.ShaftMaxX)
+                    {
+                        hasIdentical = true;
+                        break;
+                    }
+                }
+                if (!hasIdentical) count++;
+            }
+            return count;
+        }
+
+        private int CountNewStairFloors(BuildStairwellCommand cmd)
+        {
+            var stairContentType = new ContentId("amenity:stairwell");
+            var count = 0;
+            for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
+            {
+                var rooms = Topology.GetRoomsOnFloor(floor);
+                var hasIdentical = false;
+                for (var i = 0; i < rooms.Count; i++)
+                {
+                    if (rooms[i].ContentType == stairContentType &&
+                        rooms[i].Bounds.MinX == cmd.StairMinX &&
+                        rooms[i].Bounds.MaxX == cmd.StairMaxX)
+                    {
+                        hasIdentical = true;
+                        break;
+                    }
+                }
+                if (!hasIdentical) count++;
+            }
+            return count;
         }
 
         public ResidentSpatialPosition GetResidentPosition(EntityId personId)

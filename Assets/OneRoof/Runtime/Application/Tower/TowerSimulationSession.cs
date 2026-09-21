@@ -23,6 +23,12 @@ namespace OneRoof.Application.Tower
         private ElevatorBankCongestionProjection _cachedCongestionProjection;
         private long _cachedTick = -1;
         private long _cachedCongestionTick = -1;
+        // Cheap structural fingerprints: direct Simulation mutations bypass the
+        // wrappers below, so tick alone cannot prove a projection is fresh.
+        private int _cachedFloorCount = -1;
+        private int _cachedResidentCount = -1;
+        private int _cachedQueuedTotal = -1;
+        private int _cachedCarCount = -1;
 
         public TowerSimulationSession(TowerSimulation simulation = null)
         {
@@ -91,6 +97,13 @@ namespace OneRoof.Application.Tower
             return result;
         }
 
+        public CommandResult ExpandGroundSlab(ExpandGroundSlabCommand cmd)
+        {
+            var result = _simulation.ExpandGroundSlab(cmd);
+            InvalidateProjectionCaches();
+            return result;
+        }
+
         public CommandResult BuildRoom(BuildRoomCommand cmd)
         {
             var result = _simulation.BuildRoom(cmd);
@@ -138,12 +151,18 @@ namespace OneRoof.Application.Tower
 
         public ElevatorBankCongestionProjection CongestionProjection()
         {
-            if (_cachedCongestionProjection != null && _cachedCongestionTick == _simulation.CurrentTick)
+            var floorCount = _simulation.Topology.FloorCount;
+            var carCount = _simulation.ElevatorBank.Cars.Count;
+            var queuedTotal = _simulation.TotalQueuedElevatorPassengers;
+            if (_cachedCongestionProjection != null &&
+                _cachedCongestionTick == _simulation.CurrentTick &&
+                _cachedFloorCount == floorCount &&
+                _cachedCarCount == carCount &&
+                _cachedQueuedTotal == queuedTotal)
             {
                 return _cachedCongestionProjection;
             }
 
-            var floorCount = _simulation.Topology.FloorCount;
             var floorProjections = new List<FloorCongestionProjection>(floorCount);
             var maxQueue = -1;
             var bottleneckFloor = 0;
@@ -201,6 +220,9 @@ namespace OneRoof.Application.Tower
                 floorProjections,
                 elevProjections);
             _cachedCongestionTick = _simulation.CurrentTick;
+            _cachedFloorCount = floorCount;
+            _cachedCarCount = carCount;
+            _cachedQueuedTotal = queuedTotal;
             return _cachedCongestionProjection;
         }
 
@@ -208,7 +230,16 @@ namespace OneRoof.Application.Tower
 
         public TowerProjection TransitProjection()
         {
-            if (_cachedTransitProjection != null && _cachedTick == _simulation.CurrentTick)
+            var transitFloorCount = _simulation.Topology.FloorCount;
+            var transitResidentCount = _simulation.ResidentCount;
+            var transitQueuedTotal = _simulation.TotalQueuedElevatorPassengers;
+            var transitCarCount = _simulation.ElevatorBank.Cars.Count;
+            if (_cachedTransitProjection != null &&
+                _cachedTick == _simulation.CurrentTick &&
+                _cachedFloorCount == transitFloorCount &&
+                _cachedResidentCount == transitResidentCount &&
+                _cachedQueuedTotal == transitQueuedTotal &&
+                _cachedCarCount == transitCarCount)
             {
                 return _cachedTransitProjection;
             }
@@ -334,15 +365,27 @@ namespace OneRoof.Application.Tower
                 elevators);
 
             _cachedTick = _simulation.CurrentTick;
+            _cachedFloorCount = transitFloorCount;
+            _cachedResidentCount = transitResidentCount;
+            _cachedQueuedTotal = transitQueuedTotal;
+            _cachedCarCount = transitCarCount;
             return _cachedTransitProjection;
         }
 
-        private void InvalidateProjectionCaches()
+        /// <summary>
+        /// Public escape hatch for code that mutates <see cref="Simulation"/>
+        /// directly instead of through this session's command wrappers.
+        /// </summary>
+        public void InvalidateProjectionCaches()
         {
             _cachedTransitProjection = null;
             _cachedCongestionProjection = null;
             _cachedTick = -1;
             _cachedCongestionTick = -1;
+            _cachedFloorCount = -1;
+            _cachedResidentCount = -1;
+            _cachedQueuedTotal = -1;
+            _cachedCarCount = -1;
         }
     }
 }
