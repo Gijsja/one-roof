@@ -9,6 +9,10 @@ namespace OneRoof.Application.Overlays
         ElevatorWait = 1,
         FootTraffic = 2,
         Population = 3,
-        Satisfaction = 4
+        Satisfaction = 4,
+        Noise = 5,
+        BusinessHealth = 6,
+        FactionTension = 7,
+        Utilities = 8
     }
 }
