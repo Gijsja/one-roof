@@ -170,10 +170,17 @@ namespace OneRoof.Presentation.Tower
 
             for (var i = 0; i < _elevatorViews.Count; i++)
             {
-                CalculateCarLayout(i, _elevatorViews.Count, out _, out var carWidth);
+                CalculateCarLayout(i, _elevatorViews.Count, out var carX, out var carWidth);
                 if (_elevatorViews[i] != null)
                 {
+                    // Authored Tower views used to retain their serialized default-white
+                    // material until the first simulation tick. Normalize them to the
+                    // presenter's material immediately so the initial frame matches
+                    // dynamically-created cars.
+                    _elevatorViews[i].sharedMaterial = _worldMaterial;
+                    _elevatorViews[i].transform.position = new Vector3(carX, TowerStructurePresenter.FloorY(0), 0f);
                     _elevatorViews[i].transform.localScale = new Vector3(carWidth, 0.5f, 1f);
+                    SetRendererColor(_elevatorViews[i], new Color(0.18f, 0.65f, 0.5f));
                 }
             }
         }

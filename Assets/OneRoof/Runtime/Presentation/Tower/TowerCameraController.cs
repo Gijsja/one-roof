@@ -81,6 +81,10 @@ namespace OneRoof.Presentation.Tower
                 isNew = true;
             }
             camObj.tag = "MainCamera";
+            if (camObj.GetComponent<AudioListener>() == null)
+            {
+                camObj.AddComponent<AudioListener>();
+            }
             if (gridPlacement != null) gridPlacement.Camera = cam;
 
             var centerY = TowerStructurePresenter.FloorY(0) + (floorCount - 1) * 1.75f * 0.5f;

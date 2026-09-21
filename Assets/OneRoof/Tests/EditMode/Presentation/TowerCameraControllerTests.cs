@@ -157,5 +157,24 @@ namespace OneRoof.Presentation.Tests.EditMode
                 }
             }
         }
+
+        [Test]
+        public void EnsureTowerCamera_AddsAnAudioListenerForSpatialTowerSound()
+        {
+            Camera cam = null;
+            try
+            {
+                cam = TowerCameraController.EnsureTowerCamera(5, null, resetView: true);
+
+                Assert.That(cam.GetComponent<AudioListener>(), Is.Not.Null);
+            }
+            finally
+            {
+                if (cam != null)
+                {
+                    Object.DestroyImmediate(cam.gameObject);
+                }
+            }
+        }
     }
 }

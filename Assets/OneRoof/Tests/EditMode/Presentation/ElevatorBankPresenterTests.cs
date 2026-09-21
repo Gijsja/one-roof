@@ -51,6 +51,24 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void EnsureElevatorViews_NormalizesAuthoredCarMaterialAndInitialColor()
+        {
+            var authoredCar = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            var authoredMaterial = new Material(Shader.Find("Sprites/Default"));
+            authoredCar.name = "Elevator Car 0";
+            authoredCar.transform.SetParent(_holder.transform, false);
+            authoredCar.GetComponent<MeshRenderer>().sharedMaterial = authoredMaterial;
+
+            _presenter.Initialize(_holder.transform, _material, _colorBlock);
+            _presenter.EnsureElevatorViews(1);
+
+            var car = _presenter.ElevatorViews[0];
+            Assert.That(car.sharedMaterial, Is.SameAs(_material));
+            Assert.That(car.transform.localScale.x, Is.EqualTo(0.48f).Within(0.001f));
+            Object.DestroyImmediate(authoredMaterial);
+        }
+
+        [Test]
         public void Clear_DestroysAllViewsAndResetsCounters()
         {
             _presenter.EnsureShaftViews(5);

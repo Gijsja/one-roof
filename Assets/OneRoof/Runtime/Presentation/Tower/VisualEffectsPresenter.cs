@@ -105,8 +105,8 @@ namespace OneRoof.Presentation.Tower
                 var pulse = 1f + glow * 0.32f;
                 _auraObject.transform.localScale = new Vector3(pulse, pulse, 1f);
                 _auraRenderer.GetPropertyBlock(_block);
-                _block.SetColor("_BaseColor", new Color(1f, 0.26f, 0.06f, glow * 0.38f));
-                _block.SetColor("_Color", new Color(1f, 0.26f, 0.06f, glow * 0.38f));
+                _block.SetColor("_BaseColor", new Color(1f, 0.26f, 0.06f, glow * 0.18f));
+                _block.SetColor("_Color", new Color(1f, 0.26f, 0.06f, glow * 0.18f));
                 _auraRenderer.SetPropertyBlock(_block);
             }
         }
@@ -118,7 +118,7 @@ namespace OneRoof.Presentation.Tower
             _auraObject.name = "CongestionAgitationAura";
             _auraObject.transform.SetParent(transform, false);
             _auraObject.transform.localPosition = new Vector3(0f, 0.2f, 0.12f);
-            _auraObject.transform.localScale = new Vector3(0.72f, 0.92f, 1f);
+            _auraObject.transform.localScale = new Vector3(0.58f, 0.78f, 1f);
             var collider = _auraObject.GetComponent<Collider>();
             if (collider != null)
             {

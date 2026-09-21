@@ -43,7 +43,7 @@ namespace OneRoof.Presentation.Tower
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
 
-            var hudRect = new Rect(20, 20, 480, 220);
+            var hudRect = new Rect(20, 20, 700, 290);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
@@ -64,6 +64,9 @@ namespace OneRoof.Presentation.Tower
             if (GUILayout.Button("Inspect Bottleneck [I]", _hudButtonStyle, GUILayout.Height(28))) _controller.InspectBottleneck();
             if (GUILayout.Button("Flow Overlay [D]", _hudButtonStyle, GUILayout.Height(28))) _controller.ToggleDataOverlay();
             if (GUILayout.Button("Satisfaction", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowSatisfactionOverlay();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Population", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowPopulationOverlay();
             if (GUILayout.Button("Scrutiny", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowScrutinyOverlay();
             if (GUILayout.Button("Foot Traffic", _hudButtonStyle, GUILayout.Height(28))) _controller.ShowFootTrafficOverlay();
@@ -87,27 +90,27 @@ namespace OneRoof.Presentation.Tower
 
             _hudHeaderStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 14,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.25f, 0.88f, 1f) }
             };
 
             _hudMetricStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 11,
+                fontSize = 13,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
 
             _hudButtonStyle = new GUIStyle(GUI.skin.button)
             {
-                fontSize = 11,
+                fontSize = 12,
                 fontStyle = FontStyle.Bold
             };
 
             _hudHelpStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 10,
+                fontSize = 11,
                 fontStyle = FontStyle.Italic,
                 normal = { textColor = new Color(0.7f, 0.8f, 0.9f) }
             };
