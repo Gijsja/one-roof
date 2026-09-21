@@ -208,6 +208,16 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void ResolvePlacementFloor_FloorSlabTargetsNextUnbuiltLevelFromOverviewHover()
+        {
+            var nextFloor = _session.FloorCount;
+
+            var resolvedFloor = _gridPlacement.ResolvePlacementFloor("floor:slab", hoveredFloor: 0);
+
+            Assert.That(resolvedFloor, Is.EqualTo(nextFloor));
+        }
+
+        [Test]
         public void TryGetToolPlacementBounds_SnapsShaftToCentralColumn()
         {
             var hasBounds = _gridPlacement.TryGetToolPlacementBounds("transit:elevator_shaft", floor: 2, cellX: 1, out var bounds);

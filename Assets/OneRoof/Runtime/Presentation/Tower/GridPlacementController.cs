@@ -120,6 +120,8 @@ namespace OneRoof.Presentation.Tower
 
                 if (TryGetCellFromScreen(screenPos, Camera, out var floor, out var cellX))
                 {
+                    floor = ResolvePlacementFloor(projection.SelectedBuildTool, floor);
+
                     // Clear suppression once pointer moves away from the just-placed cell
                     if (_suppressedCellFloor.HasValue && (_suppressedCellFloor.Value != floor || _suppressedCellX.Value != cellX))
                     {
@@ -348,6 +350,22 @@ namespace OneRoof.Presentation.Tower
             }
 
             return 4;
+        }
+
+        /// <summary>
+        /// Resolves the floor that a build tool should target from a hovered grid floor.
+        /// A floor slab is an expansion action rather than an arbitrary overlay: it always
+        /// previews the next unbuilt level so a player cannot accidentally target an
+        /// existing lower floor while looking at the tower overview.
+        /// </summary>
+        public int ResolvePlacementFloor(string toolId, int hoveredFloor)
+        {
+            if (toolId != null && toolId.Equals("floor:slab", StringComparison.OrdinalIgnoreCase) && _simulationSession != null)
+            {
+                return _simulationSession.Topology.FloorCount;
+            }
+
+            return hoveredFloor;
         }
 
         public bool TryGetToolPlacementBounds(string toolId, int floor, int cellX, out CellBounds bounds)

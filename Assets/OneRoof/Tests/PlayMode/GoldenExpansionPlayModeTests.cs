@@ -22,19 +22,25 @@ namespace OneRoof.Tests.PlayMode
 
                 var nextFloor = controller.SimulationSession.FloorCount;
                 controller.ModeSession.SelectBuildTool("floor:slab");
-                controller.ModeSession.SetPlacementTarget(nextFloor, 0);
+                var previewFloor = controller.GridPlacement.ResolvePlacementFloor("floor:slab", hoveredFloor: 0);
+                controller.ModeSession.SetPlacementTarget(previewFloor, 0);
 
-                Assert.That(controller.GridPlacement.ValidatePlacement("floor:slab", nextFloor, 0, out var reason), Is.True, reason);
-                Assert.That(controller.GridPlacement.TryGetToolPlacementBounds("floor:slab", nextFloor, 0, out var bounds), Is.True);
+                Assert.That(controller.ModeSession.Projection().IsBuildMode, Is.True);
+                Assert.That(controller.ModeSession.Projection().SelectedBuildTool, Is.EqualTo("floor:slab"));
+                Assert.That(previewFloor, Is.EqualTo(nextFloor), "Floor Slab must preview the next unbuilt floor from an overview hover.");
+                Assert.That(controller.GridPlacement.ValidatePlacement("floor:slab", previewFloor, 0, out var reason), Is.True, reason);
+                Assert.That(controller.GridPlacement.TryGetToolPlacementBounds("floor:slab", previewFloor, 0, out var bounds), Is.True);
                 controller.GhostPresenter.ShowGhost(
-                    controller.GridPlacement.CellToWorld(nextFloor, bounds.MinX, bounds.Width),
+                    controller.GridPlacement.CellToWorld(previewFloor, bounds.MinX, bounds.Width),
                     new Vector2(bounds.Width * controller.GridPlacement.CellWidth, controller.GridPlacement.FloorHeight * 0.9f),
                     isValid: true);
                 Assert.That(controller.GhostPresenter.IsVisible, Is.True);
 
-                Assert.That(controller.GridPlacement.TryExecutePlacement("floor:slab", nextFloor, 0, out var result), Is.True);
+                var initialCash = controller.SimulationSession.Economy.CashBalance;
+                Assert.That(controller.GridPlacement.TryExecutePlacement("floor:slab", previewFloor, 0, out var result), Is.True);
                 Assert.That(result.Accepted, Is.True);
                 Assert.That(controller.SimulationSession.Topology.FloorSlabs.ContainsKey(nextFloor), Is.True);
+                Assert.That(controller.SimulationSession.Economy.CashBalance, Is.LessThan(initialCash));
                 Assert.That(controller.StructurePresenter.RenderedFloorCount, Is.EqualTo(nextFloor + 1));
                 Assert.That(holder.transform.Find($"Floor Slab {nextFloor}"), Is.Not.Null);
             }
