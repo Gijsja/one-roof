@@ -65,7 +65,10 @@ namespace OneRoof.Editor.AssetLab
         {
             foreach (var record in NpcContentRegistry.AllRecords)
             {
-                ValidateRecord(errors, ids, record.ContentId, record.ResourcePath);
+                // Composite placeholder sprites were removed; the Spine modular rig is
+                // canonical, so residents are exempt from the Resources-existence gate.
+                // Still enforce ID uniqueness plus the rig/body contract.
+                if (string.IsNullOrEmpty(record.ContentId) || !ids.Add(record.ContentId)) errors.Add($"Duplicate or empty content ID: {record.ContentId}");
                 if (record.InteractionPoints.Count == 0) errors.Add($"{record.ContentId} has no interaction anchors.");
                 if (record.WorldWidth <= 0f || record.WorldHeight <= 0f) errors.Add($"{record.ContentId} has invalid rig dimensions.");
             }

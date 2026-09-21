@@ -33,6 +33,7 @@ namespace OneRoof.Presentation.Population
         public NpcEmoteKind CurrentEmote { get; private set; } = NpcEmoteKind.None;
         public NpcAnimationClip CurrentAnimation { get; private set; } = NpcAnimationClip.Idle;
         public NpcWardrobeLoadout Wardrobe { get; private set; }
+        public string WardrobeVariantKey { get; private set; }
 
         private float _timeOffset;
         private readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
@@ -55,7 +56,10 @@ namespace OneRoof.Presentation.Population
             EnsureHierarchy();
             ResidentIndex = residentIndex;
             ContentRecord = ResidentSpriteCatalog.GetRecord(residentIndex);
+            var variant = NpcWardrobeVariantCatalog.GetVariant(residentIndex);
+            WardrobeVariantKey = variant != null ? variant.Key : null;
             ApplyWardrobe(NpcWardrobeLoadout.FromRecord(ContentRecord));
+            ApplyVariantDiversity(variant);
             _timeOffset = (residentIndex * 0.37f) % 3.0f;
 
             var sprite = ResidentSpriteCatalog.GetResidentSprite(residentIndex);
@@ -239,10 +243,93 @@ namespace OneRoof.Presentation.Population
                     var layerId = wardrobe.GetLayerId(layer);
                     renderer.name = $"Wardrobe_{layer}_{layerId}";
                     renderer.sprite = CreateWardrobeSwatch(layerId);
-                    renderer.color = Color.HSVToRGB((Mathf.Abs(layerId.GetHashCode()) % 360) / 360f, .52f, .92f);
+                    renderer.color = ResolveWardrobeColor(layer, layerId);
                     ConfigureWardrobeSlot(layer, renderer.transform);
                 }
             }
+        }
+
+        public void ApplyVariantDiversity(NpcWardrobeVariant variant)
+        {
+            if (variant == null) return;
+            WardrobeVariantKey = variant.Key;
+            EnsureHierarchy();
+
+            // Re-resolve wardrobe slot colors through the variant palette so the
+            // 12 profession columns from the modular sheets read at a glance.
+            if (Wardrobe != null)
+            {
+                foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
+                {
+                    if (_wardrobeSlots.TryGetValue(layer, out var renderer) && renderer != null)
+                    {
+                        renderer.color = ResolveWardrobeColor(layer, Wardrobe.GetLayerId(layer));
+                    }
+                }
+            }
+
+            // Tint the modular base anatomy: skin for head/hands, profession
+            // upper/lower/footwear for torso/legs/feet. Keeps rig proportions
+            // identical; only presentation colors vary.
+            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var skin))
+            {
+                SetLimbColor("head", skin);
+                SetLimbColor(NpcRigDefinition.BoneHandL, skin);
+                SetLimbColor(NpcRigDefinition.BoneHandR, skin);
+            }
+            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.UpperClothing), out var upper))
+            {
+                SetLimbColor("torso", upper);
+            }
+            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.LowerClothing), out var lower))
+            {
+                SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
+                SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+            }
+            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Footwear), out var footwear))
+            {
+                SetLimbColor(NpcRigDefinition.BoneFootL, footwear);
+                SetLimbColor(NpcRigDefinition.BoneFootR, footwear);
+            }
+
+            // Subtle stature jitter (+/-5%) for crowd readability. Absolute scale
+            // assignment keeps repeated Initialize calls idempotent.
+            var s = Mathf.Clamp(variant.BodyScale, 0.9f, 1.1f);
+            transform.localScale = new Vector3(s, s, 1f);
+        }
+
+        private Color ResolveWardrobeColor(NpcLayerKind layer, string layerId)
+        {
+            var variant = !string.IsNullOrEmpty(WardrobeVariantKey)
+                ? NpcWardrobeVariantCatalog.GetByKey(WardrobeVariantKey)
+                : null;
+            if (variant == null && ResidentIndex >= 0)
+            {
+                variant = NpcWardrobeVariantCatalog.GetVariant(ResidentIndex);
+            }
+            if (variant != null && TryParseHex(variant.GetLayerColor(layer), out var palette))
+            {
+                return palette;
+            }
+            return Color.HSVToRGB((Mathf.Abs(layerId.GetHashCode()) % 360) / 360f, .52f, .92f);
+        }
+
+        private void SetLimbColor(string key, Color color)
+        {
+            if (_limbRenderers.TryGetValue(key, out var renderer) && renderer != null)
+            {
+                renderer.color = color;
+            }
+        }
+
+        private static bool TryParseHex(string hex, out Color color)
+        {
+            if (!string.IsNullOrWhiteSpace(hex) && ColorUtility.TryParseHtmlString(hex, out color))
+            {
+                return true;
+            }
+            color = Color.white;
+            return false;
         }
 
         public void ApplyProceduralAnimation(float globalTime)

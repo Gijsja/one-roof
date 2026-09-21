@@ -28,6 +28,7 @@ namespace OneRoof.Domain.Persistence
         public ActiveTripSaveData[] activeTrips;
         public ScrutinySaveData scrutiny;
         public BusinessSaveData[] businesses;
+        public UtilityOperationsSaveData utilityOperations;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData
         {
@@ -95,6 +96,19 @@ namespace OneRoof.Domain.Persistence
         public long lastCustomerRevenue;
         public long lastWages;
         public bool isInsolvent;
+    }
+
+    [Serializable]
+    public sealed class UtilityOperationsSaveData
+    {
+        public UtilityEquipmentSaveData[] equipment;
+    }
+
+    [Serializable]
+    public sealed class UtilityEquipmentSaveData
+    {
+        public int roomId;
+        public float condition;
     }
 
     [Serializable]

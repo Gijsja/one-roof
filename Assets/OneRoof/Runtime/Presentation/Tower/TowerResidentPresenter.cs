@@ -137,7 +137,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateResidentPositions(TowerProjection snapshot, BuildingTopologyState topology, float time, RoomPresenter roomPresenter = null)
+        public void UpdateResidentPositions(TowerProjection snapshot, BuildingTopologyState topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null)
         {
             if (snapshot == null) return;
 
@@ -239,10 +239,28 @@ namespace OneRoof.Presentation.Tower
                     case TransitResidentStatus.Riding:
                     {
                         var elevatorIndex = FindPassengerElevator(snapshot, resident.ResidentId);
-                        if (elevatorIndex >= snapshot.Elevators.Count) elevatorIndex = 0;
-                        var carY = TowerStructurePresenter.FloorY(snapshot.Elevators[elevatorIndex].Floor) - 0.25f;
-                        var carX = snapshot.Elevators.Count == 1 ? -1.9f : (-2.15f + elevatorIndex * 0.5f);
-                        residentTransform.position = new Vector3(carX + ((i % 2) - 0.5f) * 0.12f, carY, -0.3f);
+                        if (snapshot.Elevators.Count == 0 || elevatorIndex < 0 || elevatorIndex >= snapshot.Elevators.Count)
+                        {
+                            break;
+                        }
+                        // Share the car's layout math so riders stand inside the
+                        // rendered car at any bank size instead of a hardcoded column.
+                        ElevatorBankPresenter.CalculateCarLayout(elevatorIndex, snapshot.Elevators.Count, out var layoutX, out var carWidth);
+                        var jitterX = ((i % 2) - 0.5f) * Mathf.Min(0.12f, carWidth * 0.3f);
+                        Vector3 carAnchor;
+                        if (elevatorPresenter != null && elevatorIndex < elevatorPresenter.ElevatorViews.Count && elevatorPresenter.ElevatorViews[elevatorIndex] != null)
+                        {
+                            // Ride the rendered car: it lerps between floors, so
+                            // anchoring to it keeps residents inside mid-travel
+                            // instead of snapping to the logical floor ahead of it.
+                            var carPos = elevatorPresenter.ElevatorViews[elevatorIndex].transform.position;
+                            carAnchor = new Vector3(carPos.x, carPos.y - 0.25f, -0.3f);
+                        }
+                        else
+                        {
+                            carAnchor = new Vector3(layoutX, TowerStructurePresenter.FloorY(snapshot.Elevators[elevatorIndex].Floor) - 0.25f, -0.3f);
+                        }
+                        residentTransform.position = new Vector3(carAnchor.x + jitterX, carAnchor.y, carAnchor.z);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Riding);
                         break;
                     }

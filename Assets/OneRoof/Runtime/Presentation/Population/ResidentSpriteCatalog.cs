@@ -6,7 +6,11 @@ namespace OneRoof.Presentation.Population
 {
     /// <summary>
     /// Presentation catalog bridging NpcContentRegistry with Unity sprite assets.
-    /// Loads runtime sprites from Resources with robust procedural fallback for headless test runners.
+    /// Composite placeholder sprites were removed; the Spine modular rig in
+    /// NpcSkeletalHierarchy is canonical. Until layered wardrobe part sprites land,
+    /// records carry an empty ResourcePath and this catalog resolves the procedural
+    /// bottom-center-pivot fallback so headless tests and the disabled legacy
+    /// MainRenderer slot stay non-null.
     /// </summary>
     public static class ResidentSpriteCatalog
     {
@@ -42,12 +46,16 @@ namespace OneRoof.Presentation.Population
                 return GetOrCreateFallbackSprite(contentId, 0);
             }
 
-            // 1. Attempt loading from Unity Resources
-            var loaded = Resources.Load<Sprite>(record.ResourcePath);
-            if (loaded != null)
+            // 1. Attempt loading from Unity Resources (skipped when the record
+            // carries no composite path; Spine modular rig is canonical).
+            if (!string.IsNullOrEmpty(record.ResourcePath))
             {
-                SpriteCache[contentId] = loaded;
-                return loaded;
+                var loaded = Resources.Load<Sprite>(record.ResourcePath);
+                if (loaded != null)
+                {
+                    SpriteCache[contentId] = loaded;
+                    return loaded;
+                }
             }
 
             // 2. Procedural fallback for headless tests or unimported editor passes

@@ -5,7 +5,9 @@
 One Roof is a vertical-city simulation where the player shapes architecture, infrastructure, leases, and policy while autonomous residents form routines, relationships, businesses, and factions ([Docs/01_GAME_VISION.md](file:///home/geisha/Vibecode/UnityAI/one-roof/Docs/01_GAME_VISION.md)).
 
 - **First Proof (Milestones 0–4):** Five floors, 50 persistent residents, observable elevator congestion, explainable wait overlay, second-elevator capacity intervention, and golden acceptance verification. *(STATUS: COMPLETE)*
-- **Interactive Expansion (Milestone 5):** Dynamic slab/room construction, economy treasury, demand-driven leasing, bulldozer demolition, stairwells, 9-sliced room backdrops, interactive camera navigation, environment prop families, holographic build shaders, and resident room living. *(STATUS: ACTIVE)*
+- **Interactive Expansion (Milestone 5):** Dynamic slab/room construction, economy treasury, demand-driven leasing, bulldozer demolition, stairwells, 9-sliced room backdrops, interactive camera navigation, environment prop families, holographic build shaders, and resident room living. *(STATUS: COMPLETE)*
+- **Living Society & Economy (Milestones 6–8):** Resident needs, personality facets, satisfaction/strain/scrutiny, specialist roles, commercial leases, business health/foot-traffic overlays, physical power/water/waste networks with degradation and technician response. *(STATUS: COMPLETE through OR-803)*
+- **Social Fabric & Beta Exit (Milestones 9–10):** Relationship graph, factions, policy decrees, noise/faction overlays, blueprints, crisis pressure, City Status. *(STATUS: READY — no implementation yet)*
 - **Beta Boundary (Milestone 10):** 30 floors, 300 persistent residents, full room diversity (residential, office, retail, clinic, maintenance, security, utility), physical utilities (power, water, waste), resident needs, 4 faction archetypes, policy decrees, 8 data overlays, 6 crisis event chains, and sustaining **City Status** under strict performance budgets (<4ms simulation tick, 60 FPS presentation).
 
 ---
@@ -20,14 +22,14 @@ graph TD
     M3 --> M4["M4: Understand & Respond (DONE)"]
     M4 --> M51["M5.1: Dynamic Building & Expansion (DONE)"]
     M51 --> M52["M5.2: Sliced Architecture, Camera & Anchors (DONE)"]
-    M52 --> M53["M5.3: Shaders, Props & Room Living (ACTIVE)"]
-    M53 --> M53a["M5.3a: Architecture Deepening (READY)"]
-    M53a --> M54["M5.4: Anchor Docking & Inspection Depth"]
-    M54 --> M6["M6: Resident Psychology, Needs & Spine 2D"]
-    M6 --> M7["M7: Commercial Leases, Businesses & Services"]
-    M7 --> M8["M8: Physical Utilities (Power, Water, Waste, Maintenance)"]
-    M8 --> M9["M9: Social Networks, Factions & Policy Decrees"]
-    M9 --> M10["M10: 30-Floor Scale, Blueprints & Beta Exit (City Status)"]
+    M52 --> M53["M5.3: Shaders, Props & Room Living (DONE)"]
+    M53 --> M53a["M5.3a: Architecture Deepening (DONE)"]
+    M53a --> M54["M5.4: Anchor Docking & Inspection Depth (DONE)"]
+    M54 --> M6["M6: Resident Psychology, Needs & Spine 2D (DONE)"]
+    M6 --> M7["M7: Commercial Leases, Businesses & Services (DONE)"]
+    M7 --> M8["M8: Physical Utilities (DONE)"]
+    M8 --> M9["M9: Social Networks, Factions & Policy Decrees (READY)"]
+    M9 --> M10["M10: 30-Floor Scale, Blueprints & Beta Exit (READY)"]
     style M53a fill:#065f46,color:#fff,stroke:#065f46
 ```
 
@@ -81,15 +83,15 @@ graph TD
 
 ## Active & Upcoming Milestones
 
-### M5.3 — Shaders, Environment Props & Resident Room Living *(ACTIVE)*
+### M5.3 — Shaders, Environment Props & Resident Room Living *(DONE)*
 **Goal:** Complete room furnishings, visual GPU shader transitions, and enable residents to live inside their rooms with full corridor-to-elevator transit.
 
 - [x] **`ART-002`**: 16-prop environment sheet normalized with collision/interaction anchors; `PropContentRegistry`, `PropCatalog`, and `RoomFurnishingPresenter` dynamically furnishing Residential, Diner, Office, and Lobby rooms.
 - [x] **`OR-517`**: AllIn1SpriteShader holographic placement ghost with animated scanlines, validity response, and procedural border textures.
 - [x] **`OR-521`**: Resident room living: Residents positioned inside assigned apartments/rooms with interior slot spacing; leg-by-leg corridor walking, floor-specific elevator queues, and in-cabin riding.
-- [ ] **`OR-518`**: Inspect mode selection and hover outline shader presenter (`OUTBASE_ON`, `GLOW_ON`) for pixel-perfect silhouettes on hovered/selected entities.
-- [ ] **`OR-519`**: Demolition dissolve and construction scanline shader transitions (`FADE_ON` / `DISSOLVE_ON`) when bulldozing or building rooms/slabs.
-- [ ] **`OR-520`**: Elevator congestion and resident agitation visual shader aura on doors and waiting commuters when wait times exceed thresholds.
+- [x] **`OR-518`**: Inspect mode selection and hover outline shader presenter (`OUTBASE_ON`, `GLOW_ON`) for pixel-perfect silhouettes on hovered/selected entities.
+- [x] **`OR-519`**: Demolition dissolve and construction scanline shader transitions (`FADE_ON` / `DISSOLVE_ON`) when bulldozing or building rooms/slabs.
+- [x] **`OR-520`**: Elevator congestion and resident agitation visual shader aura on doors and waiting commuters when wait times exceed thresholds.
 
 **Exit Criteria:** All 16 props furnished, holographic ghost and shader outlines operational, zero primitives in scene, residents live inside rooms and walk transit legs, and tests pass cleanly.
 
@@ -253,21 +255,20 @@ graph TD
 
 ---
 
-### M5.4 — Furniture Anchor Docking & Inspection Depth *(PLANNED)*
+### M5.4 — Furniture Anchor Docking & Inspection Depth *(DONE)*
 **Goal:** Deepen physical room legibility and provide comprehensive inspection drill-downs into residents, rooms, and elevator shafts.
 
-- **`OR-522` (Presentation Furniture Anchor Docking):** Connect resident visual views directly to `InteractionPoint` furniture positions so residents visibly sit on sofas, sleep in beds, work at desks, and dine at booths.
-- **`OR-523` (Inspect Mode Deep Cards):**
-  - **Resident Card:** Name, household, profession, daily routine timeline, current need levels, mood, home/workplace links, and follow-camera toggle.
-  - **Room Card:** Content type, tenant household or business, capacity/occupants, rent tier, and condition.
-  - **Elevator Card:** Current floor, direction, speed, passenger manifest, wait queue breakdown, and maintenance wear.
+- [x] **`OR-522` (Presentation Furniture Anchor Docking):** residents visibly dock onto sofas, beds, desks, and booths via `InteractionPoint` furniture positions.
+- [x] **`OR-523` (Inspect Mode Deep Cards):** resident, room, and elevator-bank cards with symptom/cause drill-downs.
+
+**Known gap:** no business/tenant card yet; satisfaction-contributor weights are not yet inspector-visible. Tracked as follow-up, not a new milestone.
 
 **Exit Criteria:** Residents visibly dock onto furniture anchors; clicking any resident, room, or elevator shaft in Inspect mode opens a data-rich inspector card with complete symptom/cause breakdown.
 
 ---
 
-### M6 — Living Society, Resident Psychology & Character Pipeline *(PLANNED)*
-**Goal:** Establish readable resident wellbeing, external pressure, and soft specialist roles alongside the character pipeline.
+### M6 — Living Society, Resident Psychology & Character Pipeline *(DONE — per BACKLOG OR-601 through OR-605, ART-003 through ART-005)*
+**Goal:** Establish readable resident wellbeing, external pressure, and soft specialist roles alongside the character pipeline. All backlog items DONE.
 
 - **`ART-003` (Milestone 6.0 — Spine 2D Skeletal Animation & Wardrobe Compositor):**
   - Shared 17-bone humanoid rig (`rig.npc.humanoid.2d.v1`).
@@ -297,8 +298,8 @@ graph TD
 
 ---
 
-### M7 — Commercial Economy, Leases & Service Rooms *(PLANNED)*
-**Goal:** Expand tower zoning beyond basic apartments and diner into an interconnected commercial ecosystem where businesses lease space, hire residents, and serve customers.
+### M7 — Commercial Economy, Leases & Service Rooms *(DONE — per BACKLOG OR-701 through OR-706)*
+**Goal:** Expand tower zoning beyond basic apartments and diner into an interconnected commercial ecosystem where businesses lease space, hire residents, and serve customers. All backlog items DONE.
 
 - **`OR-701` (Expanded Room Zoning & Content):**
   - **Retail Shops:** Corner grocery, clothing boutique, bookshop.
@@ -316,8 +317,8 @@ graph TD
 
 ---
 
-### M8 — Physical Utilities (Power, Water, Waste & Maintenance) *(PLANNED)*
-**Goal:** Introduce physical utility networks that create engineering constraints on building height and require active maintenance management.
+### M8 — Physical Utilities (Power, Water, Waste & Maintenance) *(DONE — per BACKLOG OR-801 through OR-803)*
+**Goal:** Introduce physical utility networks that create engineering constraints on building height and require active maintenance management. All backlog items DONE; utility-ops condition persists through save/load.
 
 - **`OR-801` (Electrical Grid Network):**
   - Ground intake substation, vertical electrical riser ducts, floor transformer boxes.
@@ -334,8 +335,8 @@ graph TD
 
 ---
 
-### M9 — Social Fabric, Factions & Policy Decrees *(PLANNED)*
-**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies.
+### M9 — Social Fabric, Factions & Policy Decrees *(READY — no implementation yet)*
+**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. Next up: OR-901.
 
 - **`OR-901` (Relationship Graph & 4 Faction Archetypes):**
   - Affinity formation: Residents build friendships through shared workplaces, neighboring apartments, and elevator encounters.
@@ -356,7 +357,7 @@ graph TD
 
 ---
 
-### M10 — Tower Scaling, Blueprints & Beta Exit (City Status) *(PLANNED)*
+### M10 — Tower Scaling, Blueprints & Beta Exit (City Status) *(READY — no implementation yet)*
 **Goal:** Scale the simulation to the full Beta Boundary (30 floors, 300 persistent residents) with scaling tools, adaptive crisis pressure, and campaign progression.
 
 - **`OR-1001` (Blueprints & Rapid Expansion Tooling):**
@@ -383,16 +384,20 @@ graph TD
 
 ## Complete Overlay Registry (8 Beta Overlays)
 
-| # | Overlay | Primary Visual Channel | Data Source | Corresponding Crisis / Cause |
-| --- | --- | --- | --- | --- |
-| 1 | **Elevator Wait** *(DONE)* | Animated flow paths & queue bars | `ElevatorBankCongestionProjection` | Shaft capacity shortage, floor bottlenecks |
-| 2 | **Foot Traffic** | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
-| 3 | **Population** | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
-| 4 | **Satisfaction** | Soft regional glow plus value/pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, high rent |
-| 5 | **Noise** | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into bedrooms |
-| 6 | **Business Health** | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, excessive commercial rent |
-| 7 | **Faction Tension** | Regional tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
-| 8 | **Utilities** | Network pipe/cable flow pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
+| # | Overlay | Status | Primary Visual Channel | Data Source | Corresponding Crisis / Cause |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **Elevator Wait** | DONE | Animated flow paths & queue bars | `ElevatorBankCongestionProjection` | Shaft capacity shortage, floor bottlenecks |
+| 2 | **Foot Traffic** | DONE | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
+| 3 | **Population** | DONE | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
+| 4 | **Satisfaction** | DONE | Soft regional glow plus value/pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, high rent |
+| 5 | **Noise** | READY (OR-903) | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into bedrooms |
+| 6 | **Business Health** | DONE | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, excessive commercial rent |
+| 7 | **Faction Tension** | READY (OR-903) | Regional tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
+| 8 | **Utilities** | DONE | Network pipe/cable flow pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
+
+> Note: current overlay presenters are IMGUI text/debug views, not yet the
+> contracted visual channels above. Replacing them with heatmaps, flow vectors,
+> contours, and coverage rendering is open UX work; see `Docs/04_UX_CONTRACT.md`.
 
 ---
 

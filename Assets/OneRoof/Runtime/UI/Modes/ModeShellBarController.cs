@@ -248,6 +248,20 @@ namespace OneRoof.UI.Modes
             GUILayout.BeginArea(contextRect);
             GUILayout.BeginHorizontal();
 
+            var statusText = BuildModeStatusText(projection);
+
+            GUILayout.Label(statusText, _contextStyle);
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// Pure status-line builder for the mode context bar. Manage mode has no
+        /// decree panel yet (OR-902 READY), so it names the upcoming systems-level
+        /// levers instead of leaving the player at a dead-end mode label.
+        /// </summary>
+        public static string BuildModeStatusText(ModeShellProjection projection)
+        {
             var statusText = $"MODE: {projection.CurrentMode.ToString().ToUpperInvariant()}";
             if (projection.IsBuildMode)
             {
@@ -268,10 +282,12 @@ namespace OneRoof.UI.Modes
             {
                 statusText += $"  |  Entity: #{projection.SelectedEntityId.Value}";
             }
+            else if (projection.IsManageMode)
+            {
+                statusText += "  |  Steward policies (rent caps, transit subsidies, quiet hours, commercial tax) arrive with OR-902; treasury and leasing run automatically";
+            }
 
-            GUILayout.Label(statusText, _contextStyle);
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            return statusText;
         }
 
         private void EnsureStyles()

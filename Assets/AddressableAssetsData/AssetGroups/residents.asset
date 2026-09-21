@@ -14,42 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: residents
   m_GUID: a9ef56a46e5cc6d5ba198637415e11fe
-  m_SerializeEntries:
-  - m_GUID: 0f372782fb140fa6079b3954573cd236
-    m_Address: Residents/resident_05_student
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3d4f4e607183394902defebb927aa9a9
-    m_Address: Residents/resident_04_senior
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 60fbb779aaa47230a3b113941b466d47
-    m_Address: Residents/resident_01_barista
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 986fd3034fedbc4bd49cdb69fdceef6f
-    m_Address: Residents/resident_06_technician
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c7ebd264c93b82dada20ae5d7134d742
-    m_Address: Residents/resident_02_executive
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: d447a57c719f470c9b6452591d51e924
-    m_Address: Residents/resident_03_creative
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e0d91e0b4b0977b7ec79bebb56958713
-    m_Address: Residents/resident_spritesheet
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
+  m_SerializeEntries: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fcafc23d48903310d8492ef4cc75a37e, type: 2}
   m_SchemaSet:

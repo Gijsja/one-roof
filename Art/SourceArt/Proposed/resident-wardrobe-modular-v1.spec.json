@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed-source-art",
+  "sourceFiles": [
+    "frontview.png",
+    "frontview1.png",
+    "sideview.png",
+    "sideview1.png",
+    "backview1.png"
+  ],
+  "sheet": {
+    "pixels": {
+      "width": 1536,
+      "height": 1024
+    },
+    "background": "opaque dark gradient (RGBA container, fully opaque pixels; requires background removal before sprite use)",
+    "pixelsPerUnit": 512,
+    "perspectiveProfile": "photographic-orthographic-paperdoll",
+    "theme": "service-profession-wardrobe-set"
+  },
+  "provenance": {
+    "method": "AI-generated modular paperdoll sheets (headgear / heads / torsos / trousers / footwear columns) across front, side, and back views",
+    "addedOn": "2026-09-21",
+    "referenceRole": "wardrobe color and profession reference for the shared Spine 2D modular rig; not yet transparent game sprites"
+  },
+  "views": [
+    {
+      "file": "frontview.png",
+      "facing": "front",
+      "rows": [
+        { "kind": "headgear", "count": 8, "items": ["fire-helmet", "hardhat-yellow", "chef-toque", "ball-cap-red", "police-cap", "bellhop-cap", "baseball-navy", "astronaut-helmet"] },
+        { "kind": "heads", "count": 9, "note": "diverse skin tones, hair styles, facial hair, glasses" },
+        { "kind": "heads-alt", "count": 3, "note": "afro, east-asian, glasses variants above torso row" },
+        { "kind": "torsos-upper", "count": 8, "items": ["hi-vis-vest", "service-red-shirt", "chef-coat", "firefighter-turnout", "tactical-vest", "medic-red-jacket", "corporate-suit", "pilot-shirt"] },
+        { "kind": "torsos-lower", "count": 5, "items": ["police-blues", "service-white-bowtie", "service-white-tie", "maintenance-purple", "astronaut-torso"] },
+        { "kind": "trousers", "count": 8, "note": "navy cargo, white stripe, white, red cargo, black, white space, black tactical x2" },
+        { "kind": "footwear", "count": 8, "note": "oxfords, boots, sneakers, space boots; near-black on dark background" }
+      ]
+    },
+    {
+      "file": "frontview1.png",
+      "facing": "front",
+      "note": "alt base figure in corporate suit; headgear row identical families with slight visor/angle variants; torso set adds suit jacket + black tie + navy police + purple variants",
+      "rows": [
+        { "kind": "headgear", "count": 8 },
+        { "kind": "heads", "count": 9 },
+        { "kind": "heads-alt", "count": 3 },
+        { "kind": "torsos-upper", "count": 8 },
+        { "kind": "torsos-lower", "count": 5 },
+        { "kind": "trousers", "count": 8 },
+        { "kind": "footwear", "count": 8 }
+      ]
+    },
+    {
+      "file": "sideview.png",
+      "facing": "side",
+      "note": "profile heads (7) for locomotion readability; torso/pants side silhouettes for walk-cycle reference",
+      "rows": [
+        { "kind": "headgear", "count": 8 },
+        { "kind": "heads-profile", "count": 7 },
+        { "kind": "torsos-upper", "count": 8 },
+        { "kind": "torsos-lower", "count": 5 },
+        { "kind": "trousers", "count": 8 },
+        { "kind": "footwear", "count": 8 }
+      ]
+    },
+    {
+      "file": "sideview1.png",
+      "facing": "side",
+      "note": "alt side set with 10 profile heads and extended trouser column (12 incl. shorts + purple maintenance set); suited base figure",
+      "rows": [
+        { "kind": "headgear", "count": 8 },
+        { "kind": "heads-profile", "count": 10 },
+        { "kind": "torsos", "count": 10 },
+        { "kind": "trousers", "count": 12 },
+        { "kind": "footwear", "count": 12 }
+      ]
+    },
+    {
+      "file": "backview1.png",
+      "facing": "back",
+      "note": "suited base figure; no head row (backs of heads); back-torso silhouettes for queue/elevator readability",
+      "rows": [
+        { "kind": "headgear-back", "count": 8 },
+        { "kind": "torsos-upper-back", "count": 8 },
+        { "kind": "torsos-lower-back", "count": 5 },
+        { "kind": "trousers-back", "count": 9 },
+        { "kind": "footwear-back", "count": 9 }
+      ]
+    }
+  ],
+  "professionColumns": [
+    "firefighter-turnout",
+    "construction-hi-vis",
+    "chef-whites",
+    "medic-red-service",
+    "security-tactical",
+    "pilot-whites",
+    "corporate-suit",
+    "police-navy",
+    "service-white",
+    "maintenance-purple",
+    "astronaut-suit",
+    "casual-offduty"
+  ],
+  "npcLayerContract": {
+    "rigId": "rig.npc.humanoid.2d.v1",
+    "compatibleBodyTypes": ["adult-standard"],
+    "mapping": {
+      "headgear": ["accessory", "hair"],
+      "heads": ["body", "face", "hair"],
+      "torsos": ["upper_clothing"],
+      "trousers": ["lower_clothing"],
+      "footwear": ["footwear"]
+    },
+    "anchorSet": ["feet-center", "hip", "chest", "neck", "head", "hand-L", "hand-R"],
+    "scaleProfile": {
+      "targetWorldHeight": 0.58,
+      "targetWorldWidth": 0.28
+    }
+  },
+  "recommendedUnityImport": {
+    "note": "DO NOT import raw sheets as in-game sprites: backgrounds are opaque and photorealistic resolution mismatches the 0.58m cutaway cast. Import only after artist cleanup (transparent PNG, <=256px tall parts, bottom-center pivot, 512 PPU).",
+    "textureType": "Sprite (2D and UI)",
+    "spriteMode": "Multiple (manual slice after cleanup)",
+    "filterMode": "Bilinear",
+    "compression": "High Quality",
+    "meshType": "Full Rect",
+    "pixelsPerUnit": 512,
+    "spritePivot": { "x": 0.5, "y": 0.0 }
+  },
+  "runtimeUse": {
+    "immediate": "NpcWardrobeVariantCatalog palettes sampled from these sheets drive the 8-layer Spine compositor (colors + skin tones + scale), giving 12 deterministic profession variants with zero binary import.",
+    "blocked": "Transparent part slicing (accessory/hair/upper/lower/footwear PNGs) pending background removal and artist cleanup of halos and near-black shoe rows."
+  },
+  "integrationConstraints": [
+    "status is proposed-source-art, never validated-asset-candidate: opaque backgrounds fail the transparency gate in Docs/05_ASSET_PIPELINE.md.",
+    "Never rename a released content ID; the 6 npc.resident.*.v1 IDs stay immutable. New visual variety ships as wardrobe variants, not new resident IDs.",
+    "Pivot anchor strictly bottom-center (0.5, 0.0); world height normalized to 0.58m.",
+    "Skeletal rig must stay Spine 4.2 bone-compatible (resident-spine-setup-v1.json)."
+  ]
+}

@@ -81,7 +81,7 @@ namespace OneRoof.Domain
         public BusinessState Businesses { get; private set; }
         public ElectricalGridState ElectricalGrid { get; }
         public WaterWasteNetworkState WaterWasteNetwork { get; }
-        public UtilityOperationsState UtilityOperations { get; }
+        public UtilityOperationsState UtilityOperations { get; private set; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
 
@@ -710,6 +710,7 @@ namespace OneRoof.Domain
             data.activeTrips = Transit.ToSaveData();
             data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
             data.businesses = Businesses.ToSaveData();
+            data.utilityOperations = UtilityOperations.ToSaveData();
 
             return data;
         }
@@ -727,6 +728,7 @@ namespace OneRoof.Domain
 
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
             sim.Businesses = BusinessState.FromSaveData(data.businesses);
+            sim.UtilityOperations = UtilityOperationsState.FromSaveData(data.utilityOperations);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 

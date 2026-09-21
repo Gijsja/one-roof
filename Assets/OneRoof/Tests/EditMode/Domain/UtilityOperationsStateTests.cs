@@ -44,5 +44,28 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(topology.Execute(new BuildRoomCommand(0, 0, 3, ElectricalGridState.SubstationContentId, 100), new Tick(0)).Accepted, Is.True);
             return topology;
         }
+
+        [Test]
+        public void ToSaveData_FromSaveData_PreservesWornCondition()
+        {
+            var topology = CreateTopology();
+            var operations = new UtilityOperationsState();
+            for (var tick = 0; tick < 50; tick++) operations.Advance(topology, new PopulationState(null, null));
+            var original = operations.Snapshot(topology).Equipment[0];
+
+            var restored = UtilityOperationsState.FromSaveData(operations.ToSaveData());
+            var roundTripped = restored.Snapshot(topology).Equipment[0];
+
+            Assert.That(roundTripped.RoomId, Is.EqualTo(original.RoomId));
+            Assert.That(roundTripped.Condition, Is.EqualTo(original.Condition).Within(1e-5f));
+            Assert.That(roundTripped.IsFailed, Is.EqualTo(original.IsFailed));
+        }
+
+        [Test]
+        public void FromSaveData_MissingPayload_RestoresFreshDefaults()
+        {
+            var restored = UtilityOperationsState.FromSaveData(null);
+            Assert.That(restored.Snapshot(CreateTopology()).Equipment[0].Condition, Is.EqualTo(1f));
+        }
     }
 }

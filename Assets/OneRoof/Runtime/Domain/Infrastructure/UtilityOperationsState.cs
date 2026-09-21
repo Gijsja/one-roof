@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
 
@@ -55,6 +56,29 @@ namespace OneRoof.Domain.Infrastructure
             for (var i = 0; i < removed.Count; i++) _conditionByRoom.Remove(removed[i]);
             foreach (var room in topology.Rooms.Values)
                 if (IsUtilityEquipment(room) && !_conditionByRoom.ContainsKey(room.Id)) _conditionByRoom.Add(room.Id, 1f);
+        }
+
+        public UtilityOperationsSaveData ToSaveData()
+        {
+            var ids = new List<EntityId>(_conditionByRoom.Keys);
+            ids.Sort((a, b) => a.Value.CompareTo(b.Value));
+            var equipment = new List<UtilityEquipmentSaveData>(ids.Count);
+            for (var i = 0; i < ids.Count; i++)
+                equipment.Add(new UtilityEquipmentSaveData { roomId = ids[i].Value, condition = _conditionByRoom[ids[i]] });
+            return new UtilityOperationsSaveData { equipment = equipment.ToArray() };
+        }
+
+        public static UtilityOperationsState FromSaveData(UtilityOperationsSaveData data)
+        {
+            var state = new UtilityOperationsState();
+            if (data?.equipment == null) return state;
+            for (var i = 0; i < data.equipment.Length; i++)
+            {
+                var entry = data.equipment[i];
+                if (entry == null) continue;
+                state._conditionByRoom[new EntityId(entry.roomId)] = Math.Max(0f, Math.Min(1f, entry.condition));
+            }
+            return state;
         }
 
         private static int CountTechnicians(PopulationState population)

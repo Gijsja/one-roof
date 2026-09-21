@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Transit;
+using OneRoof.Domain.Population;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
 
@@ -94,6 +97,69 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.Initialize(_holder.transform);
 
             Assert.That(skeletal.MainRenderer.enabled, Is.False);
+        }
+
+        [Test]
+        public void RidingResident_WithoutCarPresenter_StandsInsideShaftAtLargestBank()
+        {
+            var session = new TowerSimulationSession();
+            var residents = new List<TransitResidentProjection>
+            {
+                new TransitResidentProjection(7, 0, TransitResidentStatus.Riding, 2, 0, null, ActivityKind.Idle, 0, 0)
+            };
+            var elevators = new List<ElevatorProjection>
+            {
+                new ElevatorProjection(501, 0, 0, 10, new List<int>()),
+                new ElevatorProjection(502, 1, 0, 10, new List<int>()),
+                new ElevatorProjection(503, 2, 1, 10, new List<int> { 7 })
+            };
+            var snapshot = new TowerProjection(10L, 0, 0, 0f, residents, elevators);
+
+            _presenter.EnsureResidentViews(1);
+            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+
+            ElevatorBankPresenter.CalculateCarLayout(2, 3, out var layoutX, out var carWidth);
+            var expectedX = layoutX + ((0 % 2) - 0.5f) * Mathf.Min(0.12f, carWidth * 0.3f);
+            var pos = _presenter.ResidentViews[0].transform.position;
+            Assert.That(pos.x, Is.EqualTo(expectedX).Within(0.001f));
+            Assert.That(pos.x, Is.GreaterThan(-2.4f).And.LessThan(-1.4f), "Rider must stay inside the shaft cavity.");
+            Assert.That(pos.y, Is.EqualTo(TowerStructurePresenter.FloorY(2) - 0.25f).Within(0.001f));
+        }
+
+        [Test]
+        public void RidingResident_WithCarPresenter_TracksRenderedCarMidTravel()
+        {
+            var session = new TowerSimulationSession();
+            var carHolder = new GameObject("Test_Car_Holder");
+            var elevatorPresenter = new ElevatorBankPresenter();
+            elevatorPresenter.Initialize(carHolder.transform, null, null);
+            elevatorPresenter.EnsureElevatorViews(1);
+            elevatorPresenter.ElevatorViews[0].transform.position = new Vector3(-1.9f, 9.9f, 0f);
+
+            var residents = new List<TransitResidentProjection>
+            {
+                new TransitResidentProjection(3, 0, TransitResidentStatus.Riding, 2, 0, null, ActivityKind.Idle, 0, 0)
+            };
+            var elevators = new List<ElevatorProjection>
+            {
+                new ElevatorProjection(501, 2, 1, 10, new List<int> { 3 })
+            };
+            var snapshot = new TowerProjection(10L, 0, 0, 0f, residents, elevators);
+
+            try
+            {
+                _presenter.EnsureResidentViews(1);
+                _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f, null, elevatorPresenter);
+
+                var pos = _presenter.ResidentViews[0].transform.position;
+                Assert.That(pos.y, Is.EqualTo(9.65f).Within(0.001f), "Rider feet must sit on the rendered car floor mid-travel.");
+                Assert.That(pos.x, Is.EqualTo(-1.96f).Within(0.001f));
+            }
+            finally
+            {
+                elevatorPresenter.Clear();
+                Object.DestroyImmediate(carHolder);
+            }
         }
     }
 }

@@ -1,10 +1,15 @@
 using NUnit.Framework;
 using OneRoof.Domain;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Persistence;
+using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
 using OneRoof.Domain.Time;
+using OneRoof.Domain.Topology;
+using OneRoof.Domain.Transit;
 using OneRoof.Infrastructure.Persistence;
 
 namespace OneRoof.Infrastructure.Tests.EditMode
@@ -157,6 +162,47 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(restored.MinX, Is.EqualTo(original.MinX - 6));
             Assert.That(restored.MaxX, Is.EqualTo(original.MaxX));
             Assert.That(restoredSim.Economy.CashBalance, Is.EqualTo(sim.Economy.CashBalance));
+        }
+
+        [Test]
+        public void ExportAndRestore_WornUtilityEquipment_PreservesCondition()
+        {
+            var topology = new BuildingTopologyState();
+            topology.Execute(new BuildFloorSlabCommand(0, 0, 30), new Tick(0));
+            topology.Execute(new BuildFloorSlabCommand(1, 0, 30), new Tick(0));
+            var sim = new TowerSimulation(
+                new SimulationClock(new Tick(0)),
+                topology,
+                new PopulationState(null, null),
+                new ElevatorBank(0, 1, null),
+                new TowerEconomyState(sandboxMode: true));
+            Assert.That(sim.BuildRoom(new BuildRoomCommand(0, 0, 3, ElectricalGridState.SubstationContentId, 120)).Accepted, Is.True);
+
+            for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
+            var original = sim.UtilityOperationsSnapshot().Equipment[0];
+
+            var saveData = sim.ExportSaveData();
+            var metadata = new SaveEnvelopeMetadata(
+                new SchemaVersion(1),
+                new Tick(sim.CurrentTick),
+                new RandomStreamState(1337, 1337, 50),
+                "2026-09-21T00:00:00Z",
+                "0.8.2");
+            var json = _serializer.Serialize(new SaveEnvelope<TowerSaveData>(metadata, saveData));
+            var loadResult = _serializer.Deserialize<TowerSaveData>(json, new SchemaVersion(1));
+            Assert.That(loadResult.IsSuccess, Is.True);
+
+            var restoredSim = TowerSimulation.RestoreFromSaveData(loadResult.Value.StatePayload);
+            var roundTripped = restoredSim.UtilityOperationsSnapshot().Equipment[0];
+
+            Assert.That(roundTripped.RoomId, Is.EqualTo(original.RoomId));
+            Assert.That(roundTripped.Condition, Is.EqualTo(original.Condition).Within(1e-5f));
+            Assert.That(roundTripped.IsFailed, Is.EqualTo(original.IsFailed));
+
+            sim.AdvanceOneTick();
+            restoredSim.AdvanceOneTick();
+            Assert.That(restoredSim.UtilityOperationsSnapshot().Equipment[0].Condition,
+                Is.EqualTo(sim.UtilityOperationsSnapshot().Equipment[0].Condition).Within(1e-5f));
         }
     }
 }

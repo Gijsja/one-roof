@@ -93,5 +93,35 @@ namespace OneRoof.UI.Tests.EditMode
 
             Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
         }
+
+        [Test]
+        public void BuildModeStatusText_ManageMode_NamesUpcomingLeversInsteadOfDeadEnd()
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Manage, InteractionMode.Inspect, null, null, null, null, null, null);
+
+            var text = ModeShellBarController.BuildModeStatusText(projection);
+
+            Assert.That(text, Does.Contain("MODE: MANAGE"));
+            Assert.That(text, Does.Contain("OR-902"));
+        }
+
+        [Test]
+        public void BuildModeStatusText_InspectModeWithEntity_NamesSelectedEntity()
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Inspect, InteractionMode.Inspect, null, null, null, 42, null, null);
+
+            Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Entity: #42"));
+        }
+
+        [Test]
+        public void BuildModeStatusText_DataModeWithOverlay_NamesActiveOverlay()
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Data, InteractionMode.Inspect, null, null, null, null, null, "overlay:utilities");
+
+            Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Overlay: overlay:utilities"));
+        }
     }
 }
