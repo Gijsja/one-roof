@@ -61,6 +61,31 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void ExpandGroundSlab_ValidWiderBounds_UpdatesGroundSlabAndEmitsEvent()
+        {
+            _state.Execute(new BuildFloorSlabCommand(0, -10, 10), _testTick);
+
+            var result = _state.Execute(new ExpandGroundSlabCommand(-16, 10), _testTick);
+
+            Assert.That(result.Accepted, Is.True);
+            Assert.That(_state.TryGetFloorSlab(0, out var ground), Is.True);
+            Assert.That(ground.MinX, Is.EqualTo(-16));
+            Assert.That(ground.MaxX, Is.EqualTo(10));
+            Assert.That(result.Events[0].Type, Is.EqualTo(new ContentId("event:ground_slab_expanded")));
+        }
+
+        [Test]
+        public void ExpandGroundSlab_UnchangedBounds_IsRejected()
+        {
+            _state.Execute(new BuildFloorSlabCommand(0, -10, 10), _testTick);
+
+            var result = _state.Execute(new ExpandGroundSlabCommand(-10, 10), _testTick);
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("topology:ground_expansion_no_change")));
+        }
+
+        [Test]
         public void BuildFloorSlab_GapInFloors_Rejected()
         {
             _state.Execute(new BuildFloorSlabCommand(0, -20, 20), _testTick);

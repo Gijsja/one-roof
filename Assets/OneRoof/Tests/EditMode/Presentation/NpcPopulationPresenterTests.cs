@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using OneRoof.Application.Population;
 using OneRoof.Presentation.Population;
+using OneRoof.Presentation.Tower;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tests.EditMode
@@ -99,6 +100,20 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(view.BoundEntityId.Value, Is.InRange(1, 50));
                 Assert.That(view.gameObject.activeSelf, Is.True);
             }
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(4)]
+        [TestCase(12)]
+        public void CalculateWorldPosition_UsesSharedTowerFloorCoordinates(int floor)
+        {
+            var projection = new NpcProjection(1, 1, floor, 1, NpcActivityKind.Idle, false, null, null, 0, 2.5f);
+
+            var position = NpcPopulationPresenter.CalculateWorldPosition(projection);
+
+            Assert.That(position.x, Is.EqualTo(2.5f));
+            Assert.That(position.y, Is.EqualTo(TowerStructurePresenter.FloorY(floor)).Within(0.0001f));
         }
 
         private static List<NpcProjection> CreateFiftyResidentProjections()

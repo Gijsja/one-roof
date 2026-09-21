@@ -81,5 +81,19 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(hitIdx, Is.EqualTo(1));
             Assert.That(hitBounds.size.x, Is.GreaterThan(0f));
         }
+
+        [Test]
+        public void Initialize_ExistingResidentDisablesLegacyCompositeSprite()
+        {
+            var resident = new GameObject("Resident View 1");
+            resident.transform.SetParent(_holder.transform, false);
+            var skeletal = resident.AddComponent<OneRoof.Presentation.Population.NpcSkeletalHierarchy>();
+            skeletal.EnsureHierarchy();
+            skeletal.MainRenderer.enabled = true;
+
+            _presenter.Initialize(_holder.transform);
+
+            Assert.That(skeletal.MainRenderer.enabled, Is.False);
+        }
     }
 }

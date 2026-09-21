@@ -90,7 +90,12 @@ namespace OneRoof.Domain.Scrutiny
             var pressure = expansion * .42f + inequality * .22f + unresolvedPressure * .30f + policy * .25f;
             var responseReadiness = Math.Max(0f, crisisResponseMultiplier - 1f);
             var relief = wellbeing * .035f + Math.Min(.04f, serviceInvestment * .01f) + Math.Min(.02f, responseReadiness * .10f);
-            Value = Clamp(Value + (pressure * .45f) - relief);
+            // Scrutiny must signal sustained harmful expansion, not lock the first
+            // playable tower after a few ordinary simulation ticks. Fixture-level
+            // household budget variation is intentionally broad, so a gentler
+            // accumulation rate preserves the player’s core build-response loop
+            // while still allowing repeated rapid expansion to become constrained.
+            Value = Clamp(Value + (pressure * .20f) - relief);
             _recentExpansionPressure = Clamp(_recentExpansionPressure - .02f);
             _recentPolicyPressure = Clamp(_recentPolicyPressure - .01f);
 

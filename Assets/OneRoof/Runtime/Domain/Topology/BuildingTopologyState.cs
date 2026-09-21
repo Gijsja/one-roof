@@ -175,6 +175,30 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
+        public CommandResult CanExecute(ExpandGroundSlabCommand cmd)
+        {
+            if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            if (!_floorSlabs.TryGetValue(0, out var current))
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:ground_slab_not_found"), "A ground slab must exist before it can be expanded.") });
+            if (cmd.MinX > cmd.MaxX)
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:invalid_bounds"), "MinX cannot exceed MaxX.") });
+            if (cmd.MinX > current.MinX || cmd.MaxX < current.MaxX)
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:ground_expansion_must_contain_existing"), "Ground expansion must retain the entire existing slab.") });
+            if (cmd.MinX == current.MinX && cmd.MaxX == current.MaxX)
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:ground_expansion_no_change"), "Ground expansion must add at least one cell.") });
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(ExpandGroundSlabCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+            _floorSlabs[0] = cmd.Bounds;
+            InvalidateGraph();
+            var evt = new DomainEvent(AllocateId(), new ContentId("event:ground_slab_expanded"), tick, Array.Empty<EntityId>());
+            return CommandResult.Accept(new[] { evt });
+        }
+
         public CommandResult CanExecute(BuildRoomCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));

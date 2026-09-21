@@ -53,6 +53,21 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void CanExecute_ExpandGroundSlab_ChargesOnlyNewCells()
+        {
+            Assert.That(_sim.Topology.TryGetFloorSlab(0, out var ground), Is.True);
+            var cmd = new ExpandGroundSlabCommand(ground.MinX - 6, ground.MaxX);
+            var before = _sim.Economy.CashBalance;
+
+            var result = _sim.ExpandGroundSlab(cmd);
+
+            Assert.That(result.Accepted, Is.True);
+            Assert.That(_sim.Economy.CashBalance, Is.EqualTo(before - 6 * TowerEconomyState.CostPerSlabCell));
+            Assert.That(_sim.Topology.TryGetFloorSlab(0, out var expanded), Is.True);
+            Assert.That(expanded.MinX, Is.EqualTo(ground.MinX - 6));
+        }
+
+        [Test]
         public void CanExecute_BuildRoom_OverlappingExisting_Rejected()
         {
             // Lobby is at floor 0, [2..14]
@@ -71,6 +86,24 @@ namespace OneRoof.Domain.Tests.EditMode
             var result = _sim.CanExecute(cmd);
 
             Assert.That(result.Accepted, Is.True);
+        }
+
+        [Test]
+        public void CanExecute_NormalRunningTower_KeepsCoreExpansionAvailable()
+        {
+            // The standard fifty-resident simulation must not turn its normal
+            // budget variation into an immediate global construction lock.
+            for (var tick = 0; tick < 60; tick++)
+            {
+                _sim.AdvanceOneTick();
+            }
+
+            var slab = _sim.CanExecute(new BuildFloorSlabCommand(5, -14, 17));
+            var room = _sim.CanExecute(new BuildRoomCommand(0, -14, -11, new ContentId("residential:studio"), 4));
+
+            Assert.That(_sim.Scrutiny.IsExpansionConstrained, Is.False);
+            Assert.That(slab.Accepted, Is.True, slab.Rejections.Count > 0 ? slab.Rejections[0].Message : "Floor slab was rejected.");
+            Assert.That(room.Accepted, Is.True, room.Rejections.Count > 0 ? room.Rejections[0].Message : "Room was rejected.");
         }
 
         [Test]

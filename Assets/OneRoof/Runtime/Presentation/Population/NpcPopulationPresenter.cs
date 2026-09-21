@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using OneRoof.Application.Population;
+using OneRoof.Presentation.Tower;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Population
@@ -115,12 +116,13 @@ namespace OneRoof.Presentation.Population
         /// </summary>
         public static Vector3 CalculateWorldPosition(in NpcProjection projection)
         {
-            var y = FloorY(projection.Floor);
+            var y = TowerStructurePresenter.FloorY(projection.Floor);
             var x = projection.HorizontalPosition;
             return new Vector3(x, y, -2f);
         }
 
-        public static float FloorY(int floor) => -3.2f + floor * 1.85f;
+        /// <summary>Compatibility entry point for NPC-only consumers; all tower views share this coordinate system.</summary>
+        public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
 
         private NpcViewPool EnsureViewPool()
         {
