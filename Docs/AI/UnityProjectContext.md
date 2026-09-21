@@ -5,8 +5,8 @@
 ## Project Summary
 
 - Project root: `/home/geisha/Vibecode/UnityAI/one-roof`
-- Last analyzed: 2026-09-20
-- Last analyzed commit: `a06d5de023f507bd9e704bf6c06c5c483f42267d`
+- Last analyzed: 2026-09-21
+- Last analyzed commit: `a76d298a632520c278c7d43e5ca278ba8290ef7a`
 - One Roof is a deterministic, pure-C# vertical-city simulation with a Unity cutaway presentation.
 
 ## Confirmed Environment
@@ -72,7 +72,8 @@
 ## Testing And Validation
 
 - EditMode tests are split by runtime assembly; PlayMode golden acceptance tests are present.
-- The previous OR-604 handoff records 318/318 EditMode tests passing on 2026-09-19.
+- The Tower working-version hardening pass records 360/360 EditMode and 5/5 PlayMode tests passing on 2026-09-21.
+- A `StandaloneLinux64` player build completed successfully from an isolated worktree on 2026-09-21.
 - CI compile/test workflow remains blocked on the GitHub `UNITY_LICENSE` secret (`OR-005`).
 
 ## Available Unity Tooling

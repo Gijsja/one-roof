@@ -76,5 +76,56 @@ namespace OneRoof.Application.Tests.EditMode
 
             Assert.That(observedCommuting, Is.True, "Residents should be observed commuting via Walking, Queued, or Riding.");
         }
+
+        [Test]
+        public void CongestionProjection_SameTick_ReusesImmutableSnapshot()
+        {
+            var session = new TowerSimulationSession();
+
+            var first = session.CongestionProjection();
+            var second = session.CongestionProjection();
+
+            Assert.That(second, Is.SameAs(first),
+                "HUD and overlay reads within one simulation tick should not rebuild congestion collections.");
+        }
+
+        [Test]
+        public void CongestionProjection_AfterTick_RebuildsSnapshot()
+        {
+            var session = new TowerSimulationSession();
+            var before = session.CongestionProjection();
+
+            session.AdvanceOneTick();
+            var after = session.CongestionProjection();
+
+            Assert.That(after, Is.Not.SameAs(before));
+            Assert.That(after.Tick, Is.EqualTo(session.CurrentTick));
+        }
+
+        [Test]
+        public void CongestionProjection_AfterSameTickCommand_RebuildsSnapshot()
+        {
+            var session = new TowerSimulationSession();
+            var before = session.CongestionProjection();
+
+            var result = session.AddCapacity();
+            var after = session.CongestionProjection();
+
+            Assert.That(result.Accepted, Is.True);
+            Assert.That(after, Is.Not.SameAs(before));
+            Assert.That(after.Elevators.Count, Is.EqualTo(before.Elevators.Count + 1));
+        }
+
+        [Test]
+        public void CongestionProjection_AfterMorningRushSeed_RebuildsSnapshot()
+        {
+            var session = new TowerSimulationSession();
+            var before = session.CongestionProjection();
+
+            session.SeedMorningRush();
+            var after = session.CongestionProjection();
+
+            Assert.That(after, Is.Not.SameAs(before));
+        }
     }
 }

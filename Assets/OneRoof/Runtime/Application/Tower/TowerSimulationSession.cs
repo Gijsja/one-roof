@@ -20,7 +20,9 @@ namespace OneRoof.Application.Tower
     {
         private TowerSimulation _simulation;
         private TowerProjection _cachedTransitProjection;
+        private ElevatorBankCongestionProjection _cachedCongestionProjection;
         private long _cachedTick = -1;
+        private long _cachedCongestionTick = -1;
 
         public TowerSimulationSession(TowerSimulation simulation = null)
         {
@@ -57,7 +59,7 @@ namespace OneRoof.Application.Tower
         public void AdvanceOneTick()
         {
             _simulation.AdvanceOneTick();
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
         }
 
         public CommandResult AddCapacity()
@@ -65,7 +67,7 @@ namespace OneRoof.Application.Tower
             var result = _simulation.AddElevatorCar();
             if (result.Accepted)
             {
-                _cachedTransitProjection = null;
+                InvalidateProjectionCaches();
             }
             return result;
         }
@@ -77,7 +79,7 @@ namespace OneRoof.Application.Tower
             var result = _simulation.ExecuteCommand(command);
             if (result.Accepted)
             {
-                _cachedTransitProjection = null;
+                InvalidateProjectionCaches();
             }
             return result;
         }
@@ -85,54 +87,62 @@ namespace OneRoof.Application.Tower
         public CommandResult BuildFloorSlab(BuildFloorSlabCommand cmd)
         {
             var result = _simulation.BuildFloorSlab(cmd);
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
             return result;
         }
 
         public CommandResult BuildRoom(BuildRoomCommand cmd)
         {
             var result = _simulation.BuildRoom(cmd);
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
             return result;
         }
 
         public CommandResult AddElevatorShaft(AddElevatorShaftCommand cmd)
         {
             var result = _simulation.AddElevatorShaft(cmd);
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
             return result;
         }
 
         public CommandResult BuildStairwell(BuildStairwellCommand cmd)
         {
             var result = _simulation.BuildStairwell(cmd);
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
             return result;
         }
 
         public CommandResult DemolishRoom(DemolishRoomCommand cmd)
         {
             var result = _simulation.DemolishRoom(cmd);
-            _cachedTransitProjection = null;
+            InvalidateProjectionCaches();
             return result;
         }
 
         public void Reset()
         {
             _simulation = TowerSimulation.CreateStandardFiveFloor();
-            _cachedTransitProjection = null;
-            _cachedTick = -1;
+            InvalidateProjectionCaches();
         }
 
         /// <summary>
         /// Seeds the elevator bank with morning-rush passengers for the standard five-floor scenario.
         /// Only seeds if the bank is empty so it is idempotent on reset or reload.
         /// </summary>
-        public void SeedMorningRush() => _simulation.SeedMorningRush();
+        public void SeedMorningRush()
+        {
+            _simulation.SeedMorningRush();
+            InvalidateProjectionCaches();
+        }
 
 
         public ElevatorBankCongestionProjection CongestionProjection()
         {
+            if (_cachedCongestionProjection != null && _cachedCongestionTick == _simulation.CurrentTick)
+            {
+                return _cachedCongestionProjection;
+            }
+
             var floorCount = _simulation.Topology.FloorCount;
             var floorProjections = new List<FloorCongestionProjection>(floorCount);
             var maxQueue = -1;
@@ -180,7 +190,7 @@ namespace OneRoof.Application.Tower
             var (bMaxWait, _) = _simulation.GetFloorWaitMetrics(bottleneckFloor);
             var overallSeverity = CongestionEvaluator.Evaluate(maxQueue > 0 ? maxQueue : 0, bMaxWait);
 
-            return new ElevatorBankCongestionProjection(
+            _cachedCongestionProjection = new ElevatorBankCongestionProjection(
                 _simulation.CurrentTick,
                 totalQueued,
                 inTransit,
@@ -190,6 +200,8 @@ namespace OneRoof.Application.Tower
                 overallSeverity,
                 floorProjections,
                 elevProjections);
+            _cachedCongestionTick = _simulation.CurrentTick;
+            return _cachedCongestionProjection;
         }
 
         public TowerProjection Projection() => TransitProjection();
@@ -323,6 +335,14 @@ namespace OneRoof.Application.Tower
 
             _cachedTick = _simulation.CurrentTick;
             return _cachedTransitProjection;
+        }
+
+        private void InvalidateProjectionCaches()
+        {
+            _cachedTransitProjection = null;
+            _cachedCongestionProjection = null;
+            _cachedTick = -1;
+            _cachedCongestionTick = -1;
         }
     }
 }
