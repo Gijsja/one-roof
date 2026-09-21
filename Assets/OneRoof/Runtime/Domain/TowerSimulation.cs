@@ -51,6 +51,7 @@ namespace OneRoof.Domain
             Businesses = new BusinessState();
             ElectricalGrid = new ElectricalGridState();
             WaterWasteNetwork = new WaterWasteNetworkState();
+            UtilityOperations = new UtilityOperationsState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
         }
@@ -80,6 +81,7 @@ namespace OneRoof.Domain
         public BusinessState Businesses { get; private set; }
         public ElectricalGridState ElectricalGrid { get; }
         public WaterWasteNetworkState WaterWasteNetwork { get; }
+        public UtilityOperationsState UtilityOperations { get; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
 
@@ -99,6 +101,9 @@ namespace OneRoof.Domain
         /// <summary>Immutable water pressure and gravity-waste collection state derived from the authoritative topology.</summary>
         public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() => WaterWasteNetwork.Evaluate(Topology);
 
+        /// <summary>Mutable operational condition of installed utility equipment, projected without Unity dependencies.</summary>
+        public UtilityOperationsSnapshot UtilityOperationsSnapshot() => UtilityOperations.Snapshot(Topology);
+
         public void AdvanceOneTick()
         {
             var previousTick = Clock.CurrentTick;
@@ -108,6 +113,7 @@ namespace OneRoof.Domain
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
             Specialists.Advance(Population, Topology, currentTick);
+            UtilityOperations.Advance(Topology, Population);
             Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier);
             Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 

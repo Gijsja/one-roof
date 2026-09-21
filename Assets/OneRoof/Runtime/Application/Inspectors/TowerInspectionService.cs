@@ -131,6 +131,18 @@ namespace OneRoof.Application.Inspectors
             return new InspectorDetailProjection("Tower Scrutiny", symptom, details, "Respond through capacity and service investment, balanced household conditions, and time for pressure to recede.");
         }
 
+        public InspectorDetailProjection InspectUtilities()
+        {
+            var overlay = new UtilitiesOverlayService().CreateOverlay(_session);
+            var details = new List<string> { $"Failed equipment: {overlay.FailedEquipmentCount}" };
+            foreach (var floor in overlay.Floors) if (floor.HasDisruption) details.Add(floor.AccessibilityLabel);
+            foreach (var item in overlay.Equipment) if (item.IsFailed) details.Add($"Failed: {item.ContentId} in room #{item.RoomId} on floor {item.Floor} ({item.Condition:P0} condition).");
+            var symptom = overlay.FailedEquipmentCount > 0
+                ? "Utility equipment has failed and is disrupting service on the listed floors."
+                : "Utility network connections and equipment condition are currently stable.";
+            return new InspectorDetailProjection("Tower Utilities", symptom, details, "Build connected utility capacity and maintenance training space; technicians respond autonomously when equipment fails.");
+        }
+
         private static TransitResidentProjection? FindResident(TowerProjection projection, int residentId)
         {
             foreach (var resident in projection.Residents)
