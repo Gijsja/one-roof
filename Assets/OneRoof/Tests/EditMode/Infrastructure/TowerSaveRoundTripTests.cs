@@ -126,5 +126,37 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(restoredSim.Topology.HasFloor(5), Is.True);
             Assert.That(restoredSim.Topology.GetRoomsOnFloor(5).Count, Is.EqualTo(2));
         }
+
+        [Test]
+        public void ExportAndRestore_ExpandedGroundSlab_PreservesWidenedBounds()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            Assert.That(sim.Topology.TryGetFloorSlab(0, out var original), Is.True);
+
+            var expandResult = sim.ExpandGroundSlab(
+                new ExpandGroundSlabCommand(original.MinX - 6, original.MaxX));
+            Assert.That(expandResult.Accepted, Is.True);
+
+            var saveData = sim.ExportSaveData();
+            var metadata = new SaveEnvelopeMetadata(
+                new SchemaVersion(1),
+                new Tick(sim.CurrentTick),
+                new RandomStreamState(1337, 1337, 0),
+                "2026-09-16T15:00:00Z",
+                "0.5.1");
+
+            var envelope = new SaveEnvelope<TowerSaveData>(metadata, saveData);
+            var json = _serializer.Serialize(envelope);
+
+            var loadResult = _serializer.Deserialize<TowerSaveData>(json, new SchemaVersion(1));
+            Assert.That(loadResult.IsSuccess, Is.True);
+
+            var restoredSim = TowerSimulation.RestoreFromSaveData(loadResult.Value.StatePayload);
+
+            Assert.That(restoredSim.Topology.TryGetFloorSlab(0, out var restored), Is.True);
+            Assert.That(restored.MinX, Is.EqualTo(original.MinX - 6));
+            Assert.That(restored.MaxX, Is.EqualTo(original.MaxX));
+            Assert.That(restoredSim.Economy.CashBalance, Is.EqualTo(sim.Economy.CashBalance));
+        }
     }
 }
