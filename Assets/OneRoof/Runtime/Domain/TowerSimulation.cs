@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Events;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
@@ -48,6 +49,7 @@ namespace OneRoof.Domain
             Needs = new ResidentNeedsSystem();
             Specialists = new SpecialistRoleSystem();
             Businesses = new BusinessState();
+            ElectricalGrid = new ElectricalGridState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
         }
@@ -75,6 +77,7 @@ namespace OneRoof.Domain
         public ResidentNeedsSystem Needs { get; }
         public SpecialistRoleSystem Specialists { get; }
         public BusinessState Businesses { get; private set; }
+        public ElectricalGridState ElectricalGrid { get; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
 
@@ -87,6 +90,9 @@ namespace OneRoof.Domain
         public int TotalQueuedElevatorPassengers => ElevatorBank.TotalQueuedCount;
 
         public float AverageElevatorWaitTicks => ElevatorBank.AverageWaitTicks;
+
+        /// <summary>Immutable electrical state derived from the authoritative topology at the time of request.</summary>
+        public ElectricalGridSnapshot ElectricalGridSnapshot() => ElectricalGrid.Evaluate(Topology);
 
         public void AdvanceOneTick()
         {

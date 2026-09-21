@@ -5,6 +5,7 @@ using OneRoof.Domain;
 using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
@@ -43,6 +44,9 @@ namespace OneRoof.Application.Tower
         public int ResidentCount => _simulation.ResidentCount;
 
         public int FloorCount => _simulation.Topology.FloorCount;
+
+        /// <summary>Application-facing immutable power network projection for future utility UI and inspectors.</summary>
+        public ElectricalGridSnapshot ElectricalGridProjection() => _simulation.ElectricalGridSnapshot();
 
         public void AdvanceOneTick()
         {
