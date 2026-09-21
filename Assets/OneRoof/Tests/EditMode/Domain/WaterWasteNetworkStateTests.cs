@@ -56,6 +56,20 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(snapshot.Floors[1].WasteFailure, Is.EqualTo(WasteFailureReason.NoGroundCollection));
         }
 
+        [Test]
+        public void Evaluate_OtherSystemUtilityRooms_AddNoWaterDemand()
+        {
+            var topology = new BuildingTopologyState();
+            topology.Execute(new BuildFloorSlabCommand(0, 0, 30), TestTick);
+            Build(topology, 0, 0, 3, WaterWasteNetworkState.WaterPumpContentId, 120);
+            Build(topology, 0, 4, 7, ElectricalGridState.SubstationContentId, 120);
+            Build(topology, 0, 8, 11, ElectricalGridState.TransformerContentId, 0);
+            Build(topology, 0, 20, 25, new ContentId("residential:apartment"), 5);
+            var snapshot = new WaterWasteNetworkState().Evaluate(topology);
+
+            Assert.That(snapshot.TotalDemand, Is.EqualTo(2f).Within(.0001f));
+        }
+
         private static BuildingTopologyState CreateTopology(int floors, bool includePump = true, bool includeCollector = true, bool includeMiddleWaterRiser = true, bool includeMiddleWasteChute = true)
         {
             var topology = new BuildingTopologyState();

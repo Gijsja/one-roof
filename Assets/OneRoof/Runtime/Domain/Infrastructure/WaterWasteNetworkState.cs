@@ -94,7 +94,8 @@ namespace OneRoof.Domain.Infrastructure
             return demand;
         }
 
-        private static bool IsInfrastructure(ContentId type) => type == WaterPumpContentId || type == WaterRiserContentId || type == BoosterPumpContentId || type == WasteChuteContentId || type == WasteCollectionContentId;
+        private static bool IsInfrastructure(ContentId type) => type == WaterPumpContentId || type == WaterRiserContentId || type == BoosterPumpContentId || type == WasteChuteContentId || type == WasteCollectionContentId ||
+            type == ElectricalGridState.SubstationContentId || type == ElectricalGridState.RiserContentId || type == ElectricalGridState.TransformerContentId;
 
         private static bool HasRoomOfType(IReadOnlyList<Room> rooms, ContentId type)
         {

@@ -54,6 +54,21 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(snapshot.Floors[1].BrownoutReason, Is.EqualTo(ElectricalBrownoutReason.MissingTransformer));
         }
 
+        [Test]
+        public void Evaluate_OtherSystemUtilityRooms_AddNoElectricalDemand()
+        {
+            var topology = new BuildingTopologyState();
+            topology.Execute(new BuildFloorSlabCommand(0, 0, 30), TestTick);
+            Build(topology, 0, 0, 3, ElectricalGridState.SubstationContentId, 120);
+            Build(topology, 0, 4, 7, WaterWasteNetworkState.WaterPumpContentId, 120);
+            Build(topology, 0, 8, 11, WaterWasteNetworkState.WasteCollectionContentId, 120);
+            Build(topology, 0, 20, 25, new ContentId("residential:apartment"), 5);
+            var snapshot = new ElectricalGridState().Evaluate(topology);
+
+            Assert.That(snapshot.TotalDemand, Is.EqualTo(2.5f));
+            Assert.That(snapshot.IsSubstationOverloaded, Is.False);
+        }
+
         private static BuildingTopologyState CreateTwoFloorElectricalTopology(int substationCapacity, bool includeUpperRiser = true, bool includeUpperTransformer = true)
         {
             var topology = new BuildingTopologyState();
