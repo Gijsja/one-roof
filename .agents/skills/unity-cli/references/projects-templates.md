@@ -227,6 +227,14 @@ to 50 and caps at 500, and the envelope's `truncated` tells you when there was m
 self-hosted workspace has no reviews API — those commands refuse with
 `VCS_UVCS_REVIEW_SELF_HOSTED` and point at the GUI rather than failing obscurely.
 
+**They need a signed-in session, and the three auth-shaped failures mean different things.**
+`unity auth login` is all you have to do; the short-lived gateway token these commands
+authenticate with is obtained for you. `NOT_SIGNED_IN` and `SESSION_EXPIRED` (both exit 3) mean
+sign in again. `UVCS_TOKEN_UNAVAILABLE` (exit 6) means that token could not be obtained at all —
+a connectivity or service problem, not a credential one, so re-running sign-in will not help.
+`VCS_UVCS_REVIEW_REQUIRE_AUTH` (exit 3) is the reviews service itself refusing a credential the
+CLI did obtain. Do not treat them as one condition: only the first two are worth a login retry.
+
 **`line` is one-based, and may be absent.** The service anchors a comment with a zero-based line in
 a string field whose `-1` means "not anchored to a line". The CLI does that arithmetic once: `line`
 in the envelope matches what the dashboard shows, and is `null` — never `0` — for a comment that
