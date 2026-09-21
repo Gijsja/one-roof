@@ -23,6 +23,12 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
+# Unity activation artifacts are credentials. Store CI activation material only
+# in the GitHub Actions secret store, never in the repository.
+*.alf
+*.ulf
+UnityEntitlementLicense.xml
+
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
 *.blend1.meta
@@ -116,4 +122,3 @@ InitTestScene*.unity*
 # Pipeline test capture screenshots
 /[Aa]ssets/[Ss]creenshots*
 test-results.xml
-
