@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Content;
 using OneRoof.Domain.Identity;
@@ -145,7 +146,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateResidentPositions(TowerProjection snapshot, BuildingTopologyState topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null)
+        public void UpdateResidentPositions(TowerProjection snapshot, TowerTopologyProjection topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null)
         {
             if (snapshot == null) return;
 

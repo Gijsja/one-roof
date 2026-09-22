@@ -40,7 +40,7 @@ namespace OneRoof.Tests.PlayMode
             }
 
             var finalProjection = session.Projection();
-            Assert.That(session.Simulation.ElevatorBank.DeliveredCount, Is.GreaterThan(0),
+            Assert.That(session.DeliveredPassengerCount, Is.GreaterThan(0),
                 "Residents must be delivered by the elevator after capacity intervention.");
             Assert.That(finalProjection.Elevators.Count, Is.EqualTo(2));
         }

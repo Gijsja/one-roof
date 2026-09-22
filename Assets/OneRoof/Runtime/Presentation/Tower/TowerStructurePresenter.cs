@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using OneRoof.Application.Tower;
 using OneRoof.Domain.Topology;
 using UnityEngine;
 
@@ -45,7 +46,7 @@ namespace OneRoof.Presentation.Tower
 
         }
 
-        public void EnsureFloorViews(BuildingTopologyState topology)
+        public void EnsureFloorViews(TowerTopologyProjection topology)
         {
             var targetCount = topology != null ? topology.FloorCount : InitialFloorCount;
 

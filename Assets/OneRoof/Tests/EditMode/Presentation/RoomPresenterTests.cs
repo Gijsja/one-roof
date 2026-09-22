@@ -45,7 +45,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void EnsureRoomViews_WithTowerTopology_RendersRooms()
         {
             var session = new TowerSimulationSession();
-            var topology = session.Topology;
+            var topology = session.TopologyProjection();
 
             _presenter.EnsureRoomViews(topology);
 
@@ -60,11 +60,11 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void EnsureRoomViews_AdoptsAuthoredRoomInsteadOfCreatingDuplicate()
         {
             var session = new TowerSimulationSession();
-            var room = System.Linq.Enumerable.First(session.Topology.Rooms.Values);
+            var room = System.Linq.Enumerable.First(session.TopologyProjection().Rooms.Values);
             var authored = new GameObject($"RoomView_{room.Id}");
             authored.transform.SetParent(_holder.transform, false);
 
-            _presenter.EnsureRoomViews(session.Topology);
+            _presenter.EnsureRoomViews(session.TopologyProjection());
 
             Assert.That(_holder.transform.Find($"RoomView_{room.Id}"), Is.SameAs(authored.transform));
             var matching = 0;
@@ -77,7 +77,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void Clear_DestroysRoomObjectsAndClearsTrackedIds()
         {
             var session = new TowerSimulationSession();
-            _presenter.EnsureRoomViews(session.Topology);
+            _presenter.EnsureRoomViews(session.TopologyProjection());
             Assert.That(_presenter.RenderedRoomIds.Count, Is.GreaterThan(0));
 
             _presenter.Clear();
@@ -90,7 +90,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void TryGetRoomBounds_WithValidRoom_ReturnsTrueAndValidBounds()
         {
             var session = new TowerSimulationSession();
-            var topo = session.Topology;
+            var topo = session.TopologyProjection();
             Assert.That(topo.Rooms.Count, Is.GreaterThan(0));
             var firstRoom = System.Linq.Enumerable.First(topo.Rooms.Values);
 
@@ -105,7 +105,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void TryGetRoomAt_WhenWithinBounds_ReturnsRoomId()
         {
             var session = new TowerSimulationSession();
-            var topo = session.Topology;
+            var topo = session.TopologyProjection();
             Room firstRoom = null;
             foreach (var r in topo.Rooms.Values)
             {
@@ -133,7 +133,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void EnsureRoomViews_WhenRoomDemolished_DestroysRoomAndAllChildrenWithoutOrphans()
         {
             var session = new TowerSimulationSession();
-            var topo = session.Topology;
+            var topo = session.TopologyProjection();
 
             _presenter.EnsureRoomViews(topo);
             var initialChildCount = _holder.transform.childCount;
@@ -154,7 +154,7 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             var demolishResult = session.ExecuteCommand(new OneRoof.Domain.Commands.DemolishRoomCommand(targetRoom.Id, force: true));
             Assert.That(demolishResult.Accepted, Is.True);
-            _presenter.EnsureRoomViews(session.Topology);
+            _presenter.EnsureRoomViews(session.TopologyProjection());
 
             Assert.That(_presenter.RenderedRoomIds.Contains(targetRoom.Id), Is.False);
             Assert.That(_holder.transform.Find($"RoomView_{targetRoom.Id}"), Is.Null);
@@ -165,7 +165,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         public void EnsureRoomViews_NewRoomsReceiveConstructionTransition()
         {
             var session = new TowerSimulationSession();
-            _presenter.EnsureRoomViews(session.Topology);
+            _presenter.EnsureRoomViews(session.TopologyProjection());
 
             Transform root = null;
             for (var i = 0; i < _holder.transform.childCount; i++)

@@ -43,7 +43,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         {
             var session = new TowerSimulationSession();
             var snapshot = session.Projection();
-            var topology = session.Topology;
+            var topology = session.TopologyProjection();
 
             _presenter.EnsureResidentViews(snapshot.Residents.Count);
             _presenter.UpdateResidentPositions(snapshot, topology, 0f);
@@ -116,7 +116,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             var snapshot = new TowerProjection(10L, 0, 0, 0f, residents, elevators);
 
             _presenter.EnsureResidentViews(1);
-            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+            _presenter.UpdateResidentPositions(snapshot, session.TopologyProjection(), 0f);
 
             ElevatorBankPresenter.CalculateCarLayout(2, 3, out var layoutX, out var carWidth);
             var expectedX = layoutX + ((0 % 2) - 0.5f) * Mathf.Min(0.12f, carWidth * 0.3f);
@@ -149,7 +149,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             try
             {
                 _presenter.EnsureResidentViews(1);
-                _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f, null, elevatorPresenter);
+                _presenter.UpdateResidentPositions(snapshot, session.TopologyProjection(), 0f, null, elevatorPresenter);
 
                 var pos = _presenter.ResidentViews[0].transform.position;
                 Assert.That(pos.y, Is.EqualTo(9.65f).Within(0.001f), "Rider feet must sit on the rendered car floor mid-travel.");
@@ -177,7 +177,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             var snapshot = new TowerProjection(10L, 14, 0, 25f, residents, new List<ElevatorProjection>());
 
             _presenter.EnsureResidentViews(residents.Count);
-            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+            _presenter.UpdateResidentPositions(snapshot, session.TopologyProjection(), 0f);
 
             for (var i = 0; i < residents.Count; i++)
             {
@@ -224,7 +224,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.EnsureResidentViews(1);
             var skeletal = _presenter.ResidentSkeletons[0];
             var stature = skeletal.BodyStature;
-            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+            _presenter.UpdateResidentPositions(snapshot, session.TopologyProjection(), 0f);
 
             var scale = _presenter.ResidentViews[0].transform.localScale;
             Assert.That(scale.x, Is.EqualTo(stature).Within(0.0001f), "Queue heading reset must keep stature.");
@@ -243,15 +243,15 @@ namespace OneRoof.Presentation.Tests.EditMode
                     new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 4f, null, ActivityKind.Idle, 0, 0)
                 },
                 new List<ElevatorProjection>());
-            _presenter.UpdateResidentPositions(right, session.Topology, 0f);
-            _presenter.UpdateResidentPositions(right, session.Topology, 0.1f);
+            _presenter.UpdateResidentPositions(right, session.TopologyProjection(), 0f);
+            _presenter.UpdateResidentPositions(right, session.TopologyProjection(), 0.1f);
             var further = new TowerProjection(11L, 0, 0, 0f,
                 new List<TransitResidentProjection>
                 {
                     new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 6f, null, ActivityKind.Idle, 0, 0)
                 },
                 new List<ElevatorProjection>());
-            _presenter.UpdateResidentPositions(further, session.Topology, 0.2f);
+            _presenter.UpdateResidentPositions(further, session.TopologyProjection(), 0.2f);
             Assert.That(_presenter.ResidentSkeletons[0].FacingDirection, Is.EqualTo(1f));
 
             var back = new TowerProjection(12L, 0, 0, 0f,
@@ -260,7 +260,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                     new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 1f, null, ActivityKind.Idle, 0, 0)
                 },
                 new List<ElevatorProjection>());
-            _presenter.UpdateResidentPositions(back, session.Topology, 0.3f);
+            _presenter.UpdateResidentPositions(back, session.TopologyProjection(), 0.3f);
             Assert.That(_presenter.ResidentSkeletons[0].FacingDirection, Is.EqualTo(-1f));
             var scale = _presenter.ResidentViews[0].transform.localScale;
             Assert.That(Mathf.Abs(scale.x), Is.EqualTo(_presenter.ResidentSkeletons[0].BodyStature).Within(0.0001f),

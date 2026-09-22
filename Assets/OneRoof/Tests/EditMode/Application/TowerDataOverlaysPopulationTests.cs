@@ -5,12 +5,12 @@ using OneRoof.Application.Tower;
 
 namespace OneRoof.Application.Tests.EditMode
 {
-    public sealed class PopulationOverlayServiceTests
+    public sealed class TowerDataOverlaysPopulationTests
     {
         [Test]
         public void CreateOverlay_StandardTower_ProjectsEveryFloorWithAccessibleDemographics()
         {
-            var overlay = new PopulationOverlayService().CreateOverlay(new TowerSimulationSession());
+            var overlay = new TowerDataOverlays(new TowerSimulationSession()).Population;
 
             Assert.That(overlay.ResidentCount, Is.EqualTo(50));
             Assert.That(overlay.Floors, Has.Count.EqualTo(5));

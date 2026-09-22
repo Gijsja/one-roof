@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Tower;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Architecture;
@@ -44,7 +45,7 @@ namespace OneRoof.Presentation.Tower
             return true;
         }
 
-        public bool TryGetRoomBounds(EntityId roomId, BuildingTopologyState topology, out Bounds bounds)
+        public bool TryGetRoomBounds(EntityId roomId, TowerTopologyProjection topology, out Bounds bounds)
         {
             if (topology != null && topology.TryGetRoom(roomId, out var room))
             {
@@ -55,7 +56,7 @@ namespace OneRoof.Presentation.Tower
             return false;
         }
 
-        public bool TryGetRoomAt(Vector2 worldPos, BuildingTopologyState topology, out EntityId roomId, out Bounds bounds)
+        public bool TryGetRoomAt(Vector2 worldPos, TowerTopologyProjection topology, out EntityId roomId, out Bounds bounds)
         {
             if (topology != null)
             {
@@ -96,7 +97,7 @@ namespace OneRoof.Presentation.Tower
             _authoredRoomIds.Clear();
         }
 
-        public void EnsureRoomViews(BuildingTopologyState topology)
+        public void EnsureRoomViews(TowerTopologyProjection topology)
         {
             if (topology == null) return;
 

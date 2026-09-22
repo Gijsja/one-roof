@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Inspectors;
 using OneRoof.Application.Transit;
 using OneRoof.Domain;
 using OneRoof.Domain.Commands;
@@ -22,18 +23,30 @@ namespace OneRoof.Application.Tower
         private TowerSimulation _simulation;
         private TowerProjection _cachedTransitProjection;
         private ElevatorBankCongestionProjection _cachedCongestionProjection;
+        private TowerTopologyProjection _cachedTopologyProjection;
+        private long _topologyVersion;
+        private long _cachedTopologyVersion = -1;
         private long _cachedTick = -1;
         private long _cachedCongestionTick = -1;
-        // Cheap structural fingerprints: direct Simulation mutations bypass the
-        // wrappers below, so tick alone cannot prove a projection is fresh.
-        private int _cachedFloorCount = -1;
-        private int _cachedResidentCount = -1;
-        private int _cachedQueuedTotal = -1;
-        private int _cachedCarCount = -1;
+        // Version proving projections fresh: only this module mutates the
+        // simulation, so (tick, version) fully keys the caches.
+        private long _version;
+        private long _cachedVersion = -1;
+        private long _cachedCongestionVersion = -1;
 
-        public TowerSimulationSession(TowerSimulation simulation = null)
+        public TowerSimulationSession() : this(TowerSimulation.CreateStandardFiveFloor())
         {
-            _simulation = simulation ?? TowerSimulation.CreateStandardFiveFloor();
+        }
+
+        private TowerSimulationSession(TowerSimulation simulation)
+        {
+            _simulation = simulation;
+        }
+
+        /// <summary>Five-floor fixture with a configurable treasury for build validation.</summary>
+        public static TowerSimulationSession CreateStandardFiveFloor(long startingTreasury)
+        {
+            return new TowerSimulationSession(TowerSimulation.CreateStandardFiveFloor(new TowerEconomyState(startingTreasury)));
         }
 
         /// <summary>Ground-floor from-scratch start: one slab, lobby shell, no residents.</summary>
@@ -41,18 +54,6 @@ namespace OneRoof.Application.Tower
         {
             return new TowerSimulationSession(TowerSimulation.CreateGroundFloorStart(startingTreasury));
         }
-
-        public TowerSimulation Simulation => _simulation;
-
-        public BuildingTopologyState Topology => _simulation.Topology;
-
-        public PopulationState Population => _simulation.Population;
-
-        public ElevatorBank ElevatorBank => _simulation.ElevatorBank;
-
-        public TowerEconomyState Economy => _simulation.Economy;
-
-        public OneRoof.Domain.Scrutiny.ScrutinyState Scrutiny => _simulation.Scrutiny;
 
         public long CurrentTick => _simulation.CurrentTick;
 
@@ -62,6 +63,74 @@ namespace OneRoof.Application.Tower
         public int ResidentCount => _simulation.ResidentCount;
 
         public int FloorCount => _simulation.Topology.FloorCount;
+
+        public TowerTopologyProjection TopologyProjection()
+        {
+            if (_cachedTopologyProjection != null && _cachedTopologyVersion == _topologyVersion)
+                return _cachedTopologyProjection;
+            _cachedTopologyProjection = new TowerTopologyProjection(_simulation.Topology);
+            _cachedTopologyVersion = _topologyVersion;
+            return _cachedTopologyProjection;
+        }
+
+        public int ActiveTripCount => _simulation.ActiveTripCount;
+
+        public int ElevatorCarCount => _simulation.ElevatorBank.Cars.Count;
+
+        public int DeliveredPassengerCount => _simulation.ElevatorBank.DeliveredCount;
+
+        public long TreasuryBalance => _simulation.Economy.CashBalance;
+
+        public long TotalRevenue => _simulation.Economy.TotalRevenue;
+
+        internal ElevatorBankSnapshot ElevatorSnapshot() => _simulation.ElevatorBank.Snapshot();
+
+        public int ElevatorMinFloor => _simulation.ElevatorBank.MinFloor;
+
+        public int ElevatorMaxFloor => _simulation.ElevatorBank.MaxFloor;
+
+        public int RoomCount => _simulation.Topology.Rooms.Count;
+
+        public IReadOnlyList<Room> GetRoomsOnFloor(int floor) => TopologyProjection().GetRoomsOnFloor(floor);
+
+        public bool TryGetRoom(EntityId id, out Room room) => TopologyProjection().TryGetRoom(id, out room);
+
+        public bool TryGetFloorSlab(int floor, out CellBounds slab) => TopologyProjection().TryGetFloorSlab(floor, out slab);
+
+        internal TowerSimulation Simulation => _simulation;
+
+        internal BuildingTopologyState Topology => _simulation.Topology;
+
+        internal PopulationState Population => _simulation.Population;
+
+        internal ElevatorBank ElevatorBank => _simulation.ElevatorBank;
+
+        internal OneRoof.Domain.Scrutiny.ScrutinyState Scrutiny => _simulation.Scrutiny;
+
+        internal IReadOnlyList<BusinessRecord> Businesses => _simulation.Businesses.Businesses;
+
+        public bool TryGetResidentInspection(EntityId id, out ResidentInspectionSnapshot snapshot)
+        {
+            if (_simulation.Population.TryGetPerson(id, out var person))
+            {
+                snapshot = new ResidentInspectionSnapshot(person);
+                return true;
+            }
+            snapshot = null;
+            return false;
+        }
+
+        public int CountRoomOccupants(EntityId roomId)
+        {
+            var count = 0;
+            foreach (var person in _simulation.Population.Persons)
+                if (person.CurrentRoomId.Equals(roomId)) count++;
+            return count;
+        }
+
+        internal IReadOnlyList<PersonRecord> Persons => _simulation.Population.Persons;
+
+        internal HouseholdRecord GetHousehold(EntityId id) => _simulation.Population.GetHousehold(id);
 
         /// <summary>Application-facing immutable power network projection for future utility UI and inspectors.</summary>
         public ElectricalGridSnapshot ElectricalGridProjection() => _simulation.ElectricalGridSnapshot();
@@ -75,7 +144,7 @@ namespace OneRoof.Application.Tower
         public void AdvanceOneTick()
         {
             _simulation.AdvanceOneTick();
-            InvalidateProjectionCaches();
+            BumpVersion();
         }
 
         public CommandResult AddCapacity()
@@ -83,7 +152,7 @@ namespace OneRoof.Application.Tower
             var result = _simulation.AddElevatorCar();
             if (result.Accepted)
             {
-                InvalidateProjectionCaches();
+                BumpVersion();
             }
             return result;
         }
@@ -95,64 +164,22 @@ namespace OneRoof.Application.Tower
             var result = _simulation.ExecuteCommand(command);
             if (result.Accepted)
             {
-                InvalidateProjectionCaches();
+                BumpVersion(topologyChanged: true);
             }
-            return result;
-        }
-
-        public CommandResult BuildFloorSlab(BuildFloorSlabCommand cmd)
-        {
-            var result = _simulation.BuildFloorSlab(cmd);
-            InvalidateProjectionCaches();
-            return result;
-        }
-
-        public CommandResult ExpandGroundSlab(ExpandGroundSlabCommand cmd)
-        {
-            var result = _simulation.ExpandGroundSlab(cmd);
-            InvalidateProjectionCaches();
-            return result;
-        }
-
-        public CommandResult BuildRoom(BuildRoomCommand cmd)
-        {
-            var result = _simulation.BuildRoom(cmd);
-            InvalidateProjectionCaches();
-            return result;
-        }
-
-        public CommandResult AddElevatorShaft(AddElevatorShaftCommand cmd)
-        {
-            var result = _simulation.AddElevatorShaft(cmd);
-            InvalidateProjectionCaches();
-            return result;
-        }
-
-        public CommandResult BuildStairwell(BuildStairwellCommand cmd)
-        {
-            var result = _simulation.BuildStairwell(cmd);
-            InvalidateProjectionCaches();
-            return result;
-        }
-
-        public CommandResult DemolishRoom(DemolishRoomCommand cmd)
-        {
-            var result = _simulation.DemolishRoom(cmd);
-            InvalidateProjectionCaches();
             return result;
         }
 
         public void Reset()
         {
             _simulation = TowerSimulation.CreateStandardFiveFloor();
-            InvalidateProjectionCaches();
+            BumpVersion(topologyChanged: true);
         }
 
         /// <summary>Resets to the ground-floor from-scratch start instead of the five-floor fixture.</summary>
         public void ResetToGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury)
         {
             _simulation = TowerSimulation.CreateGroundFloorStart(startingTreasury);
-            InvalidateProjectionCaches();
+            BumpVersion(topologyChanged: true);
         }
 
         /// <summary>
@@ -162,24 +189,20 @@ namespace OneRoof.Application.Tower
         public void SeedMorningRush()
         {
             _simulation.SeedMorningRush();
-            InvalidateProjectionCaches();
+            BumpVersion();
         }
 
 
         public ElevatorBankCongestionProjection CongestionProjection()
         {
-            var floorCount = _simulation.Topology.FloorCount;
-            var carCount = _simulation.ElevatorBank.Cars.Count;
-            var queuedTotal = _simulation.TotalQueuedElevatorPassengers;
             if (_cachedCongestionProjection != null &&
                 _cachedCongestionTick == _simulation.CurrentTick &&
-                _cachedFloorCount == floorCount &&
-                _cachedCarCount == carCount &&
-                _cachedQueuedTotal == queuedTotal)
+                _cachedCongestionVersion == _version)
             {
                 return _cachedCongestionProjection;
             }
 
+            var floorCount = _simulation.Topology.FloorCount;
             var floorProjections = new List<FloorCongestionProjection>(floorCount);
             var maxQueue = -1;
             var bottleneckFloor = 0;
@@ -237,9 +260,7 @@ namespace OneRoof.Application.Tower
                 floorProjections,
                 elevProjections);
             _cachedCongestionTick = _simulation.CurrentTick;
-            _cachedFloorCount = floorCount;
-            _cachedCarCount = carCount;
-            _cachedQueuedTotal = queuedTotal;
+            _cachedCongestionVersion = _version;
             return _cachedCongestionProjection;
         }
 
@@ -247,28 +268,15 @@ namespace OneRoof.Application.Tower
 
         public TowerProjection TransitProjection()
         {
-            var transitFloorCount = _simulation.Topology.FloorCount;
-            var transitResidentCount = _simulation.ResidentCount;
-            var transitQueuedTotal = _simulation.TotalQueuedElevatorPassengers;
-            var transitCarCount = _simulation.ElevatorBank.Cars.Count;
             if (_cachedTransitProjection != null &&
                 _cachedTick == _simulation.CurrentTick &&
-                _cachedFloorCount == transitFloorCount &&
-                _cachedResidentCount == transitResidentCount &&
-                _cachedQueuedTotal == transitQueuedTotal &&
-                _cachedCarCount == transitCarCount)
+                _cachedVersion == _version)
             {
                 return _cachedTransitProjection;
             }
 
             // Index elevator bank passenger states for rush hour and transit visualization
             var snapshot = _simulation.ElevatorBank.Snapshot();
-
-            var deliveredByPerson = new Dictionary<EntityId, ElevatorPassenger>(snapshot.DeliveredPassengers.Count);
-            foreach (var p in snapshot.DeliveredPassengers)
-            {
-                deliveredByPerson[p.PersonId] = p;
-            }
 
             var ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
             foreach (var car in snapshot.Cars)
@@ -382,27 +390,25 @@ namespace OneRoof.Application.Tower
                 elevators);
 
             _cachedTick = _simulation.CurrentTick;
-            _cachedFloorCount = transitFloorCount;
-            _cachedResidentCount = transitResidentCount;
-            _cachedQueuedTotal = transitQueuedTotal;
-            _cachedCarCount = transitCarCount;
+            _cachedVersion = _version;
             return _cachedTransitProjection;
         }
 
-        /// <summary>
-        /// Public escape hatch for code that mutates <see cref="Simulation"/>
-        /// directly instead of through this session's command wrappers.
-        /// </summary>
-        public void InvalidateProjectionCaches()
+        private void BumpVersion(bool topologyChanged = false)
+        {
+            _version++;
+            if (topologyChanged) _topologyVersion++;
+            InvalidateProjectionCaches();
+        }
+
+        private void InvalidateProjectionCaches()
         {
             _cachedTransitProjection = null;
             _cachedCongestionProjection = null;
             _cachedTick = -1;
             _cachedCongestionTick = -1;
-            _cachedFloorCount = -1;
-            _cachedResidentCount = -1;
-            _cachedQueuedTotal = -1;
-            _cachedCarCount = -1;
+            _cachedVersion = -1;
+            _cachedCongestionVersion = -1;
         }
     }
 }

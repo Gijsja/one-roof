@@ -21,7 +21,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                     new List<TransitResidentProjection> { new TransitResidentProjection(42, 2, TransitResidentStatus.Walking, 2, 4f) },
                     new List<ElevatorProjection> { new ElevatorProjection(1, 0, 0, 8, new List<int>()) });
 
-                presenter.UpdateSoundscape(projection, session.Topology);
+                presenter.UpdateSoundscape(projection, session.TopologyProjection());
 
                 Assert.That(presenter.LastFootstepResidentId, Is.EqualTo(42));
                 Assert.That(presenter.FootstepFoley.transform.position.y, Is.EqualTo(TowerStructurePresenter.FloorY(2) - 0.58f).Within(0.001f));
@@ -43,10 +43,10 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var presenter = root.AddComponent<TowerAtmospherePresenter>();
                 var session = new TowerSimulationSession();
                 presenter.UpdateSoundscape(new TowerProjection(0, 0, 0, 0f,
-                    new List<TransitResidentProjection>(), new List<ElevatorProjection>()), session.Topology);
+                    new List<TransitResidentProjection>(), new List<ElevatorProjection>()), session.TopologyProjection());
 
                 var expectedRoomCount = 0;
-                foreach (var room in session.Topology.Rooms.Values)
+                foreach (var room in session.TopologyProjection().Rooms.Values)
                     if (!room.ContentType.Value.Contains("elevator_shaft")) expectedRoomCount++;
 
                 Assert.That(presenter.WindowLightCount, Is.EqualTo(expectedRoomCount));

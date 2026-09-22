@@ -3,9 +3,9 @@ namespace OneRoof.Application.Overlays
     /// <summary>
     /// Types of diagnostic overlays available in Data mode (Docs/04_UX_CONTRACT.md).
     /// Status: ElevatorWait, FootTraffic, Population, Satisfaction, BusinessHealth,
-    /// and Utilities are implemented with Application services and Presentation
+    /// and Utilities are implemented by TowerDataOverlays and Presentation
     /// presenters. Noise and FactionTension are reserved for OR-903 and have no
-    /// service or presenter yet; do not expose them in overlay UI until then.
+    /// projection or presenter yet; do not expose them in overlay UI until then.
     /// </summary>
     public enum DataOverlayKind
     {

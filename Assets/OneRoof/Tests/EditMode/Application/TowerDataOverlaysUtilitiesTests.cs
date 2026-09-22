@@ -5,12 +5,12 @@ using OneRoof.Application.Tower;
 
 namespace OneRoof.Application.Tests.EditMode
 {
-    public sealed class UtilitiesOverlayServiceTests
+    public sealed class TowerDataOverlaysUtilitiesTests
     {
         [Test]
         public void CreateOverlay_StandardTower_ProjectsEveryFloorWithNonColourEvidence()
         {
-            var overlay = new UtilitiesOverlayService().CreateOverlay(new TowerSimulationSession());
+            var overlay = new TowerDataOverlays(new TowerSimulationSession()).Utilities;
             Assert.That(overlay.Floors, Has.Count.EqualTo(5));
             Assert.That(overlay.Floors[0].AccessibilityLabel, Does.Contain("power"));
             Assert.That(overlay.Floors[0].AccessibilityLabel, Does.Contain("water"));

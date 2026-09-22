@@ -6,24 +6,7 @@ using OneRoof.Domain.Infrastructure;
 namespace OneRoof.Application.Overlays
 {
     /// <summary>Combines physical utility connectivity with operational equipment condition for Overlay 8.</summary>
-    public sealed class UtilitiesOverlayService
-    {
-        public UtilitiesOverlayProjection CreateOverlay(TowerSimulationSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            var power = session.ElectricalGridProjection(); var waterWaste = session.WaterWasteNetworkProjection(); var operations = session.UtilityOperationsProjection();
-            var failedByFloor = new Dictionary<int, int>();
-            foreach (var item in operations.Equipment) if (item.IsFailed) failedByFloor[item.Floor] = failedByFloor.TryGetValue(item.Floor, out var count) ? count + 1 : 1;
-            var floors = new List<UtilitiesFloorProjection>();
-            for (var floor = 0; floor < session.FloorCount; floor++)
-            {
-                var electrical = power.Floors[floor]; var plumbing = waterWaste.Floors[floor];
-                failedByFloor.TryGetValue(floor, out var failures);
-                floors.Add(new UtilitiesFloorProjection(floor, electrical.Voltage, electrical.BrownoutReason.ToString(), plumbing.WaterPressure, plumbing.WaterFailure.ToString(), plumbing.WasteFailure.ToString(), failures));
-            }
-            return new UtilitiesOverlayProjection(floors, operations.Equipment);
-        }
-    }
+
 
     public sealed class UtilitiesOverlayProjection
     {

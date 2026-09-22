@@ -78,7 +78,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void HitTest_WhenPointingInRoom_ReturnsRoom()
         {
-            var topo = _simSession.Topology;
+            var topo = _simSession.TopologyProjection();
             Assert.That(topo.Rooms.Count, Is.GreaterThan(0));
 
             // Pick the first non-shaft room
@@ -119,7 +119,7 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(hit, Is.True);
             Assert.That(kind, Is.EqualTo(InspectTargetKind.Resident));
-            Assert.That(id, Is.EqualTo(_simSession.Population.Persons[0].Id.Value));
+            Assert.That(id, Is.EqualTo(_simSession.TransitProjection().Residents[0].ResidentId));
             Assert.That(tr, Is.Not.Null);
             Assert.That(sprite, Is.Not.Null);
         }
@@ -162,8 +162,8 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void ShowDetails_ForResidentAndRoom_UsesStableEntityIds()
         {
-            var residentId = _simSession.Population.Persons[0].Id.Value;
-            var roomId = _simSession.Population.Persons[0].HomeRoomId.Value;
+            var residentId = _simSession.TransitProjection().Residents[0].ResidentId;
+            var roomId = _simSession.TransitProjection().Residents[0].RoomId.Value;
 
             _controller.ShowDetails(InspectTargetKind.Resident, residentId);
             Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo($"Resident #{residentId}"));

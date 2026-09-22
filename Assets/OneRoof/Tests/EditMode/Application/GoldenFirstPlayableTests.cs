@@ -41,7 +41,7 @@ namespace OneRoof.Application.Tests.EditMode
 
             var scenario1 = new CongestedElevatorScenario(carCount: 1);
             var congestionService = new TransitCongestionService();
-            var overlayService = new ElevatorWaitOverlayService();
+
             var predictor = new ElevatorPlacementPredictor();
             var modeSession = new ModeShellSession();
 
@@ -57,7 +57,7 @@ namespace OneRoof.Application.Tests.EditMode
             modeSession.SwitchMode(InteractionMode.Data);
             modeSession.SetActiveOverlay("overlay:elevator_wait");
 
-            var overlay = overlayService.CreateOverlay(initialCongestion);
+            var overlay = TowerDataOverlays.ProjectElevatorWait(initialCongestion);
 
             Assert.That(overlay.BottleneckFloor, Is.EqualTo(0));
             Assert.That(overlay.FloorFlows[0].IsBottleneck, Is.True);

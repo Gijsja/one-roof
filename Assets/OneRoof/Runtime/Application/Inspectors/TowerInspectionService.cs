@@ -21,28 +21,28 @@ namespace OneRoof.Application.Inspectors
         public InspectorDetailProjection InspectResident(int residentId)
         {
             var personId = new EntityId(residentId);
-            if (!_session.Population.TryGetPerson(personId, out var person)) return null;
+            if (!_session.TryGetResidentInspection(personId, out var person)) return null;
 
             var transit = _session.TransitProjection();
             var resident = FindResident(transit, residentId);
             var details = new List<string>
             {
-                $"Activity: {person.CurrentActivity}",
-                $"Household: #{person.HouseholdId.Value}",
-                $"Home: room #{person.HomeRoomId.Value}",
-                $"Workplace: room #{person.WorkplaceRoomId.Value}",
-                person.Specialization.Role == SpecialistRole.None
-                    ? (person.Specialization.IsTraining ? $"Training: {person.Specialization.TrainingRole} ({person.Specialization.TrainingProgress:P0})" : "Specialist role: none yet")
-                    : $"Specialist role: {person.Specialization.Role}"
+                $"Activity: {person.Activity}",
+                $"Household: #{person.HouseholdId}",
+                $"Home: room #{person.HomeRoomId}",
+                $"Workplace: room #{person.WorkplaceRoomId}",
+                person.Role == SpecialistRole.None
+                    ? (person.IsTraining ? $"Training: {person.TrainingRole} ({person.TrainingProgress:P0})" : "Specialist role: none yet")
+                    : $"Specialist role: {person.Role}"
             };
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
-            details.Add($"Satisfaction: {person.Wellbeing.Satisfaction:P0}");
-            details.Add($"Strain: {person.Wellbeing.Strain:P0}");
-            details.Add($"Commute quality: {person.Wellbeing.Commute:P0}");
-            details.Add($"Rent burden: {person.Wellbeing.RentBurden:P0}");
+            details.Add($"Satisfaction: {person.Satisfaction:P0}");
+            details.Add($"Strain: {person.Strain:P0}");
+            details.Add($"Commute quality: {person.Commute:P0}");
+            details.Add($"Rent burden: {person.RentBurden:P0}");
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
-            foreach (var grievance in person.Wellbeing.Grievances) details.Add($"Grievance: {grievance}");
+            foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
 
             var symptom = !resident.HasValue
                 ? "Resident location is not currently available."
@@ -51,15 +51,13 @@ namespace OneRoof.Application.Inspectors
 
             return new InspectorDetailProjection(
                 $"Resident #{residentId}", symptom, details,
-                person.Wellbeing.Grievances.Count > 0 ? "Open the Satisfaction overlay, then respond through transit capacity, services, or leasing." : "Observe needs and activity before changing tower systems.");
+                person.Grievances.Count > 0 ? "Open the Satisfaction overlay, then respond through transit capacity, services, or leasing." : "Observe needs and activity before changing tower systems.");
         }
 
         public InspectorDetailProjection InspectRoom(int roomId)
         {
-            if (!_session.Topology.TryGetRoom(new EntityId(roomId), out var room)) return null;
-            var occupants = 0;
-            foreach (var person in _session.Population.Persons)
-                if (person.CurrentRoomId.Value == roomId) occupants++;
+            if (!_session.TryGetRoom(new EntityId(roomId), out var room)) return null;
+            var occupants = _session.CountRoomOccupants(room.Id);
 
             var details = new List<string>
             {
@@ -78,7 +76,7 @@ namespace OneRoof.Application.Inspectors
 
         public InspectorDetailProjection InspectElevatorBank()
         {
-            var snapshot = _session.ElevatorBank.Snapshot();
+            var snapshot = _session.ElevatorSnapshot();
             var details = new List<string>
             {
                 $"Cars in service: {snapshot.Cars.Count}",
@@ -99,7 +97,7 @@ namespace OneRoof.Application.Inspectors
         /// <summary>Provides the overlay's floor-level demographic evidence as an immutable cause-chain card.</summary>
         public InspectorDetailProjection InspectPopulationFloor(int floor)
         {
-            var overlay = new PopulationOverlayService().CreateOverlay(_session);
+            var overlay = new TowerDataOverlays(_session).Population;
             if (!overlay.TryGetFloor(floor, out var population)) return null;
             var details = new List<string>
             {
@@ -116,7 +114,7 @@ namespace OneRoof.Application.Inspectors
 
         public InspectorDetailProjection InspectScrutiny()
         {
-            var overlay = new ScrutinyOverlayService().CreateOverlay(_session);
+            var overlay = new TowerDataOverlays(_session).Scrutiny;
             var details = new List<string>
             {
                 $"Current scrutiny: {overlay.Value:P0}",
@@ -133,7 +131,7 @@ namespace OneRoof.Application.Inspectors
 
         public InspectorDetailProjection InspectUtilities()
         {
-            var overlay = new UtilitiesOverlayService().CreateOverlay(_session);
+            var overlay = new TowerDataOverlays(_session).Utilities;
             var details = new List<string> { $"Failed equipment: {overlay.FailedEquipmentCount}" };
             foreach (var floor in overlay.Floors) if (floor.HasDisruption) details.Add(floor.AccessibilityLabel);
             foreach (var item in overlay.Equipment) if (item.IsFailed) details.Add($"Failed: {item.ContentId} in room #{item.RoomId} on floor {item.Floor} ({item.Condition:P0} condition).");

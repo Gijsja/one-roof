@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Time;
@@ -34,7 +35,7 @@ namespace OneRoof.Presentation.Tower
         private long _lastDayNightKey = -1;
         private int _tintFloorCount = -1;
         private long _lastFootstepTick = -1;
-        private BuildingTopologyState _syncedTopology;
+        private TowerTopologyProjection _syncedTopology;
         private int _syncedRoomCount = -1;
 
         public int RoomToneSourceCount => _roomTones.Count;
@@ -59,7 +60,7 @@ namespace OneRoof.Presentation.Tower
             _footstepFoley.clip = CreateTone("footstep", 170f, 0.08f, 0.18f);
         }
 
-        public void UpdateSoundscape(TowerProjection snapshot, BuildingTopologyState topology)
+        public void UpdateSoundscape(TowerProjection snapshot, TowerTopologyProjection topology)
         {
             if (snapshot == null || topology == null) return;
             Initialize();
@@ -134,7 +135,7 @@ namespace OneRoof.Presentation.Tower
             _tintFloorCount = -1;
         }
 
-        private void SyncRoomTonesAndWindowLighting(BuildingTopologyState topology)
+        private void SyncRoomTonesAndWindowLighting(TowerTopologyProjection topology)
         {
             if (ReferenceEquals(_syncedTopology, topology) && _syncedRoomCount == topology.Rooms.Count) return;
             var active = new HashSet<EntityId>(topology.Rooms.Keys);

@@ -36,11 +36,11 @@ namespace OneRoof.Tests.PlayMode
                     isValid: true);
                 Assert.That(controller.GhostPresenter.IsVisible, Is.True);
 
-                var initialCash = controller.SimulationSession.Economy.CashBalance;
+                var initialCash = controller.SimulationSession.TreasuryBalance;
                 Assert.That(controller.GridPlacement.TryExecutePlacement("floor:slab", previewFloor, 0, out var result), Is.True);
                 Assert.That(result.Accepted, Is.True);
-                Assert.That(controller.SimulationSession.Topology.FloorSlabs.ContainsKey(nextFloor), Is.True);
-                Assert.That(controller.SimulationSession.Economy.CashBalance, Is.LessThan(initialCash));
+                Assert.That(controller.SimulationSession.TryGetFloorSlab(nextFloor, out _), Is.True);
+                Assert.That(controller.SimulationSession.TreasuryBalance, Is.LessThan(initialCash));
                 Assert.That(controller.StructurePresenter.RenderedFloorCount, Is.EqualTo(nextFloor + 1));
                 Assert.That(holder.transform.Find($"Floor Slab {nextFloor}"), Is.Not.Null);
             }
@@ -71,18 +71,18 @@ namespace OneRoof.Tests.PlayMode
 
             // Interactive expansion: Build floor 5 slab
             var slabCmd = new BuildFloorSlabCommand(5, -14, 16);
-            var slabResult = controller.SimulationSession.BuildFloorSlab(slabCmd);
+            var slabResult = controller.SimulationSession.ExecuteCommand(slabCmd);
             Assert.That(slabResult.Accepted, Is.True);
             Assert.That(controller.SimulationSession.FloorCount, Is.EqualTo(6));
 
             // Build apartment on floor 5
             var aptCmd = new BuildRoomCommand(5, -10, -5, new ContentId("residential:studio"), capacity: 5);
-            var aptResult = controller.SimulationSession.BuildRoom(aptCmd);
+            var aptResult = controller.SimulationSession.ExecuteCommand(aptCmd);
             Assert.That(aptResult.Accepted, Is.True);
 
             // Extend shaft to floor 5
             var shaftCmd = new AddElevatorShaftCommand(0, 1, 0, 5);
-            var shaftResult = controller.SimulationSession.AddElevatorShaft(shaftCmd);
+            var shaftResult = controller.SimulationSession.ExecuteCommand(shaftCmd);
             Assert.That(shaftResult.Accepted, Is.True);
 
             // Advance 40 ticks to allow leasing to move in residents
@@ -95,9 +95,9 @@ namespace OneRoof.Tests.PlayMode
             Assert.That(controller.SimulationSession.ResidentCount, Is.GreaterThan(50));
 
             // Player intervention: Add elevator capacity
-            var initialCars = controller.SimulationSession.ElevatorBank.Cars.Count;
+            var initialCars = controller.SimulationSession.ElevatorCarCount;
             controller.OnConfirmElevatorPlacement();
-            Assert.That(controller.SimulationSession.ElevatorBank.Cars.Count, Is.EqualTo(initialCars + 1));
+            Assert.That(controller.SimulationSession.ElevatorCarCount, Is.EqualTo(initialCars + 1));
 
             // Advance through commute
             for (var i = 0; i < 30; i++)
@@ -106,7 +106,7 @@ namespace OneRoof.Tests.PlayMode
                 yield return null;
             }
 
-            Assert.That(controller.SimulationSession.ElevatorBank.DeliveredCount, Is.GreaterThan(0));
+            Assert.That(controller.SimulationSession.DeliveredPassengerCount, Is.GreaterThan(0));
 
             Object.DestroyImmediate(holder);
         }

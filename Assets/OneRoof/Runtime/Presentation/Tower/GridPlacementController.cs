@@ -125,8 +125,7 @@ namespace OneRoof.Presentation.Tower
         private string _resolveCellCacheTool;
         private int _resolveCellCacheFloor;
         private int _resolveCellCacheHover;
-        private int _resolveCellCacheRoomCount;
-        private int _resolveCellCacheFloorCount;
+        private TowerTopologyProjection _resolveCellCacheTopology;
         private int _resolveCellCacheResult;
         private bool _hasResolveCellCache;
 
@@ -210,9 +209,9 @@ namespace OneRoof.Presentation.Tower
 
                     if (toolId.Equals("transit:stairwell", StringComparison.OrdinalIgnoreCase))
                     {
-                        var topology = _simulationSession?.Topology;
-                        var topFloor = (topology != null && floor == topology.FloorCount - 1) ? floor : floor + 1;
-                        var bottomFloor = (topology != null && floor == topology.FloorCount - 1) ? floor - 1 : floor;
+                        var sessionFloorCount = _simulationSession?.FloorCount ?? 0;
+                        var topFloor = (_simulationSession != null && floor == sessionFloorCount - 1) ? floor : floor + 1;
+                        var bottomFloor = (_simulationSession != null && floor == sessionFloorCount - 1) ? floor - 1 : floor;
                         var midY = (_floorOriginY + bottomFloor * _floorHeight + _floorOriginY + topFloor * _floorHeight) * 0.5f;
                         worldPos = new Vector3(worldPos.x, midY, worldPos.z);
                         worldSize = new Vector2(placementBounds.Width * _cellWidth, _floorHeight * 1.85f);
@@ -471,21 +470,21 @@ namespace OneRoof.Presentation.Tower
             {
                 if (toolId.Equals("floor:slab", StringComparison.OrdinalIgnoreCase))
                 {
-                    return _simulationSession.Topology.FloorCount;
+                    return _simulationSession.FloorCount;
                 }
 
                 if (toolId.Equals("floor:ground_expansion", StringComparison.OrdinalIgnoreCase)) return 0;
 
                 if (toolId.Equals("transit:elevator_shaft", StringComparison.OrdinalIgnoreCase))
                 {
-                    var topFloor = Math.Max(1, _simulationSession.Topology.FloorCount - 1);
+                    var topFloor = Math.Max(1, _simulationSession.FloorCount - 1);
                     if (hoveredFloor >= 1 && hoveredFloor <= topFloor) return hoveredFloor;
                     return topFloor;
                 }
 
                 if (toolId.Equals("transit:stairwell", StringComparison.OrdinalIgnoreCase))
                 {
-                    var topFloor = Math.Max(0, _simulationSession.Topology.FloorCount - 1);
+                    var topFloor = Math.Max(0, _simulationSession.FloorCount - 1);
                     if (hoveredFloor >= 0 && hoveredFloor <= topFloor) return hoveredFloor;
                     return topFloor;
                 }
@@ -512,19 +511,18 @@ namespace OneRoof.Presentation.Tower
                 return hoveredCellX;
             }
 
-            var topology = _simulationSession.Topology;
+            var session = _simulationSession;
             if (_hasResolveCellCache &&
                 string.Equals(_resolveCellCacheTool, toolId, StringComparison.OrdinalIgnoreCase) &&
                 _resolveCellCacheFloor == floor &&
                 _resolveCellCacheHover == hoveredCellX &&
-                _resolveCellCacheFloorCount == topology.FloorCount &&
-                _resolveCellCacheRoomCount == topology.Rooms.Count)
+                ReferenceEquals(_resolveCellCacheTopology, session.TopologyProjection()))
             {
                 return _resolveCellCacheResult;
             }
 
-            var bottomFloor = floor == topology.FloorCount - 1 ? floor - 1 : floor;
-            if (bottomFloor < 0 || !topology.TryGetFloorSlab(bottomFloor, out var lowerSlab))
+            var bottomFloor = floor == session.FloorCount - 1 ? floor - 1 : floor;
+            if (bottomFloor < 0 || !session.TryGetFloorSlab(bottomFloor, out var lowerSlab))
             {
                 return hoveredCellX;
             }
@@ -547,8 +545,7 @@ namespace OneRoof.Presentation.Tower
             _resolveCellCacheTool = toolId;
             _resolveCellCacheFloor = floor;
             _resolveCellCacheHover = hoveredCellX;
-            _resolveCellCacheFloorCount = topology.FloorCount;
-            _resolveCellCacheRoomCount = topology.Rooms.Count;
+            _resolveCellCacheTopology = session.TopologyProjection();
             _resolveCellCacheResult = bestCell;
             _hasResolveCellCache = true;
             return bestCell;
@@ -566,7 +563,7 @@ namespace OneRoof.Presentation.Tower
             {
                 if (_simulationSession != null)
                 {
-                    var floorRooms = _simulationSession.Topology.GetRoomsOnFloor(floor);
+                    var floorRooms = _simulationSession.GetRoomsOnFloor(floor);
                     for (var i = 0; i < floorRooms.Count; i++)
                     {
                         if (cellX >= floorRooms[i].Bounds.MinX && cellX <= floorRooms[i].Bounds.MaxX)
@@ -585,7 +582,7 @@ namespace OneRoof.Presentation.Tower
                 var minX = DefaultFloorSlabMinX;
                 var maxX = DefaultFloorSlabMaxX;
                 if (_simulationSession != null && floor > 0 &&
-                    _simulationSession.Topology.FloorSlabs.TryGetValue(floor - 1, out var lowerSlab))
+                    _simulationSession.TryGetFloorSlab(floor - 1, out var lowerSlab))
                 {
                     minX = lowerSlab.MinX;
                     maxX = lowerSlab.MaxX;
@@ -596,7 +593,7 @@ namespace OneRoof.Presentation.Tower
 
             if (toolId.Equals("floor:ground_expansion", StringComparison.OrdinalIgnoreCase))
             {
-                if (_simulationSession == null || !_simulationSession.Topology.TryGetFloorSlab(0, out var groundSlab))
+                if (_simulationSession == null || !_simulationSession.TryGetFloorSlab(0, out var groundSlab))
                 {
                     bounds = new CellBounds(0, DefaultFloorSlabMinX, DefaultFloorSlabMaxX);
                     return false;
@@ -693,7 +690,7 @@ namespace OneRoof.Presentation.Tower
 
             if (toolId.Equals("demolish:room", StringComparison.OrdinalIgnoreCase))
             {
-                var floorRooms = _simulationSession.Topology.GetRoomsOnFloor(floor);
+                var floorRooms = _simulationSession.GetRoomsOnFloor(floor);
                 Room targetRoom = null;
                 for (var i = 0; i < floorRooms.Count; i++)
                 {
@@ -716,14 +713,13 @@ namespace OneRoof.Presentation.Tower
 
             if (toolId.Equals("transit:stairwell", StringComparison.OrdinalIgnoreCase))
             {
-                var topology = _simulationSession.Topology;
-                if (topology.FloorCount < 2)
+                if (_simulationSession.FloorCount < 2)
                 {
                     failureReason = "Stairwell requires at least 2 tower floors.";
                     return false;
                 }
 
-                var bottomFloor = (floor == topology.FloorCount - 1) ? floor - 1 : floor;
+                var bottomFloor = (floor == _simulationSession.FloorCount - 1) ? floor - 1 : floor;
                 var topFloor = bottomFloor + 1;
 
                 command = new BuildStairwellCommand(cellX, cellX + 1, bottomFloor, topFloor);

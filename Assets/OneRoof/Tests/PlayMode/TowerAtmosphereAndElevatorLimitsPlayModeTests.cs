@@ -29,7 +29,7 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(controller.TransitSession.AddCapacity().Accepted, Is.True);
                 Assert.That(controller.TransitSession.AddCapacity().Accepted, Is.True);
                 Assert.That(controller.TransitSession.AddCapacity().Accepted, Is.False);
-                Assert.That(controller.TransitSession.ElevatorBank.Cars.Count, Is.EqualTo(ElevatorBank.MaxCarsPerBank));
+                Assert.That(controller.TransitSession.ElevatorCarCount, Is.EqualTo(ElevatorBank.MaxCarsPerBank));
 
                 controller.SyncPresenterGeometry();
                 Assert.That(controller.ElevatorPresenter.ElevatorViews.Count, Is.EqualTo(3));

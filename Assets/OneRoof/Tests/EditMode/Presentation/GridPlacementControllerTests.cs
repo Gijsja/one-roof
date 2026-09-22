@@ -190,8 +190,8 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void ValidatePlacement_RejectsWhenTreasuryCannotAfford()
         {
-            _session.Economy.SandboxMode = false;
-            _session.Economy.TryDeduct(_session.Economy.CashBalance); // deplete treasury to 0
+            _session = TowerSimulationSession.CreateStandardFiveFloor(0);
+            _gridPlacement.SimulationSession = _session;
 
             var valid = _gridPlacement.ValidatePlacement("transit:elevator_car", floor: 0, cellX: 0, out var reason);
 
@@ -212,9 +212,9 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(result.Accepted, Is.True);
             Assert.That(eventFired, Is.True);
             Assert.That(_session.FloorCount, Is.EqualTo(initialFloors + 1));
-            Assert.That(_session.Topology.FloorSlabs.ContainsKey(5), Is.True);
-            Assert.That(_session.Topology.FloorSlabs[5].MinX, Is.EqualTo(-14));
-            Assert.That(_session.Topology.FloorSlabs[5].MaxX, Is.EqualTo(17));
+            Assert.That(_session.TopologyProjection().FloorSlabs.ContainsKey(5), Is.True);
+            Assert.That(_session.TopologyProjection().FloorSlabs[5].MinX, Is.EqualTo(-14));
+            Assert.That(_session.TopologyProjection().FloorSlabs[5].MaxX, Is.EqualTo(17));
         }
 
         [Test]
@@ -241,13 +241,13 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void GroundExpansionTool_ExpandsGroundSlabOnHoveredSide()
         {
-            Assert.That(_session.Topology.TryGetFloorSlab(0, out var ground), Is.True);
+            Assert.That(_session.TopologyProjection().TryGetFloorSlab(0, out var ground), Is.True);
             var floor = _gridPlacement.ResolvePlacementFloor("floor:ground_expansion", hoveredFloor: 4);
 
             var success = _gridPlacement.TryExecutePlacement("floor:ground_expansion", floor, ground.MaxX + 4, out var result);
 
             Assert.That(success, Is.True, result.Rejections.Count > 0 ? result.Rejections[0].Message : "Ground expansion was rejected.");
-            Assert.That(_session.Topology.TryGetFloorSlab(0, out var expanded), Is.True);
+            Assert.That(_session.TopologyProjection().TryGetFloorSlab(0, out var expanded), Is.True);
             Assert.That(expanded.MaxX, Is.EqualTo(ground.MaxX + GridPlacementController.GroundSlabExpansionWidth));
         }
 
@@ -292,12 +292,12 @@ namespace OneRoof.Presentation.Tests.EditMode
             // First build floor slab on floor 5
             _gridPlacement.TryExecutePlacement("floor:slab", floor: 5, cellX: -12, out _);
 
-            var initialRooms = _session.Topology.Rooms.Count;
+            var initialRooms = _session.TopologyProjection().Rooms.Count;
             var success = _gridPlacement.TryExecutePlacement("residential:apartment", floor: 5, cellX: -10, out var result);
 
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
-            Assert.That(_session.Topology.Rooms.Count, Is.EqualTo(initialRooms + 1));
+            Assert.That(_session.TopologyProjection().Rooms.Count, Is.EqualTo(initialRooms + 1));
         }
 
         [TestCase("commercial:retail", 6, 6)]
@@ -319,13 +319,13 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void TryExecutePlacement_AddsElevatorCar()
         {
-            var initialCars = _session.ElevatorBank.Cars.Count;
+            var initialCars = _session.ElevatorCarCount;
 
             var success = _gridPlacement.TryExecutePlacement("transit:elevator_car", floor: 0, cellX: 0, out var result);
 
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
-            Assert.That(_session.ElevatorBank.Cars.Count, Is.EqualTo(initialCars + 1));
+            Assert.That(_session.ElevatorCarCount, Is.EqualTo(initialCars + 1));
         }
 
         [Test]
@@ -441,7 +441,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             _gridPlacement.TryExecutePlacement("floor:slab", floor: 5, cellX: 0, out _);
             _gridPlacement.TryExecutePlacement("residential:apartment", floor: 5, cellX: -10, out _);
 
-            var roomCountBefore = _session.Topology.Rooms.Count;
+            var roomCountBefore = _session.TopologyProjection().Rooms.Count;
             var eventFired = false;
             _gridPlacement.PlacementExecuted += res => eventFired = res.Accepted;
 
@@ -450,7 +450,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
             Assert.That(eventFired, Is.True);
-            Assert.That(_session.Topology.Rooms.Count, Is.EqualTo(roomCountBefore - 1));
+            Assert.That(_session.TopologyProjection().Rooms.Count, Is.EqualTo(roomCountBefore - 1));
         }
 
         [Test]
@@ -475,7 +475,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(result.Accepted, Is.True);
 
             // Verify stairwell rooms were created on floors 0 and 1
-            var roomsF0 = _session.Topology.GetRoomsOnFloor(0);
+            var roomsF0 = _session.TopologyProjection().GetRoomsOnFloor(0);
             var hasStairF0 = false;
             for (var i = 0; i < roomsF0.Count; i++)
             {
@@ -504,7 +504,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void FloorSlabTool_MirrorsLowerSlabBoundsForAlignedExpansion()
         {
-            var lowerSlab = _session.Topology.FloorSlabs[_session.FloorCount - 1];
+            var lowerSlab = _session.TopologyProjection().FloorSlabs[_session.FloorCount - 1];
             var newFloor = _session.FloorCount;
 
             Assert.That(_gridPlacement.ResolvePlacementFloor("floor:slab", hoveredFloor: 99), Is.EqualTo(newFloor));
@@ -517,7 +517,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             var success = _gridPlacement.TryExecutePlacement("floor:slab", newFloor, cellX: 0, out var result);
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
-            var builtSlab = _session.Topology.FloorSlabs[newFloor];
+            var builtSlab = _session.TopologyProjection().FloorSlabs[newFloor];
             Assert.That(builtSlab.MinX, Is.EqualTo(lowerSlab.MinX));
             Assert.That(builtSlab.MaxX, Is.EqualTo(lowerSlab.MaxX));
         }
@@ -538,7 +538,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(shaftPlaced, Is.True);
             Assert.That(shaftResult.Accepted, Is.True);
 
-            var roomsF5 = _session.Topology.GetRoomsOnFloor(5);
+            var roomsF5 = _session.TopologyProjection().GetRoomsOnFloor(5);
             var hasAlignedShaft = false;
             for (var i = 0; i < roomsF5.Count; i++)
             {
@@ -558,14 +558,14 @@ namespace OneRoof.Presentation.Tests.EditMode
             // Build slab on floor 5
             _gridPlacement.TryExecutePlacement("floor:slab", floor: 5, cellX: 0, out _);
 
-            var initialRooms = _session.Topology.Rooms.Count;
+            var initialRooms = _session.TopologyProjection().Rooms.Count;
             var success = _gridPlacement.TryExecutePlacement("commercial:office", floor: 5, cellX: -10, out var result);
 
             Assert.That(success, Is.True);
             Assert.That(result.Accepted, Is.True);
-            Assert.That(_session.Topology.Rooms.Count, Is.EqualTo(initialRooms + 1));
+            Assert.That(_session.TopologyProjection().Rooms.Count, Is.EqualTo(initialRooms + 1));
 
-            var roomsF5 = _session.Topology.GetRoomsOnFloor(5);
+            var roomsF5 = _session.TopologyProjection().GetRoomsOnFloor(5);
             Room office = null;
             for (var i = 0; i < roomsF5.Count; i++)
             {

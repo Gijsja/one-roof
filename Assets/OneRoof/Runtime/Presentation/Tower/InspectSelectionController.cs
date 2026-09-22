@@ -273,7 +273,7 @@ namespace OneRoof.Presentation.Tower
             }
 
             // 3. Rooms
-            var topo = _simulationSession?.Topology;
+            var topo = _simulationSession?.TopologyProjection();
             if (_roomPresenter != null && topo != null && _roomPresenter.TryGetRoomAt(worldPos, topo, out var roomId, out var roomBounds))
             {
                 kind = InspectTargetKind.Room;

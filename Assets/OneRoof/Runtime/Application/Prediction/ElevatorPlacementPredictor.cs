@@ -42,8 +42,8 @@ namespace OneRoof.Application.Prediction
                     predictedAverageWaitTicks: currentCongestion.AverageWaitTicks,
                     currentMaxWaitTicks: 0,
                     predictedMaxWaitTicks: 0,
-                    currentSeverity: ElevatorWaitOverlayService.ToTier(currentCongestion.OverallSeverity),
-                    predictedSeverity: ElevatorWaitOverlayService.ToTier(currentCongestion.OverallSeverity),
+                    currentSeverity: TowerDataOverlays.ToTier(currentCongestion.OverallSeverity),
+                    predictedSeverity: TowerDataOverlays.ToTier(currentCongestion.OverallSeverity),
                     estimatedImprovementPercentage: 0f,
                     confidence: PredictionConfidence.High,
                     confidenceLabel: "High confidence (capacity limit exceeded)");
@@ -92,8 +92,8 @@ namespace OneRoof.Application.Prediction
                 predictedAverageWaitTicks: predictedAvgWait,
                 currentMaxWaitTicks: currentMaxWait,
                 predictedMaxWaitTicks: predictedMaxWait,
-                currentSeverity: ElevatorWaitOverlayService.ToTier(currentCongestion.OverallSeverity),
-                predictedSeverity: ElevatorWaitOverlayService.ToTier(predictedSeverity),
+                currentSeverity: TowerDataOverlays.ToTier(currentCongestion.OverallSeverity),
+                predictedSeverity: TowerDataOverlays.ToTier(predictedSeverity),
                 estimatedImprovementPercentage: improvement,
                 confidence: PredictionConfidence.High,
                 confidenceLabel: "High confidence (deterministic schedule model)");

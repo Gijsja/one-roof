@@ -6,17 +6,17 @@ using OneRoof.Domain.Transit;
 
 namespace OneRoof.Application.Tests.EditMode
 {
-    public sealed class ElevatorWaitOverlayServiceTests
+    public sealed class TowerDataOverlaysTransitTests
     {
         [Test]
         public void CreateOverlay_SevereMorningCongestion_IdentifiesBottleneckAndExplainsCauses()
         {
             var scenario = new CongestedElevatorScenario(carCount: 1);
             var congestionService = new TransitCongestionService();
-            var overlayService = new ElevatorWaitOverlayService();
+
 
             var congestion = congestionService.Project(scenario.Bank, new Tick(0));
-            var overlay = overlayService.CreateOverlay(congestion);
+            var overlay = TowerDataOverlays.ProjectElevatorWait(congestion);
 
             Assert.That(overlay.BottleneckFloor, Is.EqualTo(0));
             Assert.That(overlay.OverallSeverity, Is.EqualTo(CongestionTier.Severe));
@@ -45,11 +45,11 @@ namespace OneRoof.Application.Tests.EditMode
         {
             var scenario = new CongestedElevatorScenario(carCount: 1);
             var congestionService = new TransitCongestionService();
-            var overlayService = new ElevatorWaitOverlayService();
+
 
             scenario.RunToCompletion();
             var congestion = congestionService.Project(scenario.Bank, scenario.CurrentTick);
-            var overlay = overlayService.CreateOverlay(congestion);
+            var overlay = TowerDataOverlays.ProjectElevatorWait(congestion);
 
             Assert.That(overlay.OverallSeverity, Is.EqualTo(CongestionTier.Clear));
             Assert.That(overlay.PrimaryCause, Does.Contain("nominal"));

@@ -79,10 +79,10 @@ namespace OneRoof.Presentation.Tower
             GUILayout.EndHorizontal();
             var phase = sim.DayPhase;
             GUILayout.Label($"Day {phase.DayNumber} — {phase.ClockLabel} {(phase.IsNight ? "Night" : "Day")}  •  Tick: {snapshot.Tick}  •  Status: {(_controller.IsPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
-            GUILayout.Label($"Treasury: ${sim.Economy.CashBalance:N0}  •  Residents: {sim.ResidentCount}  •  Floors: {sim.FloorCount}", _hudMetricStyle);
+            GUILayout.Label($"Treasury: ${sim.TreasuryBalance:N0}  •  Residents: {sim.ResidentCount}  •  Floors: {sim.FloorCount}", _hudMetricStyle);
             GUILayout.Space(4);
 
-            var overlay = _controller.OverlayPresenter?.CurrentOverlay ?? _controller.OverlayService?.CreateOverlay(congestion);
+            var overlay = _controller.OverlayPresenter?.CurrentOverlay ?? _controller.DataOverlays?.ElevatorWait;
             var severityBadge = overlay?.OverallSeverity.ToString().ToUpperInvariant() ?? "OPTIMAL";
 
             GUILayout.Label($"Lobby Queue: {snapshot.QueueLength}/{totalRes} waiting  [{severityBadge}]", _hudMetricStyle);
@@ -127,9 +127,8 @@ namespace OneRoof.Presentation.Tower
             GUILayout.Space(6);
             GUILayout.Label("FROM-SCRATCH CHECKLIST", _hudHeaderStyle);
 
-            var economy = sim.Economy;
-            var rentDone = economy.TotalRevenue > 0;
-            GUILayout.Label($"{Mark(rentDone)} Economy — Treasury ${economy.CashBalance:N0} {(rentDone ? $"• rent collected ${economy.TotalRevenue:N0}" : "• build homes + workplaces to earn rent")}", _hudMetricStyle);
+            var rentDone = sim.TotalRevenue > 0;
+            GUILayout.Label($"{Mark(rentDone)} Economy — Treasury ${sim.TreasuryBalance:N0} {(rentDone ? $"• rent collected ${sim.TotalRevenue:N0}" : "• build homes + workplaces to earn rent")}", _hudMetricStyle);
 
             var power = sim.ElectricalGridProjection();
             var powerOk = power.SubstationCapacity > 0f;
@@ -141,13 +140,13 @@ namespace OneRoof.Presentation.Tower
 
             var congestion = sim.CongestionProjection();
             var commuteOk = sim.FloorCount > 1 && sim.ResidentCount > 0;
-            GUILayout.Label($"{Mark(commuteOk)} Commute — {sim.ElevatorBank.Cars.Count} car(s), {congestion.TotalQueued} queued, avg wait {congestion.AverageWaitTicks:F1} ticks", _hudMetricStyle);
+            GUILayout.Label($"{Mark(commuteOk)} Commute — {sim.ElevatorCarCount} car(s), {congestion.TotalQueued} queued, avg wait {congestion.AverageWaitTicks:F1} ticks", _hudMetricStyle);
 
             var routineOk = sim.ResidentCount > 0;
-            GUILayout.Label($"{Mark(routineOk)} Routine — {sim.ResidentCount} resident(s), {sim.Simulation.ActiveTripCount} trip(s) in transit", _hudMetricStyle);
+            GUILayout.Label($"{Mark(routineOk)} Routine — {sim.ResidentCount} resident(s), {sim.ActiveTripCount} trip(s) in transit", _hudMetricStyle);
 
             var expandOk = sim.FloorCount > 1;
-            GUILayout.Label($"{Mark(expandOk)} Expansion — {sim.FloorCount} floor(s), {sim.Topology.Rooms.Count} room(s)", _hudMetricStyle);
+            GUILayout.Label($"{Mark(expandOk)} Expansion — {sim.FloorCount} floor(s), {sim.RoomCount} room(s)", _hudMetricStyle);
         }
 
         private static string Mark(bool done) => done ? "[✔]" : "[○]";

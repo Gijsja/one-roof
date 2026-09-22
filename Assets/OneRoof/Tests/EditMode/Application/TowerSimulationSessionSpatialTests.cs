@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Overlays;
 using OneRoof.Application.Transit;
+using OneRoof.Domain.Commands;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
@@ -126,6 +128,50 @@ namespace OneRoof.Application.Tests.EditMode
             var after = session.CongestionProjection();
 
             Assert.That(after, Is.Not.SameAs(before));
+        }
+
+        [Test]
+        public void TopologyProjection_ChangesOnlyAfterAcceptedStructuralCommand()
+        {
+            var session = new TowerSimulationSession();
+            var before = session.TopologyProjection();
+            session.AdvanceOneTick();
+            Assert.That(session.TopologyProjection(), Is.SameAs(before));
+
+            var result = session.ExecuteCommand(new BuildFloorSlabCommand(5, -14, 17));
+            Assert.That(result.Accepted, Is.True);
+            var after = session.TopologyProjection();
+            Assert.That(after, Is.Not.SameAs(before));
+            Assert.That(before.TryGetFloorSlab(5, out _), Is.False);
+            Assert.That(after.TryGetFloorSlab(5, out _), Is.True);
+            Assert.That(after, Is.SameAs(session.TopologyProjection()));
+        }
+
+        [Test]
+        public void DataOverlays_AndTransitShareCommandInvalidation()
+        {
+            var session = new TowerSimulationSession();
+            var overlays = new TowerDataOverlays(session);
+            var before = overlays.ElevatorWait;
+            Assert.That(overlays.ElevatorWait, Is.SameAs(before));
+
+            Assert.That(session.AddCapacity().Accepted, Is.True);
+            var after = overlays.ElevatorWait;
+            Assert.That(after, Is.Not.SameAs(before));
+            Assert.That(after.ContributingCauses[0], Does.Contain("2 car(s)"));
+        }
+
+        [Test]
+        public void RejectedCommandDoesNotInvalidateReadModels()
+        {
+            var session = new TowerSimulationSession();
+            var topology = session.TopologyProjection();
+            var congestion = session.CongestionProjection();
+            var result = session.ExecuteCommand(new BuildFloorSlabCommand(1, -14, 17));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(session.TopologyProjection(), Is.SameAs(topology));
+            Assert.That(session.CongestionProjection(), Is.SameAs(congestion));
         }
     }
 }
