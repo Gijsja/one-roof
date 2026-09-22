@@ -37,7 +37,19 @@ namespace OneRoof.Presentation.Population
         /// <summary>Lie direction for the Sleep clip: +1 head toward +x, -1 toward -x. Set from facing.</summary>
         public int SleepDirection { get; set; } = 1;
 
+        // Animator split: stature (uniform squash & stretch from the variant) lives apart from
+        // facing (mirror direction from the presenter). They compose as (facing * stature,
+        // stature, 1) so turning around never wipes body diversity and sizing up never
+        // straightens a flipped resident.
+        private float _stature = 1f;
+        private float _facing = 1f;
+        /// <summary>Signed facing multiplier: +1 faces +x, -1 faces -x. Preserves stature.</summary>
+        public float FacingDirection => _facing;
+        /// <summary>Uniform stature scale from the wardrobe variant (0.9..1.1).</summary>
+        public float BodyStature => _stature;
+
         private float _timeOffset;
+        private Vector3 _hipBasePos = new Vector3(0f, 0.28f, 0f);
         private readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
         private readonly Dictionary<NpcLayerKind, SpriteRenderer> _wardrobeSlots = new Dictionary<NpcLayerKind, SpriteRenderer>();
         private readonly Dictionary<string, SpriteRenderer> _limbRenderers = new Dictionary<string, SpriteRenderer>();
@@ -57,6 +69,7 @@ namespace OneRoof.Presentation.Population
         {
             EnsureHierarchy();
             ResidentIndex = residentIndex;
+            _facing = 1f;
             ContentRecord = ResidentSpriteCatalog.GetRecord(residentIndex);
             var variant = NpcWardrobeVariantCatalog.GetVariant(residentIndex);
             WardrobeVariantKey = variant != null ? variant.Key : null;
@@ -77,7 +90,11 @@ namespace OneRoof.Presentation.Population
 
         public void EnsureHierarchy()
         {
-            if (Root != null) return;
+            if (Root != null)
+            {
+                RepointWardrobeSlots();
+                return;
+            }
 
             Root = transform;
             _bones[NpcRigDefinition.BoneRoot] = Root;
@@ -102,9 +119,26 @@ namespace OneRoof.Presentation.Population
 
             foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
             {
-                var slot = new GameObject($"Wardrobe_{layer}");
-                slot.transform.SetParent(layer == NpcLayerKind.Hair || layer == NpcLayerKind.Face ? Head : Spine, false);
-                var renderer = slot.AddComponent<SpriteRenderer>();
+                var parentBone = NpcRigDefinition.GetParentBone(layer);
+                var parent = parentBone != null && _bones.TryGetValue(parentBone, out var bone) && bone != null
+                    ? bone
+                    : Spine;
+                var existing = FindAuthoredSlot(layer);
+                Transform slotTransform;
+                SpriteRenderer renderer;
+                if (existing != null)
+                {
+                    slotTransform = existing;
+                    renderer = existing.GetComponent<SpriteRenderer>();
+                    if (renderer == null) renderer = existing.gameObject.AddComponent<SpriteRenderer>();
+                }
+                else
+                {
+                    var slot = new GameObject($"Wardrobe_{layer}");
+                    slotTransform = slot.transform;
+                    renderer = slot.AddComponent<SpriteRenderer>();
+                }
+                slotTransform.SetParent(parent, false);
                 renderer.sortingOrder = 16 + (int)layer;
                 renderer.enabled = true;
                 _wardrobeSlots[layer] = renderer;
@@ -163,6 +197,9 @@ namespace OneRoof.Presentation.Population
             {
                 EmoteRenderer.enabled = CurrentEmote != NpcEmoteKind.None;
             }
+
+            // Bind-pose carry for procedural locomotion: hip bob/sway offsets compose on top.
+            if (Hip != null) _hipBasePos = Hip.localPosition;
         }
 
         private TransitResidentStatus _currentStatus = TransitResidentStatus.Queued;
@@ -232,6 +269,24 @@ namespace OneRoof.Presentation.Population
 
         public void SetAnimationClip(NpcAnimationClip animation) => CurrentAnimation = animation;
 
+        /// <summary>
+        /// Faces the resident toward a signed x direction without touching stature.
+        /// Replaces direct <c>transform.localScale = (±1,1,1)</c> writes, which used to wipe the
+        /// variant's body scale. Zero or NaN keeps the current facing.
+        /// </summary>
+        public void SetFacing(float direction)
+        {
+            if (float.IsNaN(direction) || Mathf.Approximately(direction, 0f)) return;
+            EnsureHierarchy();
+            _facing = direction >= 0f ? 1f : -1f;
+            UpdateBodyScale();
+        }
+
+        private void UpdateBodyScale()
+        {
+            if (transform != null) transform.localScale = new Vector3(_facing * _stature, _stature, 1f);
+        }
+
         public void ApplyWardrobe(NpcWardrobeLoadout wardrobe)
         {
             if (wardrobe == null) throw new System.ArgumentNullException(nameof(wardrobe));
@@ -264,7 +319,7 @@ namespace OneRoof.Presentation.Population
                     renderer.enabled = true;
                     renderer.sprite = CreateWardrobeSwatch(layerId);
                     renderer.color = ResolveWardrobeColor(layer, layerId);
-                    ConfigureWardrobeSlot(layer, renderer.transform);
+                    WardrobePartCatalog.FitSwatchSlot(renderer.transform, layer);
                 }
             }
             // Photo parts fully cover the procedural boxes beneath them; hide those so no
@@ -339,9 +394,11 @@ namespace OneRoof.Presentation.Population
             SetLimbColor(NpcRigDefinition.BoneFootR, footwear);
 
             // Subtle stature jitter (+/-5%) for crowd readability. Absolute scale
-            // assignment keeps repeated Initialize calls idempotent.
+            // assignment keeps repeated Initialize calls idempotent; facing composes
+            // multiplicatively so turning never wipes diversity.
             var s = Mathf.Clamp(variant.BodyScale, 0.9f, 1.1f);
-            transform.localScale = new Vector3(s, s, 1f);
+            _stature = s;
+            UpdateBodyScale();
         }
 
         private Color ResolveWardrobeColor(NpcLayerKind layer, string layerId)
@@ -413,8 +470,12 @@ namespace OneRoof.Presentation.Population
         {
             if (Spine == null || Head == null) return;
 
+            // Rotation convention (front view, facing +x): +z swings a hanging limb forward.
+            // Knees flex backward (heel lift, negative) and elbows flex forward (positive);
+            // joints keep a soft constant bend so limbs never lock poker-straight.
             var t = globalTime + _timeOffset;
             ResetLimbPose();
+            if (Hip != null) Hip.localPosition = _hipBasePos;
             if (CurrentAnimation != NpcAnimationClip.Sleep)
             {
                 Root.localRotation = Quaternion.identity;
@@ -423,24 +484,55 @@ namespace OneRoof.Presentation.Population
 
             if (CurrentAnimation == NpcAnimationClip.Walk)
             {
-                // Walking locomotion bob & swing
-                var walkSwing = Mathf.Sin(t * 8f);
-                Spine.localRotation = Quaternion.Euler(0f, 0f, walkSwing * 3.5f);
-                Head.localRotation = Quaternion.Euler(0f, 0f, -walkSwing * 1.5f);
-                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, walkSwing * 20f);
-                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, -walkSwing * 20f);
-                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, -walkSwing * 17f);
-                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, walkSwing * 17f);
+                // Two-bone gait: contralateral arm/leg swing, knee fold on push-off and
+                // swing-through, partial foot flattening, pelvis bob at 2x stride frequency.
+                var phase = t * 8f;
+                var stride = Mathf.Sin(phase);
+                var lift = Mathf.Abs(Mathf.Cos(phase));
+                Spine.localRotation = Quaternion.Euler(0f, 0f, stride * 3.5f);
+                Head.localRotation = Quaternion.Euler(0f, 0f, -stride * 1.5f);
+                if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, lift * 0.008f, 0f);
+
+                var shoulderL = stride * 20f;
+                var shoulderR = -stride * 20f;
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, shoulderL);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, shoulderR);
+                var elbowL = 4f + Mathf.Max(0f, -stride) * 18f;
+                var elbowR = 4f + Mathf.Max(0f, stride) * 18f;
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, elbowL);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, elbowR);
+                SetBoneRotation(NpcRigDefinition.BoneHandL, -(shoulderL + elbowL) * 0.3f);
+                SetBoneRotation(NpcRigDefinition.BoneHandR, -(shoulderR + elbowR) * 0.3f);
+
+                var thighL = -stride * 17f;
+                var thighR = stride * 17f;
+                var shinL = -(Mathf.Max(0f, stride) * 26f + Mathf.Max(0f, -stride) * 10f);
+                var shinR = -(Mathf.Max(0f, -stride) * 26f + Mathf.Max(0f, stride) * 10f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, thighL);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, thighR);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, shinL);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, shinR);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, -(thighL + shinL) * 0.5f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, -(thighR + shinR) * 0.5f);
             }
             else if (CurrentAnimation == NpcAnimationClip.Sleep)
             {
                 // Lie flat: rotate the whole body about the feet so the head
                 // rests toward the facing direction instead of tipping the
                 // spine rigidly sideways mid-air. The underfoot plate is
-                // counter-rotated so it stays a floor shadow.
+                // counter-rotated so it stays a floor shadow. Limbs relax into
+                // a slight fetal fold so the body never reads as a stiff plank.
                 var dir = SleepDirection >= 0 ? 1f : -1f;
                 Root.localRotation = Quaternion.Euler(0f, 0f, -75f * dir);
                 Head.localRotation = Quaternion.Euler(0f, 0f, 8f * dir);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, 8f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, 8f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 14f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 14f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, 6f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, 6f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -10f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, -10f);
                 if (StatusPlateRenderer != null)
                 {
                     StatusPlateRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, 75f * dir);
@@ -448,33 +540,73 @@ namespace OneRoof.Presentation.Population
             }
             else if (CurrentAnimation == NpcAnimationClip.Sit)
             {
+                // Seated fold: thighs forward to horizontal, shins drop to vertical,
+                // feet flatten (78 - 72 - 6 = 0), hands rest forward onto the lap.
                 Spine.localRotation = Quaternion.Euler(0f, 0f, -8f);
                 Head.localRotation = Quaternion.Euler(0f, 0f, 4f);
-                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, 58f);
-                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, 58f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, 78f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, 78f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -72f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, -72f);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, -6f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, -6f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, 12f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, 12f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 18f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 18f);
             }
             else if (CurrentAnimation == NpcAnimationClip.QueueWait)
             {
-                var shift = Mathf.Sin(t * 1.7f) * 2.5f;
+                // Impatient weight shift: pelvis sways foot-to-foot with a small transfer
+                // dip mid-shift while the chest counter-rolls above it.
+                var shiftPhase = t * 1.7f;
+                var shift = Mathf.Sin(shiftPhase) * 2.5f;
                 Spine.localRotation = Quaternion.Euler(0f, 0f, shift);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -shift * .5f);
+                if (Hip != null)
+                {
+                    Hip.localPosition = _hipBasePos + new Vector3(
+                        Mathf.Sin(shiftPhase) * 0.008f,
+                        -Mathf.Abs(Mathf.Cos(shiftPhase)) * 0.002f, 0f);
+                }
                 SetBoneRotation(NpcRigDefinition.BoneArmUpperL, shift * 2f);
                 SetBoneRotation(NpcRigDefinition.BoneArmUpperR, -shift * 2f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 5f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 5f);
             }
             else if (CurrentAnimation == NpcAnimationClip.Ride)
             {
+                // Braced stance: soft knees, hands half-raised as if on the car rail.
                 Spine.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 2.5f) * .7f);
                 Head.localRotation = Quaternion.identity;
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -6f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, -6f);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, 3f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, 3f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 8f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 8f);
             }
             else
             {
-                // Subtle idle breathing motion
-                var breatheAngle = Mathf.Sin(t * 2.1f) * 1.2f;
+                // Idle breathing: chest rise, head counter-nod, unlocked elbows,
+                // faint shoulder drift so the silhouette never freezes.
+                var breathe = Mathf.Sin(t * 2.1f);
+                var breatheAngle = breathe * 1.2f;
                 Spine.localRotation = Quaternion.Euler(0f, 0f, breatheAngle);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -breatheAngle * 0.7f);
+                if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, breathe * 0.0015f, 0f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, breathe * 1f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, -breathe * 1f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 4f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 4f);
             }
 
-            // Emote bubble frame animation and subtle float
+            // Emote bubble frame animation and subtle float. The bubble hangs off the mirrored
+            // head chain, so counter-mirror its anchor to keep glyphs legible when facing left.
+            if (EmoteAnchor != null)
+            {
+                EmoteAnchor.localScale = new Vector3(_facing, 1f, 1f);
+            }
             if (CurrentEmote != NpcEmoteKind.None && EmoteRenderer != null)
             {
                 var frame = (int)((globalTime / 0.15f) % 3);
@@ -497,6 +629,37 @@ namespace OneRoof.Presentation.Population
             }
         }
 
+        private void RepointWardrobeSlots()
+        {
+            // Scene-authored residents were built when every slot hung off the spine.
+            // Re-seat each slot on its spec bone so garments deform with the right joint.
+            foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
+            {
+                if (!_wardrobeSlots.TryGetValue(layer, out var renderer) || renderer == null) continue;
+                var parentBone = NpcRigDefinition.GetParentBone(layer);
+                if (parentBone != null && _bones.TryGetValue(parentBone, out var bone) && bone != null)
+                {
+                    renderer.transform.SetParent(bone, false);
+                }
+            }
+        }
+
+        private Transform FindAuthoredSlot(NpcLayerKind layer)
+        {
+            var slotName = $"Wardrobe_{layer}";
+            var direct = transform.Find(slotName);
+            if (direct != null) return direct;
+            // Scene-authored slots may already hang off a bone from an earlier pass.
+            foreach (var pair in _bones)
+            {
+                var boneTransform = pair.Value;
+                if (boneTransform == null || boneTransform == transform) continue;
+                var nested = boneTransform.Find(slotName);
+                if (nested != null) return nested;
+            }
+            return null;
+        }
+
         private Transform EnsureBone(Transform parent, string boneName, Vector3 localPos)
         {
             var child = parent.Find(boneName);
@@ -513,16 +676,18 @@ namespace OneRoof.Presentation.Population
 
         private void EnsureBaseAnatomy()
         {
-            EnsureLimbRenderer("torso", Spine, _torsoSprite ?? (_torsoSprite = CreatePixelPartSprite(10, 14)), new Vector3(0f, -.065f, .02f), new Vector3(.18f, .25f, 1f), 17, new Color(.78f, .62f, .48f));
-            EnsureLimbRenderer("head", Head, _headSprite ?? (_headSprite = CreatePixelPartSprite(10, 10)), new Vector3(0f, .025f, .01f), new Vector3(.14f, .14f, 1f), 19, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperL, _bones[NpcRigDefinition.BoneArmUpperL], _limbSprite ?? (_limbSprite = CreatePixelPartSprite(4, 12)), new Vector3(-.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 16, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperR, _bones[NpcRigDefinition.BoneArmUpperR], _limbSprite, new Vector3(.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 18, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperL, _bones[NpcRigDefinition.BoneLegUpperL], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 16, new Color(.34f, .39f, .47f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperR, _bones[NpcRigDefinition.BoneLegUpperR], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 18, new Color(.34f, .39f, .47f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneHandL, _bones[NpcRigDefinition.BoneHandL], _handSprite ?? (_handSprite = CreatePixelPartSprite(5, 5)), new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 16, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneHandR, _bones[NpcRigDefinition.BoneHandR], _handSprite, new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 18, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneFootL, _bones[NpcRigDefinition.BoneFootL], _footSprite ?? (_footSprite = CreatePixelPartSprite(8, 3)), new Vector3(-.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 16, new Color(.16f, .19f, .24f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneFootR, _bones[NpcRigDefinition.BoneFootR], _footSprite, new Vector3(.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 18, new Color(.16f, .19f, .24f));
+            // Procedural fallback body draws strictly under the wardrobe slots (16+), so a
+            // palette swatch or photo part always covers the box beneath its own layer.
+            EnsureLimbRenderer("torso", Spine, _torsoSprite ?? (_torsoSprite = CreatePixelPartSprite(10, 14)), new Vector3(0f, -.065f, .02f), new Vector3(.18f, .25f, 1f), 13, new Color(.78f, .62f, .48f));
+            EnsureLimbRenderer("head", Head, _headSprite ?? (_headSprite = CreatePixelPartSprite(10, 10)), new Vector3(0f, .025f, .01f), new Vector3(.14f, .14f, 1f), 14, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperL, _bones[NpcRigDefinition.BoneArmUpperL], _limbSprite ?? (_limbSprite = CreatePixelPartSprite(4, 12)), new Vector3(-.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperR, _bones[NpcRigDefinition.BoneArmUpperR], _limbSprite, new Vector3(.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperL, _bones[NpcRigDefinition.BoneLegUpperL], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperR, _bones[NpcRigDefinition.BoneLegUpperR], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneHandL, _bones[NpcRigDefinition.BoneHandL], _handSprite ?? (_handSprite = CreatePixelPartSprite(5, 5)), new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneHandR, _bones[NpcRigDefinition.BoneHandR], _handSprite, new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneFootL, _bones[NpcRigDefinition.BoneFootL], _footSprite ?? (_footSprite = CreatePixelPartSprite(8, 3)), new Vector3(-.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneFootR, _bones[NpcRigDefinition.BoneFootR], _footSprite, new Vector3(.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));
         }
 
         private void EnsureLimbRenderer(string key, Transform parent, Sprite sprite, Vector3 localPosition, Vector3 localScale, int sortingOrder, Color color)
@@ -565,19 +730,6 @@ namespace OneRoof.Presentation.Population
             texture.SetPixels(pixels);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(.5f, 1f), height);
-        }
-
-        private static void ConfigureWardrobeSlot(NpcLayerKind layer, Transform slot)
-        {
-            switch (layer)
-            {
-                case NpcLayerKind.Hair: slot.localPosition = new Vector3(0f, .045f, -.01f); slot.localScale = new Vector3(.16f, .12f, 1f); break;
-                case NpcLayerKind.Face: slot.localPosition = new Vector3(0f, -.005f, -.02f); slot.localScale = new Vector3(.11f, .07f, 1f); break;
-                case NpcLayerKind.LowerClothing: slot.localPosition = new Vector3(0f, -.12f, -.03f); slot.localScale = new Vector3(.17f, .16f, 1f); break;
-                case NpcLayerKind.Footwear: slot.localPosition = new Vector3(0f, -.245f, -.04f); slot.localScale = new Vector3(.18f, .045f, 1f); break;
-                case NpcLayerKind.CarriedProp: slot.localPosition = new Vector3(.13f, -.05f, -.05f); slot.localScale = new Vector3(.07f, .13f, 1f); break;
-                default: slot.localPosition = new Vector3(0f, -.035f, -.03f); slot.localScale = new Vector3(.20f, .20f, 1f); break;
-            }
         }
 
         private static Sprite CreateWardrobeSwatch(string layerId)

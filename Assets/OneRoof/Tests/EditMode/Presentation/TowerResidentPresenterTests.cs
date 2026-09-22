@@ -187,6 +187,87 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void FacingComposesWithStatureInsteadOfWipingIt()
+        {
+            var go = new GameObject("Test_Facing");
+            try
+            {
+                var skeletal = go.AddComponent<OneRoof.Presentation.Population.NpcSkeletalHierarchy>();
+                skeletal.Initialize(0); // firefighter stature 1.03
+                var stature = skeletal.BodyStature;
+                Assert.That(stature, Is.InRange(0.9f, 1.1f));
+
+                skeletal.SetFacing(-1f);
+                Assert.That(skeletal.FacingDirection, Is.EqualTo(-1f));
+                Assert.That(go.transform.localScale.x, Is.EqualTo(-stature).Within(0.0001f));
+                Assert.That(go.transform.localScale.y, Is.EqualTo(stature).Within(0.0001f));
+
+                skeletal.SetFacing(1f);
+                Assert.That(go.transform.localScale.x, Is.EqualTo(stature).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void QueuedUpdate_PreservesVariantStature()
+        {
+            var session = new TowerSimulationSession();
+            var residents = new List<TransitResidentProjection>
+            {
+                new TransitResidentProjection(100, 0, TransitResidentStatus.Queued, 1, 0, null, ActivityKind.Idle, 0, 25)
+            };
+            var snapshot = new TowerProjection(10L, 1, 0, 25f, residents, new List<ElevatorProjection>());
+
+            _presenter.EnsureResidentViews(1);
+            var skeletal = _presenter.ResidentSkeletons[0];
+            var stature = skeletal.BodyStature;
+            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+
+            var scale = _presenter.ResidentViews[0].transform.localScale;
+            Assert.That(scale.x, Is.EqualTo(stature).Within(0.0001f), "Queue heading reset must keep stature.");
+            Assert.That(scale.y, Is.EqualTo(stature).Within(0.0001f));
+        }
+
+        [Test]
+        public void WalkingResident_FacesTravelDirection()
+        {
+            var session = new TowerSimulationSession();
+            _presenter.EnsureResidentViews(1);
+
+            var right = new TowerProjection(10L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 4f, null, ActivityKind.Idle, 0, 0)
+                },
+                new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(right, session.Topology, 0f);
+            _presenter.UpdateResidentPositions(right, session.Topology, 0.1f);
+            var further = new TowerProjection(11L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 6f, null, ActivityKind.Idle, 0, 0)
+                },
+                new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(further, session.Topology, 0.2f);
+            Assert.That(_presenter.ResidentSkeletons[0].FacingDirection, Is.EqualTo(1f));
+
+            var back = new TowerProjection(12L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 1f, null, ActivityKind.Idle, 0, 0)
+                },
+                new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(back, session.Topology, 0.3f);
+            Assert.That(_presenter.ResidentSkeletons[0].FacingDirection, Is.EqualTo(-1f));
+            var scale = _presenter.ResidentViews[0].transform.localScale;
+            Assert.That(Mathf.Abs(scale.x), Is.EqualTo(_presenter.ResidentSkeletons[0].BodyStature).Within(0.0001f),
+                "Travel facing must preserve stature magnitude.");
+        }
+
+        [Test]
         public void SleepingResident_LiesFlatTowardFacingInsteadOfTippingSideways()
         {
             var go = new GameObject("Test_Sleeper");

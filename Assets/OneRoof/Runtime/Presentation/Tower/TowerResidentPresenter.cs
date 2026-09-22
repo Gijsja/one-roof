@@ -22,6 +22,10 @@ namespace OneRoof.Presentation.Tower
         private readonly List<NpcSkeletalHierarchy> _residentSkeletons = new List<NpcSkeletalHierarchy>();
         private readonly List<GameObject> _residentObjects = new List<GameObject>();
         private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
+        // Animator facing memory: last walk x per resident plus latched travel direction,
+        // so walkers face where they travel and idle poses keep their last heading.
+        private readonly List<float> _lastWalkX = new List<float>();
+        private readonly List<float> _walkFacing = new List<float>();
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
@@ -87,6 +91,8 @@ namespace OneRoof.Presentation.Tower
             _residentSkeletons.Clear();
             _residentObjects.Clear();
             _authoredObjects.Clear();
+            _lastWalkX.Clear();
+            _walkFacing.Clear();
             // Tolerate gaps and unrigged children: skip instead of breaking so
             // one unprepared child cannot orphan every higher-index resident.
             // Cap consecutive misses to avoid unbounded hierarchy scans.
@@ -134,6 +140,8 @@ namespace OneRoof.Presentation.Tower
                 _residentViews.Add(skeletal.MainRenderer);
                 _residentSkeletons.Add(skeletal);
                 _residentObjects.Add(go);
+                _lastWalkX.Add(0f);
+                _walkFacing.Add(1f);
             }
         }
 
@@ -190,7 +198,10 @@ namespace OneRoof.Presentation.Tower
 
                             var roomCenterX = (worldLeft + worldRight) * 0.5f;
                             var faceScaleX = (residentTransform.position.x < roomCenterX) ? 1f : -1f;
-                            residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
+                            // Facing composes with stature inside the hierarchy; never write
+                            // localScale here or the variant's body scale gets wiped.
+                            if (skeletal != null) skeletal.SetFacing(faceScaleX);
+                            else residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
                             if (skeletal != null) skeletal.SleepDirection = resident.Activity == ActivityKind.Sleeping ? (int)faceScaleX : 1;
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
@@ -220,6 +231,15 @@ namespace OneRoof.Presentation.Tower
                         if (walkFloor < 0 || walkFloor >= floorCount) walkFloor = 0;
                         var walkY = TowerStructurePresenter.FloorY(walkFloor) - 0.58f;
                         residentTransform.position = new Vector3(walkX, walkY, -0.2f);
+                        // Face travel direction, latched per resident so pauses keep heading.
+                        EnsureWalkMemory(i, walkX);
+                        var heading = _walkFacing[i];
+                        if (walkX > _lastWalkX[i] + 0.001f) heading = 1f;
+                        else if (walkX < _lastWalkX[i] - 0.001f) heading = -1f;
+                        _walkFacing[i] = heading;
+                        _lastWalkX[i] = walkX;
+                        if (skeletal != null) skeletal.SetFacing(heading);
+                        else residentTransform.localScale = new Vector3(heading, 1f, 1f);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Walking);
                         break;
                     }
@@ -239,7 +259,9 @@ namespace OneRoof.Presentation.Tower
                         var queueX = -1.62f - col * 0.24f + crush * 0.09f;
                         var queueY = TowerStructurePresenter.FloorY(queueFloor) - 0.58f + row * 0.34f - crush * 0.05f;
                         residentTransform.position = new Vector3(queueX, queueY, -0.2f);
-                        residentTransform.localScale = new Vector3(1f, 1f, 1f);
+                        // Reset heading without touching stature; queues face the car (+x).
+                        if (skeletal != null) skeletal.SetFacing(1f);
+                        else residentTransform.localScale = new Vector3(1f, 1f, 1f);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Queued);
                         break;
                     }
@@ -335,6 +357,19 @@ namespace OneRoof.Presentation.Tower
             _residentViews.Clear();
             _residentSkeletons.Clear();
             _authoredObjects.Clear();
+            _lastWalkX.Clear();
+            _walkFacing.Clear();
+        }
+
+        private void EnsureWalkMemory(int index, float currentX)
+        {
+            // Authored residents discovered via Initialize never pass through
+            // EnsureResidentViews, so grow the parallel facing memory on demand.
+            while (_lastWalkX.Count <= index)
+            {
+                _lastWalkX.Add(currentX);
+                _walkFacing.Add(1f);
+            }
         }
 
         private static int FindPassengerElevator(TowerProjection snapshot, int residentId)

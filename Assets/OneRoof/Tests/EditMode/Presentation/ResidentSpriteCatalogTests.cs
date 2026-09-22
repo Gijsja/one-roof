@@ -101,6 +101,131 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void SkeletalHierarchy_WardrobeSlotsRideTheirSpecBones()
+        {
+            var go = new GameObject("TestSlotParents");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0);
+
+                foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
+                {
+                    var slot = skeletal.WardrobeSlots[layer];
+                    var expectedBone = NpcRigDefinition.GetParentBone(layer);
+                    Assert.That(slot.transform.parent, Is.SameAs(skeletal.Bones[expectedBone]),
+                        $"{layer} must hang off {expectedBone} so it deforms with the right joint.");
+                }
+
+                // Pair-sprite compromise: one footwear slot straddles both feet via the pelvis.
+                Assert.That(skeletal.WardrobeSlots[NpcLayerKind.Footwear].transform.parent,
+                    Is.SameAs(skeletal.Hip));
+                // The prop rides the holding hand through arm swing.
+                Assert.That(skeletal.WardrobeSlots[NpcLayerKind.CarriedProp].transform.parent.name,
+                    Is.EqualTo(NpcRigDefinition.BoneHandL));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SkeletalHierarchy_WalkCycleBendsKneesAndBobsHips()
+        {
+            var go = new GameObject("TestWalkCycle");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0); // time offset 0: phase == globalTime * 8
+                skeletal.SetAnimationClip(NpcAnimationClip.Walk);
+
+                // Passing pose (phase 0): pelvis at peak bob, knees near straight.
+                skeletal.ApplyProceduralAnimation(0f);
+                Assert.That(skeletal.Hip.localPosition.y, Is.GreaterThan(NpcRigDefinition.HipHeight),
+                    "Pelvis must bob up at the passing pose.");
+                Assert.That(ZOf(skeletal, NpcRigDefinition.BoneLegLowerL), Is.EqualTo(0f).Within(0.5f));
+
+                // Strike pose (phase PI/2, stride +1): push-off knee folded back, never forward.
+                skeletal.ApplyProceduralAnimation(Mathf.PI / 16f);
+                var shinL = ZOf(skeletal, NpcRigDefinition.BoneLegLowerL);
+                var shinR = ZOf(skeletal, NpcRigDefinition.BoneLegLowerR);
+                Assert.That(shinL, Is.LessThan(0f), "Knees flex backward (heel lift), never forward.");
+                Assert.That(shinR, Is.LessThanOrEqualTo(0f));
+                Assert.That(Mathf.Abs(shinL), Is.GreaterThan(Mathf.Abs(shinR)),
+                    "Push-off leg folds more than the swinging leg.");
+
+                // Feet counter-pitch against thigh+shin instead of toe-dragging rigidly.
+                var thighL = ZOf(skeletal, NpcRigDefinition.BoneLegUpperL);
+                var footL = ZOf(skeletal, NpcRigDefinition.BoneFootL);
+                Assert.That(footL, Is.EqualTo(-(thighL + shinL) * 0.5f).Within(0.5f));
+
+                // Elbows keep a soft bend with extra fold as the arm swings back.
+                Assert.That(ZOf(skeletal, NpcRigDefinition.BoneArmLowerL), Is.GreaterThan(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SkeletalHierarchy_SitFoldsLegsFlatAndRestsHands()
+        {
+            var go = new GameObject("TestSitFold");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0);
+                skeletal.SetAnimationClip(NpcAnimationClip.Sit);
+                skeletal.ApplyProceduralAnimation(1f);
+
+                var thigh = ZOf(skeletal, NpcRigDefinition.BoneLegUpperL);
+                var shin = ZOf(skeletal, NpcRigDefinition.BoneLegLowerL);
+                var foot = ZOf(skeletal, NpcRigDefinition.BoneFootL);
+                Assert.That(thigh, Is.EqualTo(78f).Within(0.5f));
+                Assert.That(shin, Is.EqualTo(-72f).Within(0.5f));
+                Assert.That(thigh + shin + foot, Is.EqualTo(0f).Within(0.5f),
+                    "Thigh forward, shin down, foot flat must sum to a level foot.");
+                Assert.That(ZOf(skeletal, NpcRigDefinition.BoneArmLowerL), Is.GreaterThan(0f),
+                    "Hands rest forward onto the lap, arms never dangle through it.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SkeletalHierarchy_HipOffsetRestoresBetweenClips()
+        {
+            var go = new GameObject("TestHipRestore");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0);
+                skeletal.SetAnimationClip(NpcAnimationClip.Walk);
+                skeletal.ApplyProceduralAnimation(0f);
+                Assert.That(skeletal.Hip.localPosition.y, Is.Not.EqualTo(NpcRigDefinition.HipHeight).Within(0.0001f));
+
+                skeletal.SetAnimationClip(NpcAnimationClip.Idle);
+                skeletal.ApplyProceduralAnimation(0f); // breathe == 0: hip must sit on bind pose
+                Assert.That(skeletal.Hip.localPosition.y, Is.EqualTo(NpcRigDefinition.HipHeight).Within(0.0001f));
+                Assert.That(skeletal.Hip.localPosition.x, Is.EqualTo(0f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        private static float ZOf(NpcSkeletalHierarchy skeletal, string bone)
+        {
+            var z = skeletal.Bones[bone].localRotation.eulerAngles.z;
+            return z > 180f ? z - 360f : z;
+        }
+
+        [Test]
         public void SkeletalHierarchy_EmoteBubbleSetupAndAnimation()
         {
             var go = new GameObject("TestEmoteResident");

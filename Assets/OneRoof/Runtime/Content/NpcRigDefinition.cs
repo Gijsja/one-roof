@@ -56,5 +56,34 @@ namespace OneRoof.Content
             NpcLayerKind.Accessory,     // Glasses, hats, belts, aprons
             NpcLayerKind.CarriedProp    // Held bags, mugs, tools
         };
+
+        /// <summary>
+        /// Animator-correct parent bone per wardrobe layer, mirroring the slot→bone map in
+        /// Art/SourceArt/Proposed/resident-spine-setup-v1.json. Attachments must deform with
+        /// the bone they visually belong to: headgear with the head (head counter-rotation),
+        /// trousers with the pelvis (not the swaying chest), shirts with the chest, and the
+        /// carried prop with the holding hand so arm swing carries it along.
+        /// Footwear is a single pair sprite straddling both feet, so it rides the hip (pelvis):
+        /// parenting a pair to one foot bone would drag both shoes through the walk cycle.
+        /// </summary>
+        public static string GetParentBone(NpcLayerKind layer)
+        {
+            switch (layer)
+            {
+                case NpcLayerKind.Face:
+                case NpcLayerKind.Hair:
+                case NpcLayerKind.Accessory:
+                    return BoneHead;
+                case NpcLayerKind.LowerClothing:
+                case NpcLayerKind.Footwear:
+                    return BoneHip;
+                case NpcLayerKind.CarriedProp:
+                    return BoneHandL;
+                case NpcLayerKind.Body:
+                case NpcLayerKind.UpperClothing:
+                default:
+                    return BoneSpine;
+            }
+        }
     }
 }

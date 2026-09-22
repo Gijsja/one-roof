@@ -27,6 +27,22 @@ namespace OneRoof.Content.Tests.EditMode
         }
 
         [Test]
+        public void RigDefinition_SlotParentBonesFollowSpineSpec()
+        {
+            // Mirrors the slot→bone map in resident-spine-setup-v1.json: garments deform with
+            // the joint they belong to. Footwear is the deliberate exception: the pair sprite
+            // straddles both feet, so it rides the pelvis instead of one foot bone.
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.Face), Is.EqualTo(NpcRigDefinition.BoneHead));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.Hair), Is.EqualTo(NpcRigDefinition.BoneHead));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.Accessory), Is.EqualTo(NpcRigDefinition.BoneHead));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.UpperClothing), Is.EqualTo(NpcRigDefinition.BoneSpine));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.Body), Is.EqualTo(NpcRigDefinition.BoneSpine));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.LowerClothing), Is.EqualTo(NpcRigDefinition.BoneHip));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.Footwear), Is.EqualTo(NpcRigDefinition.BoneHip));
+            Assert.That(NpcRigDefinition.GetParentBone(NpcLayerKind.CarriedProp), Is.EqualTo(NpcRigDefinition.BoneHandL));
+        }
+
+        [Test]
         public void RigDefinition_LayerRenderingOrderCoversAllLayers()
         {
             var layers = NpcRigDefinition.LayerRenderingOrder;

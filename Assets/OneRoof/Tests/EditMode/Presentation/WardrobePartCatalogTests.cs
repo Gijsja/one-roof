@@ -46,6 +46,48 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Parts_PhotoAndSwatchPathsShareAnchors()
+        {
+            // Regression: the old swatch fallback used a second anchor table, so residents
+            // missing a slice popped by ~10cm (footwear) vs sliced neighbors. Both paths now
+            // share SlotAnchor, and the swatch lands at the same final size as auto-fit.
+            var go = new GameObject("AnchorParity");
+            try
+            {
+                var photoSlot = new GameObject("Photo").transform;
+                photoSlot.SetParent(go.transform, false);
+                var swatchSlot = new GameObject("Swatch").transform;
+                swatchSlot.SetParent(go.transform, false);
+
+                foreach (var layer in new[] { NpcLayerKind.UpperClothing, NpcLayerKind.Footwear })
+                {
+                    var variant = NpcWardrobeVariantCatalog.AllVariants[0];
+                    var part = WardrobePartCatalog.GetPart(variant, layer);
+                    if (part == null) continue;
+                    WardrobePartCatalog.FitSlot(photoSlot, part, layer);
+                    WardrobePartCatalog.FitSwatchSlot(swatchSlot, layer);
+                    Assert.That(swatchSlot.localPosition, Is.EqualTo(WardrobePartCatalog.SlotAnchor(layer, part)).Within(0.0001f),
+                        $"{layer} swatch must share the photo anchor.");
+                }
+
+                // Trousers are the honest exception: full-length (tall) hangs to the ankle while
+                // the generic swatch is cut short, so anchors differ by garment length on purpose.
+                var lowerPart = WardrobePartCatalog.GetPart(NpcWardrobeVariantCatalog.AllVariants[0], NpcLayerKind.LowerClothing);
+                if (lowerPart != null)
+                {
+                    var tallAnchor = WardrobePartCatalog.SlotAnchor(NpcLayerKind.LowerClothing, lowerPart);
+                    var swatchAnchor = WardrobePartCatalog.SlotAnchor(NpcLayerKind.LowerClothing, null);
+                    Assert.That(tallAnchor.y, Is.LessThan(swatchAnchor.y),
+                        "Full-length trousers must hang lower than the short swatch cut.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
         public void Parts_HierarchyAppliesPhotoPartsAndHidesCoveredAnatomy()
         {
             var go = new GameObject("PartResident");
