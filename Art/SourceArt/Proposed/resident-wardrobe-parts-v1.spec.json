@@ -1,0 +1,497 @@
+{
+ "schemaVersion": 1,
+ "status": "validated-asset-candidate",
+ "sourceFile": "frontview.png",
+ "sourceSpec": "resident-wardrobe-modular-v1.spec.json",
+ "provenance": {
+  "method": "uniform-grid cell estimation (8-col pitch 140.25, 9-col pitch 124.67) + rembg u2net per-cell background removal + largest-component filtering + transparent trim, capped at 256px, never upscaled",
+  "processedOn": "2026-09-21"
+ },
+ "sheet": {
+  "pixels": {
+   "width": 1536,
+   "height": 1024
+  },
+  "background": "transparent RGBA",
+  "pixelsPerUnit": 512,
+  "perspectiveProfile": "cutaway-orthographic-front",
+  "theme": "service-profession-wardrobe-set"
+ },
+ "recommendedUnityImport": {
+  "textureType": "Sprite (2D and UI)",
+  "spriteMode": "Single",
+  "filterMode": "Bilinear",
+  "compression": "High Quality",
+  "meshType": "Full Rect",
+  "pixelsPerUnit": 512,
+  "spritePivot": {
+   "x": 0.5,
+   "y": 0.0
+  },
+  "packingTag": "one-roof-residents-wardrobe",
+  "resourceDir": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front"
+ },
+ "npcLayerContract": {
+  "rigId": "rig.npc.humanoid.2d.v1",
+  "compatibleBodyTypes": [
+   "adult-standard"
+  ],
+  "anchorSet": [
+   "feet-center",
+   "hip",
+   "chest",
+   "neck",
+   "head",
+   "hand-L",
+   "hand-R"
+  ]
+ },
+ "assets": [
+  {
+   "file": "wardrobe_front_footwear_00_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    108,
+    43
+   ],
+   "alphaCoverage": 0.243
+  },
+  {
+   "file": "wardrobe_front_footwear_01_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    104,
+    45
+   ],
+   "alphaCoverage": 0.264
+  },
+  {
+   "file": "wardrobe_front_footwear_02_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    101,
+    45
+   ],
+   "alphaCoverage": 0.261
+  },
+  {
+   "file": "wardrobe_front_footwear_03_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    102,
+    46
+   ],
+   "alphaCoverage": 0.277
+  },
+  {
+   "file": "wardrobe_front_footwear_04_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    111,
+    53
+   ],
+   "alphaCoverage": 0.307
+  },
+  {
+   "file": "wardrobe_front_footwear_05_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    145,
+    41
+   ],
+   "alphaCoverage": 0.219
+  },
+  {
+   "file": "wardrobe_front_footwear_06_pair.png",
+   "npcLayer": "footwear",
+   "pixels": [
+    136,
+    67
+   ],
+   "alphaCoverage": 0.172
+  },
+  {
+   "file": "wardrobe_front_head_00.png",
+   "npcLayer": "face",
+   "pixels": [
+    82,
+    107
+   ],
+   "alphaCoverage": 0.34
+  },
+  {
+   "file": "wardrobe_front_head_01.png",
+   "npcLayer": "face",
+   "pixels": [
+    92,
+    115
+   ],
+   "alphaCoverage": 0.374
+  },
+  {
+   "file": "wardrobe_front_head_02.png",
+   "npcLayer": "face",
+   "pixels": [
+    87,
+    113
+   ],
+   "alphaCoverage": 0.365
+  },
+  {
+   "file": "wardrobe_front_head_03.png",
+   "npcLayer": "face",
+   "pixels": [
+    81,
+    111
+   ],
+   "alphaCoverage": 0.347
+  },
+  {
+   "file": "wardrobe_front_head_04.png",
+   "npcLayer": "face",
+   "pixels": [
+    78,
+    107
+   ],
+   "alphaCoverage": 0.318
+  },
+  {
+   "file": "wardrobe_front_head_05.png",
+   "npcLayer": "face",
+   "pixels": [
+    78,
+    108
+   ],
+   "alphaCoverage": 0.318
+  },
+  {
+   "file": "wardrobe_front_head_06.png",
+   "npcLayer": "face",
+   "pixels": [
+    86,
+    105
+   ],
+   "alphaCoverage": 0.317
+  },
+  {
+   "file": "wardrobe_front_head_07.png",
+   "npcLayer": "face",
+   "pixels": [
+    79,
+    107
+   ],
+   "alphaCoverage": 0.321
+  },
+  {
+   "file": "wardrobe_front_head_08.png",
+   "npcLayer": "face",
+   "pixels": [
+    115,
+    132
+   ],
+   "alphaCoverage": 0.533
+  },
+  {
+   "file": "wardrobe_front_head_09_alt.png",
+   "npcLayer": "face",
+   "pixels": [
+    118,
+    120
+   ],
+   "alphaCoverage": 0.535
+  },
+  {
+   "file": "wardrobe_front_head_10_alt.png",
+   "npcLayer": "face",
+   "pixels": [
+    79,
+    107
+   ],
+   "alphaCoverage": 0.344
+  },
+  {
+   "file": "wardrobe_front_head_11_alt.png",
+   "npcLayer": "face",
+   "pixels": [
+    87,
+    108
+   ],
+   "alphaCoverage": 0.364
+  },
+  {
+   "file": "wardrobe_front_headgear_00_firehelmet.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    121,
+    106
+   ],
+   "alphaCoverage": 0.385
+  },
+  {
+   "file": "wardrobe_front_headgear_01_hardhat.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    93,
+    56
+   ],
+   "alphaCoverage": 0.163
+  },
+  {
+   "file": "wardrobe_front_headgear_02_toque.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    70,
+    89
+   ],
+   "alphaCoverage": 0.272
+  },
+  {
+   "file": "wardrobe_front_headgear_03_ballcap_red.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    90,
+    53
+   ],
+   "alphaCoverage": 0.228
+  },
+  {
+   "file": "wardrobe_front_headgear_04_policecap.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    92,
+    61
+   ],
+   "alphaCoverage": 0.211
+  },
+  {
+   "file": "wardrobe_front_headgear_05_bellhop.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    78,
+    48
+   ],
+   "alphaCoverage": 0.256
+  },
+  {
+   "file": "wardrobe_front_headgear_06_baseball_navy.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    86,
+    113
+   ],
+   "alphaCoverage": 0.4
+  },
+  {
+   "file": "wardrobe_front_headgear_07_astrohelmet.png",
+   "npcLayer": "accessory",
+   "pixels": [
+    46,
+    111
+   ],
+   "alphaCoverage": 0.181
+  },
+  {
+   "file": "wardrobe_front_lower_00_navy_cargo.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    97,
+    200
+   ],
+   "alphaCoverage": 0.444
+  },
+  {
+   "file": "wardrobe_front_lower_01_white_stripe.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    92,
+    200
+   ],
+   "alphaCoverage": 0.4
+  },
+  {
+   "file": "wardrobe_front_lower_02_white.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    131,
+    200
+   ],
+   "alphaCoverage": 0.391
+  },
+  {
+   "file": "wardrobe_front_lower_03_red_cargo.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    90,
+    199
+   ],
+   "alphaCoverage": 0.409
+  },
+  {
+   "file": "wardrobe_front_lower_04_black.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    88,
+    199
+   ],
+   "alphaCoverage": 0.406
+  },
+  {
+   "file": "wardrobe_front_lower_05_white_space.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    92,
+    198
+   ],
+   "alphaCoverage": 0.431
+  },
+  {
+   "file": "wardrobe_front_lower_06_black_tac_a.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    95,
+    204
+   ],
+   "alphaCoverage": 0.437
+  },
+  {
+   "file": "wardrobe_front_lower_07_black_tac_b.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    94,
+    218
+   ],
+   "alphaCoverage": 0.507
+  },
+  {
+   "file": "wardrobe_front_lower_08_red_shorts.png",
+   "npcLayer": "lower_clothing",
+   "pixels": [
+    103,
+    94
+   ],
+   "alphaCoverage": 0.229
+  },
+  {
+   "file": "wardrobe_front_upper_00_hivis.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    139,
+    130
+   ],
+   "alphaCoverage": 0.547
+  },
+  {
+   "file": "wardrobe_front_upper_01_service_red.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    142,
+    138
+   ],
+   "alphaCoverage": 0.5
+  },
+  {
+   "file": "wardrobe_front_upper_02_chef.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    134,
+    137
+   ],
+   "alphaCoverage": 0.6
+  },
+  {
+   "file": "wardrobe_front_upper_03_firefighter.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    152,
+    151
+   ],
+   "alphaCoverage": 0.652
+  },
+  {
+   "file": "wardrobe_front_upper_04_tactical.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    116,
+    133
+   ],
+   "alphaCoverage": 0.448
+  },
+  {
+   "file": "wardrobe_front_upper_05_medic_red.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    140,
+    146
+   ],
+   "alphaCoverage": 0.61
+  },
+  {
+   "file": "wardrobe_front_upper_06_suit.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    138,
+    157
+   ],
+   "alphaCoverage": 0.644
+  },
+  {
+   "file": "wardrobe_front_upper_07_pilot.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    147,
+    157
+   ],
+   "alphaCoverage": 0.562
+  },
+  {
+   "file": "wardrobe_front_upper_08_police.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    149,
+    133
+   ],
+   "alphaCoverage": 0.547
+  },
+  {
+   "file": "wardrobe_front_upper_09_service_bowtie.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    138,
+    129
+   ],
+   "alphaCoverage": 0.516
+  },
+  {
+   "file": "wardrobe_front_upper_10_service_tie.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    139,
+    130
+   ],
+   "alphaCoverage": 0.528
+  },
+  {
+   "file": "wardrobe_front_upper_11_purple.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    142,
+    129
+   ],
+   "alphaCoverage": 0.535
+  },
+  {
+   "file": "wardrobe_front_upper_12_astronaut.png",
+   "npcLayer": "upper_clothing",
+   "pixels": [
+    131,
+    135
+   ],
+   "alphaCoverage": 0.588
+  }
+ ],
+ "integrationConstraints": [
+  "Pivot anchor strictly bottom-center (0.5, 0.0) at 512 PPU.",
+  "Slots auto-fit to per-layer target sizes in WardrobePartCatalog; palette swatches remain the fallback when a part is unassigned.",
+  "Side/back views remain unsliced reference until a facing-swap pass needs them."
+ ]
+}

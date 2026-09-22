@@ -61,6 +61,10 @@ A failing suite proves nothing until failures are attributed. Check whether fail
 
 Record the worktree path (or its removal), exact commands, exit codes, result XML paths, test totals, and any pre-existing failures plus their baseline evidence. See `Handoffs/Active/` for examples.
 
-### Not used
+### Pipeline CLI
 
-This project has no persistent Editor connection, no `com.unity.pipeline`, and no Pipeline descriptors. Unity CLI invocations other than one-shot `-batchmode` Editor runs are not validation evidence.
+The `unity` CLI (`unity test`, `unity pipeline`, `unity command`, `unity status`) is permitted
+validation evidence alongside raw one-shot `-batchmode` runs; `com.unity.pipeline` is installed.
+Prefer an isolated worktree and reuse a connected editor only for light read-only checks — never
+trigger heavy runs on an editor another session owns. Record the command, exit code, result paths,
+and attributed failures in the handoff either way.

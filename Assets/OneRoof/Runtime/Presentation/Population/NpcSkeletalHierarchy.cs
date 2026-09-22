@@ -236,17 +236,40 @@ namespace OneRoof.Presentation.Population
             if (wardrobe.RigId != NpcRigDefinition.RigId) throw new System.ArgumentException("Wardrobe is incompatible with the resident rig.", nameof(wardrobe));
             Wardrobe = wardrobe;
             EnsureHierarchy();
+            var variant = CurrentVariant();
+            var facePart = variant != null ? WardrobePartCatalog.GetPart(variant, NpcLayerKind.Face) : null;
             foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
             {
-                if (_wardrobeSlots.TryGetValue(layer, out var renderer))
+                if (!_wardrobeSlots.TryGetValue(layer, out var renderer) || renderer == null) continue;
+                var layerId = wardrobe.GetLayerId(layer);
+                renderer.name = $"Wardrobe_{layer}_{layerId}";
+                var part = variant != null ? WardrobePartCatalog.GetPart(variant, layer) : null;
+                if (part != null)
                 {
-                    var layerId = wardrobe.GetLayerId(layer);
-                    renderer.name = $"Wardrobe_{layer}_{layerId}";
+                    // Sliced transparent part from the modular sheets: true color, auto-fit.
+                    renderer.enabled = true;
+                    renderer.sprite = part;
+                    renderer.color = Color.white;
+                    WardrobePartCatalog.FitSlot(renderer.transform, part, layer);
+                }
+                else if (layer == NpcLayerKind.Hair && facePart != null)
+                {
+                    // Photo head already carries hair; hide the palette swatch.
+                    renderer.enabled = false;
+                }
+                else
+                {
+                    renderer.enabled = true;
                     renderer.sprite = CreateWardrobeSwatch(layerId);
                     renderer.color = ResolveWardrobeColor(layer, layerId);
                     ConfigureWardrobeSlot(layer, renderer.transform);
                 }
             }
+            // Photo parts fully cover the procedural boxes beneath them; hide those so no
+            // box edges peek around the art. Missing parts keep the procedural body.
+            SetLimbVisible("head", facePart == null);
+            var upperPart = variant != null ? WardrobePartCatalog.GetPart(variant, NpcLayerKind.UpperClothing) : null;
+            SetLimbVisible("torso", upperPart == null);
         }
 
         public void ApplyVariantDiversity(NpcWardrobeVariant variant)
@@ -257,13 +280,17 @@ namespace OneRoof.Presentation.Population
 
             // Re-resolve wardrobe slot colors through the variant palette so the
             // 12 profession columns from the modular sheets read at a glance.
+            // Layers carrying a sliced photo part keep true-white color.
             if (Wardrobe != null)
             {
                 foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
                 {
                     if (_wardrobeSlots.TryGetValue(layer, out var renderer) && renderer != null)
                     {
-                        renderer.color = ResolveWardrobeColor(layer, Wardrobe.GetLayerId(layer));
+                        if (WardrobePartCatalog.GetPart(variant, layer) == null)
+                        {
+                            renderer.color = ResolveWardrobeColor(layer, Wardrobe.GetLayerId(layer));
+                        }
                     }
                 }
             }
@@ -283,8 +310,17 @@ namespace OneRoof.Presentation.Population
             }
             if (TryParseHex(variant.GetLayerColor(NpcLayerKind.LowerClothing), out var lower))
             {
-                SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
-                SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+                // Shorts variants (bare legs) keep skin-toned legs under the photo shorts.
+                if (!variant.BareLegs)
+                {
+                    SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
+                    SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+                }
+                else if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var bareSkin))
+                {
+                    SetLimbColor(NpcRigDefinition.BoneLegUpperL, bareSkin);
+                    SetLimbColor(NpcRigDefinition.BoneLegUpperR, bareSkin);
+                }
             }
             if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Footwear), out var footwear))
             {
@@ -300,18 +336,30 @@ namespace OneRoof.Presentation.Population
 
         private Color ResolveWardrobeColor(NpcLayerKind layer, string layerId)
         {
-            var variant = !string.IsNullOrEmpty(WardrobeVariantKey)
-                ? NpcWardrobeVariantCatalog.GetByKey(WardrobeVariantKey)
-                : null;
-            if (variant == null && ResidentIndex >= 0)
-            {
-                variant = NpcWardrobeVariantCatalog.GetVariant(ResidentIndex);
-            }
+            var variant = CurrentVariant();
             if (variant != null && TryParseHex(variant.GetLayerColor(layer), out var palette))
             {
                 return palette;
             }
             return Color.HSVToRGB((Mathf.Abs(layerId.GetHashCode()) % 360) / 360f, .52f, .92f);
+        }
+
+        private NpcWardrobeVariant CurrentVariant()
+        {
+            if (!string.IsNullOrEmpty(WardrobeVariantKey))
+            {
+                var keyed = NpcWardrobeVariantCatalog.GetByKey(WardrobeVariantKey);
+                if (keyed != null) return keyed;
+            }
+            return ResidentIndex >= 0 ? NpcWardrobeVariantCatalog.GetVariant(ResidentIndex) : null;
+        }
+
+        private void SetLimbVisible(string key, bool visible)
+        {
+            if (_limbRenderers.TryGetValue(key, out var renderer) && renderer != null)
+            {
+                renderer.enabled = visible;
+            }
         }
 
         private void SetLimbColor(string key, Color color)

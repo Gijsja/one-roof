@@ -65,5 +65,24 @@ namespace OneRoof.Content.Tests.EditMode
             }
             Assert.That(seen.Count, Is.EqualTo(12));
         }
+
+        [Test]
+        public void Catalog_PartPathsAreNamespacedResourcePaths()
+        {
+            const string prefix = "Residents/Wardrobe/Front/wardrobe_front_";
+            var bareLegsCount = 0;
+            foreach (var variant in NpcWardrobeVariantCatalog.AllVariants)
+            {
+                Assert.That(variant.PartPaths.Count, Is.EqualTo(8));
+                foreach (var layer in new[] { NpcLayerKind.Face, NpcLayerKind.UpperClothing, NpcLayerKind.LowerClothing, NpcLayerKind.Footwear })
+                {
+                    Assert.That(variant.GetPartPath(layer), Does.StartWith(prefix), $"{variant.Key}/{layer} must reference a sliced part");
+                }
+                var accessory = variant.GetPartPath(NpcLayerKind.Accessory);
+                Assert.That(accessory == "" || accessory.StartsWith(prefix), Is.True);
+                if (variant.BareLegs) bareLegsCount++;
+            }
+            Assert.That(bareLegsCount, Is.EqualTo(1));
+        }
     }
 }

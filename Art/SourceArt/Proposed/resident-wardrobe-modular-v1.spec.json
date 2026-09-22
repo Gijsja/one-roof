@@ -131,7 +131,7 @@
   },
   "runtimeUse": {
     "immediate": "NpcWardrobeVariantCatalog palettes sampled from these sheets drive the 8-layer Spine compositor (colors + skin tones + scale), giving 12 deterministic profession variants with zero binary import.",
-    "blocked": "Transparent part slicing (accessory/hair/upper/lower/footwear PNGs) pending background removal and artist cleanup of halos and near-black shoe rows."
+    "sliced": "frontview.png sliced into 49 validated transparent parts (see resident-wardrobe-parts-v1.spec.json); WardrobePartCatalog binds them to rig slots with palette fallback. Side/back views remain reference."
   },
   "integrationConstraints": [
     "status is proposed-source-art, never validated-asset-candidate: opaque backgrounds fail the transparency gate in Docs/05_ASSET_PIPELINE.md.",

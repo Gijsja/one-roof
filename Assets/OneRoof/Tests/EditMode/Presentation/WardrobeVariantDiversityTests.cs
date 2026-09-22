@@ -42,9 +42,12 @@ namespace OneRoof.Presentation.Tests.EditMode
                 a.Initialize(0); // firefighter
                 b.Initialize(2); // chef
 
-                var upperA = a.WardrobeSlots[NpcLayerKind.UpperClothing].color;
-                var upperB = b.WardrobeSlots[NpcLayerKind.UpperClothing].color;
-                Assert.That(upperA, Is.Not.EqualTo(upperB));
+                var upperA = a.WardrobeSlots[NpcLayerKind.UpperClothing];
+                var upperB = b.WardrobeSlots[NpcLayerKind.UpperClothing];
+                Assert.That(upperA.sprite, Is.Not.Null);
+                Assert.That(upperB.sprite, Is.Not.Null);
+                Assert.That(upperA.sprite.name, Is.Not.EqualTo(upperB.sprite.name));
+                Assert.That(upperA.color, Is.EqualTo(Color.white));
 
                 Assert.That(a.transform.localScale.x, Is.InRange(0.9f, 1.1f));
                 Assert.That(a.LimbRenderers["head"].color, Is.Not.EqualTo(Color.white));
