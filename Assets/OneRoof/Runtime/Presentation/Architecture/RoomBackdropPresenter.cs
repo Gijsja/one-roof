@@ -37,41 +37,46 @@ namespace OneRoof.Presentation.Architecture
             var lowerTheme = (roomTheme ?? "").ToLowerInvariant();
             var isResidential = lowerTheme.Contains("residential") || lowerTheme.Contains("apartment");
             var isOffice = lowerTheme.Contains("office") || lowerTheme.Contains("commercial:office");
+            var isRetail = lowerTheme.Contains("retail");
+            var isClinic = lowerTheme.Contains("clinic");
+            var isMaintenance = lowerTheme.Contains("maintenance");
+            var isSecurity = lowerTheme.Contains("security");
+            var isUtilityBigRoom = lowerTheme.Contains("electrical_substation") ||
+                                   lowerTheme.Contains("water_pump") ||
+                                   lowerTheme.Contains("waste_collection");
 
             var floorBaselineY = -height * 0.5f;
 
             // 2. Door fixture (interior corridor side, facing elevator shaft)
             if (isResidential || isOffice)
             {
-                var doorObj = new GameObject("EntranceDoor");
-                doorObj.transform.SetParent(transform, false);
-
-                // If room is west of shaft, corridor is on east (right) edge; if east of shaft, corridor is on west (left) edge
-                var doorLocalX = isWestSide ? (width * 0.5f - 0.35f) : (-width * 0.5f + 0.35f);
-                doorObj.transform.localPosition = new Vector3(doorLocalX, floorBaselineY, 0.45f);
-
-                DoorRenderer = doorObj.AddComponent<SpriteRenderer>();
-                DoorRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.ApartmentDoor);
-                DoorRenderer.sortingOrder = -5;
+                AddDoor(ArchitecturalFixtureCatalog.ApartmentDoor, width, floorBaselineY, isWestSide, Vector3.one);
+            }
+            else if (isRetail || isClinic || isMaintenance || isSecurity)
+            {
+                AddDoor(ArchitecturalFixtureCatalog.ServiceDoor, width, floorBaselineY, isWestSide, Vector3.one);
+            }
+            else if (isUtilityBigRoom)
+            {
+                AddDoor(ArchitecturalFixtureCatalog.UtilityRollerDoor, width, floorBaselineY, isWestSide, new Vector3(2.2f, 1.9f, 1f));
             }
 
-            // 3. Window fixture (exterior wall side)
+            // 3. Window fixtures (exterior wall side)
             if (isResidential && width >= 1.5f)
             {
-                var windowObj = new GameObject("Window");
-                windowObj.transform.SetParent(transform, false);
-
-                // Window sits on exterior side opposite the door
-                var windowLocalX = isWestSide ? (-width * 0.5f + 0.55f) : (width * 0.5f - 0.55f);
-                windowObj.transform.localPosition = new Vector3(windowLocalX, 0.08f, 0.5f);
-
-                WindowRenderer = windowObj.AddComponent<SpriteRenderer>();
-                WindowRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.ResidentialWindow);
-                WindowRenderer.sortingOrder = -6;
+                AddWindow(ArchitecturalFixtureCatalog.ResidentialWindow, width, isWestSide, Vector3.one);
+            }
+            else if (isRetail && width >= 2.0f)
+            {
+                AddWindow(ArchitecturalFixtureCatalog.StorefrontWindow, width, isWestSide, new Vector3(2f, 2f, 1f));
+            }
+            else if (isClinic && width >= 1.5f)
+            {
+                AddWindow(ArchitecturalFixtureCatalog.ResidentialWindow, width, isWestSide, Vector3.one);
             }
 
             // 4. Wall Sconce fixture
-            if (isResidential || isOffice)
+            if (isResidential || isOffice || isRetail || isClinic || isMaintenance || isSecurity)
             {
                 var sconceObj = new GameObject("WallSconce");
                 sconceObj.transform.SetParent(transform, false);
@@ -82,6 +87,36 @@ namespace OneRoof.Presentation.Architecture
                 SconceRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.WallSconce);
                 SconceRenderer.sortingOrder = -4;
             }
+        }
+
+        private void AddDoor(string fixtureKey, float width, float floorBaselineY, bool isWestSide, Vector3 scale)
+        {
+            var doorObj = new GameObject("EntranceDoor");
+            doorObj.transform.SetParent(transform, false);
+
+            // If room is west of shaft, corridor is on east (right) edge; if east of shaft, corridor is on west (left) edge
+            var doorLocalX = isWestSide ? (width * 0.5f - 0.35f) : (-width * 0.5f + 0.35f);
+            doorObj.transform.localPosition = new Vector3(doorLocalX, floorBaselineY, 0.45f);
+            doorObj.transform.localScale = scale;
+
+            DoorRenderer = doorObj.AddComponent<SpriteRenderer>();
+            DoorRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
+            DoorRenderer.sortingOrder = -5;
+        }
+
+        private void AddWindow(string fixtureKey, float width, bool isWestSide, Vector3 scale)
+        {
+            var windowObj = new GameObject("Window");
+            windowObj.transform.SetParent(transform, false);
+
+            // Window sits on exterior side opposite the door
+            var windowLocalX = isWestSide ? (-width * 0.5f + 0.55f) : (width * 0.5f - 0.55f);
+            windowObj.transform.localPosition = new Vector3(windowLocalX, 0.08f, 0.5f);
+            windowObj.transform.localScale = scale;
+
+            WindowRenderer = windowObj.AddComponent<SpriteRenderer>();
+            WindowRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
+            WindowRenderer.sortingOrder = -6;
         }
     }
 }

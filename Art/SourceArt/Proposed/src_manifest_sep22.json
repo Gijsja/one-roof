@@ -1,0 +1,74 @@
+[
+  {
+    "file": "src_door_service_single.png",
+    "sha256": "fa7bff917b35ac4d8015863cc8074aaf073af4b662299efcf2b22251bb6e3ec5"
+  },
+  {
+    "file": "src_door_utility_roller.png",
+    "sha256": "3295051f7dfaa537314bb3e672f9b45426d2c77bcb6910c94e57f1e48a66c7b0"
+  },
+  {
+    "file": "src_retail_checkout_counter.png",
+    "sha256": "80056de165db08a8838c997e25749419b51c8172bee0fec8fdd4fc6f8c24041f"
+  },
+  {
+    "file": "src_retail_rack_round.png",
+    "sha256": "9ed6c7964bc5be45aaec9f91f8affe92d81087672451784c19e6013e4a63a40f"
+  },
+  {
+    "file": "src_retail_shelf_double.png",
+    "sha256": "a5a018ebd0a3107539cb5b24a2cbc92ffdaf8f181c83570fc8717feb9a80b1dd"
+  },
+  {
+    "file": "src_security_locker_row.png",
+    "sha256": "339dc92a0954caa2fc84765aa840f219d50aa690103acc4adc193320860d7b12"
+  },
+  {
+    "file": "src_security_monitor_desk.png",
+    "sha256": "a46cb94e14003ac3ff6df8b96eb4cfeb162ae761b3aa2e9c971214c59d6d5c43"
+  },
+  {
+    "file": "src_sheet_backdrops_service_v1.png",
+    "sha256": "eca794b0d5f1004bb9feadc431ee7925b386cfec98146dafa5e7be4225922dfa"
+  },
+  {
+    "file": "src_sheet_backdrops_utility_v1.png",
+    "sha256": "045d257322ec99474d9138e1fc860b459183894cc4c80084a4d8af9b59ba3e1b"
+  },
+  {
+    "file": "src_sheet_clinic_trio.png",
+    "sha256": "5e8b1416963d8e9ccfbc840c1d7ea88e0cc924b910772010b5597d06f5fcb86f"
+  },
+  {
+    "file": "src_sheet_maintenance_trio.png",
+    "sha256": "43ff0ea3b343bb96b03cac413ed8ad798e4e577e55cfcec5bb609f6f79efd506"
+  },
+  {
+    "file": "src_sign_exit_service.png",
+    "sha256": "6d5a56378466a205dba24eeff5c845c3ce41adfe6a1d36ed463431c0e34004c1"
+  },
+  {
+    "file": "src_stair_flight_dressing.png",
+    "sha256": "383b3766dcde120795a47c2e19d5b1edfd36414f7f11ccab1b73cb207eca81dd"
+  },
+  {
+    "file": "src_utility_pipe_chase.png",
+    "sha256": "e29c2272f631349e7b6d4e20d0e20ab459a26d63246139d8b077137a0c2cb530"
+  },
+  {
+    "file": "src_utility_pump_skid.png",
+    "sha256": "f9b99b4a41af5126e4f54e90b54f113587dd0e379e839e1ff129d30da1fca286"
+  },
+  {
+    "file": "src_utility_substation_cabinet.png",
+    "sha256": "04e5230d236a93dc91292bf0dc4986bd7a5032d8a8240fc17380beabded37fc5"
+  },
+  {
+    "file": "src_utility_waste_hopper.png",
+    "sha256": "72b4073cc56cbeb059e002e5b1040b94054450a4664f83ce21f97891803e6bd3"
+  },
+  {
+    "file": "src_window_storefront_glass.png",
+    "sha256": "61cfbb6e5d872ec9fe944a522fc8897b89ad18ee57c5462a682cae3519b157e9"
+  }
+]

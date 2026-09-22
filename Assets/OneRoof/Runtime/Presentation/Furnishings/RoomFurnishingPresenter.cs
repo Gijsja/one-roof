@@ -17,14 +17,14 @@ namespace OneRoof.Presentation.Furnishings
 
         public bool TryGetDockPosition(InteractionPointKind kind, int slot, out Vector3 worldPosition)
         {
-            var match = kind == InteractionPointKind.Sleep ? "bed" :
-                kind == InteractionPointKind.Work ? "desk" :
-                kind == InteractionPointKind.Seat ? "sofa" : "booth";
+            var matches = kind == InteractionPointKind.Sleep ? new[] { "bed" } :
+                kind == InteractionPointKind.Work ? new[] { "desk", "bench", "monitor" } :
+                kind == InteractionPointKind.Seat ? new[] { "sofa" } : new[] { "booth" };
             var matchCount = 0;
             for (var i = 0; i < _placedProps.Count; i++)
             {
                 var prop = _placedProps[i];
-                if (prop != null && prop.name.ToLowerInvariant().Contains(match))
+                if (prop != null && NameContainsAny(prop.name, matches))
                 {
                     matchCount++;
                 }
@@ -35,7 +35,7 @@ namespace OneRoof.Presentation.Furnishings
                 for (var i = 0; i < _placedProps.Count; i++)
                 {
                     var prop = _placedProps[i];
-                    if (prop != null && prop.name.ToLowerInvariant().Contains(match) && selected-- == 0)
+                    if (prop != null && NameContainsAny(prop.name, matches) && selected-- == 0)
                     {
                         worldPosition = prop.transform.position + new Vector3(0f, 0.06f, -0.2f);
                         return true;
@@ -43,6 +43,16 @@ namespace OneRoof.Presentation.Furnishings
                 }
             }
             worldPosition = default;
+            return false;
+        }
+
+        private static bool NameContainsAny(string name, string[] matches)
+        {
+            var lower = name.ToLowerInvariant();
+            for (var i = 0; i < matches.Length; i++)
+            {
+                if (lower.Contains(matches[i])) return true;
+            }
             return false;
         }
 
@@ -64,6 +74,26 @@ namespace OneRoof.Presentation.Furnishings
             else if (lowerTheme.Contains("diner") || lowerTheme.Contains("restaurant"))
             {
                 FurnishDiner(width, floorBaselineY, isWestSide);
+            }
+            else if (lowerTheme.Contains("retail"))
+            {
+                FurnishRetail(width, floorBaselineY, isWestSide);
+            }
+            else if (lowerTheme.Contains("clinic"))
+            {
+                FurnishClinic(width, floorBaselineY, isWestSide);
+            }
+            else if (lowerTheme.Contains("maintenance"))
+            {
+                FurnishMaintenance(width, floorBaselineY, isWestSide);
+            }
+            else if (lowerTheme.Contains("security"))
+            {
+                FurnishSecurity(width, floorBaselineY, isWestSide);
+            }
+            else if (lowerTheme.Contains("utility"))
+            {
+                FurnishUtility(roomTheme, width, floorBaselineY, isWestSide);
             }
             else if (lowerTheme.Contains("lobby"))
             {
@@ -136,6 +166,96 @@ namespace OneRoof.Presentation.Furnishings
             // Monstera planter
             var plantX = isWestSide ? (width * 0.5f - 0.35f) : (-width * 0.5f + 0.35f);
             SpawnProp("prop.decor.planter.v1", new Vector3(plantX, baselineY, 0.42f));
+        }
+
+        private void FurnishRetail(float width, float baselineY, bool isWestSide)
+        {
+            // Display shelf on exterior side
+            var shelfX = isWestSide ? (-width * 0.5f + 0.60f) : (width * 0.5f - 0.60f);
+            SpawnProp("prop.commercial.shelf.v1", new Vector3(shelfX, baselineY, 0.35f));
+
+            // Checkout counter near corridor
+            var counterX = isWestSide ? (width * 0.5f - 0.85f) : (-width * 0.5f + 0.85f);
+            SpawnProp("prop.commercial.checkout.v1", new Vector3(counterX, baselineY, 0.38f));
+
+            // Garment rack in wider shops
+            if (width >= 2.5f)
+            {
+                SpawnProp("prop.commercial.rack.v1", new Vector3(0f, baselineY, 0.42f));
+            }
+        }
+
+        private void FurnishClinic(float width, float baselineY, bool isWestSide)
+        {
+            // Exam bed on exterior side
+            var bedX = isWestSide ? (-width * 0.5f + 0.65f) : (width * 0.5f - 0.65f);
+            SpawnProp("prop.service.exambed.v1", new Vector3(bedX, baselineY, 0.40f));
+
+            // Supply cabinet near corridor
+            var cabinetX = isWestSide ? (width * 0.5f - 0.35f) : (-width * 0.5f + 0.35f);
+            SpawnProp("prop.service.pharmacabinet.v1", new Vector3(cabinetX, baselineY, 0.42f));
+
+            // Privacy screen in wider clinics
+            if (width >= 2.5f)
+            {
+                SpawnProp("prop.service.screen.v1", new Vector3(0f, baselineY, 0.45f));
+            }
+        }
+
+        private void FurnishMaintenance(float width, float baselineY, bool isWestSide)
+        {
+            // Central workbench
+            SpawnProp("prop.service.workbench.v1", new Vector3(0f, baselineY, 0.38f));
+
+            // Tool cabinet against the wall
+            var cabinetX = isWestSide ? (-width * 0.5f + 0.25f) : (width * 0.5f - 0.25f);
+            SpawnProp("prop.service.toolcabinet.v1", new Vector3(cabinetX, baselineY, 0.42f));
+
+            // Parts shelf in wider workshops
+            if (width >= 3.0f)
+            {
+                var shelfX = isWestSide ? (width * 0.5f - 0.55f) : (-width * 0.5f + 0.55f);
+                SpawnProp("prop.service.partsshelf.v1", new Vector3(shelfX, baselineY, 0.40f));
+            }
+        }
+
+        private void FurnishSecurity(float width, float baselineY, bool isWestSide)
+        {
+            // Monitor desk in the middle
+            SpawnProp("prop.service.securitydesk.v1", new Vector3(0f, baselineY, 0.40f));
+
+            // Locker row against the wall
+            var lockerX = isWestSide ? (-width * 0.5f + 0.55f) : (width * 0.5f - 0.55f);
+            SpawnProp("prop.service.lockerrow.v1", new Vector3(lockerX, baselineY, 0.42f));
+        }
+
+        private void FurnishUtility(string roomTheme, float width, float baselineY, bool isWestSide)
+        {
+            var lower = (roomTheme ?? "").ToLowerInvariant();
+            if (lower.Contains("electrical_substation") || lower.Contains("transformer"))
+            {
+                SpawnProp("prop.utility.substation.v1", new Vector3(0f, baselineY, 0.38f));
+            }
+            else if (lower.Contains("water_pump") || lower.Contains("water_booster"))
+            {
+                SpawnProp("prop.utility.pump.v1", new Vector3(0f, baselineY, 0.38f));
+            }
+            else if (lower.Contains("waste_collection"))
+            {
+                SpawnProp("prop.utility.wastehopper.v1", new Vector3(0f, baselineY, 0.38f));
+            }
+            else
+            {
+                // Risers and chutes are narrow vertical runs: dress with a pipe chase
+                SpawnProp("prop.utility.pipechase.v1", new Vector3(0f, baselineY, 0.42f));
+            }
+
+            // Larger plant rooms get a pipe chase on the corridor edge; keep a clear walk lane
+            if (width >= 1.5f && (lower.Contains("substation") || lower.Contains("water_pump") || lower.Contains("waste_collection")))
+            {
+                var chaseX = isWestSide ? (width * 0.5f - 0.25f) : (-width * 0.5f + 0.25f);
+                SpawnProp("prop.utility.pipechase.v1", new Vector3(chaseX, baselineY, 0.42f));
+            }
         }
 
         private GameObject SpawnProp(string contentId, Vector3 localPosition)

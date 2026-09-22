@@ -21,7 +21,9 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void Catalog_ResolvesNonNullSpritesForAllThemes()
         {
-            var themes = new[] { "residential", "room:apartment", "commercial:office", "office", "commercial:diner", "lobby" };
+            var themes = new[] { "residential", "room:apartment", "commercial:office", "office", "commercial:diner", "lobby",
+                "commercial:retail", "service:clinic", "service:maintenance_workshop", "service:security_station",
+                "utility:electrical_substation", "utility:water_pump", "utility:waste_collection", "amenity:stairwell" };
             foreach (var theme in themes)
             {
                 var sprite = ArchitecturalFixtureCatalog.GetRoomBackdrop(theme);

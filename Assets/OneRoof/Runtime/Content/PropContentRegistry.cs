@@ -118,7 +118,127 @@ namespace OneRoof.Content
                     "Props/prop_residential_coffee_table",
                     2, 1, "low", "solid",
                     Array.Empty<string>(),
-                    new[] { "residential", "lobby" })
+                    new[] { "residential", "lobby" }),
+
+                new PropContentRecord(
+                    "prop.commercial.shelf.v1",
+                    "Retail Shelf Double",
+                    "Props/prop_retail_shelf_double",
+                    2, 1, "medium", "solid",
+                    new[] { "browse-front" },
+                    new[] { "commercial:retail" }),
+
+                new PropContentRecord(
+                    "prop.commercial.checkout.v1",
+                    "Retail Checkout Counter",
+                    "Props/prop_retail_checkout_counter",
+                    2, 1, "medium", "solid",
+                    new[] { "serve-front", "staff-back" },
+                    new[] { "commercial:retail" }),
+
+                new PropContentRecord(
+                    "prop.commercial.rack.v1",
+                    "Retail Garment Rack",
+                    "Props/prop_retail_rack_round",
+                    1, 1, "tall", "solid",
+                    new[] { "browse-front" },
+                    new[] { "commercial:retail" }),
+
+                new PropContentRecord(
+                    "prop.service.exambed.v1",
+                    "Clinic Exam Bed",
+                    "Props/prop_clinic_exam_bed",
+                    2, 1, "medium", "solid",
+                    new[] { "sleep-left" },
+                    new[] { "service:clinic" }),
+
+                new PropContentRecord(
+                    "prop.service.pharmacabinet.v1",
+                    "Clinic Supply Cabinet",
+                    "Props/prop_clinic_cabinet_cross",
+                    1, 1, "tall", "solid",
+                    new[] { "file-front" },
+                    new[] { "service:clinic" }),
+
+                new PropContentRecord(
+                    "prop.service.screen.v1",
+                    "Clinic Privacy Screen",
+                    "Props/prop_clinic_screen_privacy",
+                    1, 1, "tall", "solid",
+                    Array.Empty<string>(),
+                    new[] { "service:clinic" }),
+
+                new PropContentRecord(
+                    "prop.service.workbench.v1",
+                    "Maintenance Workbench",
+                    "Props/prop_maint_workbench",
+                    3, 1, "medium", "solid",
+                    new[] { "work-front" },
+                    new[] { "service:maintenance_workshop" }),
+
+                new PropContentRecord(
+                    "prop.service.toolcabinet.v1",
+                    "Maintenance Tool Cabinet",
+                    "Props/prop_maint_tool_cabinet",
+                    1, 1, "tall", "solid",
+                    new[] { "file-front" },
+                    new[] { "service:maintenance_workshop" }),
+
+                new PropContentRecord(
+                    "prop.service.partsshelf.v1",
+                    "Maintenance Parts Shelf",
+                    "Props/prop_maint_parts_shelf",
+                    2, 1, "medium", "solid",
+                    new[] { "store-front" },
+                    new[] { "service:maintenance_workshop" }),
+
+                new PropContentRecord(
+                    "prop.service.securitydesk.v1",
+                    "Security Monitor Desk",
+                    "Props/prop_security_monitor_desk",
+                    2, 1, "medium", "solid",
+                    new[] { "work-front" },
+                    new[] { "service:security_station" }),
+
+                new PropContentRecord(
+                    "prop.service.lockerrow.v1",
+                    "Security Locker Row",
+                    "Props/prop_security_locker_row",
+                    2, 1, "tall", "solid",
+                    new[] { "store-front" },
+                    new[] { "service:security_station" }),
+
+                new PropContentRecord(
+                    "prop.utility.substation.v1",
+                    "Electrical Substation Cabinet",
+                    "Props/prop_utility_substation_cabinet",
+                    2, 2, "tall", "solid",
+                    new[] { "work-front" },
+                    new[] { "utility:electrical_substation", "utility:floor_transformer", "utility:electrical_riser" }),
+
+                new PropContentRecord(
+                    "prop.utility.pump.v1",
+                    "Water Pump Skid",
+                    "Props/prop_utility_pump_skid",
+                    2, 1, "medium", "solid",
+                    new[] { "work-front" },
+                    new[] { "utility:water_pump", "utility:water_booster", "utility:water_riser" }),
+
+                new PropContentRecord(
+                    "prop.utility.pipechase.v1",
+                    "Utility Pipe Chase",
+                    "Props/prop_utility_pipe_chase",
+                    1, 1, "tall", "solid",
+                    Array.Empty<string>(),
+                    new[] { "utility:water_riser", "utility:electrical_riser", "utility:waste_chute" }),
+
+                new PropContentRecord(
+                    "prop.utility.wastehopper.v1",
+                    "Waste Collection Hopper",
+                    "Props/prop_utility_waste_hopper",
+                    2, 1, "tall", "solid",
+                    new[] { "work-front" },
+                    new[] { "utility:waste_collection", "utility:waste_chute" })
             };
 
             RecordsById = new Dictionary<string, PropContentRecord>(StringComparer.OrdinalIgnoreCase);

@@ -62,6 +62,11 @@ namespace OneRoof.Presentation.Furnishings
             if (contentId.Contains("counter")) return new Color(0.58f, 0.40f, 0.28f);
             if (contentId.Contains("planter")) return new Color(0.25f, 0.55f, 0.35f);
             if (contentId.Contains("kitchenette")) return new Color(0.45f, 0.48f, 0.52f);
+            if (contentId.Contains("retail") || contentId.Contains("checkout") || contentId.Contains("rack") || contentId.Contains("shelf")) return new Color(0.55f, 0.42f, 0.28f);
+            if (contentId.Contains("exam") || contentId.Contains("clinic") || contentId.Contains("pharma") || contentId.Contains("screen")) return new Color(0.55f, 0.65f, 0.62f);
+            if (contentId.Contains("bench") || contentId.Contains("maint") || contentId.Contains("toolcabinet") || contentId.Contains("partsshelf")) return new Color(0.42f, 0.32f, 0.22f);
+            if (contentId.Contains("security") || contentId.Contains("monitor") || contentId.Contains("locker")) return new Color(0.25f, 0.32f, 0.48f);
+            if (contentId.Contains("utility") || contentId.Contains("substation") || contentId.Contains("pump") || contentId.Contains("hopper") || contentId.Contains("pipechase")) return new Color(0.35f, 0.42f, 0.48f);
             return new Color(0.35f, 0.40f, 0.45f);
         }
 

@@ -67,6 +67,14 @@ namespace OneRoof.Presentation.Tests.EditMode
                 (theme: "commercial:office", minProps: 3),
                 (theme: "commercial:diner", minProps: 2),
                 (theme: "lobby", minProps: 3),
+                (theme: "commercial:retail", minProps: 3),
+                (theme: "service:clinic", minProps: 3),
+                (theme: "service:maintenance_workshop", minProps: 2),
+                (theme: "service:security_station", minProps: 2),
+                (theme: "utility:electrical_substation", minProps: 2),
+                (theme: "utility:water_pump", minProps: 2),
+                (theme: "utility:water_riser", minProps: 1),
+                (theme: "utility:waste_collection", minProps: 2),
             };
 
             foreach (var (theme, minProps) in themes)

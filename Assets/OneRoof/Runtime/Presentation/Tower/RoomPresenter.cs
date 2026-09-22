@@ -167,7 +167,12 @@ namespace OneRoof.Presentation.Tower
 
                 var isResidential = contentTypeStr.StartsWith("residential") || contentTypeStr.StartsWith("room:apartment");
                 var isOffice = contentTypeStr.Equals("commercial:office", StringComparison.OrdinalIgnoreCase) || contentTypeStr.Contains("office");
-                var isDiner = (contentTypeStr.StartsWith("commercial") || contentTypeStr.StartsWith("room:diner")) && !isOffice;
+                var isRetail = contentTypeStr.Contains("retail");
+                var isClinic = contentTypeStr.Contains("clinic");
+                var isMaintenance = contentTypeStr.Contains("maintenance");
+                var isSecurity = contentTypeStr.Contains("security");
+                var isUtility = contentTypeStr.Contains("utility");
+                var isDiner = (contentTypeStr.StartsWith("commercial") || contentTypeStr.StartsWith("room:diner")) && !isOffice && !isRetail;
                 var isStairwell = contentTypeStr.Equals("amenity:stairwell", StringComparison.OrdinalIgnoreCase) || contentTypeStr.Contains("stairwell");
                 var isLobby = contentTypeStr.Contains("lobby");
                 var isWestSide = centerX < -1.9f;
@@ -179,7 +184,7 @@ namespace OneRoof.Presentation.Tower
                 _roomObjects.Add(roomRoot);
                 roomRoot.AddComponent<VisualEffectsPresenter>().BeginConstruction();
 
-                if (isResidential || isOffice || isDiner || isLobby)
+                if (isResidential || isOffice || isDiner || isLobby || isRetail || isClinic || isMaintenance || isSecurity || isUtility)
                 {
                     var backdropPresenter = roomRoot.AddComponent<RoomBackdropPresenter>();
                     backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
@@ -209,13 +214,14 @@ namespace OneRoof.Presentation.Tower
                 }
                 else if (isStairwell)
                 {
-                    CreateQuad($"Stair Bg {room.Id}", new Color(0.12f, 0.16f, 0.22f), new Vector3(centerX, y, 0.7f), new Vector2(width - 0.04f, 1.45f), roomRoot.transform);
+                    var stairBackdrop = roomRoot.AddComponent<RoomBackdropPresenter>();
+                    stairBackdrop.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
                     CreateQuad($"Stair Tread 1 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.30f, y - 0.45f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Tread 2 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.10f, y - 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Tread 3 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.10f, y + 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Tread 4 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.30f, y + 0.45f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Rail {room.Id}", new Color(0.88f, 0.76f, 0.30f), new Vector3(centerX, y, 0.50f), new Vector2(width * 0.75f, 0.04f), roomRoot.transform);
-                    CreateQuad($"Stair Exit Sign {room.Id}", new Color(0.20f, 0.85f, 0.45f), new Vector3(centerX, y + 0.58f, 0.48f), new Vector2(0.26f, 0.10f), roomRoot.transform);
+                    CreateExitSign(room.Id, centerX, y, roomRoot.transform);
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.42f, 0.50f, 0.62f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
@@ -224,6 +230,31 @@ namespace OneRoof.Presentation.Tower
                     CreateQuad($"Lobby Desk {room.Id}", new Color(0.48f, 0.58f, 0.70f), new Vector3(centerX - 1.2f, y - 0.46f, 0.55f), new Vector2(1.2f, 0.30f), roomRoot.transform);
                     CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.52f, 0.65f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                }
+                else if (isRetail)
+                {
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.45f, 0.50f, 0.64f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.45f, 0.50f, 0.64f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                }
+                else if (isClinic)
+                {
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.55f, 0.62f, 0.64f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.55f, 0.62f, 0.64f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                }
+                else if (isMaintenance)
+                {
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.40f, 0.44f, 0.50f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.40f, 0.44f, 0.50f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                }
+                else if (isSecurity)
+                {
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.30f, 0.36f, 0.48f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.30f, 0.36f, 0.48f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                }
+                else if (isUtility)
+                {
+                    CreateQuad($"Room Wall L {room.Id}", new Color(0.32f, 0.36f, 0.42f), new Vector3(worldLeft, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
+                    CreateQuad($"Room Wall R {room.Id}", new Color(0.32f, 0.36f, 0.42f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.48f), roomRoot.transform);
                 }
                 else
                 {
@@ -278,6 +309,19 @@ namespace OneRoof.Presentation.Tower
             }
             worldPosition = default;
             return false;
+        }
+
+        private void CreateExitSign(EntityId roomId, float centerX, float y, Transform parent)
+        {
+            var signObj = new GameObject($"Stair Exit Sign {roomId}");
+            if (parent != null) signObj.transform.SetParent(parent, false);
+            signObj.transform.position = new Vector3(centerX, y + 0.58f, 0.48f);
+
+            var renderer = signObj.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.ExitSign);
+            renderer.sortingOrder = -4;
+
+            _roomObjects.Add(signObj);
         }
 
         private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size, Transform parent = null)
