@@ -38,9 +38,9 @@ namespace OneRoof.Presentation.Tower
             _appliedSlabs.Clear();
             while (_parent != null && _parent.Find($"Floor Slab {_renderedFloorCount}") != null)
             {
-                Adopt($"Floor Slab {_renderedFloorCount}");
-                Adopt($"Floor Line L {_renderedFloorCount}");
-                Adopt($"Floor Line R {_renderedFloorCount}");
+                AdoptSingle($"Floor Slab {_renderedFloorCount}");
+                AdoptSingle($"Floor Line L {_renderedFloorCount}");
+                AdoptSingle($"Floor Line R {_renderedFloorCount}");
                 _renderedFloorCount++;
             }
 
@@ -50,15 +50,30 @@ namespace OneRoof.Presentation.Tower
         {
             var targetCount = topology != null ? topology.FloorCount : InitialFloorCount;
 
+            // A presenter may be recreated while its old views remain serialized
+            // in a scene (ExecuteAlways / domain reload). Ground-floor starts can
+            // therefore inherit slab quads from the five-floor fixture. Retire
+            // those views before ensuring the topology's actual floor count.
+            while (_renderedFloorCount > targetCount)
+            {
+                var floor = --_renderedFloorCount;
+                DestroyNamedView($"Floor Slab {floor}");
+                DestroyNamedView($"Floor Line L {floor}");
+                DestroyNamedView($"Floor Line R {floor}");
+                _appliedSlabs.Remove(floor);
+            }
+
             while (_renderedFloorCount < targetCount)
             {
                 var floor = _renderedFloorCount;
+                if (TryAdoptExisting(floor, topology))
+                {
+                    _renderedFloorCount++;
+                    continue;
+                }
                 var y = FloorY(floor);
-                var isLobby = floor == 0;
 
-                var floorColor = isLobby
-                    ? new Color(0.11f, 0.15f, 0.22f)
-                    : new Color(0.09f, 0.12f, 0.18f);
+                var floorColor = FloorColor(floor);
 
                 float minX = -14f, maxX = 16f;
                 if (topology != null && topology.TryGetFloorSlab(floor, out var slab))
@@ -80,7 +95,7 @@ namespace OneRoof.Presentation.Tower
                 const float shaftLeft = -2.40f;
                 const float shaftRight = -1.40f;
                 var floorLineY = y - 0.74f;
-                var floorLineColor = new Color(0.35f, 0.45f, 0.58f);
+                var floorLineColor = FloorLineColor;
 
                 if (shaftLeft > worldLeft)
                 {
@@ -117,12 +132,24 @@ namespace OneRoof.Presentation.Tower
                 {
                     if (_appliedSlabs.TryGetValue(pair.Key, out var applied) && applied.Equals(pair.Value))
                     {
+                        EnsureFloorAppearance(pair.Key);
                         continue;
                     }
                     ApplyFloorGeometry(pair.Key, pair.Value);
                     _appliedSlabs[pair.Key] = pair.Value;
                 }
             }
+        }
+
+        private void DestroyNamedView(string name)
+        {
+            if (_parent == null) return;
+            var child = _parent.Find(name);
+            if (child == null) return;
+            _structureObjects.Remove(child.gameObject);
+            _authoredObjects.Remove(child.gameObject);
+            if (UnityEngine.Application.isPlaying) Object.Destroy(child.gameObject);
+            else Object.DestroyImmediate(child.gameObject);
         }
 
         public void Clear()
@@ -143,12 +170,95 @@ namespace OneRoof.Presentation.Tower
             _renderedFloorCount = 0;
         }
 
-        private void Adopt(string name)
+        /// <summary>
+        /// Adopts the first quad with the given name and destroys any runtime
+        /// duplicates. Duplicates accumulate when a fresh presenter meets quads
+        /// it never tracked (domain reloads, Clear/Ensure cycles); extras render
+        /// with empty property blocks (white) and fight geometry updates.
+        /// </summary>
+        private void AdoptSingle(string name)
         {
-            var child = _parent.Find(name);
-            if (child == null) return;
-            _structureObjects.Add(child.gameObject);
-            _authoredObjects.Add(child.gameObject);
+            if (_parent == null) return;
+            GameObject keep = null;
+            var duplicates = new List<GameObject>();
+            for (var i = 0; i < _parent.childCount; i++)
+            {
+                var child = _parent.GetChild(i).gameObject;
+                if (!child.name.Equals(name, System.StringComparison.Ordinal)) continue;
+                if (keep == null) keep = child;
+                else duplicates.Add(child);
+            }
+
+            if (keep != null)
+            {
+                _structureObjects.Add(keep);
+                _authoredObjects.Add(keep);
+            }
+            for (var i = 0; i < duplicates.Count; i++)
+            {
+                var duplicate = duplicates[i];
+                _structureObjects.Remove(duplicate);
+                if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(duplicate);
+                else UnityEngine.Object.DestroyImmediate(duplicate);
+            }
+        }
+
+        /// <summary>
+        /// Adopts an already-present floor quad instead of creating a duplicate
+        /// when this presenter lost track of it (e.g. after Clear or a reload).
+        /// </summary>
+        private bool TryAdoptExisting(int floor, TowerTopologyProjection topology)
+        {
+            if (_parent == null || _parent.Find($"Floor Slab {floor}") == null) return false;
+            AdoptSingle($"Floor Slab {floor}");
+            AdoptSingle($"Floor Line L {floor}");
+            AdoptSingle($"Floor Line R {floor}");
+            if (topology != null && topology.TryGetFloorSlab(floor, out var slab))
+            {
+                _appliedSlabs[floor] = slab;
+            }
+            return true;
+        }
+
+        private static Color FloorColor(int floor)
+        {
+            return floor == 0
+                ? new Color(0.11f, 0.15f, 0.22f)
+                : new Color(0.09f, 0.12f, 0.18f);
+        }
+
+        private static readonly Color FloorLineColor = new Color(0.35f, 0.45f, 0.58f);
+
+        private void EnsureFloorAppearance(int floor)
+        {
+            EnsureQuadAppearance($"Floor Slab {floor}", FloorColor(floor));
+            EnsureQuadAppearance($"Floor Line L {floor}", FloorLineColor);
+            EnsureQuadAppearance($"Floor Line R {floor}", FloorLineColor);
+        }
+
+        private void EnsureQuadAppearance(string name, Color color)
+        {
+            var child = _parent != null ? _parent.Find(name) : null;
+            var renderer = child != null ? child.GetComponent<MeshRenderer>() : null;
+            if (renderer == null || _worldMaterial == null) return;
+
+            if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
+            _colorBlock.Clear();
+            renderer.GetPropertyBlock(_colorBlock);
+            var existingColor = _colorBlock.GetColor("_BaseColor");
+            if (renderer.sharedMaterial == _worldMaterial && ColorsMatch(existingColor, color)) return;
+
+            renderer.sharedMaterial = _worldMaterial;
+            _colorBlock.SetColor("_BaseColor", color);
+            _colorBlock.SetColor("_Color", color);
+            renderer.SetPropertyBlock(_colorBlock);
+        }
+
+        private static bool ColorsMatch(Color a, Color b)
+        {
+            const float epsilon = 0.01f;
+            return Mathf.Abs(a.r - b.r) < epsilon && Mathf.Abs(a.g - b.g) < epsilon &&
+                   Mathf.Abs(a.b - b.b) < epsilon && Mathf.Abs(a.a - b.a) < epsilon;
         }
 
         private void ApplyFloorGeometry(int floor, CellBounds slab)
@@ -158,21 +268,34 @@ namespace OneRoof.Presentation.Tower
             var width = worldRight - worldLeft;
             var centerX = (worldLeft + worldRight) * 0.5f;
             var floorY = FloorY(floor);
-            UpdateQuad($"Floor Slab {floor}", new Vector3(centerX, floorY, 1f), new Vector2(width, 1.55f));
+            UpdateQuad($"Floor Slab {floor}", new Vector3(centerX, floorY, 1f), new Vector2(width, 1.55f), FloorColor(floor));
             const float shaftLeft = -2.40f;
             const float shaftRight = -1.40f;
             var lineY = floorY - 0.74f;
-            UpdateQuad($"Floor Line L {floor}", new Vector3((worldLeft + shaftLeft) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, shaftLeft - worldLeft), 0.05f));
-            UpdateQuad($"Floor Line R {floor}", new Vector3((shaftRight + worldRight) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, worldRight - shaftRight), 0.05f));
+            UpdateQuad($"Floor Line L {floor}", new Vector3((worldLeft + shaftLeft) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, shaftLeft - worldLeft), 0.05f), FloorLineColor);
+            UpdateQuad($"Floor Line R {floor}", new Vector3((shaftRight + worldRight) * 0.5f, lineY, 0.05f), new Vector2(Mathf.Max(0f, worldRight - shaftRight), 0.05f), FloorLineColor);
         }
 
-        private void UpdateQuad(string name, Vector3 position, Vector2 size)
+        private void UpdateQuad(string name, Vector3 position, Vector2 size, Color color)
         {
             var child = _parent != null ? _parent.Find(name) : null;
             if (child == null) return;
             child.gameObject.SetActive(size.x > 0f);
             child.localPosition = position;
             child.localScale = new Vector3(size.x, size.y, 1f);
+            // Heal stale quads (e.g. authored or forgotten duplicates) that never
+            // received a property block: without it they render the white base material.
+            var renderer = child.GetComponent<MeshRenderer>();
+            if (renderer != null && _worldMaterial != null)
+            {
+                renderer.sharedMaterial = _worldMaterial;
+                if (_colorBlock != null)
+                {
+                    _colorBlock.SetColor("_BaseColor", color);
+                    _colorBlock.SetColor("_Color", color);
+                    renderer.SetPropertyBlock(_colorBlock);
+                }
+            }
         }
 
         private MeshRenderer CreateQuad(string name, Color color, Vector3 position, Vector2 size)

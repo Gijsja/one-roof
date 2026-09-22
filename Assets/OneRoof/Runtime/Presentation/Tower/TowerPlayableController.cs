@@ -37,6 +37,7 @@ namespace OneRoof.Presentation.Tower
         private FootTrafficOverlayPresenter _footTrafficPresenter;
         private BusinessHealthOverlayPresenter _businessHealthPresenter;
         private UtilitiesOverlayPresenter _utilitiesPresenter;
+        private UtilitiesNetworkLayerPresenter _utilitiesNetworkLayer;
         private CongestionInspectorCardView _inspectorCard; private PlacementPreviewCardView _placementCard;
         private GridPlacementController _gridPlacement; private PlacementGhostPresenter _ghostPresenter;
         private InspectSelectionController _inspectSelection; private InspectOutlinePresenter _inspectOutline;
@@ -82,7 +83,7 @@ namespace OneRoof.Presentation.Tower
         }
 
         private void Awake() => Initialize(); private void OnEnable() => Initialize();
-        private void OnDisable() { if (_mode != null) _mode.ModeChanged -= OnModeChanged; if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement; if (_populationPresenter != null) _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor; if (_scrutinyPresenter != null) _scrutinyPresenter.InspectionRequested -= InspectScrutiny; if (_utilitiesPresenter != null) _utilitiesPresenter.InspectionRequested -= InspectUtilities; }
+        private void OnDisable() { if (_mode != null) _mode.ModeChanged -= OnModeChanged; if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement; if (_populationPresenter != null) _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor; if (_scrutinyPresenter != null) _scrutinyPresenter.InspectionRequested -= InspectScrutiny; if (_utilitiesPresenter != null) { _utilitiesPresenter.InspectionRequested -= InspectUtilities; _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected; } }
         private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
         private void Update()
@@ -106,6 +107,8 @@ namespace OneRoof.Presentation.Tower
             (_footTrafficPresenter = Ensure<FootTrafficOverlayPresenter>()).SetVisible(false);
             (_businessHealthPresenter = Ensure<BusinessHealthOverlayPresenter>()).SetVisible(false);
             (_utilitiesPresenter = Ensure<UtilitiesOverlayPresenter>()).SetVisible(false); _utilitiesPresenter.InspectionRequested += InspectUtilities;
+            _utilitiesPresenter.NetworkSelected += OnUtilityNetworkSelected;
+            (_utilitiesNetworkLayer = Ensure<UtilitiesNetworkLayerPresenter>()).SetVisible(false);
             _scrutinyPresenter.InspectionRequested += InspectScrutiny;
             (_inspectorCard = Ensure<CongestionInspectorCardView>()).Session = _mode;
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
@@ -131,12 +134,13 @@ namespace OneRoof.Presentation.Tower
             var businessHealth = p.IsDataMode && p.ActiveOverlayId == "overlay:business_health";
             var utilities = p.IsDataMode && p.ActiveOverlayId == "overlay:utilities";
             _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction && !population && !scrutiny && !footTraffic && !businessHealth && !utilities); _satisfactionPresenter.SetVisible(satisfaction); _populationPresenter.SetVisible(population); _scrutinyPresenter.SetVisible(scrutiny); _footTrafficPresenter.SetVisible(footTraffic); _businessHealthPresenter.SetVisible(businessHealth); _utilitiesPresenter.SetVisible(utilities);
+            _utilitiesNetworkLayer.SetVisible(utilities);
             if (satisfaction) _satisfactionPresenter.UpdateOverlay(_dataOverlays.Satisfaction);
             else if (population) _populationPresenter.UpdateOverlay(_dataOverlays.Population);
             else if (scrutiny) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             else if (footTraffic) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             else if (businessHealth) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            else if (utilities) _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities);
+            else if (utilities) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities); }
             else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_dataOverlays.ElevatorWait);
             if (p.IsBuildMode && p.SelectedBuildTool == "transit:elevator_car") UpdatePlacementCard();
             else if (!p.IsBuildMode && _placementCard.IsOpen) _placementCard.Close();
@@ -173,7 +177,7 @@ namespace OneRoof.Presentation.Tower
             if (_scrutinyPresenter.IsVisible) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             if (_footTrafficPresenter.IsVisible) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             if (_businessHealthPresenter.IsVisible) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            if (_utilitiesPresenter.IsVisible) _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities);
+            if (_utilitiesPresenter.IsVisible) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities); }
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
@@ -186,6 +190,7 @@ namespace OneRoof.Presentation.Tower
         public void ShowFootTrafficOverlay() { _mode.SetActiveOverlay("overlay:foot_traffic"); }
         public void ShowBusinessHealthOverlay() { _mode.SetActiveOverlay("overlay:business_health"); }
         public void ShowUtilitiesOverlay() { _mode.SetActiveOverlay("overlay:utilities"); }
+        private void OnUtilityNetworkSelected(UtilitiesNetworkLayerPresenter.NetworkKind network) => _utilitiesNetworkLayer.Select(network);
         public void InspectPopulationFloor(int floor)
         {
             _mode.SwitchMode(InteractionMode.Inspect);
