@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
+using OneRoof.Presentation.Architecture;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
-using OneRoof.Presentation.Architecture;
 using OneRoof.Presentation.Furnishings;
 using UnityEngine;
 using EntityId = OneRoof.Domain.Identity.EntityId;
@@ -100,6 +100,32 @@ namespace OneRoof.Presentation.Tower
         public void EnsureRoomViews(TowerTopologyProjection topology)
         {
             if (topology == null) return;
+
+            // Scene-authored views can survive a domain reload even after their
+            // simulation fixture has changed. Drop orphaned or ID-colliding
+            // views before adopting anything from the current topology.
+            if (_parent != null)
+            {
+                var staleViews = new List<GameObject>();
+                for (var i = 0; i < _parent.childCount; i++)
+                {
+                    var child = _parent.GetChild(i);
+                    if (!child.name.StartsWith("RoomView_", StringComparison.Ordinal)) continue;
+                    if (!int.TryParse(child.name.Substring("RoomView_".Length), out var id) ||
+                        !topology.Rooms.TryGetValue(new EntityId(id), out var room) ||
+                        !HasMatchingTheme(child, room.ContentType.Value))
+                    {
+                        staleViews.Add(child.gameObject);
+                    }
+                }
+                for (var i = 0; i < staleViews.Count; i++)
+                {
+                    _roomObjects.Remove(staleViews[i]);
+                    staleViews[i].name = $"Stale_{staleViews[i].name}";
+                    if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(staleViews[i]);
+                    else UnityEngine.Object.DestroyImmediate(staleViews[i]);
+                }
+            }
 
             // Remove views for rooms that were demolished
             var activeRoomIds = new HashSet<EntityId>(topology.Rooms.Keys);
@@ -264,6 +290,12 @@ namespace OneRoof.Presentation.Tower
                     CreateQuad($"Room Wall R {room.Id}", new Color(0.35f, 0.45f, 0.58f), new Vector3(worldRight, y, 0.3f), new Vector2(0.08f, 1.45f), roomRoot.transform);
                 }
             }
+        }
+
+        private static bool HasMatchingTheme(Transform roomRoot, string contentType)
+        {
+            var backdrop = roomRoot.GetComponent<RoomBackdropPresenter>();
+            return backdrop != null && string.Equals(backdrop.RoomTheme, contentType, StringComparison.Ordinal);
         }
 
         public void Clear()

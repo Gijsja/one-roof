@@ -14,6 +14,7 @@ namespace OneRoof.Editor.Tower
     public static class TowerSceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Tower.unity";
+        public const string GroundStartScenePath = "Assets/Scenes/Tower_GroundStart.unity";
 
         static TowerSceneBuilder()
         {
@@ -36,6 +37,26 @@ namespace OneRoof.Editor.Tower
             root.AddComponent<TowerPlayableController>();
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log($"Successfully created and saved {ScenePath}");
+        }
+
+        [MenuItem("One Roof/Build Ground Start Scene")]
+        public static void CreateGroundStartScene()
+        {
+            // Rebuild this scene from an empty hierarchy. The old asset had
+            // ExecuteAlways-generated objects from the five-floor fixture saved
+            // into it, so reopening it could display rooms and residents that do
+            // not exist in the ground-start simulation.
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var root = new GameObject("Tower World");
+            root.SetActive(false);
+            var controller = root.AddComponent<TowerPlayableController>();
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("_startMode").enumValueIndex = (int)TowerStartMode.GroundFloorStart;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            root.SetActive(true);
+            controller.Initialize();
+            EditorSceneManager.SaveScene(scene, GroundStartScenePath);
+            Debug.Log($"Successfully rebuilt and saved {GroundStartScenePath}");
         }
     }
 }

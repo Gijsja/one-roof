@@ -128,6 +128,26 @@ namespace OneRoof.Presentation.Tower
 
         public void EnsureResidentViews(int targetCount)
         {
+            targetCount = Math.Max(0, targetCount);
+            while (_residentViews.Count > targetCount)
+            {
+                var last = _residentViews.Count - 1;
+                var go = last < _residentObjects.Count ? _residentObjects[last] : null;
+                _residentViews.RemoveAt(last);
+                if (last < _residentSkeletons.Count) _residentSkeletons.RemoveAt(last);
+                if (last < _residentObjects.Count) _residentObjects.RemoveAt(last);
+                if (last < _lastWalkX.Count) _lastWalkX.RemoveAt(last);
+                if (last < _walkFacing.Count) _walkFacing.RemoveAt(last);
+                if (go == null) continue;
+
+                // Destroy is deferred in Play Mode. Rename first so a same-frame
+                // hierarchy lookup cannot adopt this stale scene-authored view.
+                go.name = $"Retired {go.name}";
+                _authoredObjects.Remove(go);
+                if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(go);
+                else UnityEngine.Object.DestroyImmediate(go);
+            }
+
             while (_residentViews.Count < targetCount)
             {
                 var index = _residentViews.Count;
