@@ -21,6 +21,14 @@ namespace OneRoof.Domain.Topology
         private const int DefaultMinX = -14;
         private const int DefaultMaxX = 17;
 
+        /// <summary>
+        /// Reserved central elevator shaft column. Once a shaft exists anywhere in the
+        /// tower, this column stays clear on every floor so rooms and stairs can never
+        /// block a future shaft extension (shafts cannot be demolished).
+        /// </summary>
+        public const int ReservedShaftMinX = 0;
+        public const int ReservedShaftMaxX = 1;
+
         private readonly SortedDictionary<int, CellBounds> _floorSlabs;
         private readonly Dictionary<EntityId, Room> _roomsById;
         private readonly Dictionary<int, List<Room>> _roomsByFloor;
@@ -125,6 +133,22 @@ namespace OneRoof.Domain.Topology
         }
 
         // ── Command Execution & Validation ──────────────────────────────────────
+
+        private static bool OverlapsReservedShaftColumn(CellBounds bounds) =>
+            bounds.MinX <= ReservedShaftMaxX && bounds.MaxX >= ReservedShaftMinX;
+
+        /// <summary>
+        /// True once any elevator shaft room exists, committing the tower to the
+        /// central column. Shaft-less scratch topologies stay unconstrained.
+        /// </summary>
+        private bool HasEstablishedShaftColumn()
+        {
+            foreach (var room in _roomsById.Values)
+            {
+                if (room.ContentType.Value == "transit:elevator_shaft") return true;
+            }
+            return false;
+        }
 
         public CommandResult CanExecute(BuildFloorSlabCommand cmd)
         {
@@ -246,6 +270,11 @@ namespace OneRoof.Domain.Topology
                         return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:room_overlap"), $"Overlaps existing room '{existing.ContentType.Value}' at [{existing.Bounds.MinX}..{existing.Bounds.MaxX}].") });
                     }
                 }
+            }
+
+            if (OverlapsReservedShaftColumn(cmd.Bounds) && HasEstablishedShaftColumn())
+            {
+                return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("transit:shaft_overlap"), $"Room cannot block the reserved central elevator shaft column [{ReservedShaftMinX}..{ReservedShaftMaxX}]; extend the shaft there instead of zoning rooms.") });
             }
 
             if (cmd.Bounds.Width < 2 && cmd.ContentType != new ContentId("transit:elevator_shaft") && cmd.ContentType != new ContentId("amenity:stairwell"))
@@ -474,6 +503,11 @@ namespace OneRoof.Domain.Topology
                             return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:stair_overlap"), $"Stairwell overlaps existing room {existing.Id} on floor {floor}.") });
                         }
                     }
+                }
+
+                if (OverlapsReservedShaftColumn(stairBounds) && HasEstablishedShaftColumn())
+                {
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("transit:shaft_overlap"), $"Stairwell cannot block the reserved central elevator shaft column [{ReservedShaftMinX}..{ReservedShaftMaxX}] on floor {floor}.") });
                 }
             }
 

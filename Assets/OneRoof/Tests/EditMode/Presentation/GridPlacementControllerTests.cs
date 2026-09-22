@@ -355,9 +355,14 @@ namespace OneRoof.Presentation.Tests.EditMode
             var bottomScreenPos = new Vector3(100f, 30f, 0f);
             Assert.That(GridPlacementController.IsPointerOverUI(bottomScreenPos), Is.True);
 
-            // Center of screen (world area)
-            var centerScreenPos = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-            Assert.That(GridPlacementController.IsPointerOverUI(centerScreenPos), Is.False);
+            // World area must not assume a large viewport: the headless runner is
+            // 640x480, where the fixed 650px palette rect covers the screen center.
+            // (300, 375) stays world everywhere it matters: screenY 375 sits just
+            // above the palette's top edge (368), x 300 sits right of the HUD
+            // column and left of the inspector/preview cards, and top-origin
+            // y (H-375) falls outside the HUD strip and the card y-ranges.
+            var worldScreenPos = new Vector3(300f, 375f, 0f);
+            Assert.That(GridPlacementController.IsPointerOverUI(worldScreenPos), Is.False);
         }
 
         [Test]
@@ -375,8 +380,13 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void IsPointerOverUI_DoesNotReservePaletteAreaAfterToolSelection()
         {
-            var palettePosition = new Vector3(100f, 330f, 0f);
+            // screenY 200 sits inside the palette rows at typical viewport heights
+            // while staying below the HUD rows, so only the palette flag decides
+            // the outcome: reserved while choosing a tool, pass-through to the
+            // tower once the tool is selected.
+            var palettePosition = new Vector3(100f, 200f, 0f);
 
+            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: true), Is.True);
             Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false), Is.False);
         }
 
@@ -489,6 +499,57 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(resolvedCell, Is.Not.EqualTo(0));
             Assert.That(_gridPlacement.TryExecutePlacement("transit:stairwell", topFloor, resolvedCell, out var result), Is.True);
             Assert.That(result.Accepted, Is.True);
+        }
+
+        [Test]
+        public void FloorSlabTool_MirrorsLowerSlabBoundsForAlignedExpansion()
+        {
+            var lowerSlab = _session.Topology.FloorSlabs[_session.FloorCount - 1];
+            var newFloor = _session.FloorCount;
+
+            Assert.That(_gridPlacement.ResolvePlacementFloor("floor:slab", hoveredFloor: 99), Is.EqualTo(newFloor));
+
+            var hasBounds = _gridPlacement.TryGetToolPlacementBounds("floor:slab", newFloor, cellX: 0, out var bounds);
+            Assert.That(hasBounds, Is.True);
+            Assert.That(bounds.MinX, Is.EqualTo(lowerSlab.MinX));
+            Assert.That(bounds.MaxX, Is.EqualTo(lowerSlab.MaxX));
+
+            var success = _gridPlacement.TryExecutePlacement("floor:slab", newFloor, cellX: 0, out var result);
+            Assert.That(success, Is.True);
+            Assert.That(result.Accepted, Is.True);
+            var builtSlab = _session.Topology.FloorSlabs[newFloor];
+            Assert.That(builtSlab.MinX, Is.EqualTo(lowerSlab.MinX));
+            Assert.That(builtSlab.MaxX, Is.EqualTo(lowerSlab.MaxX));
+        }
+
+        [Test]
+        public void ExpansionFloor_ReservesShaftColumnUntilShaftClaimsIt()
+        {
+            Assert.That(_gridPlacement.TryExecutePlacement("floor:slab", floor: 5, cellX: 0, out _), Is.True);
+
+            // Apartment at cellX 0 spans [0..5]: no shaft room on floor 5 yet, but the
+            // established column is reserved tower-wide.
+            var roomValid = _gridPlacement.ValidatePlacement("residential:apartment", floor: 5, cellX: 0, out var roomReason);
+            Assert.That(roomValid, Is.False);
+            Assert.That(roomReason, Does.Contain("elevator shaft column"));
+
+            // The shaft tool claims the kept-clear column with aligned rooms.
+            var shaftPlaced = _gridPlacement.TryExecutePlacement("transit:elevator_shaft", floor: 5, cellX: 0, out var shaftResult);
+            Assert.That(shaftPlaced, Is.True);
+            Assert.That(shaftResult.Accepted, Is.True);
+
+            var roomsF5 = _session.Topology.GetRoomsOnFloor(5);
+            var hasAlignedShaft = false;
+            for (var i = 0; i < roomsF5.Count; i++)
+            {
+                if (roomsF5[i].ContentType.Value == "transit:elevator_shaft" &&
+                    roomsF5[i].Bounds.MinX == 0 && roomsF5[i].Bounds.MaxX == 1)
+                {
+                    hasAlignedShaft = true;
+                    break;
+                }
+            }
+            Assert.That(hasAlignedShaft, Is.True, "Expected aligned shaft room [0..1] on the expansion floor");
         }
 
         [Test]

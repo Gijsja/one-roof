@@ -36,6 +36,12 @@ namespace OneRoof.Application.Tower
             _simulation = simulation ?? TowerSimulation.CreateStandardFiveFloor();
         }
 
+        /// <summary>Ground-floor from-scratch start: one slab, lobby shell, no residents.</summary>
+        public static TowerSimulationSession CreateGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury)
+        {
+            return new TowerSimulationSession(TowerSimulation.CreateGroundFloorStart(startingTreasury));
+        }
+
         public TowerSimulation Simulation => _simulation;
 
         public BuildingTopologyState Topology => _simulation.Topology;
@@ -139,6 +145,13 @@ namespace OneRoof.Application.Tower
         public void Reset()
         {
             _simulation = TowerSimulation.CreateStandardFiveFloor();
+            InvalidateProjectionCaches();
+        }
+
+        /// <summary>Resets to the ground-floor from-scratch start instead of the five-floor fixture.</summary>
+        public void ResetToGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury)
+        {
+            _simulation = TowerSimulation.CreateGroundFloorStart(startingTreasury);
             InvalidateProjectionCaches();
         }
 

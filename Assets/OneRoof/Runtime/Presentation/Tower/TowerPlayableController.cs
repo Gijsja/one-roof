@@ -13,11 +13,20 @@ using UnityEngine;
 
 namespace OneRoof.Presentation.Tower
 {
+    /// <summary>Which simulation the scene boots: the five-floor first-playable fixture or a from-scratch ground floor.</summary>
+    public enum TowerStartMode
+    {
+        StandardFiveFloor = 0,
+        GroundFloorStart = 1
+    }
+
     /// <summary>Presentation coordinator routing projection snapshots to four deep presenters.</summary>
     [ExecuteAlways, DisallowMultipleComponent]
     public sealed class TowerPlayableController : MonoBehaviour
     {
         public const int InitialResidentCount = 50, InitialFloorCount = 5;
+
+        [SerializeField] private TowerStartMode _startMode = TowerStartMode.StandardFiveFloor;
 
         private TowerSimulationSession _sim; private ModeShellSession _mode;
         private ElevatorWaitOverlayService _overlaySvc; private ElevatorPlacementPredictor _predictor;
@@ -54,12 +63,16 @@ namespace OneRoof.Presentation.Tower
         public TowerStructurePresenter StructurePresenter => _structure; public ElevatorBankPresenter ElevatorPresenter => _elevator;
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
         public TowerAtmospherePresenter AtmospherePresenter => _atmosphere;
+        public TowerStartMode StartMode => _startMode;
+        public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
 
         public void Initialize()
         {
             if (_sim != null) return;
-            _sim = new TowerSimulationSession(); SeedMorningRush(); _mode = new ModeShellSession();
+            _sim = IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
+            if (!IsGroundStart) SeedMorningRush();
+            _mode = new ModeShellSession();
             _overlaySvc = new ElevatorWaitOverlayService(); _predictor = new ElevatorPlacementPredictor();
             _satisfactionService = new SatisfactionOverlayService();
             _populationService = new PopulationOverlayService();
@@ -109,6 +122,7 @@ namespace OneRoof.Presentation.Tower
             _inspectSelection.ResidentPresenter = _resident; _inspectSelection.OutlinePresenter = _inspectOutline;
             _atmosphere = Ensure<TowerAtmospherePresenter>(); _atmosphere.Initialize();
             TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
+            if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
         }
 
         private T Ensure<T>() where T : Component => GetComponent<T>() ?? gameObject.AddComponent<T>();
@@ -203,7 +217,8 @@ namespace OneRoof.Presentation.Tower
 
         public void ResetCommuteSimulation()
         {
-            _sim.Reset(); SeedMorningRush(); if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
+            if (IsGroundStart) _sim.ResetToGroundFloorStart(); else { _sim.Reset(); SeedMorningRush(); }
+            if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
             if (_inspectSelection != null) _inspectSelection.SimulationSession = _sim;
             _inspectorCard.Close(); _placementCard.Close(); _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
             ClearWorldGeometry(); CreateWorldGeometry();

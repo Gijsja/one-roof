@@ -109,7 +109,7 @@ namespace OneRoof.Infrastructure.Tests.EditMode
 
             sim.BuildFloorSlab(new BuildFloorSlabCommand(5, -30, 30));
             sim.BuildRoom(new BuildRoomCommand(5, -10, -5, new ContentId("residential:apartment"), 4));
-            sim.BuildRoom(new BuildRoomCommand(5, 0, 5, new ContentId("commercial:office"), 8));
+            sim.BuildRoom(new BuildRoomCommand(5, 2, 9, new ContentId("commercial:office"), 8));
 
             var saveData = sim.ExportSaveData();
             var metadata = new SaveEnvelopeMetadata(

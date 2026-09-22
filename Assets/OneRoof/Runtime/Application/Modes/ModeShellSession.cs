@@ -42,8 +42,12 @@ namespace OneRoof.Application.Modes
                 changed = true;
             }
 
-            if (command.ToolId != null || command.TargetMode != InteractionMode.Build)
+            if (command.ToolId != null || command.TargetMode == InteractionMode.Build)
             {
+                // Targeting Build always applies the tool slot, even when null:
+                // entering Build must reopen the palette without a preselected tool,
+                // and SelectBuildTool(null) is the explicit deselect path used by
+                // OnBuildModeRequested to reopen the palette after a placement.
                 _state.SelectBuildTool(command.ToolId);
                 changed = true;
             }

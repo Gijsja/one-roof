@@ -114,12 +114,12 @@ namespace OneRoof.Domain.Tests.EditMode
             var sim = TowerSimulation.CreateStandardFiveFloor();
             var initialCount = sim.ResidentCount;
 
-            // Build a new floor 5 and an apartment
+            // Build a new floor 5 and an apartment (clear of the reserved shaft column).
             sim.BuildFloorSlab(new BuildFloorSlabCommand(5, -30, 30));
             var buildResult = sim.BuildRoom(new BuildRoomCommand(
                 floor: 5,
-                minX: 0,
-                maxX: 5,
+                minX: 2,
+                maxX: 7,
                 contentType: new ContentId("residential:apartment"),
                 capacity: 4));
 

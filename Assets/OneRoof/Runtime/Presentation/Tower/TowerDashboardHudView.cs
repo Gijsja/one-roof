@@ -68,12 +68,13 @@ namespace OneRoof.Presentation.Tower
             var snapshot = sim.Projection();
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
+            var groundStart = _controller.IsGroundStart;
 
-            var hudRect = new Rect(20, 20, 700, 352);
+            var hudRect = groundStart ? new Rect(20, 20, 700, 560) : new Rect(20, 20, 700, 352);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
+            GUILayout.Label(groundStart ? "ONE ROOF — GROUND-FLOOR START" : "ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
             if (GUILayout.Button("Hide [H]", _hudButtonStyle, GUILayout.Height(24), GUILayout.Width(90))) ToggleCollapsed();
             GUILayout.EndHorizontal();
             var phase = sim.DayPhase;
@@ -112,8 +113,44 @@ namespace OneRoof.Presentation.Tower
 
             GUILayout.Space(4);
             GUILayout.Label("Shortcuts: [Space] Pause  [1/B] Build  [2/I] Inspect  [3/D] Data  [4/M] Manage  [H] HUD  [Esc] Cancel", _hudHelpStyle);
+            if (groundStart) DrawGroundStartChecklist(sim);
             GUILayout.EndArea();
         }
+
+        /// <summary>
+        /// From-scratch progress checklist: each of the five focus systems shows a
+        /// live, read-only milestone so economy, utilities, commute, routines, and
+        /// expansion stay legible from the first slab. Presentation only — no domain writes.
+        /// </summary>
+        private void DrawGroundStartChecklist(Application.Tower.TowerSimulationSession sim)
+        {
+            GUILayout.Space(6);
+            GUILayout.Label("FROM-SCRATCH CHECKLIST", _hudHeaderStyle);
+
+            var economy = sim.Economy;
+            var rentDone = economy.TotalRevenue > 0;
+            GUILayout.Label($"{Mark(rentDone)} Economy — Treasury ${economy.CashBalance:N0} {(rentDone ? $"• rent collected ${economy.TotalRevenue:N0}" : "• build homes + workplaces to earn rent")}", _hudMetricStyle);
+
+            var power = sim.ElectricalGridProjection();
+            var powerOk = power.SubstationCapacity > 0f;
+            GUILayout.Label($"{Mark(powerOk)} Utility — Power {(powerOk ? $"substation {power.SubstationCapacity:F0} vs demand {power.TotalDemand:F0}" : "no substation: build utility:electrical_substation")}", _hudMetricStyle);
+
+            var water = sim.WaterWasteNetworkProjection();
+            var waterOk = water.PumpCapacity > 0f;
+            GUILayout.Label($"{Mark(waterOk)} Utility — Water {(waterOk ? $"pumps {water.PumpCapacity:F0} vs demand {water.TotalDemand:F0}" : "no pumps: build utility:water_pump")}", _hudMetricStyle);
+
+            var congestion = sim.CongestionProjection();
+            var commuteOk = sim.FloorCount > 1 && sim.ResidentCount > 0;
+            GUILayout.Label($"{Mark(commuteOk)} Commute — {sim.ElevatorBank.Cars.Count} car(s), {congestion.TotalQueued} queued, avg wait {congestion.AverageWaitTicks:F1} ticks", _hudMetricStyle);
+
+            var routineOk = sim.ResidentCount > 0;
+            GUILayout.Label($"{Mark(routineOk)} Routine — {sim.ResidentCount} resident(s), {sim.Simulation.ActiveTripCount} trip(s) in transit", _hudMetricStyle);
+
+            var expandOk = sim.FloorCount > 1;
+            GUILayout.Label($"{Mark(expandOk)} Expansion — {sim.FloorCount} floor(s), {sim.Topology.Rooms.Count} room(s)", _hudMetricStyle);
+        }
+
+        private static string Mark(bool done) => done ? "[✔]" : "[○]";
 
         private void EnsureStyles()
         {

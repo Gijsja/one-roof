@@ -693,6 +693,45 @@ namespace OneRoof.Domain
             return sim;
         }
 
+        /// <summary>
+        /// Ground-floor start for from-scratch play: a single ground slab with a
+        /// lobby shell and elevator shaft, zero residents, and a funded treasury.
+        /// The player expands upward, adds power/water, zones rooms, and the
+        /// demand-driven leasing system moves residents in as homes and
+        /// workplaces appear. Economy, utilities, commute, routines, and
+        /// expansion all run through the standard tick loop from tick zero.
+        /// </summary>
+        public static TowerSimulation CreateGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury, IRandomStream randomStream = null)
+        {
+            var clock = new SimulationClock(new Tick(0));
+            var topologyState = new BuildingTopologyState(startingEntityId: 2000);
+
+            var slab = new CellBounds(0, -14, 17);
+            var shaftPortal = new Portal(new EntityId(11), PortalType.ElevatorShaftDoor, new CellCoordinate(0, 0), new EntityId(13));
+            var lobbyPortal = new Portal(new EntityId(12), PortalType.Door, new CellCoordinate(2, 0), new EntityId(14));
+            var shaftRoom = new Room(new EntityId(13), FiveFloorTopologyFixture.ElevatorShaftContentId, new CellBounds(0, 0, 1), new[] { shaftPortal.Id }, 10);
+            var lobbyRoom = new Room(new EntityId(14), FiveFloorTopologyFixture.LobbyContentId, new CellBounds(0, 2, 14), new[] { lobbyPortal.Id }, 50);
+            topologyState.RestoreFromData(
+                new[] { slab },
+                new[] { shaftRoom, lobbyRoom },
+                new[] { shaftPortal, lobbyPortal });
+
+            var population = new PopulationState(
+                Array.Empty<PersonRecord>(),
+                Array.Empty<HouseholdRecord>());
+
+            var car = new ElevatorCar(new EntityId(501), startingFloor: 0, capacity: 10);
+            var elevatorBank = new ElevatorBank(minFloor: 0, maxFloor: 0, new[] { car });
+
+            return new TowerSimulation(
+                clock,
+                topologyState,
+                population,
+                elevatorBank,
+                new TowerEconomyState(startingTreasury),
+                randomStream);
+        }
+
         public TowerSaveData ExportSaveData()
         {
             var data = new TowerSaveData
