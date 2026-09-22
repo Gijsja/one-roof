@@ -8,6 +8,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
 
 namespace OneRoof.Application.Tower
@@ -48,6 +49,9 @@ namespace OneRoof.Application.Tower
         public OneRoof.Domain.Scrutiny.ScrutinyState Scrutiny => _simulation.Scrutiny;
 
         public long CurrentTick => _simulation.CurrentTick;
+
+        /// <summary>Pure calendar view over the tick clock for the day/night presentation clock.</summary>
+        public DayPhase DayPhase => _simulation.DayPhase;
 
         public int ResidentCount => _simulation.ResidentCount;
 

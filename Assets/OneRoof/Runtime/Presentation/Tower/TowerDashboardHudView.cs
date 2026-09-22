@@ -43,11 +43,12 @@ namespace OneRoof.Presentation.Tower
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
 
-            var hudRect = new Rect(20, 20, 700, 325);
+            var hudRect = new Rect(20, 20, 700, 352);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
-            GUILayout.Label($"Sim Tick: {snapshot.Tick}  •  Status: {(_controller.IsPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
+            var phase = sim.DayPhase;
+            GUILayout.Label($"Day {phase.DayNumber} — {phase.ClockLabel} {(phase.IsNight ? "Night" : "Day")}  •  Tick: {snapshot.Tick}  •  Status: {(_controller.IsPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
             GUILayout.Label($"Treasury: ${sim.Economy.CashBalance:N0}  •  Residents: {sim.ResidentCount}  •  Floors: {sim.FloorCount}", _hudMetricStyle);
             GUILayout.Space(4);
 
@@ -81,7 +82,7 @@ namespace OneRoof.Presentation.Tower
             GUILayout.EndHorizontal();
 
             GUILayout.Space(4);
-            GUILayout.Label("Shortcuts: [Space] Pause  [1/B] Build  [2/I] Inspect  [3/D] Data  [4/M] Manage  [Esc] Cancel", _hudHelpStyle);
+            GUILayout.Label("Shortcuts: [Space] Pause  [1/B] Build  [2/I] Inspect  [3/D] Data  [4/M] Manage  [H] HUD  [Esc] Cancel", _hudHelpStyle);
             GUILayout.EndArea();
         }
 

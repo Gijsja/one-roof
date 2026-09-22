@@ -87,6 +87,9 @@ namespace OneRoof.Domain
 
         public long CurrentTick => Clock.CurrentTick.Value;
 
+        /// <summary>Pure calendar view over the tick clock for the day/night presentation clock.</summary>
+        public DayPhase DayPhase => DayClock.FromTick(CurrentTick);
+
         public int ResidentCount => Population.ResidentCount;
 
         public int ActiveTripCount => Transit.ActiveTripCount;

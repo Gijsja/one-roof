@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using OneRoof.Application.Transit;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -27,6 +28,11 @@ namespace OneRoof.Presentation.Tower
 
         private AudioSource _elevatorFoley;
         private AudioSource _footstepFoley;
+        private MaterialPropertyBlock _dayNightBlock;
+        private GameObject _nightTint;
+        private Material _nightTintMaterial;
+        private long _lastDayNightKey = -1;
+        private int _tintFloorCount = -1;
         private long _lastFootstepTick = -1;
         private BuildingTopologyState _syncedTopology;
         private int _syncedRoomCount = -1;
@@ -37,6 +43,7 @@ namespace OneRoof.Presentation.Tower
         public int LastFootstepResidentId { get; private set; } = -1;
         public AudioSource ElevatorFoley => _elevatorFoley;
         public AudioSource FootstepFoley => _footstepFoley;
+        public float NightTintAlpha { get; private set; }
 
         private void OnDestroy() => Clear();
 
@@ -61,6 +68,41 @@ namespace OneRoof.Presentation.Tower
             UpdateFootsteps(snapshot);
         }
 
+        /// <summary>
+        /// Presentation-only day/night response to the domain calendar: window lights glow warm
+        /// at night and fade by day, plus a translucent night tint over the tower. Quantized to
+        /// 30-minute buckets so per-frame calls stay cheap. Collider-free, so build picking is unaffected.
+        /// </summary>
+        public void UpdateDayNight(DayPhase phase, int floorCount)
+        {
+            var key = (long)phase.DayNumber * 2880L + phase.Hour * 2L + (phase.Minute >= 30 ? 1L : 0L);
+            if (key == _lastDayNightKey && floorCount == _tintFloorCount) return;
+            _lastDayNightKey = key;
+            _tintFloorCount = floorCount;
+
+            var night = NightFactor(phase.Hour + phase.Minute / 60f);
+            NightTintAlpha = night * 0.34f;
+
+            if (_dayNightBlock == null) _dayNightBlock = new MaterialPropertyBlock();
+            var windowColor = Color.Lerp(new Color(0.75f, 0.85f, 1f, 0.08f), new Color(1f, 0.72f, 0.35f, 0.5f), night);
+            for (var i = 0; i < _windowLightRenderers.Count; i++)
+            {
+                var renderer = _windowLightRenderers[i];
+                if (renderer == null) continue;
+                renderer.GetPropertyBlock(_dayNightBlock);
+                _dayNightBlock.SetColor("_BaseColor", windowColor);
+                _dayNightBlock.SetColor("_Color", windowColor);
+                renderer.SetPropertyBlock(_dayNightBlock);
+            }
+
+            EnsureNightTint(floorCount);
+            if (_nightTint != null)
+            {
+                _nightTint.SetActive(night > 0.001f);
+                if (_nightTintMaterial != null) _nightTintMaterial.color = new Color(0.05f, 0.08f, 0.22f, NightTintAlpha);
+            }
+        }
+
         public void Clear()
         {
             foreach (var source in _roomTones.Values) DestroyUnityObject(source != null ? source.gameObject : null);
@@ -83,6 +125,13 @@ namespace OneRoof.Presentation.Tower
             _syncedTopology = null;
             _syncedRoomCount = -1;
             LastFootstepResidentId = -1;
+            NightTintAlpha = 0f;
+            DestroyUnityObject(_nightTint);
+            _nightTint = null;
+            DestroyUnityObject(_nightTintMaterial);
+            _nightTintMaterial = null;
+            _lastDayNightKey = -1;
+            _tintFloorCount = -1;
         }
 
         private void SyncRoomTonesAndWindowLighting(BuildingTopologyState topology)
@@ -156,6 +205,52 @@ namespace OneRoof.Presentation.Tower
                 if (UnityApplication.isPlaying) _footstepFoley.PlayOneShot(_footstepFoley.clip, 0.8f);
                 return;
             }
+        }
+
+        private static float NightFactor(float hour)
+        {
+            if (hour < 5.5f || hour >= 20.5f) return 1f;
+            if (hour < 6.5f) return 6.5f - hour;
+            if (hour < 19.5f) return 0f;
+            return hour - 19.5f;
+        }
+
+        private void EnsureNightTint(int floorCount)
+        {
+            var floors = Mathf.Max(1, floorCount);
+            var bottom = TowerStructurePresenter.FloorY(0) - 1.4f;
+            var top = TowerStructurePresenter.FloorY(floors - 1) + 1.4f;
+            var center = new Vector3(-0.5f, (bottom + top) * 0.5f, -1.5f);
+            var size = new Vector3(14f, top - bottom, 1f);
+            if (_nightTint == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+                if (shader == null) return;
+                _nightTint = new GameObject("NightTint");
+                _nightTint.transform.SetParent(transform, false);
+                // Quad faces +Z; the camera looks along +Z from negative Z, so turn it to face the camera.
+                _nightTint.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+                var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                quad.transform.SetParent(_nightTint.transform, false);
+                quad.transform.localPosition = Vector3.zero;
+                quad.transform.localRotation = Quaternion.identity;
+                var collider = quad.GetComponent<Collider>();
+                if (collider != null) DestroyUnityObject(collider);
+                var renderer = quad.GetComponent<MeshRenderer>();
+                _nightTintMaterial = new Material(shader);
+                _nightTintMaterial.color = new Color(0.05f, 0.08f, 0.22f, 0f);
+                _nightTintMaterial.SetOverrideTag("RenderType", "Transparent");
+                if (_nightTintMaterial.HasProperty("_Surface")) _nightTintMaterial.SetFloat("_Surface", 1f);
+                if (_nightTintMaterial.HasProperty("_Blend")) _nightTintMaterial.SetFloat("_Blend", 0f);
+                _nightTintMaterial.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+                _nightTintMaterial.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+                _nightTintMaterial.SetInt("_ZWrite", 0);
+                _nightTintMaterial.renderQueue = (int)RenderQueue.Transparent;
+                renderer.sharedMaterial = _nightTintMaterial;
+            }
+
+            _nightTint.transform.position = center;
+            _nightTint.transform.localScale = size;
         }
 
         private void CreateWindowVolume(Room room)
