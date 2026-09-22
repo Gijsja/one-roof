@@ -29,6 +29,24 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Apply_RecoversWhenBlockLostButRenderersCached()
+        {
+            var go = new GameObject("EffectsStale");
+            try
+            {
+                var effects = go.AddComponent<VisualEffectsPresenter>();
+                effects.SetAgitation(0.8f);
+                var blockField = typeof(VisualEffectsPresenter).GetField("_block",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                blockField.SetValue(effects, null);
+
+                Assert.DoesNotThrow(() => effects.Advance(0.016f));
+                Assert.That(blockField.GetValue(effects), Is.Not.Null);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(go); }
+        }
+
+        [Test]
         public void RoomPresenter_UsesDomainInteractionPointForDockCoordinate()
         {
             var roomId = new EntityId(9);

@@ -79,6 +79,7 @@ namespace OneRoof.Presentation.Tower
 
         private void Apply()
         {
+            if (_block == null) _block = new MaterialPropertyBlock();
             if (_renderers == null || _renderers.Length == 0) CacheRenderers();
             if (_renderers == null) return;
             var progress = _duration > 0f ? Mathf.Clamp01(_elapsed / _duration) : 1f;
