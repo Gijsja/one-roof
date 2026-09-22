@@ -87,6 +87,27 @@ namespace OneRoof.Presentation.Tower
         public float CellOriginX => _cellOriginX;
         public float CellWidth => _cellWidth;
 
+        /// <summary>Most recent hover validation outcome for Build-mode hint UI.</summary>
+        public bool LastPlacementValid { get; private set; } = true;
+
+        /// <summary>Human-readable hover hint: validity plus the blocking reason when invalid.</summary>
+        public string LastPlacementHint { get; private set; }
+
+        /// <summary>
+        /// Pure hint formatter (Docs/04_UX_CONTRACT.md): every invalid hover must
+        /// name its blocking condition; every valid hover names the target.
+        /// The ✖/✔ prefix keeps meaning off the colour channel.
+        /// </summary>
+        public static string FormatPlacementHint(string toolId, int floor, CellBounds bounds, bool isValid, string failureReason)
+        {
+            if (isValid)
+            {
+                return $"✔ {toolId}: floor {floor}, cells {bounds.MinX}–{bounds.MaxX}";
+            }
+            var reason = string.IsNullOrEmpty(failureReason) ? "Placement invalid." : failureReason;
+            return $"✖ {reason}";
+        }
+
         public event Action<CommandResult> PlacementExecuted;
 
         private int? _suppressedCellFloor;
@@ -96,6 +117,8 @@ namespace OneRoof.Presentation.Tower
         // IMGUI palette (which runs after Update in the same frame) never also
         // places a room in the tower beneath it.
         private string _lastSeenToolId = string.Empty;
+        private Vector3 _lastHintScreenPos;
+        private GUIStyle _hintStyle;
 
         // Single-entry cache for the stairwell snap search: Update calls it every
         // frame while hovering, and each search runs domain validation per candidate.
@@ -120,6 +143,7 @@ namespace OneRoof.Presentation.Tower
                 _suppressedCellFloor = null;
                 _suppressedCellX = null;
                 _lastSeenToolId = string.Empty;
+                LastPlacementHint = null;
                 GhostPresenter.HideGhost();
                 return;
             }
@@ -146,6 +170,7 @@ namespace OneRoof.Presentation.Tower
                 // Disallow grid hover and clicks when pointer is interacting with UI
                 if (IsPointerOverUI(screenPos, includeBuildPalette: string.IsNullOrEmpty(projection.SelectedBuildTool)))
                 {
+                    LastPlacementHint = null;
                     GhostPresenter.HideGhost();
                     return;
                 }
@@ -165,6 +190,7 @@ namespace OneRoof.Presentation.Tower
                     // While lingering over the just-placed cell, suppress red error ghost
                     if (_suppressedCellFloor.HasValue && _suppressedCellFloor.Value == floor && _suppressedCellX.Value == cellX)
                     {
+                        LastPlacementHint = null;
                         GhostPresenter.HideGhost();
                         return;
                     }
@@ -173,7 +199,10 @@ namespace OneRoof.Presentation.Tower
 
                     var toolId = projection.SelectedBuildTool;
                     TryGetToolPlacementBounds(toolId, floor, cellX, out var placementBounds);
-                    var isValid = ValidatePlacement(toolId, floor, cellX, out _);
+                    var isValid = ValidatePlacement(toolId, floor, cellX, out var failureReason);
+                    LastPlacementValid = isValid;
+                    LastPlacementHint = FormatPlacementHint(toolId, floor, placementBounds, isValid, failureReason);
+                    _lastHintScreenPos = screenPos;
 
                     var worldPos = CellToWorld(floor, placementBounds.MinX, placementBounds.Width);
                     var worldSize = new Vector2(placementBounds.Width * _cellWidth, _floorHeight * 0.9f);
@@ -211,7 +240,33 @@ namespace OneRoof.Presentation.Tower
                 }
             }
 
+            LastPlacementHint = null;
             GhostPresenter.HideGhost();
+        }
+
+        private void OnGUI()
+        {
+            if (!UnityEngine.Application.isPlaying) return;
+            if (_modeSession == null) return;
+            if (string.IsNullOrEmpty(LastPlacementHint)) return;
+
+            var projection = _modeSession.Projection();
+            if (!projection.IsBuildMode || string.IsNullOrEmpty(projection.SelectedBuildTool)) return;
+
+            if (_hintStyle == null)
+            {
+                _hintStyle = new GUIStyle(GUI.skin.box)
+                {
+                    fontSize = 11,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleLeft,
+                    normal = { textColor = LastPlacementValid ? new Color(0.35f, 1f, 0.6f) : new Color(1f, 0.55f, 0.45f) }
+                };
+            }
+            _hintStyle.normal.textColor = LastPlacementValid ? new Color(0.35f, 1f, 0.6f) : new Color(1f, 0.55f, 0.45f);
+
+            var guiY = Screen.height - _lastHintScreenPos.y;
+            GUI.Label(new Rect(_lastHintScreenPos.x + 16, guiY + 14, 430, 24), LastPlacementHint, _hintStyle);
         }
 
         public static bool IsPointerOverUI(Vector3 screenPos, bool includeBuildPalette = true)

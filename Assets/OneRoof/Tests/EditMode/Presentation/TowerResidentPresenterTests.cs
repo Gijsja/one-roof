@@ -161,5 +161,57 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Object.DestroyImmediate(carHolder);
             }
         }
+
+        [Test]
+        public void QueuedResidents_CrowdedLanding_StaysInsideShaftReserve()
+        {
+            // Regression: the single-file queue marched 12 slots deep into the
+            // neighbouring apartment (with red agitation auras). The landing
+            // formation must stay inside the shaft reserve [-2.4, -1.4].
+            var session = new TowerSimulationSession();
+            var residents = new List<TransitResidentProjection>();
+            for (var i = 0; i < 14; i++)
+            {
+                residents.Add(new TransitResidentProjection(100 + i, 0, TransitResidentStatus.Queued, 1, 0, null, ActivityKind.Idle, 0, 25));
+            }
+            var snapshot = new TowerProjection(10L, 14, 0, 25f, residents, new List<ElevatorProjection>());
+
+            _presenter.EnsureResidentViews(residents.Count);
+            _presenter.UpdateResidentPositions(snapshot, session.Topology, 0f);
+
+            for (var i = 0; i < residents.Count; i++)
+            {
+                var pos = _presenter.ResidentViews[i].transform.position;
+                Assert.That(pos.x, Is.GreaterThan(-2.5f).And.LessThan(-1.3f), $"Queued resident {i} must stay inside the shaft reserve.");
+            }
+        }
+
+        [Test]
+        public void SleepingResident_LiesFlatTowardFacingInsteadOfTippingSideways()
+        {
+            var go = new GameObject("Test_Sleeper");
+            go.transform.SetParent(_holder.transform, false);
+            var skeletal = go.AddComponent<OneRoof.Presentation.Population.NpcSkeletalHierarchy>();
+            skeletal.EnsureHierarchy();
+            Assert.That(skeletal.Root, Is.Not.Null, "Skeletal hierarchy must build its bone root.");
+            skeletal.SleepDirection = -1;
+            skeletal.SetAnimationClip(OneRoof.Content.NpcAnimationClip.Sleep);
+
+            skeletal.ApplyProceduralAnimation(1f);
+
+            var z = skeletal.Root.localRotation.eulerAngles.z;
+            Assert.That(z, Is.EqualTo(75f).Within(0.5f), "Sleeper must lie flat toward its facing direction.");
+        }
+
+        [Test]
+        public void WardrobeFallbackColors_ArePlausibleGarmentsNeverBlankWhite()
+        {
+            foreach (OneRoof.Content.NpcLayerKind layer in System.Enum.GetValues(typeof(OneRoof.Content.NpcLayerKind)))
+            {
+                var color = OneRoof.Presentation.Population.NpcSkeletalHierarchy.LayerFallbackColor(layer);
+                Assert.That(color.a, Is.EqualTo(1f));
+                Assert.That(color.grayscale, Is.LessThan(0.97f), $"{layer} fallback must not read as blank white.");
+            }
+        }
     }
 }

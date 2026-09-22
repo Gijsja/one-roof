@@ -158,14 +158,10 @@ namespace OneRoof.Domain
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
 
-            if (Scrutiny.IsExpansionConstrained && (command is BuildFloorSlabCommand || command is ExpandGroundSlabCommand || command is BuildRoomCommand || command is AddElevatorShaftCommand || command is BuildStairwellCommand))
-            {
-                return CommandResult.Reject(new[]
-                {
-                    new CommandRejectionReason(new ContentId("scrutiny:expansion_constrained"), "External scrutiny is temporarily constraining further expansion. Improve capacity or household conditions, then allow pressure to recede.")
-                });
-            }
-
+            // Scrutiny is an event-pressure mechanic, never an instant build
+            // blocker: high scrutiny raises inspection-event likelihood
+            // (ExternalEventPressure, consumed by the crisis-event system) but
+            // expansion commands are always validated on economy and topology.
             switch (command)
             {
                 case BuildFloorSlabCommand slabCmd:

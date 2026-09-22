@@ -89,19 +89,22 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void CanExecute_NormalRunningTower_KeepsCoreExpansionAvailable()
+        public void CanExecute_MaxScrutiny_NeverBlocksExpansion()
         {
-            // The standard fifty-resident simulation must not turn its normal
-            // budget variation into an immediate global construction lock.
-            for (var tick = 0; tick < 60; tick++)
+            // Scrutiny is an event-pressure mechanic, not a build veto: drive
+            // it to saturation through sustained rapid expansion, then prove
+            // core expansion stays available and gated only by economy/topology.
+            for (var tick = 0; tick < 25; tick++)
             {
+                _sim.Scrutiny.RecordExpansion(100);
                 _sim.AdvanceOneTick();
             }
+
+            Assert.That(_sim.Scrutiny.Value, Is.GreaterThan(.80f));
 
             var slab = _sim.CanExecute(new BuildFloorSlabCommand(5, -14, 17));
             var room = _sim.CanExecute(new BuildRoomCommand(0, -14, -11, new ContentId("residential:studio"), 4));
 
-            Assert.That(_sim.Scrutiny.IsExpansionConstrained, Is.False);
             Assert.That(slab.Accepted, Is.True, slab.Rejections.Count > 0 ? slab.Rejections[0].Message : "Floor slab was rejected.");
             Assert.That(room.Accepted, Is.True, room.Rejections.Count > 0 ? room.Rejections[0].Message : "Room was rejected.");
         }

@@ -39,7 +39,7 @@ The same chain applies to every subject.
 
 - **Room:** occupancy, noise, utilities, service or production output, affected residents, and levers such as capacity, service, lease, or upgrade changes.
 - **Transit:** load, wait, and transfer-lobby congestion; the downstream commute effect on Satisfaction and Strain; capacity and routing levers.
-- **Scrutiny:** current value, trend, contributing factors, constraints, external-event pressure, and policy/service/crisis-response levers.
+- **Scrutiny:** current value, trend, contributing factors, inspection-event pressure band, and policy/service/crisis-response levers. Scrutiny never blocks construction directly; any future building constraint arrives via an explicit event with its own cause and expiry.
 
 ## Presentation and data rules
 

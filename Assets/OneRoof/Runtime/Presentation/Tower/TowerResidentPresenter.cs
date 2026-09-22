@@ -191,6 +191,7 @@ namespace OneRoof.Presentation.Tower
                             var roomCenterX = (worldLeft + worldRight) * 0.5f;
                             var faceScaleX = (residentTransform.position.x < roomCenterX) ? 1f : -1f;
                             residentTransform.localScale = new Vector3(faceScaleX, 1f, 1f);
+                            if (skeletal != null) skeletal.SleepDirection = resident.Activity == ActivityKind.Sleeping ? (int)faceScaleX : 1;
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
                             skeletal?.SetAnimationClip(resident.Activity == ActivityKind.Sleeping ? NpcAnimationClip.Sleep :
@@ -228,8 +229,15 @@ namespace OneRoof.Presentation.Tower
                         var queueFloor = resident.Floor;
                         if (queueFloor < 0 || queueFloor >= floorCount) queueFloor = 0;
                         var slot = queuedCountsPerFloor[queueFloor]++;
-                        var queueX = -1.45f - (slot % 12) * 0.28f;
-                        var queueY = TowerStructurePresenter.FloorY(queueFloor) - 0.58f;
+                        // Compact landing formation inside the shaft reserve
+                        // (world x in [-2.4, -1.4]). Four columns spill into a
+                        // second row instead of marching single-file into the
+                        // neighbouring apartment with their agitation auras.
+                        var col = slot % 4;
+                        var row = (slot / 4) % 2;
+                        var crush = (slot / 8) % 2;
+                        var queueX = -1.62f - col * 0.24f + crush * 0.09f;
+                        var queueY = TowerStructurePresenter.FloorY(queueFloor) - 0.58f + row * 0.34f - crush * 0.05f;
                         residentTransform.position = new Vector3(queueX, queueY, -0.2f);
                         residentTransform.localScale = new Vector3(1f, 1f, 1f);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Queued);

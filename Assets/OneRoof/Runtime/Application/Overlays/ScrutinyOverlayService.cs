@@ -10,7 +10,7 @@ namespace OneRoof.Application.Overlays
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             var scrutiny = session.Scrutiny;
-            return new ScrutinyOverlayProjection(scrutiny.Value, scrutiny.Trend, scrutiny.ExternalEventPressure, scrutiny.IsExpansionConstrained, scrutiny.ContributingFactors);
+            return new ScrutinyOverlayProjection(scrutiny.Value, scrutiny.Trend, scrutiny.ExternalEventPressure, scrutiny.ContributingFactors);
         }
     }
 }

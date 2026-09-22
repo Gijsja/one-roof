@@ -181,8 +181,52 @@ namespace OneRoof.Presentation.Tower
                     _elevatorViews[i].transform.position = new Vector3(carX, TowerStructurePresenter.FloorY(0), 0f);
                     _elevatorViews[i].transform.localScale = new Vector3(carWidth, 0.5f, 1f);
                     SetRendererColor(_elevatorViews[i], new Color(0.18f, 0.65f, 0.5f));
+                    LayoutCarDressing(_elevatorViews[i], carWidth);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gives the flat cabin quad a readable cabin silhouette: a dark door
+        /// seam and a roof cap as children that track the layout width, so cars
+        /// read as elevator cabins instead of floating green squares.
+        /// </summary>
+        private void LayoutCarDressing(MeshRenderer cabin, float carWidth)
+        {
+            if (cabin == null) return;
+            var door = EnsureCarChild(cabin, "CarDoor", new Color(0.09f, 0.12f, 0.15f));
+            door.transform.localPosition = new Vector3(0f, 0f, -0.02f);
+            door.transform.localScale = new Vector3(0.045f / Mathf.Max(0.05f, carWidth), 0.84f, 1f);
+            var roof = EnsureCarChild(cabin, "CarRoof", new Color(0.55f, 0.60f, 0.68f));
+            roof.transform.localPosition = new Vector3(0f, 0.57f, -0.01f);
+            roof.transform.localScale = new Vector3((carWidth + 0.10f) / Mathf.Max(0.05f, carWidth), 0.14f, 1f);
+        }
+
+        private MeshRenderer EnsureCarChild(MeshRenderer cabin, string childName, Color color)
+        {
+            var existing = cabin.transform.Find(childName);
+            if (existing != null)
+            {
+                var renderer = existing.GetComponent<MeshRenderer>();
+                if (renderer != null)
+                {
+                    SetRendererColor(renderer, color);
+                    return renderer;
+                }
+            }
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            go.name = childName;
+            go.transform.SetParent(cabin.transform, false);
+            var col = go.GetComponent<Collider>();
+            if (col != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(col);
+                else Object.DestroyImmediate(col);
+            }
+            var childRenderer = go.GetComponent<MeshRenderer>();
+            childRenderer.sharedMaterial = _worldMaterial;
+            SetRendererColor(childRenderer, color);
+            return childRenderer;
         }
 
         public void UpdateElevatorPositions(TowerProjection snapshot)
@@ -203,6 +247,7 @@ namespace OneRoof.Presentation.Tower
                 var carTransform = _elevatorViews[i].transform;
                 carTransform.localScale = new Vector3(carWidth, 0.5f, 1f);
                 carTransform.position = Vector3.Lerp(carTransform.position, new Vector3(targetX, targetY, 0f), 0.25f);
+                LayoutCarDressing(_elevatorViews[i], carWidth);
 
                 var carColor = elevator.PassengerCount > 0
                     ? new Color(0.3f, 0.95f, 0.7f)

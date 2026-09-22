@@ -34,6 +34,8 @@ namespace OneRoof.Presentation.Population
         public NpcAnimationClip CurrentAnimation { get; private set; } = NpcAnimationClip.Idle;
         public NpcWardrobeLoadout Wardrobe { get; private set; }
         public string WardrobeVariantKey { get; private set; }
+        /// <summary>Lie direction for the Sleep clip: +1 head toward +x, -1 toward -x. Set from facing.</summary>
+        public int SleepDirection { get; set; } = 1;
 
         private float _timeOffset;
         private readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
@@ -298,35 +300,43 @@ namespace OneRoof.Presentation.Population
             // Tint the modular base anatomy: skin for head/hands, profession
             // upper/lower/footwear for torso/legs/feet. Keeps rig proportions
             // identical; only presentation colors vary.
-            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var skin))
+            if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var skin))
             {
-                SetLimbColor("head", skin);
-                SetLimbColor(NpcRigDefinition.BoneHandL, skin);
-                SetLimbColor(NpcRigDefinition.BoneHandR, skin);
+                skin = LayerFallbackColor(NpcLayerKind.Body);
             }
-            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.UpperClothing), out var upper))
+            SetLimbColor("head", skin);
+            SetLimbColor(NpcRigDefinition.BoneHandL, skin);
+            SetLimbColor(NpcRigDefinition.BoneHandR, skin);
+            if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.UpperClothing), out var upper))
             {
-                SetLimbColor("torso", upper);
+                upper = LayerFallbackColor(NpcLayerKind.UpperClothing);
             }
-            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.LowerClothing), out var lower))
+            SetLimbColor("torso", upper);
+            if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.LowerClothing), out var lower))
             {
-                // Shorts variants (bare legs) keep skin-toned legs under the photo shorts.
-                if (!variant.BareLegs)
+                lower = LayerFallbackColor(NpcLayerKind.LowerClothing);
+            }
+            // Shorts variants (bare legs) keep skin-toned legs under the photo shorts.
+            if (!variant.BareLegs)
+            {
+                SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
+                SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+            }
+            else
+            {
+                if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var bareSkin))
                 {
-                    SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
-                    SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+                    bareSkin = LayerFallbackColor(NpcLayerKind.Body);
                 }
-                else if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var bareSkin))
-                {
-                    SetLimbColor(NpcRigDefinition.BoneLegUpperL, bareSkin);
-                    SetLimbColor(NpcRigDefinition.BoneLegUpperR, bareSkin);
-                }
+                SetLimbColor(NpcRigDefinition.BoneLegUpperL, bareSkin);
+                SetLimbColor(NpcRigDefinition.BoneLegUpperR, bareSkin);
             }
-            if (TryParseHex(variant.GetLayerColor(NpcLayerKind.Footwear), out var footwear))
+            if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.Footwear), out var footwear))
             {
-                SetLimbColor(NpcRigDefinition.BoneFootL, footwear);
-                SetLimbColor(NpcRigDefinition.BoneFootR, footwear);
+                footwear = LayerFallbackColor(NpcLayerKind.Footwear);
             }
+            SetLimbColor(NpcRigDefinition.BoneFootL, footwear);
+            SetLimbColor(NpcRigDefinition.BoneFootR, footwear);
 
             // Subtle stature jitter (+/-5%) for crowd readability. Absolute scale
             // assignment keeps repeated Initialize calls idempotent.
@@ -341,7 +351,26 @@ namespace OneRoof.Presentation.Population
             {
                 return palette;
             }
-            return Color.HSVToRGB((Mathf.Abs(layerId.GetHashCode()) % 360) / 360f, .52f, .92f);
+            // A missing palette entry must degrade to a plausible garment,
+            // never the near-white parse-failure tint that read as floating boxes.
+            return LayerFallbackColor(layer);
+        }
+
+        /// <summary>Plausible per-layer garment defaults when no palette entry exists.</summary>
+        public static Color LayerFallbackColor(NpcLayerKind layer)
+        {
+            switch (layer)
+            {
+                case NpcLayerKind.Face: return new Color(.96f, .76f, .61f);
+                case NpcLayerKind.Body: return new Color(.96f, .76f, .61f);
+                case NpcLayerKind.Hair: return new Color(.25f, .18f, .14f);
+                case NpcLayerKind.UpperClothing: return new Color(.35f, .45f, .60f);
+                case NpcLayerKind.LowerClothing: return new Color(.30f, .34f, .42f);
+                case NpcLayerKind.Footwear: return new Color(.18f, .20f, .26f);
+                case NpcLayerKind.CarriedProp: return new Color(.55f, .42f, .28f);
+                case NpcLayerKind.Accessory: return new Color(.75f, .65f, .45f);
+                default: return new Color(.45f, .50f, .58f);
+            }
         }
 
         private NpcWardrobeVariant CurrentVariant()
@@ -386,6 +415,11 @@ namespace OneRoof.Presentation.Population
 
             var t = globalTime + _timeOffset;
             ResetLimbPose();
+            if (CurrentAnimation != NpcAnimationClip.Sleep)
+            {
+                Root.localRotation = Quaternion.identity;
+                if (StatusPlateRenderer != null) StatusPlateRenderer.transform.localRotation = Quaternion.identity;
+            }
 
             if (CurrentAnimation == NpcAnimationClip.Walk)
             {
@@ -400,10 +434,17 @@ namespace OneRoof.Presentation.Population
             }
             else if (CurrentAnimation == NpcAnimationClip.Sleep)
             {
-                Spine.localRotation = Quaternion.Euler(0f, 0f, 78f);
-                Head.localRotation = Quaternion.Euler(0f, 0f, -16f);
-                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, -40f);
-                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, 32f);
+                // Lie flat: rotate the whole body about the feet so the head
+                // rests toward the facing direction instead of tipping the
+                // spine rigidly sideways mid-air. The underfoot plate is
+                // counter-rotated so it stays a floor shadow.
+                var dir = SleepDirection >= 0 ? 1f : -1f;
+                Root.localRotation = Quaternion.Euler(0f, 0f, -75f * dir);
+                Head.localRotation = Quaternion.Euler(0f, 0f, 8f * dir);
+                if (StatusPlateRenderer != null)
+                {
+                    StatusPlateRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, 75f * dir);
+                }
             }
             else if (CurrentAnimation == NpcAnimationClip.Sit)
             {

@@ -41,6 +41,16 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void EnsureElevatorViews_CarReadsAsCabinWithDoorAndRoof()
+        {
+            _presenter.EnsureElevatorViews(1);
+
+            var car = _presenter.ElevatorViews[0];
+            Assert.That(car.transform.Find("CarDoor"), Is.Not.Null);
+            Assert.That(car.transform.Find("CarRoof"), Is.Not.Null);
+        }
+
+        [Test]
         public void EnsureElevatorViews_CreatesCarsAndPositionsThem()
         {
             _presenter.EnsureElevatorViews(2);

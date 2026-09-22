@@ -11,8 +11,10 @@ namespace OneRoof.Domain.Scrutiny
     /// </summary>
     public sealed class ScrutinyState
     {
-        public const float ExpansionConstraintThreshold = .80f;
-
+        // Scrutiny never blocks construction directly. High values raise
+        // ExternalEventPressure, which the crisis-event system consumes to
+        // trigger inspections and incidents; constraint, if any, arrives via
+        // an explicit event with its own cause and expiry.
         private readonly List<string> _contributingFactors = new List<string>();
         private float _recentExpansionPressure;
         private float _recentPolicyPressure;
@@ -31,7 +33,6 @@ namespace OneRoof.Domain.Scrutiny
         public float RecentPolicyPressure => _recentPolicyPressure;
         public IReadOnlyList<string> ContributingFactors => _contributingFactors;
         public float ExternalEventPressure => .10f + (.90f * Value);
-        public bool IsExpansionConstrained => Value >= ExpansionConstraintThreshold;
         public ScrutinyTrend Trend => Value > PreviousValue + .005f ? ScrutinyTrend.Rising : Value < PreviousValue - .005f ? ScrutinyTrend.Falling : ScrutinyTrend.Stable;
 
         public void RecordExpansion(int structuralUnits)
@@ -81,7 +82,13 @@ namespace OneRoof.Domain.Scrutiny
                 }
                 inequality = maxBudget - minBudget;
                 wellbeing = population.Persons.Count == 0 ? 1f : satisfactionTotal / population.Persons.Count;
-                unresolvedPressure = population.Persons.Count == 0 ? 0f : Math.Min(1f, (grievances / (float)population.Persons.Count) + (strain / population.Persons.Count));
+                // Softened curve: one grievance per resident plus strained
+                // residents is a busy tower, not a crisis. Sustained extreme
+                // conditions can still push scrutiny high, but ordinary
+                // morning-rush pressure must not saturate this driver.
+                var grievancesPerPerson = population.Persons.Count == 0 ? 0f : grievances / (float)population.Persons.Count;
+                var averageStrain = population.Persons.Count == 0 ? 0f : strain / population.Persons.Count;
+                unresolvedPressure = Math.Min(1f, grievancesPerPerson / 3f + averageStrain / 2f);
             }
 
             var serviceInvestment = CountServiceRooms(topology);
@@ -89,13 +96,20 @@ namespace OneRoof.Domain.Scrutiny
             var policy = _recentPolicyPressure;
             var pressure = expansion * .42f + inequality * .22f + unresolvedPressure * .30f + policy * .25f;
             var responseReadiness = Math.Max(0f, crisisResponseMultiplier - 1f);
-            var relief = wellbeing * .035f + Math.Min(.04f, serviceInvestment * .01f) + Math.Min(.02f, responseReadiness * .10f);
+            // Relief is deliberately smaller than the pressure gain so single
+            // expansions produce a visible bump; mean-reversion (Value term)
+            // is the main downward force, settling calm towers low and busy
+            // towers moderate without ever pinning at saturation.
+            var relief = wellbeing * .02f + Math.Min(.03f, serviceInvestment * .008f) + Math.Min(.02f, responseReadiness * .10f);
             // Scrutiny must signal sustained harmful expansion, not lock the first
             // playable tower after a few ordinary simulation ticks. Fixture-level
             // household budget variation is intentionally broad, so a gentler
             // accumulation rate preserves the player’s core build-response loop
-            // while still allowing repeated rapid expansion to become constrained.
-            Value = Clamp(Value + (pressure * .20f) - relief);
+            // while still allowing repeated rapid expansion to spike pressure.
+            // Mean-reversion (Value term in relief) guarantees even chronically
+            // bad conditions settle below saturation instead of ratcheting to a
+            // permanent 100%: scrutiny stays a live signal for the event system.
+            Value = Clamp(Value + (pressure * .20f) - relief - (Value * .06f));
             _recentExpansionPressure = Clamp(_recentExpansionPressure - .02f);
             _recentPolicyPressure = Clamp(_recentPolicyPressure - .01f);
 

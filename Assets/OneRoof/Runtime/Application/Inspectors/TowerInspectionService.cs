@@ -121,14 +121,14 @@ namespace OneRoof.Application.Inspectors
             {
                 $"Current scrutiny: {overlay.Value:P0}",
                 $"Trend: {overlay.Trend}",
-                $"External-event pressure: {overlay.ExternalEventPressure:P0}",
-                $"Expansion status: {(overlay.IsExpansionConstrained ? "Temporarily constrained" : "Available")}"
+                $"Inspection-event pressure: {overlay.ExternalEventPressure:P0} [{overlay.EventPressureBand}]",
+                "Expansion status: Available (scrutiny modulates event pressure; it never blocks construction directly)"
             };
             foreach (var cause in overlay.ContributingFactors) details.Add($"Driver: {cause}");
-            var symptom = overlay.IsExpansionConstrained
-                ? "External attention is temporarily constraining new expansion."
+            var symptom = overlay.ExternalEventPressure >= .80f
+                ? "External attention is elevated; inspection events are more likely."
                 : "External attention is being monitored; expansion remains available.";
-            return new InspectorDetailProjection("Tower Scrutiny", symptom, details, "Respond through capacity and service investment, balanced household conditions, and time for pressure to recede.");
+            return new InspectorDetailProjection("Tower Scrutiny", symptom, details, "Respond through capacity and service investment and balanced household conditions; high scrutiny raises event pressure rather than vetoing builds.");
         }
 
         public InspectorDetailProjection InspectUtilities()

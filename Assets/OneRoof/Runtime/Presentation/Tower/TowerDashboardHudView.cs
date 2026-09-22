@@ -18,6 +18,22 @@ namespace OneRoof.Presentation.Tower
         private GUIStyle _hudButtonStyle;
         private GUIStyle _hudHelpStyle;
 
+        public bool IsCollapsed { get; private set; }
+
+        public void SetCollapsed(bool collapsed) => IsCollapsed = collapsed;
+
+        public void ToggleCollapsed() => IsCollapsed = !IsCollapsed;
+
+        private void Update()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null && keyboard.hKey.wasPressedThisFrame) ToggleCollapsed();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.H)) ToggleCollapsed();
+#endif
+        }
+
         public TowerPlayableController Controller
         {
             get => _controller;
@@ -39,6 +55,16 @@ namespace OneRoof.Presentation.Tower
 
             EnsureStyles();
 
+            // Collapsed to a single chip so the top tower floors stay readable.
+            if (IsCollapsed)
+            {
+                var chipRect = new Rect(20, 20, 210, 48);
+                GUILayout.BeginArea(chipRect, GUI.skin.box);
+                if (GUILayout.Button("Show HUD [H]", _hudButtonStyle, GUILayout.Height(28))) ToggleCollapsed();
+                GUILayout.EndArea();
+                return;
+            }
+
             var snapshot = sim.Projection();
             var congestion = sim.CongestionProjection();
             var totalRes = Math.Max(1, sim.ResidentCount);
@@ -46,7 +72,10 @@ namespace OneRoof.Presentation.Tower
             var hudRect = new Rect(20, 20, 700, 352);
             GUILayout.BeginArea(hudRect, GUI.skin.box);
 
+            GUILayout.BeginHorizontal();
             GUILayout.Label("ONE ROOF — FIRST PLAYABLE SLICE", _hudHeaderStyle);
+            if (GUILayout.Button("Hide [H]", _hudButtonStyle, GUILayout.Height(24), GUILayout.Width(90))) ToggleCollapsed();
+            GUILayout.EndHorizontal();
             var phase = sim.DayPhase;
             GUILayout.Label($"Day {phase.DayNumber} — {phase.ClockLabel} {(phase.IsNight ? "Night" : "Day")}  •  Tick: {snapshot.Tick}  •  Status: {(_controller.IsPaused ? "[PAUSED]" : "[RUNNING]")}", _hudMetricStyle);
             GUILayout.Label($"Treasury: ${sim.Economy.CashBalance:N0}  •  Residents: {sim.ResidentCount}  •  Floors: {sim.FloorCount}", _hudMetricStyle);

@@ -8,15 +8,34 @@ namespace OneRoof.Domain.Tests.EditMode
     public sealed class ScrutinyStateTests
     {
         [Test]
-        public void RepeatedExpansion_RaisesPressureAndCanConstrainFurtherExpansion()
+        public void RepeatedExpansion_RaisesEventPressure()
         {
             var simulation = TowerSimulation.CreateStandardFiveFloor();
             simulation.Scrutiny.RecordExpansion(100);
 
-            simulation.AdvanceOneTick();
+            for (var tick = 0; tick < 5; tick++)
+            {
+                simulation.AdvanceOneTick();
+            }
 
-            Assert.That(simulation.Scrutiny.Value, Is.GreaterThan(.10f));
+            Assert.That(simulation.Scrutiny.Value, Is.GreaterThan(.12f));
             Assert.That(simulation.Scrutiny.ContributingFactors, Has.Some.Contains("construction"));
+        }
+
+        [Test]
+        public void UntouchedMorningRush_NeverSaturatesScrutiny()
+        {
+            // Regression: ordinary commute pressure ratcheted scrutiny to a
+            // permanent 100%, which would fire max-rate events forever once
+            // OR-1002 consumes ExternalEventPressure. A busy-but-unexpanded
+            // tower must settle below saturation.
+            var simulation = TowerSimulation.CreateStandardFiveFloor();
+            for (var tick = 0; tick < 600; tick++)
+            {
+                simulation.AdvanceOneTick();
+            }
+
+            Assert.That(simulation.Scrutiny.Value, Is.LessThan(.80f));
         }
 
         [Test]

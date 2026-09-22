@@ -15,7 +15,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             try
             {
                 var presenter = holder.AddComponent<ScrutinyOverlayPresenter>();
-                var overlay = new ScrutinyOverlayProjection(.7f, ScrutinyTrend.Rising, .73f, false, new[] { "Recent construction is drawing external attention." });
+                var overlay = new ScrutinyOverlayProjection(.7f, ScrutinyTrend.Rising, .73f, new[] { "Recent construction is drawing external attention." });
                 presenter.UpdateOverlay(overlay);
                 presenter.SetVisible(true);
                 Assert.That(presenter.CurrentOverlay, Is.SameAs(overlay));

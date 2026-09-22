@@ -156,6 +156,27 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void FormatPlacementHint_Invalid_NamesBlockingReason()
+        {
+            _gridPlacement.ValidatePlacement("floor:slab", floor: 1, cellX: -12, out var reason);
+            var bounds = new CellBounds(1, -12, -12);
+            var hint = GridPlacementController.FormatPlacementHint("floor:slab", 1, bounds, isValid: false, reason);
+
+            Assert.That(hint, Does.StartWith("✖"));
+            Assert.That(hint, Does.Contain("slab already exists"));
+        }
+
+        [Test]
+        public void FormatPlacementHint_Valid_NamesTarget()
+        {
+            var bounds = new CellBounds(5, -14, 17);
+            var hint = GridPlacementController.FormatPlacementHint("floor:slab", 5, bounds, isValid: true, failureReason: null);
+
+            Assert.That(hint, Does.StartWith("✔"));
+            Assert.That(hint, Does.Contain("floor 5"));
+        }
+
+        [Test]
         public void TryExecutePlacement_RejectsAndDoesNotPlace_WhenPlacementInvalid()
         {
             // Attempt to place an apartment overlapping an existing room on floor 1
