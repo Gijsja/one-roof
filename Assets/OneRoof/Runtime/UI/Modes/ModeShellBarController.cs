@@ -33,6 +33,15 @@ namespace OneRoof.UI.Modes
 
         public ModeShellProjection CurrentProjection => Session.Projection();
 
+        // IMGUI uses top-origin coordinates. Placement uses these same bounds to
+        // exclude visible controls before mapping a pointer to tower cells.
+        public static Rect BuildPaletteRect(int screenHeight) => new Rect(20, screenHeight - 360, 620, 288);
+
+        public static Rect ModeBarRect(int screenHeight) => new Rect(20, screenHeight - 70, 520, 50);
+
+        public static Rect ContextRect(int screenHeight, bool isBuildMode) =>
+            new Rect(20, screenHeight - (isBuildMode ? 198 : 105), isBuildMode ? 620 : 520, 32);
+
         private void Update()
         {
             HandleKeyboardShortcuts();
@@ -126,7 +135,7 @@ namespace OneRoof.UI.Modes
                 DrawBuildPalette(projection);
             }
 
-            var barRect = new Rect(20, Screen.height - 70, 520, 50);
+            var barRect = ModeBarRect(Screen.height);
 
             GUILayout.BeginArea(barRect, GUI.skin.box);
             GUILayout.BeginHorizontal();
@@ -144,7 +153,7 @@ namespace OneRoof.UI.Modes
 
         private void DrawBuildPalette(ModeShellProjection projection)
         {
-            var paletteRect = new Rect(20, Screen.height - 360, 620, 288);
+            var paletteRect = BuildPaletteRect(Screen.height);
             GUILayout.BeginArea(paletteRect, GUI.skin.box);
 
             // Row 1: Zoning & Structure
@@ -241,9 +250,7 @@ namespace OneRoof.UI.Modes
 
         private void DrawContextOverlay(ModeShellProjection projection)
         {
-            var contextY = projection.IsBuildMode ? Screen.height - 198 : Screen.height - 105;
-            var contextWidth = projection.IsBuildMode ? 620 : 520;
-            var contextRect = new Rect(20, contextY, contextWidth, 32);
+            var contextRect = ContextRect(Screen.height, projection.IsBuildMode);
 
             GUILayout.BeginArea(contextRect);
             GUILayout.BeginHorizontal();

@@ -6,6 +6,7 @@ using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
+using OneRoof.UI.Modes;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tower
@@ -26,14 +27,6 @@ namespace OneRoof.Presentation.Tower
         public const int DefaultFloorSlabMinX = -14;
         public const int DefaultFloorSlabMaxX = 17;
         public const int GroundSlabExpansionWidth = 6;
-
-        // Keep this in step with ModeShellBarController.DrawBuildPalette. IMGUI receives
-        // top-origin coordinates, whereas pointer input is bottom-origin, so this hit
-        // region must cover the full six-row palette after conversion below.
-        public const float BuildPaletteTopInset = 360f;
-        public const float BuildPaletteBottomInset = 15f;
-        public const float BuildPaletteLeftInset = 15f;
-        public const float BuildPaletteRightEdge = 650f;
 
         [SerializeField] private float _floorOriginY = DefaultFloorOriginY;
         [SerializeField] private float _floorHeight = DefaultFloorHeight;
@@ -279,25 +272,14 @@ namespace OneRoof.Presentation.Tower
             var guiY = Screen.height - screenPos.y;
             var guiPoint = new Vector2(screenPos.x, guiY);
 
-            // Bottom UI area: mode bar, context overlay, and the complete six-row
-            // build palette. Previously this only protected its lower rows, allowing
-            // a palette click to also place a room in the tower beneath it.
-            // Bounds mirror ModeShellBarController.DrawBuildPalette
-            // (Rect 20, Screen.height-360, 620x288) with a small margin. Kept
-            // relative to Screen.height so short viewports and headless test
-            // resolutions behave the same as the drawn palette.
-            if (includeBuildPalette)
-            {
-                const float margin = 8f;
-                var paletteTop = Screen.height - BuildPaletteTopInset - margin;
-                var paletteBottom = Screen.height - BuildPaletteBottomInset + margin;
-                if (paletteBottom > paletteTop &&
-                    guiPoint.x >= BuildPaletteLeftInset - margin && guiPoint.x <= BuildPaletteRightEdge + margin &&
-                    guiPoint.y >= paletteTop && guiPoint.y <= paletteBottom)
-                {
-                    return true;
-                }
-            }
+            // The chooser disappears after tool selection; the mode bar and
+            // context strip do not. Shield only the visible palette but always
+            // shield those controls, including on the click that reopens Build.
+            const float margin = 8f;
+            if (ContainsWithMargin(ModeShellBarController.ModeBarRect(Screen.height), guiPoint, margin) ||
+                ContainsWithMargin(ModeShellBarController.ContextRect(Screen.height, isBuildMode: true), guiPoint, margin) ||
+                (includeBuildPalette && ContainsWithMargin(ModeShellBarController.BuildPaletteRect(Screen.height), guiPoint, margin)))
+                return true;
 
             // Top-left HUD area
             var hudWidth = Mathf.Min(420f, Screen.width * 0.35f);
@@ -317,6 +299,10 @@ namespace OneRoof.Presentation.Tower
 
             return false;
         }
+
+        private static bool ContainsWithMargin(Rect rect, Vector2 point, float margin) =>
+            point.x >= rect.xMin - margin && point.x <= rect.xMax + margin &&
+            point.y >= rect.yMin - margin && point.y <= rect.yMax + margin;
 
         private static bool TryGetScreenPointerPosition(out Vector3 screenPos)
         {

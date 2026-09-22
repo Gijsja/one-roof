@@ -5,6 +5,7 @@ using OneRoof.Application.Tower;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Tower;
+using OneRoof.UI.Modes;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tests.EditMode
@@ -380,14 +381,35 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void IsPointerOverUI_DoesNotReservePaletteAreaAfterToolSelection()
         {
-            // screenY 200 sits inside the palette rows at typical viewport heights
-            // while staying below the HUD rows, so only the palette flag decides
-            // the outcome: reserved while choosing a tool, pass-through to the
-            // tower once the tool is selected.
-            var palettePosition = new Vector3(100f, 200f, 0f);
+            // A palette row outside the persistent context strip becomes world
+            // space after the chooser closes; the selected tool can build there.
+            var palettePosition = new Vector3(100f, Screen.height - 240f, 0f);
 
             Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: true), Is.True);
             Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false), Is.False);
+        }
+
+        [Test]
+        public void IsPointerOverUI_WithToolSelected_StillProtectsVisibleModeBarAndContext()
+        {
+            var bar = ModeShellBarController.ModeBarRect(Screen.height);
+            var context = ModeShellBarController.ContextRect(Screen.height, isBuildMode: true);
+
+            Assert.That(GridPlacementController.IsPointerOverUI(
+                new Vector3(bar.center.x, Screen.height - bar.center.y), includeBuildPalette: false), Is.True);
+            Assert.That(GridPlacementController.IsPointerOverUI(
+                new Vector3(context.center.x, Screen.height - context.center.y), includeBuildPalette: false), Is.True);
+        }
+
+        [Test]
+        public void IsPointerOverUI_ShieldsActualPaletteBoundsWhileChooserIsOpen()
+        {
+            var palette = ModeShellBarController.BuildPaletteRect(Screen.height);
+            var upperRow = new Vector3(palette.center.x, Screen.height - (palette.yMin + 20f));
+            var lowerRow = new Vector3(palette.center.x, Screen.height - (palette.yMax - 20f));
+
+            Assert.That(GridPlacementController.IsPointerOverUI(upperRow, includeBuildPalette: true), Is.True);
+            Assert.That(GridPlacementController.IsPointerOverUI(lowerRow, includeBuildPalette: true), Is.True);
         }
 
         [Test]
