@@ -219,6 +219,7 @@ namespace OneRoof.Domain.Transit
                 {
                     person.UpdateLocation(trip.DestinationRoomId);
                     person.UpdateActivity(PurposeToActivity(trip.Purpose));
+                    ReconcileArrivalActivity(person, currentTick);
                 }
 
                 return;
@@ -251,6 +252,7 @@ namespace OneRoof.Domain.Transit
                 {
                     person.UpdateLocation(trip.DestinationRoomId);
                     person.UpdateActivity(PurposeToActivity(trip.Purpose));
+                    ReconcileArrivalActivity(person, currentTick);
                 }
 
                 return;
@@ -411,10 +413,35 @@ namespace OneRoof.Domain.Transit
             {
                 person.UpdateLocation(trip.DestinationRoomId);
                 person.UpdateActivity(PurposeToActivity(trip.Purpose));
+                ReconcileArrivalActivity(person, tick);
             }
 
             _activeTrips.RemoveAt(listIndex);
             _activeTripsByPerson.Remove(trip.PersonId);
+        }
+
+        /// <summary>
+        /// 24/7 arrival fix: a Hygiene trip lands Idle, but if the schedule block expects
+        /// Sleep at home (or Work at work) the resident should rest/work immediately so
+        /// needs recover instead of idling through the night (or shift) until the next
+        /// block boundary. Only corrects when location already matches the block.
+        /// </summary>
+        public static void ReconcileArrivalActivity(PersonRecord person, Tick tick)
+        {
+            if (person == null) return;
+            var activeLabel = person.Schedule.ActiveLabelAt(tick);
+            if (activeLabel == DailySchedule.LabelSleep &&
+                person.CurrentRoomId.Equals(person.HomeRoomId) &&
+                person.CurrentActivity == ActivityKind.Idle)
+            {
+                person.UpdateActivity(ActivityKind.Sleeping);
+            }
+            else if (activeLabel == DailySchedule.LabelWork &&
+                person.CurrentRoomId.Equals(person.WorkplaceRoomId) &&
+                person.CurrentActivity == ActivityKind.Idle)
+            {
+                person.UpdateActivity(ActivityKind.Working);
+            }
         }
 
         public ResidentSpatialPosition GetResidentPosition(

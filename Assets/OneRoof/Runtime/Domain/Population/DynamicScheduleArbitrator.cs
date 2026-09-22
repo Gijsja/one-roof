@@ -84,7 +84,9 @@ namespace OneRoof.Domain.Population
         /// <summary>
         /// Evaluates destination choice at <paramref name="tick"/>.
         /// If <paramref name="isBlockTransition"/> is true, scheduled intent is evaluated if no urgent need overrides it.
-        /// If <paramref name="isBlockTransition"/> is false, only urgent need overrides trigger trips.
+        /// If <paramref name="isBlockTransition"/> is false, only urgent need overrides, finished-meal
+        /// returns, and stranded-resident catch-up trigger trips. Idle residents stay silent mid-block,
+        /// so a resident who simply has no trip yet never generates demand away from a boundary.
         /// </summary>
         public TripPurpose? ArbitrateDestination(PersonRecord person, Tick tick, bool isBlockTransition = true)
         {
@@ -97,17 +99,17 @@ namespace OneRoof.Domain.Population
                 return urgent.Value;
             }
 
+            var activeLabel = person.Schedule.ActiveLabelAt(tick);
+
             if (!isBlockTransition)
             {
-                return null;
+                return ArbitrateMidBlockRecovery(person, activeLabel);
             }
 
             var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
             var isAtWork = person.CurrentRoomId.Equals(person.WorkplaceRoomId);
             var hunger = person.GetNeedSatisfaction(NeedKind.Hunger);
             var social = person.GetNeedSatisfaction(NeedKind.Social);
-
-            var activeLabel = person.Schedule.ActiveLabelAt(tick);
 
             switch (activeLabel)
             {
@@ -156,6 +158,96 @@ namespace OneRoof.Domain.Population
                         return TripPurpose.Leisure;
                     }
 
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Mid-block recovery for a continuous 24/7 cycle. Handles two cases that block-boundary
+        /// evaluation alone misses when a resident is still travelling across the boundary:
+        /// finished meals (a satisfied eater sitting in the diner) and stranded residents
+        /// (a committed Sleeping/Working/Leisure activity at a location that disagrees with the
+        /// current schedule block). Idle residents are deliberately left silent mid-block.
+        /// May set a matching in-place activity when no trip is needed and returns null then.
+        /// </summary>
+        private TripPurpose? ArbitrateMidBlockRecovery(PersonRecord person, string activeLabel)
+        {
+            var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
+            var isAtWork = person.CurrentRoomId.Equals(person.WorkplaceRoomId);
+            var hunger = person.GetNeedSatisfaction(NeedKind.Hunger);
+            var social = person.GetNeedSatisfaction(NeedKind.Social);
+
+            // 1. Finished meal: hunger restored but resident still sits in the diner.
+            if (person.CurrentActivity == ActivityKind.Eating && hunger >= SatisfiedNeedThreshold)
+            {
+                switch (activeLabel)
+                {
+                    case DailySchedule.LabelSleep:
+                        if (!isAtHome)
+                        {
+                            return TripPurpose.Home;
+                        }
+                        person.UpdateActivity(ActivityKind.Sleeping);
+                        return null;
+
+                    case DailySchedule.LabelWork:
+                        if (!isAtWork)
+                        {
+                            return TripPurpose.Work;
+                        }
+                        person.UpdateActivity(ActivityKind.Working);
+                        return null;
+
+                    case DailySchedule.LabelEat:
+                        return TripPurpose.Home;
+
+                    case DailySchedule.LabelLeisure:
+                    default:
+                        // Reached only when no urgent need fired, so social is already
+                        // comfortable: relax where you ate instead of shuttling to the
+                        // lobby and back all evening (elevator churn).
+                        person.UpdateActivity(ActivityKind.Leisure);
+                        return null;
+                }
+            }
+
+            // 2. Stranded catch-up: missed the boundary while commuting and now sits in a
+            // committed activity that disagrees with the current block.
+            switch (activeLabel)
+            {
+                case DailySchedule.LabelSleep:
+                    if (isAtHome && person.CurrentActivity == ActivityKind.Idle)
+                    {
+                        person.UpdateActivity(ActivityKind.Sleeping);
+                        return null;
+                    }
+                    if (person.CurrentActivity == ActivityKind.Working)
+                    {
+                        return TripPurpose.Home;
+                    }
+                    if (person.CurrentActivity == ActivityKind.Leisure && social >= LowSocialThreshold)
+                    {
+                        return TripPurpose.Home;
+                    }
+                    return null;
+
+                case DailySchedule.LabelWork:
+                    if (isAtWork && person.CurrentActivity == ActivityKind.Idle)
+                    {
+                        person.UpdateActivity(ActivityKind.Working);
+                        return null;
+                    }
+                    if (!isAtWork && person.CurrentActivity == ActivityKind.Sleeping)
+                    {
+                        return TripPurpose.Work;
+                    }
+                    if (!isAtWork && person.CurrentActivity == ActivityKind.Leisure && social >= LowSocialThreshold)
+                    {
+                        return TripPurpose.Work;
+                    }
+                    return null;
+
+                default:
                     return null;
             }
         }

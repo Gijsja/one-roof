@@ -73,7 +73,17 @@ namespace OneRoof.Domain.Population
                 case ActivityKind.Sleeping:
                     energy += SleepEnergyRecoveryRate;
                     hunger -= DefaultHungerDecayRate * 0.5f;
-                    hygiene -= DefaultHygieneDecayRate * 0.5f;
+                    // 24/7: overnight hygiene must not death-spiral across repeated
+                    // day cycles. Residents at home freshen up while asleep; residents
+                    // sleeping away from home keep decaying.
+                    if (person.CurrentRoomId.Equals(person.HomeRoomId))
+                    {
+                        hygiene += HomeHygieneRecoveryRate * 0.2f;
+                    }
+                    else
+                    {
+                        hygiene -= DefaultHygieneDecayRate * 0.5f;
+                    }
                     social -= DefaultSocialDecayRate * 0.25f * socialDecayMultiplier;
                     break;
 

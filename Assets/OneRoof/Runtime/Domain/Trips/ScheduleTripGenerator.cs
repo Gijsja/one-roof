@@ -93,6 +93,7 @@ namespace OneRoof.Domain.Trips
                 if (originRoomId.Equals(destinationRoomId.Value))
                 {
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
+                    TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
                     continue;
                 }
 
@@ -169,48 +170,62 @@ namespace OneRoof.Domain.Trips
                     return person.HomeRoomId;
 
                 case TripPurpose.Food:
-                    // Find the first commercial room on Floor 0 in the building.
-                    return FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0);
+                    // Distribute diners deterministically across all matching commercial rooms
+                    // so a second diner actually relieves 24/7 meal demand.
+                    return FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id);
 
                 case TripPurpose.Leisure:
-                    // Find the lobby on Floor 0.
-                    return FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: 0);
+                    // Distribute across all lobbies the same way.
+                    return FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: 0, personId: person.Id);
 
                 default:
                     return null;
             }
         }
 
-        private EntityId? FindRoomByContent(ContentId contentId, int floorHint)
+        private EntityId? FindRoomByContent(ContentId contentId, int floorHint, EntityId personId)
         {
             var isCommercialFood = contentId == FiveFloorTopologyFixture.CommercialContentId;
+            var matches = new List<EntityId>();
 
             if (_topology.TryGetFloor(floorHint, out var floor))
             {
                 foreach (var room in floor.Rooms)
                 {
-                    if (room.ContentType == contentId ||
-                        (isCommercialFood && (room.ContentType.Value.StartsWith("commercial:") || room.ContentType.Value.StartsWith("room:diner"))))
+                    if (MatchesFoodOrLobby(room.ContentType, contentId, isCommercialFood))
                     {
-                        return room.Id;
+                        matches.Add(room.Id);
                     }
                 }
             }
 
-            // Fallback: search all floors.
+            // Fallback: search all floors (skipping the hint floor to avoid duplicates).
             foreach (var f in _topology.Floors)
             {
+                if (f.FloorLevel == floorHint) continue;
                 foreach (var room in f.Rooms)
                 {
-                    if (room.ContentType == contentId ||
-                        (isCommercialFood && (room.ContentType.Value.StartsWith("commercial:") || room.ContentType.Value.StartsWith("room:diner"))))
+                    if (MatchesFoodOrLobby(room.ContentType, contentId, isCommercialFood))
                     {
-                        return room.Id;
+                        matches.Add(room.Id);
                     }
                 }
             }
 
-            return null;
+            if (matches.Count == 0) return null;
+            if (matches.Count == 1) return matches[0];
+
+            // Deterministic spread: stable person ID selects the room, so demand splits
+            // across diners/lobbies without any per-generator state (ADR-020).
+            var index = Math.Abs(personId.Value % matches.Count);
+            return matches[(int)index];
+        }
+
+        private static bool MatchesFoodOrLobby(ContentId roomContent, ContentId wanted, bool isCommercialFood)
+        {
+            if (roomContent == wanted) return true;
+            return isCommercialFood &&
+                (roomContent.Value.StartsWith("commercial:") || roomContent.Value.StartsWith("room:diner"));
         }
     }
 }
