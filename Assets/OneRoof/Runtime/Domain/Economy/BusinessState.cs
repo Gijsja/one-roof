@@ -336,7 +336,7 @@ namespace OneRoof.Domain.Economy
             var customersByStaff = _employeeIds.Count * WalkInServeRate;
             var demandCap = (int)Math.Floor(WalkInDemandPerRoomCell * room.Capacity * (double)occupancyFactor);
             var customers = Math.Min(customersByStaff, Math.Max(0, demandCap));
-            var gross = customers * WalkInTicket(ContentType);
+            long gross = (long)customers * WalkInTicket(ContentType);
             if (quietHours) gross = (long)Math.Floor(gross * 0.9d);
             return gross;
         }

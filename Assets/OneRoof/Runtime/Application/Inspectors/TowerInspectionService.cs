@@ -25,8 +25,9 @@ namespace OneRoof.Application.Inspectors
 
             var transit = _session.TransitProjection();
             var resident = FindResident(transit, residentId);
-            var household = _session.GetHousehold(person.HouseholdId);
-            var dailyRent = _session.DailyResidentialRent(person.HouseholdId);
+            var householdId = new EntityId(person.HouseholdId);
+            var household = _session.GetHousehold(householdId);
+            var dailyRent = _session.DailyResidentialRent(householdId);
             var dailyNet = household.DailyIncome - dailyRent - household.DailyServiceSpend;
             var details = new List<string>
             {
