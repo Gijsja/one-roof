@@ -12,7 +12,7 @@ namespace OneRoof.Domain.Infrastructure
         public static readonly ContentId RiserContentId = new ContentId("utility:electrical_riser");
         public static readonly ContentId TransformerContentId = new ContentId("utility:floor_transformer");
 
-        public const float DefaultRiserLossPerFloor = .04f;
+        public const float DefaultRiserLossPerFloor = .005f;
         public const float BrownoutVoltageThreshold = .8f;
         public const float DemandPerCapacityUnit = .5f;
 

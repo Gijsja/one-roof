@@ -48,6 +48,19 @@ namespace OneRoof.UI.Modes
         public static Rect ContextRect(int screenHeight, bool isBuildMode) =>
             new Rect(16, screenHeight - 108, 620, 32);
 
+        public static bool IsPointerOverControls(Vector2 screenPosition, int screenHeight, ModeShellProjection projection)
+        {
+            var imguiPosition = new Vector2(screenPosition.x, screenHeight - screenPosition.y);
+            if (ModeBarRect(screenHeight).Contains(imguiPosition) ||
+                ContextRect(screenHeight, projection.IsBuildMode).Contains(imguiPosition))
+                return true;
+            if (projection.IsBuildMode && string.IsNullOrEmpty(projection.SelectedBuildTool) &&
+                BuildPaletteRect(screenHeight).Contains(imguiPosition))
+                return true;
+            return projection.IsDataMode &&
+                   new Rect(16, screenHeight - 282, 620, 166).Contains(imguiPosition);
+        }
+
         private void Update()
         {
             HandleKeyboardShortcuts();

@@ -80,11 +80,46 @@ namespace OneRoof.Presentation.Tower
 
             _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
             _room.Initialize(transform, _worldMat, _colorBlock); _resident.Initialize(transform);
-            InitSubcomponents(); _mode.ModeChanged += OnModeChanged; CreateWorldGeometry();
+            InitSubcomponents(); CreateWorldGeometry();
         }
 
-        private void Awake() => Initialize(); private void OnEnable() => Initialize();
-        private void OnDisable() { if (_mode != null) _mode.ModeChanged -= OnModeChanged; if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement; if (_populationPresenter != null) _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor; if (_scrutinyPresenter != null) _scrutinyPresenter.InspectionRequested -= InspectScrutiny; if (_utilitiesPresenter != null) { _utilitiesPresenter.InspectionRequested -= InspectUtilities; _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected; } }
+        private void Awake() => Initialize();
+        private void OnEnable()
+        {
+            Initialize();
+            SubscribeEvents();
+        }
+
+        private void OnDisable() => UnsubscribeEvents();
+
+        private void SubscribeEvents()
+        {
+            if (_mode != null) { _mode.ModeChanged -= OnModeChanged; _mode.ModeChanged += OnModeChanged; }
+            if (_gridPlacement != null) { _gridPlacement.PlacementExecuted -= OnPlacement; _gridPlacement.PlacementExecuted += OnPlacement; }
+            if (_populationPresenter != null) { _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor; _populationPresenter.FloorInspectionRequested += InspectPopulationFloor; }
+            if (_scrutinyPresenter != null) { _scrutinyPresenter.InspectionRequested -= InspectScrutiny; _scrutinyPresenter.InspectionRequested += InspectScrutiny; }
+            if (_utilitiesPresenter != null)
+            {
+                _utilitiesPresenter.InspectionRequested -= InspectUtilities;
+                _utilitiesPresenter.InspectionRequested += InspectUtilities;
+                _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected;
+                _utilitiesPresenter.NetworkSelected += OnUtilityNetworkSelected;
+            }
+        }
+
+        private void UnsubscribeEvents()
+        {
+            if (_mode != null) _mode.ModeChanged -= OnModeChanged;
+            if (_gridPlacement != null) _gridPlacement.PlacementExecuted -= OnPlacement;
+            if (_populationPresenter != null) _populationPresenter.FloorInspectionRequested -= InspectPopulationFloor;
+            if (_scrutinyPresenter != null) _scrutinyPresenter.InspectionRequested -= InspectScrutiny;
+            if (_utilitiesPresenter != null)
+            {
+                _utilitiesPresenter.InspectionRequested -= InspectUtilities;
+                _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected;
+            }
+        }
+
         private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); _outside?.Clear(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
         private void Update()
@@ -103,19 +138,16 @@ namespace OneRoof.Presentation.Tower
             (_overlayPresenter = Ensure<ElevatorWaitOverlayPresenter>()).SetVisible(false);
             (_satisfactionPresenter = Ensure<SatisfactionOverlayPresenter>()).SetVisible(false);
             (_populationPresenter = Ensure<PopulationOverlayPresenter>()).SetVisible(false);
-            _populationPresenter.FloorInspectionRequested += InspectPopulationFloor;
             (_scrutinyPresenter = Ensure<ScrutinyOverlayPresenter>()).SetVisible(false);
             (_footTrafficPresenter = Ensure<FootTrafficOverlayPresenter>()).SetVisible(false);
             (_businessHealthPresenter = Ensure<BusinessHealthOverlayPresenter>()).SetVisible(false);
-            (_utilitiesPresenter = Ensure<UtilitiesOverlayPresenter>()).SetVisible(false); _utilitiesPresenter.InspectionRequested += InspectUtilities;
-            _utilitiesPresenter.NetworkSelected += OnUtilityNetworkSelected;
+            (_utilitiesPresenter = Ensure<UtilitiesOverlayPresenter>()).SetVisible(false);
             (_utilitiesNetworkLayer = Ensure<UtilitiesNetworkLayerPresenter>()).SetVisible(false);
-            _scrutinyPresenter.InspectionRequested += InspectScrutiny;
             (_inspectorCard = Ensure<CongestionInspectorCardView>()).Session = _mode;
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
             _gridPlacement.SimulationSession = _sim; _gridPlacement.GhostPresenter = _ghostPresenter;
-            _gridPlacement.PlacementExecuted += OnPlacement; (_hudView = Ensure<TowerDashboardHudView>()).Controller = this;
+            (_hudView = Ensure<TowerDashboardHudView>()).Controller = this;
             _inspectOutline = Ensure<InspectOutlinePresenter>(); (_inspectSelection = Ensure<InspectSelectionController>()).ModeSession = _mode;
             _inspectSelection.SimulationSession = _sim; _inspectSelection.RoomPresenter = _room; _inspectSelection.ElevatorPresenter = _elevator;
             _inspectSelection.ResidentPresenter = _resident; _inspectSelection.OutlinePresenter = _inspectOutline;

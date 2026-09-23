@@ -6,7 +6,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
 using OneRoof.UI.Inspectors;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using OneRoof.UI.Modes;
 
 namespace OneRoof.Presentation.Tower
 {
@@ -40,9 +40,9 @@ namespace OneRoof.Presentation.Tower
             get => _modeSession;
             set
             {
-                if (_modeSession != null) _modeSession.ModeChanged -= OnModeChanged;
+                UnsubscribeModeEvents();
                 _modeSession = value;
-                if (_modeSession != null) _modeSession.ModeChanged += OnModeChanged;
+                SubscribeModeEvents();
             }
         }
 
@@ -107,10 +107,24 @@ namespace OneRoof.Presentation.Tower
             set => _detailCard = value;
         }
 
+        private void OnEnable() => SubscribeModeEvents();
+
         private void OnDisable()
         {
-            if (_modeSession != null) _modeSession.ModeChanged -= OnModeChanged;
+            UnsubscribeModeEvents();
             if (OutlinePresenter != null) OutlinePresenter.ClearAll();
+        }
+
+        private void SubscribeModeEvents()
+        {
+            if (!isActiveAndEnabled || _modeSession == null) return;
+            _modeSession.ModeChanged -= OnModeChanged;
+            _modeSession.ModeChanged += OnModeChanged;
+        }
+
+        private void UnsubscribeModeEvents()
+        {
+            if (_modeSession != null) _modeSession.ModeChanged -= OnModeChanged;
         }
 
         private void OnDestroy()
@@ -308,10 +322,10 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private static bool IsPointerOverUI(Vector2 screenPos)
+        private bool IsPointerOverUI(Vector2 screenPos)
         {
-            if (EventSystem.current == null) return false;
-            return EventSystem.current.IsPointerOverGameObject();
+            return _modeSession != null && ModeShellBarController.IsPointerOverControls(
+                screenPos, Screen.height, _modeSession.Projection());
         }
 
         private static bool TryGetScreenPointerPosition(out Vector2 screenPos)

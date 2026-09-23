@@ -12,6 +12,8 @@ namespace OneRoof.Domain.Transit
         // The current shaft art has room for three legible cars. Keep this at the
         // domain boundary so commands, saves, predictions, and presentation agree.
         public const int MaxCarsPerBank = 3;
+        public const int MinSupportedFloor = -10;
+        public const int MaxSupportedFloor = 100;
 
         private readonly List<ElevatorCar> _cars;
         private readonly Dictionary<int, Queue<ElevatorPassenger>> _floorQueues;
@@ -21,10 +23,7 @@ namespace OneRoof.Domain.Transit
 
         public ElevatorBank(int minFloor, int maxFloor, IEnumerable<ElevatorCar> cars)
         {
-            if (minFloor > maxFloor)
-            {
-                throw new ArgumentException($"minFloor ({minFloor}) cannot exceed maxFloor ({maxFloor}).");
-            }
+            ValidateFloorRange(minFloor, maxFloor);
 
             MinFloor = minFloor;
             MaxFloor = maxFloor;
@@ -36,9 +35,10 @@ namespace OneRoof.Domain.Transit
             _floorQueues = new Dictionary<int, Queue<ElevatorPassenger>>();
             _deliveredPassengers = new List<ElevatorPassenger>();
 
-            for (var floor = minFloor; floor <= maxFloor; floor++)
+            for (var floor = minFloor; ; floor++)
             {
                 _floorQueues[floor] = new Queue<ElevatorPassenger>();
+                if (floor == maxFloor) break;
             }
 
             Cars = new ReadOnlyCollection<ElevatorCar>(_cars);
@@ -51,6 +51,7 @@ namespace OneRoof.Domain.Transit
 
         public void ExpandFloorRange(int minFloor, int maxFloor)
         {
+            ValidateFloorRange(minFloor, maxFloor);
             if (minFloor < MinFloor)
             {
                 for (var f = minFloor; f < MinFloor; f++)
@@ -65,15 +66,25 @@ namespace OneRoof.Domain.Transit
 
             if (maxFloor > MaxFloor)
             {
-                for (var f = MaxFloor + 1; f <= maxFloor; f++)
+                for (var f = MaxFloor + 1; ; f++)
                 {
                     if (!_floorQueues.ContainsKey(f))
                     {
                         _floorQueues[f] = new Queue<ElevatorPassenger>();
                     }
+                    if (f == maxFloor) break;
                 }
                 MaxFloor = maxFloor;
             }
+        }
+
+        private static void ValidateFloorRange(int minFloor, int maxFloor)
+        {
+            if (minFloor > maxFloor)
+                throw new ArgumentException($"minFloor ({minFloor}) cannot exceed maxFloor ({maxFloor}).");
+            if (minFloor < MinSupportedFloor || maxFloor > MaxSupportedFloor)
+                throw new ArgumentOutOfRangeException(nameof(maxFloor),
+                    $"Elevator floor range must stay within [{MinSupportedFloor}, {MaxSupportedFloor}].");
         }
 
         public void RestoreDeliveredPassengers(IEnumerable<ElevatorPassenger> passengers)

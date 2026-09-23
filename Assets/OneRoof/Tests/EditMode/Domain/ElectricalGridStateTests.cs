@@ -24,6 +24,23 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void Evaluate_DefaultLoss_KeepsThirtyFloorElectricalStackAboveBrownoutThreshold()
+        {
+            var topology = CreateElectricalTopologyThroughFloor(30, substationCapacity: 1000);
+            var snapshot = new ElectricalGridState().Evaluate(topology);
+
+            Assert.That(snapshot.Floors, Has.Count.EqualTo(31));
+            for (var i = 0; i < snapshot.Floors.Count; i++)
+            {
+                Assert.That(snapshot.Floors[i].IsConnected, Is.True, $"Floor {snapshot.Floors[i].Floor} should be connected.");
+                Assert.That(snapshot.Floors[i].Voltage, Is.GreaterThanOrEqualTo(ElectricalGridState.BrownoutVoltageThreshold), $"Floor {snapshot.Floors[i].Floor} should remain above brownout voltage.");
+                Assert.That(snapshot.Floors[i].IsBrownout, Is.False, $"Floor {snapshot.Floors[i].Floor} should not brown out.");
+            }
+
+            Assert.That(snapshot.Floors[30].Voltage, Is.EqualTo(.85f).Within(.001f));
+        }
+
+        [Test]
         public void Evaluate_GapInRiser_OnlyDisconnectsFloorsAboveGap()
         {
             var topology = CreateTwoFloorElectricalTopology(substationCapacity: 500, includeUpperRiser: false);
@@ -81,6 +98,21 @@ namespace OneRoof.Domain.Tests.EditMode
             if (includeUpperRiser) Build(topology, 1, 10, 11, ElectricalGridState.RiserContentId, 0);
             if (includeUpperTransformer) Build(topology, 1, 14, 15, ElectricalGridState.TransformerContentId, 0);
             Build(topology, 1, 20, 25, new ContentId("residential:apartment"), 5);
+            return topology;
+        }
+
+        private static BuildingTopologyState CreateElectricalTopologyThroughFloor(int maxFloor, int substationCapacity)
+        {
+            var topology = new BuildingTopologyState();
+            for (var floor = 0; floor <= maxFloor; floor++)
+            {
+                topology.Execute(new BuildFloorSlabCommand(floor, 0, 30), TestTick);
+                if (floor == 0) Build(topology, floor, 0, 3, ElectricalGridState.SubstationContentId, substationCapacity);
+                Build(topology, floor, 10, 11, ElectricalGridState.RiserContentId, 0);
+                Build(topology, floor, 14, 15, ElectricalGridState.TransformerContentId, 0);
+                Build(topology, floor, 20, 25, new ContentId("residential:apartment"), 5);
+            }
+
             return topology;
         }
 

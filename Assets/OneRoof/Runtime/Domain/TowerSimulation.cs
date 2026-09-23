@@ -171,6 +171,7 @@ namespace OneRoof.Domain
             {
                 case BuildFloorSlabCommand slabCmd:
                 {
+                    if (slabCmd.MinX > slabCmd.MaxX) return InvalidBoundsRejection();
                     var cost = Economy.CalculateFloorSlabCost(slabCmd.Bounds);
                     if (!Economy.CanAfford(cost))
                     {
@@ -184,6 +185,7 @@ namespace OneRoof.Domain
 
                 case ExpandGroundSlabCommand groundExpansionCmd:
                 {
+                    if (groundExpansionCmd.MinX > groundExpansionCmd.MaxX) return InvalidBoundsRejection();
                     if (!Topology.TryGetFloorSlab(0, out var existingGround)) return Topology.CanExecute(groundExpansionCmd);
                     var cost = Economy.CalculateGroundSlabExpansionCost(existingGround, groundExpansionCmd.Bounds);
                     if (!Economy.CanAfford(cost))
@@ -193,6 +195,7 @@ namespace OneRoof.Domain
 
                 case BuildRoomCommand roomCmd:
                 {
+                    if (roomCmd.MinX > roomCmd.MaxX) return InvalidBoundsRejection();
                     var cost = Economy.CalculateRoomCost(roomCmd.ContentType, roomCmd.Bounds);
                     if (!Economy.CanAfford(cost))
                     {
@@ -327,6 +330,11 @@ namespace OneRoof.Domain
                     });
             }
         }
+
+        private static CommandResult InvalidBoundsRejection() => CommandResult.Reject(new[]
+        {
+            new CommandRejectionReason(new ContentId("topology:invalid_bounds"), "MinX cannot exceed MaxX.")
+        });
 
         public CommandResult ExecuteCommand(ICommand command)
         {

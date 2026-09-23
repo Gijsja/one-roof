@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
@@ -7,6 +8,21 @@ namespace OneRoof.Domain.Tests.EditMode
 {
     public sealed class ElevatorBankTests
     {
+        [TestCase(0, int.MaxValue)]
+        [TestCase(int.MinValue, 0)]
+        public void ConstructorRejectsUnsupportedFloorRanges(int minFloor, int maxFloor)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ElevatorBank(minFloor, maxFloor, null));
+        }
+
+        [Test]
+        public void ExpandFloorRangeRejectsUnsupportedRangeWithoutChangingBank()
+        {
+            var bank = new ElevatorBank(0, 4, null);
+            Assert.Throws<ArgumentOutOfRangeException>(() => bank.ExpandFloorRange(0, int.MaxValue));
+            Assert.That(bank.MaxFloor, Is.EqualTo(4));
+        }
+
         [Test]
         public void WaitingPassengerBoardsWhenCarOpensDoors()
         {

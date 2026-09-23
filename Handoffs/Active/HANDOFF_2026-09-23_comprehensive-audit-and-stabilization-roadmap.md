@@ -569,9 +569,12 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 
 ## 4. Validation Status
 
-- **Type**: Documentation & Roadmap Architecture Handoff.
-- **Headless Unity Validation**: Not executed for this documentation-only change (per `AGENTS.md` guidelines).
-- **Working Tree**: Prior active handoff `HANDOFF_2026-09-23_oni-utility-network-layer.md` successfully moved to `Handoffs/Archive/`. This document is the sole active handoff in `Handoffs/Active/`.
+- **Phase 1 (Tasks 1.1–1.6)**: Implemented. Electrical riser loss now supports 30 floors; zero-car elevator trips reroute over stairs or cancel without queueing; portal and Outside transit node identities remain stable across graph rebuilds; save paths are restricted to `Application.persistentDataPath` with exclusively created randomized temporary files; elevator range and command bounds are guarded; restored null-route trips are discarded; controller event subscriptions recover after disable/enable and Inspect ignores the visible IMGUI controls.
+- **Unity compile**: Passed in isolated worktree `/home/geisha/.codex/worktrees/phase1-stabilization/one-roof` using Unity `6000.3.24f1`; compile exit code `0` (log: `/tmp/phase1-stabilization-compile.log`).
+- **EditMode**: `477` total, `475` passed, `2` failed (result: `/tmp/phase1-stabilization-editmode-rerun.xml`). The failures are the documented presentation baseline: `RoomPresenterTests.EnsureRoomViews_AdoptsAuthoredRoomInsteadOfCreatingDuplicate` and `TowerStructurePresenterTests.Initialize_RemovesDuplicateSlabAndPreservesCanonicalGeometry`.
+- **PlayMode**: Focused controller disable/enable mode-routing test passed `1/1` (result: `/tmp/phase1-stabilization-playmode.xml`).
+- **Diff hygiene**: `git diff --check` passed in the isolated worktree.
+- **Working tree**: Existing unrelated changes in the archived handoffs and `Planning/BACKLOG.md` were preserved. This remains the sole active handoff.
 
 ---
 
@@ -583,10 +586,6 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 3. **Presenter Timing Changes**: Pausing autonomous simulation ticking during `GoldenExpansionPlayModeTests` (`Task 3.1`) alters frame-to-tick ratios in test assertions. Verify and lock tick assertions explicitly.
 
 ### Immediate Next Safe Action
-Begin **Phase 1, Task 1.1 through Task 1.6** in an isolated branch/worktree:
-1. Rescale electrical loss rate (`ElectricalGridState.cs`) to unlock the 30-floor North Star boundary.
-2. Guard zero-car elevator shafts in `HierarchicalTransitGraph.cs`.
-3. Use stable portal IDs in `TransitNode`.
-4. Constrain save paths to `Application.persistentDataPath` in `AtomicFileSaveStore.cs`.
+Begin **Phase 2, Tasks 2.1–2.5** in an isolated worktree, starting with the 40–60 resident view cap and presentation hot-path allocation fixes. Keep the two known EditMode presentation failures visible while adding phase-specific regression coverage.
 5. Fix `TowerPlayableController.cs` event unsubscription deadlock on disable/re-enable.
 6. Run headless Unity compile and EditMode test suite to verify baseline stability.

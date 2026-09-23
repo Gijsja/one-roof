@@ -30,6 +30,24 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void CanExecute_InvertedBounds_ReturnsRejectionWithoutThrowing()
+        {
+            var result = _sim.CanExecute(new BuildFloorSlabCommand(5, 10, 2));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("topology:invalid_bounds")));
+        }
+
+        [Test]
+        public void CanExecute_InvertedRoomBounds_ReturnsRejectionWithoutThrowing()
+        {
+            var result = _sim.CanExecute(new BuildRoomCommand(0, 10, 2, new ContentId("residential:studio"), 2));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("topology:invalid_bounds")));
+        }
+
+        [Test]
         public void CanExecute_BuildFloorSlab_DuplicateFloor_Rejected()
         {
             var cmd = new BuildFloorSlabCommand(2, -30, 30);

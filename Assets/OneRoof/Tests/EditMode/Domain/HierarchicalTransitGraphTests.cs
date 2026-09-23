@@ -2,6 +2,8 @@ using NUnit.Framework;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
+using OneRoof.Domain.Trips;
+using OneRoof.Domain.Time;
 
 namespace OneRoof.Domain.Tests.EditMode
 {
@@ -165,6 +167,143 @@ namespace OneRoof.Domain.Tests.EditMode
 
             var edges0 = graph.GetOutgoingEdges(stairNode0.Id);
             Assert.That(edges0, Has.Count.EqualTo(0), "Non-adjacent stair landings must not have direct vertical edges");
+        }
+
+        [Test]
+        public void PortalNodeIdsRemainStableWhenUnrelatedPortalsAreAdded()
+        {
+            var first = CreateElevatorAndStairTopology(includeUnrelatedPortal: false);
+            var expanded = CreateElevatorAndStairTopology(includeUnrelatedPortal: true);
+            var firstGraph = HierarchicalTransitGraph.FromBuildingTopology(first);
+            var expandedGraph = HierarchicalTransitGraph.FromBuildingTopology(expanded);
+            var firstRoute = new TransitRoutePlanner(firstGraph).FindRoute(new EntityId(101), new EntityId(203));
+            var expandedRoute = new TransitRoutePlanner(expandedGraph).FindRoute(new EntityId(101), new EntityId(203));
+
+            foreach (var portalId in new[] { 101, 102, 103, 201, 202, 203 })
+            {
+                Assert.That(firstGraph.TryGetNode(new EntityId(portalId), out var firstNode), Is.True);
+                Assert.That(expandedGraph.TryGetNode(new EntityId(portalId), out var expandedNode), Is.True);
+                Assert.That(expandedNode.Id, Is.EqualTo(firstNode.Id));
+            }
+
+            Assert.That(expandedRoute.Legs.Count, Is.EqualTo(firstRoute.Legs.Count));
+            for (var i = 0; i < firstRoute.Legs.Count; i++)
+            {
+                Assert.That(expandedRoute.Legs[i].FromNodeId, Is.EqualTo(firstRoute.Legs[i].FromNodeId));
+                Assert.That(expandedRoute.Legs[i].ToNodeId, Is.EqualTo(firstRoute.Legs[i].ToNodeId));
+            }
+
+            var firstLobbyGraph = HierarchicalTransitGraph.FromBuildingTopology(CreateLobbyTopology(includeUnrelatedPortal: false));
+            var expandedLobbyGraph = HierarchicalTransitGraph.FromBuildingTopology(CreateLobbyTopology(includeUnrelatedPortal: true));
+            var firstOutside = firstLobbyGraph.OutsideNode;
+            var expandedOutside = expandedLobbyGraph.OutsideNode;
+
+            Assert.That(firstOutside, Is.Not.Null);
+            Assert.That(expandedOutside, Is.Not.Null);
+            Assert.That(firstOutside.Id, Is.EqualTo(new EntityId(100)), "Outside node should use the lobby room's stable ID");
+            Assert.That(expandedOutside.Id, Is.EqualTo(firstOutside.Id));
+
+            var firstOutsideRoute = new TransitRoutePlanner(firstLobbyGraph).FindRoute(firstOutside.Id, new EntityId(101));
+            var expandedOutsideRoute = new TransitRoutePlanner(expandedLobbyGraph).FindRoute(expandedOutside.Id, new EntityId(101));
+            Assert.That(firstOutsideRoute, Is.Not.Null);
+            Assert.That(expandedOutsideRoute, Is.Not.Null);
+            Assert.That(expandedOutsideRoute.Legs.Count, Is.EqualTo(firstOutsideRoute.Legs.Count));
+            for (var i = 0; i < firstOutsideRoute.Legs.Count; i++)
+            {
+                Assert.That(expandedOutsideRoute.Legs[i].FromNodeId, Is.EqualTo(firstOutsideRoute.Legs[i].FromNodeId));
+                Assert.That(expandedOutsideRoute.Legs[i].ToNodeId, Is.EqualTo(firstOutsideRoute.Legs[i].ToNodeId));
+            }
+        }
+
+        [Test]
+        public void ZeroCarElevatorLegReroutesOverStairsWithoutEnqueueing()
+        {
+            var building = CreateElevatorAndStairTopology(includeUnrelatedPortal: false);
+            var topology = BuildingTopologyState.FromBuildingTopology(building);
+            var planner = new TransitRoutePlanner(topology.TransitGraph);
+            var route = planner.FindRoute(new EntityId(101), new EntityId(203));
+            Assert.That(route, Is.Not.Null);
+            Assert.That(route.Legs, Has.Some.Matches<TransitEdge>(edge => edge.Mode == TransitMode.Elevator));
+
+            var trip = new TripRecord(
+                new EntityId(501), new EntityId(502),
+                WorldLocation.InRoom(new EntityId(100)),
+                WorldLocation.InRoom(new EntityId(200)),
+                TripPurpose.Work, new Tick(0), route);
+            var transit = new TransitExecutionSystem();
+            transit.SubmitTrip(trip, topology, new Tick(0), null);
+            var bankWithoutCars = new ElevatorBank(0, 1, null);
+
+            transit.Advance(new Tick(1), topology, bankWithoutCars, null);
+
+            Assert.That(bankWithoutCars.TotalQueuedCount, Is.Zero);
+            Assert.That(transit.ActiveTripCount, Is.EqualTo(1));
+            Assert.That(transit.ActiveTrips[0].IsQueuedInElevator, Is.False);
+            Assert.That(transit.ActiveTrips[0].Route.Legs,
+                Has.None.Matches<TransitEdge>(edge => edge.Mode == TransitMode.Elevator));
+            Assert.That(transit.ActiveTrips[0].Route.Legs,
+                Has.Some.Matches<TransitEdge>(edge => edge.Cost == 15));
+        }
+
+        private static BuildingTopology CreateElevatorAndStairTopology(bool includeUnrelatedPortal)
+        {
+            var room0 = new Room(new EntityId(100), new ContentId("residential:room"), new CellBounds(0, 0, 8),
+                new[] { new EntityId(101), new EntityId(102), new EntityId(103) }, 8);
+            var floor0Portals = new System.Collections.Generic.List<Portal>
+            {
+                new Portal(new EntityId(101), PortalType.ElevatorShaftDoor, new CellCoordinate(0, 0), room0.Id),
+                new Portal(new EntityId(102), PortalType.StairwellDoor, new CellCoordinate(3, 0), room0.Id),
+                new Portal(new EntityId(103), PortalType.Door, new CellCoordinate(7, 0), room0.Id)
+            };
+            if (includeUnrelatedPortal)
+            {
+                var unrelated = new Room(new EntityId(300), new ContentId("service:room"), new CellBounds(0, 10, 12),
+                    new[] { new EntityId(301) }, 2);
+                floor0Portals.Add(new Portal(new EntityId(301), PortalType.Door, new CellCoordinate(10, 0), unrelated.Id));
+                return new BuildingTopology(new[]
+                {
+                    new FloorTopology(0, new[] { room0, unrelated }, floor0Portals),
+                    CreateSecondFloor()
+                });
+            }
+
+            return new BuildingTopology(new[]
+            {
+                new FloorTopology(0, new[] { room0 }, floor0Portals),
+                CreateSecondFloor()
+            });
+        }
+
+        private static FloorTopology CreateSecondFloor()
+        {
+            var room = new Room(new EntityId(200), new ContentId("residential:room"), new CellBounds(1, 0, 8),
+                new[] { new EntityId(201), new EntityId(202), new EntityId(203) }, 8);
+            return new FloorTopology(1, new[] { room }, new[]
+            {
+                new Portal(new EntityId(201), PortalType.ElevatorShaftDoor, new CellCoordinate(0, 1), room.Id),
+                new Portal(new EntityId(202), PortalType.StairwellDoor, new CellCoordinate(3, 1), room.Id),
+                new Portal(new EntityId(203), PortalType.Door, new CellCoordinate(7, 1), room.Id)
+            });
+        }
+
+        private static BuildingTopology CreateLobbyTopology(bool includeUnrelatedPortal)
+        {
+            var lobby = new Room(new EntityId(100), new ContentId("amenity:lobby"), new CellBounds(0, 0, 12),
+                new[] { new EntityId(101) }, 20);
+            var lobbyPortals = new System.Collections.Generic.List<Portal>
+            {
+                new Portal(new EntityId(101), PortalType.Door, new CellCoordinate(2, 0), lobby.Id)
+            };
+            var rooms = new System.Collections.Generic.List<Room> { lobby };
+            if (includeUnrelatedPortal)
+            {
+                var unrelated = new Room(new EntityId(200), new ContentId("service:room"), new CellBounds(0, 20, 22),
+                    new[] { new EntityId(999999) }, 2);
+                rooms.Add(unrelated);
+                lobbyPortals.Add(new Portal(new EntityId(999999), PortalType.Door, new CellCoordinate(20, 0), unrelated.Id));
+            }
+
+            return new BuildingTopology(new[] { new FloorTopology(0, rooms, lobbyPortals) });
         }
     }
 }

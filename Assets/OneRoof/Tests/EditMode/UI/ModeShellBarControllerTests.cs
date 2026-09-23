@@ -15,6 +15,19 @@ namespace OneRoof.UI.Tests.EditMode
             Assert.That(palette.yMax, Is.LessThanOrEqualTo(610f));
         }
 
+        [Test]
+        public void IsPointerOverControls_UsesScreenCoordinatesAgainstVisibleModeBar()
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Inspect, InteractionMode.Inspect, null, null, null, null, null, null);
+            const int height = 718;
+            var imguiPoint = new Vector2(30f, ModeShellBarController.ModeBarRect(height).y + 10f);
+            var screenPoint = new Vector2(imguiPoint.x, height - imguiPoint.y);
+
+            Assert.That(ModeShellBarController.IsPointerOverControls(screenPoint, height, projection), Is.True);
+            Assert.That(ModeShellBarController.IsPointerOverControls(new Vector2(900f, 500f), height, projection), Is.False);
+        }
+
         private GameObject _holder;
         private ModeShellBarController _controller;
 

@@ -116,8 +116,6 @@ namespace OneRoof.Domain.Transit
             var edges = new List<TransitEdge>();
             var elevatorStopsByColumn = new Dictionary<int, List<TransitNode>>();
 
-            var nextNodeId = 1000;
-
             // 1. Build nodes for portals on each floor
             foreach (var floor in topology.Floors)
             {
@@ -132,7 +130,7 @@ namespace OneRoof.Domain.Transit
                         _ => TransitNodeType.RoomPortal
                     };
 
-                    var node = new TransitNode(new EntityId(nextNodeId++), nodeType, portal.Location, portal.RoomId);
+                    var node = new TransitNode(portal.Id, nodeType, portal.Location, portal.RoomId);
                     nodes.Add(node);
                     floorNodes.Add(node);
 
@@ -177,7 +175,7 @@ namespace OneRoof.Domain.Transit
                             (entrance == null || node.Location.X > entrance.Location.X)) entrance = node;
                     if (entrance == null) continue;
                     var outsideX = Math.Max(room.Bounds.MaxX + 4, entrance.Location.X + 2);
-                    var outside = new TransitNode(new EntityId(nextNodeId++), TransitNodeType.Outside,
+                    var outside = new TransitNode(FindOutsideNodeId(room.Id, nodes), TransitNodeType.Outside,
                         new CellCoordinate(outsideX, 0));
                     nodes.Add(outside);
                     var distance = outsideX - entrance.Location.X;
@@ -240,6 +238,23 @@ namespace OneRoof.Domain.Transit
             }
 
             return new HierarchicalTransitGraph(nodes, edges);
+        }
+
+        private static EntityId FindOutsideNodeId(EntityId lobbyRoomId, IReadOnlyList<TransitNode> nodes)
+        {
+            // Outside has no portal of its own. Use the lobby's persistent room ID as its
+            // graph-local anchor. Entity IDs are unique within a save, so this cannot collide
+            // with a portal ID in valid topology, and unrelated portals cannot shift it.
+            foreach (var node in nodes)
+            {
+                if (node.Id.Equals(lobbyRoomId))
+                {
+                    throw new InvalidOperationException(
+                        $"Outside transit node ID {lobbyRoomId} derived from the lobby room collides with a portal node.");
+                }
+            }
+
+            return lobbyRoomId;
         }
     }
 }

@@ -64,6 +64,7 @@ namespace OneRoof.Domain.Transit
                 LegRemainingTicks = 0;
                 IsQueuedInElevator = false;
                 IsRidingElevator = false;
+                Route = trip.PlannedRoute;
                 CurrentFloor = 0;
                 CurrentX = 0f;
             }
@@ -77,6 +78,8 @@ namespace OneRoof.Domain.Transit
             public bool IsQueuedInElevator { get; set; }
 
             public bool IsRidingElevator { get; set; }
+
+            public TransitRoute Route { get; set; }
 
             public int CurrentFloor { get; set; }
 
@@ -102,6 +105,11 @@ namespace OneRoof.Domain.Transit
             float x)
         {
             if (trip == null) throw new ArgumentNullException(nameof(trip));
+            if (trip.PlannedRoute?.Legs == null)
+            {
+                CancelInvalidRestoredTrip(trip);
+                return;
+            }
             var execution = new ActiveTripExecution(trip)
             {
                 CurrentLegIndex = legIndex,
@@ -315,13 +323,21 @@ namespace OneRoof.Domain.Transit
                     continue;
                 }
 
-                if (execution.CurrentLegIndex >= trip.PlannedRoute.Legs.Count)
+                if (trip.PlannedRoute?.Legs == null)
+                {
+                    CancelInvalidRestoredTrip(trip);
+                    _activeTrips.RemoveAt(i);
+                    _activeTripsByPerson.Remove(trip.PersonId);
+                    continue;
+                }
+
+                if (execution.CurrentLegIndex >= execution.Route.Legs.Count)
                 {
                     CompleteTrip(i, execution, tick, person);
                     continue;
                 }
 
-                var leg = trip.PlannedRoute.Legs[execution.CurrentLegIndex];
+                var leg = execution.Route.Legs[execution.CurrentLegIndex];
                 topology.TransitGraph.TryGetNode(leg.FromNodeId, out var fromNode);
                 topology.TransitGraph.TryGetNode(leg.ToNodeId, out var toNode);
 
@@ -347,6 +363,17 @@ namespace OneRoof.Domain.Transit
                 }
                 else if (leg.Mode == TransitMode.Elevator)
                 {
+                    if (elevatorBank.Cars.Count == 0)
+                    {
+                        if (TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                        {
+                            continue;
+                        }
+
+                        CancelTrip(i, execution, person);
+                        continue;
+                    }
+
                     if (!execution.IsQueuedInElevator && !execution.IsRidingElevator)
                     {
                         var originFloor = fromNode?.Floor ?? 0;
@@ -392,20 +419,64 @@ namespace OneRoof.Domain.Transit
             }
         }
 
+        private static void CancelInvalidRestoredTrip(TripRecord trip)
+        {
+            if (trip.State != TripState.Completed && trip.State != TripState.Cancelled)
+                trip.Cancel();
+        }
+
         private void AdvanceLeg(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person)
         {
             execution.CurrentLegIndex++;
-            if (execution.CurrentLegIndex >= execution.Trip.PlannedRoute.Legs.Count)
+            if (execution.CurrentLegIndex >= execution.Route.Legs.Count)
             {
                 CompleteTrip(listIndex, execution, tick, person);
             }
             else
             {
-                var nextLeg = execution.Trip.PlannedRoute.Legs[execution.CurrentLegIndex];
+                var nextLeg = execution.Route.Legs[execution.CurrentLegIndex];
                 execution.LegRemainingTicks = Math.Max(1, nextLeg.Cost);
                 execution.IsQueuedInElevator = false;
                 execution.IsRidingElevator = false;
             }
+        }
+
+        private static bool TryRerouteWithoutElevators(
+            ActiveTripExecution execution,
+            HierarchicalTransitGraph graph)
+        {
+            if (execution?.Trip?.PlannedRoute == null || graph == null ||
+                execution.CurrentLegIndex >= execution.Trip.PlannedRoute.Legs.Count)
+            {
+                return false;
+            }
+
+            var currentNodeId = execution.Trip.PlannedRoute.Legs[execution.CurrentLegIndex].FromNodeId;
+            var destinationNodeId = execution.Trip.PlannedRoute.DestinationNodeId;
+            var availableEdges = new List<TransitEdge>();
+            foreach (var edge in graph.Edges)
+            {
+                if (edge.Mode != TransitMode.Elevator) availableEdges.Add(edge);
+            }
+
+            var accessibleGraph = new HierarchicalTransitGraph(graph.Nodes, availableEdges);
+            var route = new TransitRoutePlanner(accessibleGraph).FindRoute(currentNodeId, destinationNodeId);
+            if (route == null) return false;
+
+            execution.Route = route;
+            execution.CurrentLegIndex = 0;
+            execution.LegRemainingTicks = route.Legs.Count > 0 ? Math.Max(1, route.Legs[0].Cost) : 0;
+            execution.IsQueuedInElevator = false;
+            execution.IsRidingElevator = false;
+            return true;
+        }
+
+        private void CancelTrip(int listIndex, ActiveTripExecution execution, PersonRecord person)
+        {
+            if (execution.Trip.State == TripState.InProgress) execution.Trip.Cancel();
+            person?.UpdateActivity(ActivityKind.Idle);
+            _activeTrips.RemoveAt(listIndex);
+            _activeTripsByPerson.Remove(execution.Trip.PersonId);
         }
 
         private void CompleteTrip(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person)

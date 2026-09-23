@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using OneRoof.Application.Modes;
 using OneRoof.Domain.Transit;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
@@ -9,6 +10,36 @@ namespace OneRoof.Tests.PlayMode
 {
     public sealed class TowerAtmosphereAndElevatorLimitsPlayModeTests
     {
+        [UnityTest]
+        public IEnumerator TowerController_RestoresModeRoutingAfterDisableAndReenable()
+        {
+            var holder = new GameObject("Tower Controller Lifecycle Test");
+            try
+            {
+                var controller = holder.AddComponent<TowerPlayableController>();
+                yield return null;
+
+                controller.enabled = false;
+                controller.enabled = true;
+                yield return null;
+
+                controller.ModeSession.SwitchMode(InteractionMode.Data);
+                controller.ModeSession.SetActiveOverlay("overlay:satisfaction");
+                Assert.That(controller.SatisfactionPresenter.IsVisible, Is.True);
+                Assert.That(controller.OverlayPresenter.IsVisible, Is.False);
+
+                controller.ModeSession.SwitchMode(InteractionMode.Build);
+                Assert.That(controller.SatisfactionPresenter.IsVisible, Is.False);
+                Assert.That(controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Build));
+            }
+            finally
+            {
+                Object.Destroy(holder);
+                var camera = GameObject.Find("Tower Camera");
+                if (camera != null) Object.Destroy(camera);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TowerPresentation_ShowsWindowLightConesAndKeepsThreeCarsInsideTheShaft()
         {

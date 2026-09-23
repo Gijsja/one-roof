@@ -233,5 +233,21 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(person.CurrentRoomId, Is.EqualTo(initialLocation), "Resident must not teleport to destination on routing failure.");
             Assert.That(sim.Transit.ActiveTripCount, Is.EqualTo(0));
         }
+
+        [Test]
+        public void RestoringTripWithMissingRouteCancelsItInsteadOfEnqueueingInvalidExecution()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var room = topology.GetRoomsOnFloor(0)[0];
+            var trip = new TripRecord(
+                new EntityId(8890), new EntityId(1), room.Id, room.Id,
+                TripPurpose.Work, new Tick(0), plannedRoute: null);
+            var transit = new TransitExecutionSystem();
+
+            transit.RestoreTripExecution(trip, 0, 1, false, false, 0, 0f);
+
+            Assert.That(trip.State, Is.EqualTo(TripState.Cancelled));
+            Assert.That(transit.ActiveTripCount, Is.Zero);
+        }
     }
 }

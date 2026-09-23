@@ -81,6 +81,23 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Controller_DisableAndReenable_RestoresModeEventWiring()
+        {
+            _controller.enabled = false;
+            _controller.enabled = true;
+
+            _controller.ModeSession.SwitchMode(InteractionMode.Data);
+            _controller.ModeSession.SetActiveOverlay("overlay:satisfaction");
+
+            Assert.That(_controller.SatisfactionPresenter.IsVisible, Is.True);
+            Assert.That(_controller.OverlayPresenter.IsVisible, Is.False);
+
+            _controller.ModeSession.SwitchMode(InteractionMode.Build);
+            Assert.That(_controller.SatisfactionPresenter.IsVisible, Is.False);
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Build));
+        }
+
+        [Test]
         public void Controller_InitialState_BindsSpatialRoomtonesAndWindowAtmosphere()
         {
             var atmosphere = _controller.AtmospherePresenter;
