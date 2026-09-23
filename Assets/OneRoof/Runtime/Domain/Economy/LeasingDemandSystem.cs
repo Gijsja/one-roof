@@ -128,7 +128,8 @@ namespace OneRoof.Domain.Economy
                     new[] { personId },
                     apartment.Id,
                     budget: 0.75f,
-                    satisfaction: 0.85f);
+                    satisfaction: 0.85f,
+                    cashBalance: HouseholdRecord.DefaultStartingCash);
 
                 population.AddHousehold(household);
                 population.AddPerson(person);

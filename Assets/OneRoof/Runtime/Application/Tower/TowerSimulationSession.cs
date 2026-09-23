@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Economy;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Transit;
 using OneRoof.Domain;
@@ -57,6 +58,9 @@ namespace OneRoof.Application.Tower
 
         public long CurrentTick => _simulation.CurrentTick;
 
+        /// <summary>Monotonic revision for every accepted simulation mutation and tick.</summary>
+        public long Version => _version;
+
         /// <summary>Pure calendar view over the tick clock for the day/night presentation clock.</summary>
         public DayPhase DayPhase => _simulation.DayPhase;
 
@@ -82,6 +86,16 @@ namespace OneRoof.Application.Tower
         public long TreasuryBalance => _simulation.Economy.CashBalance;
 
         public long TotalRevenue => _simulation.Economy.TotalRevenue;
+
+        public TreasuryFlowProjection TreasuryFlow => new TreasuryFlowProjection(
+            _simulation.Economy.LastDailyRent,
+            _simulation.Economy.LastDailyTax,
+            _simulation.Economy.LastDailyUpkeep,
+            _simulation.Economy.LastDailySubsidy,
+            _simulation.Economy.LastDailyConstruction,
+            _simulation.Economy.LastDailyConstructionSalvage);
+
+        public long LastSettlementTick => _simulation.Economy.LastSettlementTick;
 
         internal ElevatorBankSnapshot ElevatorSnapshot() => _simulation.ElevatorBank.Snapshot();
 
@@ -131,6 +145,9 @@ namespace OneRoof.Application.Tower
         internal IReadOnlyList<PersonRecord> Persons => _simulation.Population.Persons;
 
         internal HouseholdRecord GetHousehold(EntityId id) => _simulation.Population.GetHousehold(id);
+
+        internal long DailyResidentialRent(EntityId householdId) =>
+            _simulation.Economy.CalculateResidentialRentDue(_simulation.Population.GetHousehold(householdId));
 
         /// <summary>Application-facing immutable power network projection for future utility UI and inspectors.</summary>
         public ElectricalGridSnapshot ElectricalGridProjection() => _simulation.ElectricalGridSnapshot();

@@ -15,11 +15,12 @@ namespace OneRoof.Domain.Infrastructure
         public const float RepairPerTechnicianPerTick = .045f;
 
         private readonly Dictionary<EntityId, float> _conditionByRoom = new Dictionary<EntityId, float>();
+        private long _syncedRoomsVersion = long.MinValue;
 
         public void Advance(BuildingTopologyState topology, PopulationState population)
         {
             if (topology == null) return;
-            SyncEquipment(topology);
+            SyncEquipmentIfTopologyChanged(topology);
             var technicians = CountTechnicians(population);
             foreach (var room in topology.Rooms.Values)
             {
@@ -36,7 +37,7 @@ namespace OneRoof.Domain.Infrastructure
         public UtilityOperationsSnapshot Snapshot(BuildingTopologyState topology)
         {
             if (topology == null) return UtilityOperationsSnapshot.Empty;
-            SyncEquipment(topology);
+            SyncEquipmentIfTopologyChanged(topology);
             var equipment = new List<UtilityEquipmentProjection>();
             foreach (var room in topology.Rooms.Values)
             {
@@ -56,6 +57,13 @@ namespace OneRoof.Domain.Infrastructure
             for (var i = 0; i < removed.Count; i++) _conditionByRoom.Remove(removed[i]);
             foreach (var room in topology.Rooms.Values)
                 if (IsUtilityEquipment(room) && !_conditionByRoom.ContainsKey(room.Id)) _conditionByRoom.Add(room.Id, 1f);
+        }
+
+        private void SyncEquipmentIfTopologyChanged(BuildingTopologyState topology)
+        {
+            if (_syncedRoomsVersion == topology.RoomsVersion) return;
+            SyncEquipment(topology);
+            _syncedRoomsVersion = topology.RoomsVersion;
         }
 
         public UtilityOperationsSaveData ToSaveData()

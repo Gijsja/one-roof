@@ -6,7 +6,7 @@ Canonical: money, settlement, and policy levers. Companion to `Docs/02_ARCHITECT
 
 ## 1. Problem statement
 
-Current state (see `TowerEconomyState.cs`, `BusinessState.cs`, `TowerSimulation.cs:127-132`):
+Baseline issues identified before the ECON implementation (the remaining acceptance gaps are tracked in `Planning/BACKLOG.md` and the active handoff):
 
 1. **Time-base incoherence.** `DailySchedule.TicksPerDay = 1440`, but rent and business
    cycles settle every 50 ticks (~29 paychecks per day).
@@ -17,6 +17,8 @@ Current state (see `TowerEconomyState.cs`, `BusinessState.cs`, `TowerSimulation.
    revenue is a fixed `40/employee`, so hiring more staff magically prints revenue.
 5. **Flat commercial rent.** `200/room/cycle` regardless of size, archetype, or solvency.
 6. **No sinks beyond construction.** No upkeep, no policy costs.
+
+The shared worktree now contains the household, business, policy, and treasury-flow implementation described below. It remains in progress: the 30-day conservation proof and arrears consequence chain are not complete, and the runtime settlement order still differs from the target order in §5.
 
 ## 2. Principles
 
@@ -65,11 +67,19 @@ Inspector shows tier (destitute/struggling/stable/affluent), never the raw float
 3. **Business settlement.** Customer/contract revenue ( §7 ) → business cash.
    Business pays rent ( §6 ) + tax ( §8 ) → treasury. Subtract operating (`35`, existing).
 4. **Treasury settlement.** Add tax/rent receipts, subtract upkeep ( §6 ) and active
-   subsidies ( §8 ). Record `TreasuryFlowProjection{rent, tax, upkeep, subsidy, construction}`.
+   subsidies ( §8 ). Record `TreasuryFlowProjection{rent, tax, upkeep, subsidy, construction,
+   constructionSalvage}`.
 5. **Delinquency.** Household cash `< 0` → `arrearsDays++`, else decay to 0.
    `arrearsDays > 30` → grievance + strain driver + move-out risk + Tenant-Union affinity
    hook (OR-901). Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
    paying rent, are flagged for re-lease after 7 days, and appear on Overlay 6.
+
+**Current runtime ordering gap:** `TowerSimulation.AdvanceOneTick` currently calls the combined
+business cycle (payroll, household walk-in spend, business revenue/rent/tax/operating cost)
+before collecting household residential rent. The sequence above remains the target contract;
+the implementation must be reconciled before the ECON slice is marked complete. Walk-in
+spending is limited to `$5/resident/day` and apportioned by staffed share across walk-in
+businesses, using occupancy-derived demand rather than recorded resident visits.
 
 ## 6. Rates (per day)
 
@@ -107,7 +117,7 @@ ContentScriptableObjects, never in code constants beyond defaults.
 | --- | --- | --- |
 | Rent cap | `0.7 / 1.0 / 1.3` multiplier | Scales §6 rents; low → satisfaction up, treasury down, scrutiny relief; high → inverse + inequality pressure |
 | Commercial tax | `0% / 10% / 20%` of gross | Treasury inflow; high rate → Merchant-Guild grievance, insolvency risk |
-| Transit subsidy | off / `40/day` | Costs treasury; `+0.1` commute satisfaction contributor,اضی reduces commute grievances |
+| Transit subsidy | off / `40/day` | Costs treasury; adds `+0.1` commute satisfaction and reduces commute grievances |
 | Quiet hours | off / on | On: noise grievances down; walk-in revenue −10% (tradeoff) |
 
 All decrees validate through `TowerSimulation.CanExecute` (ARCH-003 seam), emit domain
@@ -121,7 +131,7 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
 - **Overlay 4 Satisfaction:** `rentBurden` contributor becomes `rent/income` ratio instead of
   raw budget (`ResidentWellbeingSystem.cs:21` replaced by ledger-derived value).
 - **New `TreasuryFlowProjection`** (Data mode + treasury card): daily
-  `{rent, tax, upkeep, subsidy, construction, net}` with deterministic ordering.
+  `{rent, tax, upkeep, subsidy, construction, constructionSalvage, net}` with deterministic ordering.
 - **Resident card:** income / rent / food / net trajectory + arrears countdown.
 - **Business card:** revenue / wages / rent / tax / margin + default countdown.
 - Every chain ends in a lever: adjust decree, rezone, add capacity, subsidize, or demolish —
@@ -129,17 +139,20 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
 
 ## 10. Persistence, determinism, performance
 
-- `EconomySaveData`: add `policy` (`PolicyDecreeState`) and `lastSettlementTick`.
-  `PopulationSaveData`: add per-household `cashBalance, arrearsDays`.
-  `BusinessSaveData`: add `lastRentPaid, lastTaxPaid, arrearsDays`. Nullable/new fields with
-  defaults so older saves restore to fresh-ledger behavior (ARCH-004 pattern; cf. ADR-060).
+- `EconomySaveData` persists policy settings, settlement tick, pending and last daily flows,
+  including construction salvage. `PopulationSaveData` persists the household-ledger version
+  and per-household cash, arrears, income, and service spend. `BusinessSaveData` persists
+  revenue, payroll, rent, tax, operating cost, arrears, wage arrears, and insolvency state.
+  Pre-ledger saves derive household cash from the legacy normalized budget; missing policy and
+  treasury-flow fields default to the neutral policy and zero flows (ARCH-004 pattern; cf. ADR-060).
 - Integer-only settlement; entities processed in stable ID order; seeded streams untouched.
 - Budget: O(residents + rooms) once per 1440 ticks; negligible vs the 4 ms tick budget.
 
-## 11. Sliced implementation (no code in this doc)
+## 11. Sliced implementation status
 
-- **ECON-001 closed loop:** household cash + rent deduction + daily settlement + conservation test.
-- **ECON-002 business→treasury:** per-cell rent, tax remittance, demand-capped revenue, insolvency→vacancy→re-lease.
-- **ECON-003 policy state:** `PolicyDecreeState` + `CanExecute` + scrutiny hooks (unblocks OR-902 panel).
-- **ECON-004 explanation:** overlay/projection/inspector wiring per §9 + golden ledger acceptance
-  (30-day conservation + arrears→grievance→move-out chain demonstrable end to end).
+- **ECON-001 implementation:** household cash, rent deduction, arrears, daily settlement, and legacy-save migration are wired. The 30-day conservation fixture remains outstanding.
+- **ECON-002 implementation:** per-cell rent, tax remittance, demand-capped revenue, insolvency, and seven-day re-lease status are wired; validate the business ledger before completion.
+- **ECON-003 implementation:** `PolicyDecreeState`, command validation, domain events, scrutiny hooks, and save persistence are wired; the OR-902 decree panel remains separate backlog work.
+- **ECON-004 implementation:** treasury and tenant projections, inspector details, resident rent burden, and Data-mode flow display are wired. Golden ledger acceptance (30-day conservation plus arrears-to-grievance/move-out consequence chain) remains outstanding.
+
+See `Planning/BACKLOG.md` for row status and the active handoff for the next safe action. Do not mark an ECON row DONE until its acceptance evidence exists.

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using OneRoof.Application.Economy;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Domain.Transit;
@@ -10,33 +11,103 @@ namespace OneRoof.Application.Overlays
     public sealed class TowerDataOverlays
     {
         private readonly TowerSimulationSession _session;
-        private ElevatorBankCongestionProjection _cachedCongestion;
+        private long _cachedTick = long.MinValue;
+        private long _cachedVersion = long.MinValue;
         private ElevatorWaitOverlayProjection _cachedWait;
+        private SatisfactionOverlayProjection _cachedSatisfaction;
+        private PopulationOverlayProjection _cachedPopulation;
+        private ScrutinyOverlayProjection _cachedScrutiny;
+        private FootTrafficOverlayProjection _cachedFootTraffic;
+        private BusinessHealthOverlayProjection _cachedBusinessHealth;
+        private UtilitiesOverlayProjection _cachedUtilities;
 
         public TowerDataOverlays(TowerSimulationSession session)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
+        public TreasuryFlowProjection TreasuryFlow => _session.TreasuryFlow;
+
         public ElevatorWaitOverlayProjection ElevatorWait
         {
             get
             {
-                var congestion = _session.CongestionProjection();
-                if (!ReferenceEquals(congestion, _cachedCongestion))
-                {
-                    _cachedCongestion = congestion;
-                    _cachedWait = ProjectElevatorWait(congestion);
-                }
+                EnsureCurrentState();
+                if (_cachedWait == null) _cachedWait = ProjectElevatorWait(_session.CongestionProjection());
                 return _cachedWait;
             }
         }
-        public SatisfactionOverlayProjection Satisfaction => CreateSatisfaction();
-        public PopulationOverlayProjection Population => CreatePopulation();
-        public ScrutinyOverlayProjection Scrutiny => CreateScrutiny();
-        public FootTrafficOverlayProjection FootTraffic => CreateFootTraffic();
-        public BusinessHealthOverlayProjection BusinessHealth => CreateBusinessHealth();
-        public UtilitiesOverlayProjection Utilities => CreateUtilities();
+        public SatisfactionOverlayProjection Satisfaction
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedSatisfaction == null) _cachedSatisfaction = CreateSatisfaction();
+                return _cachedSatisfaction;
+            }
+        }
+        public PopulationOverlayProjection Population
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedPopulation == null) _cachedPopulation = CreatePopulation();
+                return _cachedPopulation;
+            }
+        }
+        public ScrutinyOverlayProjection Scrutiny
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedScrutiny == null) _cachedScrutiny = CreateScrutiny();
+                return _cachedScrutiny;
+            }
+        }
+        public FootTrafficOverlayProjection FootTraffic
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedFootTraffic == null) _cachedFootTraffic = CreateFootTraffic();
+                return _cachedFootTraffic;
+            }
+        }
+        public BusinessHealthOverlayProjection BusinessHealth
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedBusinessHealth == null) _cachedBusinessHealth = CreateBusinessHealth();
+                return _cachedBusinessHealth;
+            }
+        }
+        public UtilitiesOverlayProjection Utilities
+        {
+            get
+            {
+                EnsureCurrentState();
+                if (_cachedUtilities == null) _cachedUtilities = CreateUtilities();
+                return _cachedUtilities;
+            }
+        }
+
+        private void EnsureCurrentState()
+        {
+            var tick = _session.CurrentTick;
+            var version = _session.Version;
+            if (_cachedTick == tick && _cachedVersion == version) return;
+
+            _cachedTick = tick;
+            _cachedVersion = version;
+            _cachedWait = null;
+            _cachedSatisfaction = null;
+            _cachedPopulation = null;
+            _cachedScrutiny = null;
+            _cachedFootTraffic = null;
+            _cachedBusinessHealth = null;
+            _cachedUtilities = null;
+        }
 
         public static ElevatorWaitOverlayProjection ProjectElevatorWait(ElevatorBankCongestionProjection congestion)
         {
@@ -155,14 +226,18 @@ namespace OneRoof.Application.Overlays
             foreach (var person in _session.Persons)
             {
                 if (!_session.TryGetRoom(person.CurrentRoomId, out var room)) continue;
-                if (!accumulators.TryGetValue(room.Floor, out var values)) accumulators.Add(room.Floor, values = new float[3]);
-                values[0] += person.Wellbeing.Satisfaction; values[1]++; values[2] += person.Wellbeing.Grievances.Count;
+                if (!accumulators.TryGetValue(room.Floor, out var values)) accumulators.Add(room.Floor, values = new float[4]);
+                values[0] += person.Wellbeing.Satisfaction;
+                values[1]++;
+                values[2] += person.Wellbeing.Grievances.Count;
+                values[3] += person.Wellbeing.RentBurden;
             }
             var floors = new List<SatisfactionFloorProjection>(); var total = 0f; var count = 0;
             foreach (var entry in accumulators)
             {
                 var values = entry.Value; var satisfaction = values[1] == 0 ? 1f : values[0] / values[1];
-                floors.Add(new SatisfactionFloorProjection(entry.Key, satisfaction, (int)values[1], (int)values[2]));
+                var averageRentBurden = values[1] == 0 ? 0f : values[3] / values[1];
+                floors.Add(new SatisfactionFloorProjection(entry.Key, satisfaction, (int)values[1], (int)values[2], averageRentBurden));
                 total += values[0]; count += (int)values[1];
             }
             return new SatisfactionOverlayProjection(count == 0 ? 1f : total / count, floors);
@@ -241,6 +316,7 @@ namespace OneRoof.Application.Overlays
         private BusinessHealthOverlayProjection CreateBusinessHealth()
         {
             var floors = new SortedDictionary<int, BusinessHealthAccumulator>();
+            var tenants = new List<BusinessTenantProjection>(_session.Businesses.Count);
             foreach (var business in _session.Businesses)
             {
                 if (!_session.TryGetRoom(business.RoomId, out var room)) continue;
@@ -248,10 +324,27 @@ namespace OneRoof.Application.Overlays
                 value.Tenants++;
                 if (business.IsInsolvent) value.Insolvent++;
                 value.NetCash += business.CashBalance;
+                tenants.Add(new BusinessTenantProjection(
+                    business.Id.Value,
+                    business.RoomId.Value,
+                    room.Floor,
+                    business.ContentType.Value,
+                    business.CashBalance,
+                    business.EmployeeIds.Count,
+                    business.LastCustomerRevenue,
+                    business.LastContractRevenue,
+                    business.LastWages,
+                    business.LastOperatingCost,
+                    business.LastRentPaid,
+                    business.LastTaxPaid,
+                    business.ArrearsDays,
+                    business.WageArrears,
+                    business.IsInsolvent,
+                    business.IsVacantForReLease));
             }
             var result = new List<BusinessHealthFloorProjection>();
             foreach (var floor in floors) result.Add(new BusinessHealthFloorProjection(floor.Key, floor.Value.Tenants, floor.Value.Insolvent, floor.Value.NetCash));
-            return new BusinessHealthOverlayProjection(result);
+            return new BusinessHealthOverlayProjection(result, tenants);
         }
 
         private sealed class BusinessHealthAccumulator { public int Tenants; public int Insolvent; public long NetCash; }

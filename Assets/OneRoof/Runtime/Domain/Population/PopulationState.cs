@@ -143,7 +143,11 @@ namespace OneRoof.Domain.Population
                     homeRoomId = h.HomeRoomId.Value,
                     memberIds = mIds,
                     budget = h.Budget,
-                    satisfaction = h.Satisfaction
+                    satisfaction = h.Satisfaction,
+                    cashBalance = h.CashBalance,
+                    arrearsDays = h.ArrearsDays,
+                    dailyIncome = h.DailyIncome,
+                    dailyServiceSpend = h.DailyServiceSpend
                 });
             }
 
@@ -188,6 +192,7 @@ namespace OneRoof.Domain.Population
 
             return new PopulationSaveData
             {
+                householdLedgerVersion = 1,
                 households = householdList.ToArray(),
                 persons = personList.ToArray()
             };
@@ -205,7 +210,13 @@ namespace OneRoof.Domain.Population
                     {
                         foreach (var mid in h.memberIds) mList.Add(new EntityId(mid));
                     }
-                    households.Add(new HouseholdRecord(new EntityId(h.id), mList, new EntityId(h.homeRoomId), h.budget, h.satisfaction));
+                    var cashBalance = data.householdLedgerVersion > 0
+                        ? h.cashBalance
+                        : HouseholdRecord.CashFromLegacyBudget(h.budget, mList.Count);
+                    var arrearsDays = data.householdLedgerVersion > 0 ? h.arrearsDays : 0;
+                    var dailyIncome = data.householdLedgerVersion > 0 ? h.dailyIncome : 0;
+                    var dailyServiceSpend = data.householdLedgerVersion > 0 ? h.dailyServiceSpend : 0;
+                    households.Add(new HouseholdRecord(new EntityId(h.id), mList, new EntityId(h.homeRoomId), h.budget, h.satisfaction, cashBalance, arrearsDays, dailyIncome, dailyServiceSpend));
                 }
             }
 

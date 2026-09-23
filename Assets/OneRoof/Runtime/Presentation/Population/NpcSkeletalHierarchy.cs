@@ -60,6 +60,16 @@ namespace OneRoof.Presentation.Population
         private static Sprite _handSprite;
         private static Sprite _footSprite;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticCaches()
+        {
+            _torsoSprite = null;
+            _headSprite = null;
+            _limbSprite = null;
+            _handSprite = null;
+            _footSprite = null;
+        }
+
         private void Awake()
         {
             EnsureHierarchy();
@@ -678,16 +688,26 @@ namespace OneRoof.Presentation.Population
         {
             // Procedural fallback body draws strictly under the wardrobe slots (16+), so a
             // palette swatch or photo part always covers the box beneath its own layer.
-            EnsureLimbRenderer("torso", Spine, _torsoSprite ?? (_torsoSprite = CreatePixelPartSprite(10, 14)), new Vector3(0f, -.065f, .02f), new Vector3(.18f, .25f, 1f), 13, new Color(.78f, .62f, .48f));
-            EnsureLimbRenderer("head", Head, _headSprite ?? (_headSprite = CreatePixelPartSprite(10, 10)), new Vector3(0f, .025f, .01f), new Vector3(.14f, .14f, 1f), 14, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperL, _bones[NpcRigDefinition.BoneArmUpperL], _limbSprite ?? (_limbSprite = CreatePixelPartSprite(4, 12)), new Vector3(-.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer("torso", Spine, GetOrCreateSprite(ref _torsoSprite, 10, 14), new Vector3(0f, -.065f, .02f), new Vector3(.18f, .25f, 1f), 13, new Color(.78f, .62f, .48f));
+            EnsureLimbRenderer("head", Head, GetOrCreateSprite(ref _headSprite, 10, 10), new Vector3(0f, .025f, .01f), new Vector3(.14f, .14f, 1f), 14, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperL, _bones[NpcRigDefinition.BoneArmUpperL], GetOrCreateSprite(ref _limbSprite, 4, 12), new Vector3(-.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperR, _bones[NpcRigDefinition.BoneArmUpperR], _limbSprite, new Vector3(.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperL, _bones[NpcRigDefinition.BoneLegUpperL], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
             EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperR, _bones[NpcRigDefinition.BoneLegUpperR], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneHandL, _bones[NpcRigDefinition.BoneHandL], _handSprite ?? (_handSprite = CreatePixelPartSprite(5, 5)), new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneHandL, _bones[NpcRigDefinition.BoneHandL], GetOrCreateSprite(ref _handSprite, 5, 5), new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneHandR, _bones[NpcRigDefinition.BoneHandR], _handSprite, new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
-            EnsureLimbRenderer(NpcRigDefinition.BoneFootL, _bones[NpcRigDefinition.BoneFootL], _footSprite ?? (_footSprite = CreatePixelPartSprite(8, 3)), new Vector3(-.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneFootL, _bones[NpcRigDefinition.BoneFootL], GetOrCreateSprite(ref _footSprite, 8, 3), new Vector3(-.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));
             EnsureLimbRenderer(NpcRigDefinition.BoneFootR, _bones[NpcRigDefinition.BoneFootR], _footSprite, new Vector3(.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));
+        }
+
+        private static Sprite GetOrCreateSprite(ref Sprite sprite, int width, int height)
+        {
+            if (sprite == null)
+            {
+                sprite = CreatePixelPartSprite(width, height);
+            }
+
+            return sprite;
         }
 
         private void EnsureLimbRenderer(string key, Transform parent, Sprite sprite, Vector3 localPosition, Vector3 localScale, int sortingOrder, Color color)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
+using OneRoof.Application.Population;
 using OneRoof.Content;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
@@ -27,17 +28,39 @@ namespace OneRoof.Presentation.Tower
         // so walkers face where they travel and idle poses keep their last heading.
         private readonly List<float> _lastWalkX = new List<float>();
         private readonly List<float> _walkFacing = new List<float>();
+        private readonly List<int> _residentProjectionIndices = new List<int>();
+        private readonly HashSet<int> _visibleResidentIds = new HashSet<int>();
+        private readonly List<int> _releaseResidentIds = new List<int>(NpcViewPool.DefaultMaxCapacity);
+        private NpcViewPool _viewPool;
+        private Camera _camera;
+        private int _targetResidentCount;
         private const float WalkPresentationSpeed = 2.4f;
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
         public int ResidentCount => _residentViews.Count;
 
+        public NpcViewPool ViewPool
+        {
+            get => _viewPool;
+            set
+            {
+                if (_viewPool == value) return;
+                _viewPool?.ReleaseAll();
+                _viewPool = value;
+                _residentViews.Clear();
+                _residentSkeletons.Clear();
+                _residentObjects.Clear();
+                _residentProjectionIndices.Clear();
+            }
+        }
+
         public bool TryGetResidentView(int residentIndex, out Bounds bounds, out Sprite sprite, out Transform residentTransform)
         {
-            if (residentIndex >= 0 && residentIndex < _residentSkeletons.Count)
+            var viewIndex = _viewPool == null ? residentIndex : _residentProjectionIndices.IndexOf(residentIndex);
+            if (viewIndex >= 0 && viewIndex < _residentSkeletons.Count)
             {
-                var skeletal = _residentSkeletons[residentIndex];
+                var skeletal = _residentSkeletons[viewIndex];
                 if (skeletal != null && skeletal.MainRenderer != null)
                 {
                     sprite = skeletal.MainRenderer.sprite;
@@ -75,8 +98,16 @@ namespace OneRoof.Presentation.Tower
 
             if (foundIndex >= 0)
             {
-                residentIndex = foundIndex;
-                return TryGetResidentView(foundIndex, out bounds, out sprite, out residentTransform);
+                residentIndex = _viewPool == null ? foundIndex : _residentProjectionIndices[foundIndex];
+                var skeletal = _residentSkeletons[foundIndex];
+                if (skeletal != null && skeletal.MainRenderer != null)
+                {
+                    sprite = skeletal.MainRenderer.sprite;
+                    residentTransform = skeletal.transform;
+                    var pos = residentTransform.position;
+                    bounds = new Bounds(new Vector3(pos.x, pos.y + 0.35f, pos.z), new Vector3(0.5f, 0.75f, 1f));
+                    return true;
+                }
             }
 
             residentIndex = -1;
@@ -130,6 +161,8 @@ namespace OneRoof.Presentation.Tower
         public void EnsureResidentViews(int targetCount)
         {
             targetCount = Math.Max(0, targetCount);
+            _targetResidentCount = targetCount;
+            if (_viewPool != null) return;
             while (_residentViews.Count > targetCount)
             {
                 var last = _residentViews.Count - 1;
@@ -171,20 +204,29 @@ namespace OneRoof.Presentation.Tower
         {
             if (snapshot == null) return;
 
+            if (_viewPool != null) UpdatePooledViews(snapshot);
+
             var floorCount = Math.Max(TowerStructurePresenter.InitialFloorCount, topology != null ? topology.FloorCount : TowerStructurePresenter.InitialFloorCount);
             var queuedCountsPerFloor = new int[floorCount];
             var arrivedCountsPerFloor = new int[floorCount];
 
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
-                if (i >= _residentViews.Count)
-                {
-                    break;
-                }
-
                 var resident = snapshot.Residents[i];
-                var residentTransform = _residentViews[i].transform;
-                var skeletal = i < _residentSkeletons.Count ? _residentSkeletons[i] : null;
+                Transform residentTransform;
+                NpcSkeletalHierarchy skeletal;
+                if (_viewPool != null)
+                {
+                    if (!_viewPool.TryGetView(resident.ResidentId, out var pooledView)) continue;
+                    residentTransform = pooledView.transform;
+                    skeletal = pooledView.SkeletalHierarchy;
+                }
+                else
+                {
+                    if (i >= _residentViews.Count) break;
+                    residentTransform = _residentViews[i].transform;
+                    skeletal = i < _residentSkeletons.Count ? _residentSkeletons[i] : null;
+                }
 
                 switch (resident.Status)
                 {
@@ -380,6 +422,16 @@ namespace OneRoof.Presentation.Tower
 
         public void Clear()
         {
+            if (_viewPool != null)
+            {
+                _viewPool.ReleaseAll();
+                _residentViews.Clear();
+                _residentSkeletons.Clear();
+                _residentProjectionIndices.Clear();
+                _lastWalkX.Clear();
+                _walkFacing.Clear();
+                return;
+            }
             for (var i = 0; i < _residentObjects.Count; i++)
             {
                 var go = _residentObjects[i];
@@ -396,6 +448,71 @@ namespace OneRoof.Presentation.Tower
             _authoredObjects.Clear();
             _lastWalkX.Clear();
             _walkFacing.Clear();
+        }
+
+        private void UpdatePooledViews(TowerProjection snapshot)
+        {
+            _visibleResidentIds.Clear();
+            if (_camera == null) _camera = Camera.main;
+            var limit = Math.Min(Math.Min(_targetResidentCount, _viewPool.MaxCapacity), NpcViewPool.DefaultMaxCapacity + 20);
+            for (var i = 0; i < snapshot.Residents.Count && _visibleResidentIds.Count < limit; i++)
+            {
+                var resident = snapshot.Residents[i];
+                var floor = Mathf.Max(0, resident.Floor);
+                var y = TowerStructurePresenter.FloorY(floor) - 0.2f;
+                var x = -2.4f + resident.CellX * 0.5f + 0.25f;
+                if (_camera != null)
+                {
+                    var viewport = _camera.WorldToViewportPoint(new Vector3(x, y, 0f));
+                    if (viewport.z <= 0f || viewport.y < 0f || viewport.y > 1f) continue;
+                }
+                _visibleResidentIds.Add(resident.ResidentId);
+            }
+
+            _releaseResidentIds.Clear();
+            foreach (var view in _viewPool.ActiveViews)
+            {
+                if (view.BoundEntityId.HasValue && !_visibleResidentIds.Contains(view.BoundEntityId.Value))
+                    _releaseResidentIds.Add(view.BoundEntityId.Value);
+            }
+            for (var i = 0; i < _releaseResidentIds.Count; i++) _viewPool.Release(_releaseResidentIds[i]);
+
+            _residentViews.Clear();
+            _residentSkeletons.Clear();
+            _residentObjects.Clear();
+            _residentProjectionIndices.Clear();
+            for (var i = 0; i < snapshot.Residents.Count; i++)
+            {
+                var resident = snapshot.Residents[i];
+                if (!_visibleResidentIds.Contains(resident.ResidentId)) continue;
+                if (!_viewPool.TryGetView(resident.ResidentId, out var view))
+                {
+                    view = _viewPool.Acquire(resident.ResidentId);
+                    var projection = new NpcProjection(resident.ResidentId, resident.ResidentId, Math.Max(0, resident.Floor), resident.RoomId ?? 0,
+                        ToNpcActivity(resident.Activity), resident.Status == TransitResidentStatus.Riding || resident.Status == TransitResidentStatus.Queued,
+                        resident.DestinationFloor, resident.RoomId, resident.WaitTicks, resident.CellX);
+                    view.Bind(projection, Vector3.zero);
+                }
+                var skeleton = view.SkeletalHierarchy;
+                if (skeleton == null || skeleton.MainRenderer == null) continue;
+                _residentViews.Add(skeleton.MainRenderer);
+                _residentSkeletons.Add(skeleton);
+                _residentObjects.Add(view.gameObject);
+                _residentProjectionIndices.Add(i);
+                EnsureWalkMemory(i, -2.4f + resident.CellX * 0.5f + 0.25f);
+            }
+        }
+
+        private static NpcActivityKind ToNpcActivity(ActivityKind activity)
+        {
+            switch (activity)
+            {
+                case ActivityKind.Sleeping: return NpcActivityKind.Sleeping;
+                case ActivityKind.Working: return NpcActivityKind.Working;
+                case ActivityKind.Eating: return NpcActivityKind.Eating;
+                case ActivityKind.Leisure: return NpcActivityKind.Leisure;
+                default: return NpcActivityKind.Idle;
+            }
         }
 
         private void EnsureWalkMemory(int index, float currentX)

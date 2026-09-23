@@ -25,6 +25,9 @@ namespace OneRoof.Application.Inspectors
 
             var transit = _session.TransitProjection();
             var resident = FindResident(transit, residentId);
+            var household = _session.GetHousehold(person.HouseholdId);
+            var dailyRent = _session.DailyResidentialRent(person.HouseholdId);
+            var dailyNet = household.DailyIncome - dailyRent - household.DailyServiceSpend;
             var details = new List<string>
             {
                 $"Activity: {person.Activity}",
@@ -34,7 +37,13 @@ namespace OneRoof.Application.Inspectors
                 person.IsOutside ? "Current location: Outside" : "Current location: tower",
                 person.Role == SpecialistRole.None
                     ? (person.IsTraining ? $"Training: {person.TrainingRole} ({person.TrainingProgress:P0})" : "Specialist role: none yet")
-                    : $"Specialist role: {person.Role}"
+                    : $"Specialist role: {person.Role}",
+                $"Household cash: ${household.CashBalance:N0}",
+                $"Daily income: ${household.DailyIncome:N0}",
+                $"Daily rent due: ${dailyRent:N0}",
+                $"Food and service spend: ${household.DailyServiceSpend:N0}",
+                $"Daily cash change: ${dailyNet:+#,0;-#,0;0}",
+                $"Rent arrears: {household.ArrearsDays} day(s)"
             };
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");

@@ -25,6 +25,7 @@ namespace OneRoof.Domain
     {
         private int _nextElevatorCarId = 500;
         private int _nextEntityId = 3000;
+        private readonly long _settlementPeriod;
 
         public TowerSimulation(
             SimulationClock clock,
@@ -33,12 +34,15 @@ namespace OneRoof.Domain
             ElevatorBank elevatorBank,
             TowerEconomyState economy = null,
             IRandomStream randomStream = null,
-            ScrutinyState scrutiny = null)
+            ScrutinyState scrutiny = null,
+            long settlementPeriod = DailySchedule.TicksPerDay)
         {
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
             Topology = topology ?? throw new ArgumentNullException(nameof(topology));
             Population = population ?? throw new ArgumentNullException(nameof(population));
             ElevatorBank = elevatorBank ?? throw new ArgumentNullException(nameof(elevatorBank));
+            if (settlementPeriod <= 0) throw new ArgumentOutOfRangeException(nameof(settlementPeriod));
+            _settlementPeriod = settlementPeriod;
             Economy = economy ?? new TowerEconomyState();
             RandomStream = randomStream ?? new DeterministicRandomStream(1337);
 
@@ -117,7 +121,7 @@ namespace OneRoof.Domain
             Needs.Advance(Population, currentTick);
             Specialists.Advance(Population, Topology, currentTick);
             UtilityOperations.Advance(Topology, Population);
-            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier);
+            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled);
             Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
@@ -132,11 +136,17 @@ namespace OneRoof.Domain
                 Businesses.Advance(Topology, Population, ref _nextEntityId);
             }
 
-            // 2. Periodic rental collection cycle (every 50 ticks)
-            if (currentTick.Value % 50 == 0)
+            // 2. Daily cash settlement (default one in-game day; injectable for focused domain fixtures).
+            if (currentTick.Value % _settlementPeriod == 0)
             {
+                for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].BeginDailySettlement();
+                Businesses.ProcessBusinessCycle(Topology, Population, Economy, CalculateResidentialOccupancyFactor(), Economy.Policy);
                 Economy.ProcessRentCycle(Topology, Population);
-                Businesses.ProcessBusinessCycle(Population);
+                var utilityCellCount = CountUtilityCells();
+                var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
+                Economy.ChargeDailyExpense(upkeep, subsidy: false);
+                Economy.ChargeDailyExpense(Economy.Policy.DailyTransitSubsidy, subsidy: true);
+                Economy.CompleteDailySettlement(currentTick.Value);
             }
 
             // 3. Generate scheduled routine trips when schedule blocks transition
@@ -155,6 +165,29 @@ namespace OneRoof.Domain
             var currentGraph = Topology.TransitGraph;
             Planner = new TransitRoutePlanner(currentGraph);
             TripGenerator.UpdateTopology(Topology.ToSnapshot(), currentGraph, Planner);
+        }
+
+        private float CalculateResidentialOccupancyFactor()
+        {
+            var residentialCapacity = 0;
+            foreach (var room in Topology.Rooms.Values)
+            {
+                var content = room.ContentType.Value ?? string.Empty;
+                if (content.StartsWith("residential:", StringComparison.Ordinal)) residentialCapacity += room.Capacity;
+            }
+
+            return residentialCapacity <= 0 ? 0f : Math.Min(1f, Population.ResidentCount / (float)residentialCapacity);
+        }
+
+        private int CountUtilityCells()
+        {
+            var cells = 0;
+            foreach (var room in Topology.Rooms.Values)
+            {
+                var content = room.ContentType.Value ?? string.Empty;
+                if (content.StartsWith("utility:", StringComparison.Ordinal)) cells += room.Bounds.Width;
+            }
+            return cells;
         }
 
         // ── Command Seam & Validation ─────────────────────────────────────────
@@ -323,6 +356,9 @@ namespace OneRoof.Domain
                     return CommandResult.Success();
                 }
 
+                case SetPolicyDecreeCommand:
+                    return CommandResult.Success();
+
                 default:
                     return CommandResult.Reject(new[]
                     {
@@ -361,12 +397,34 @@ namespace OneRoof.Domain
                     AddElevatorCarUnchecked(carCmd.Capacity, carCmd.StartingFloor);
                     return CommandResult.Success();
                 }
+                case SetPolicyDecreeCommand policyCmd:
+                    return ApplyPolicyDecree(policyCmd);
                 default:
                     return CommandResult.Reject(new[]
                     {
                         new CommandRejectionReason(new ContentId("command:unknown"), $"Unsupported command type '{command.GetType().Name}'.")
                     });
             }
+        }
+
+        private CommandResult ApplyPolicyDecree(SetPolicyDecreeCommand command)
+        {
+            var nextPolicy = command.Policy;
+            if (Economy.Policy == nextPolicy) return CommandResult.Success();
+
+            Economy.SetPolicy(nextPolicy);
+            if (nextPolicy.IsAggressive)
+            {
+                var severity = (nextPolicy.RentCapMultiplier == PolicyDecreeState.HighRentCapMultiplier ? .08f : 0f) +
+                               (nextPolicy.CommercialTaxRate == PolicyDecreeState.HighCommercialTaxRate ? .08f : 0f);
+                Scrutiny.RecordAggressivePolicy(severity);
+            }
+
+            var changeEvent = new DomainEvent(
+                new EntityId(_nextEntityId++),
+                new ContentId("policy:decree_changed"),
+                Clock.CurrentTick);
+            return CommandResult.Accept(new[] { changeEvent });
         }
 
         public CommandResult BuildFloorSlab(BuildFloorSlabCommand cmd)
@@ -519,7 +577,7 @@ namespace OneRoof.Domain
                 var result = Topology.Execute(cmd, Clock.CurrentTick);
                 if (result.Accepted && salvageRefund > 0)
                 {
-                    Economy.AddRevenue(salvageRefund);
+                    Economy.RecordConstructionSalvage(salvageRefund);
                 }
 
                 if (result.Accepted)

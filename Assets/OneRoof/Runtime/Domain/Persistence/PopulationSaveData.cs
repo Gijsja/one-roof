@@ -9,6 +9,8 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class PopulationSaveData
     {
+        /// <summary>Version of the household cash ledger fields; 0 denotes a pre-ledger save.</summary>
+        public int householdLedgerVersion;
         public HouseholdSaveData[] households;
         public PersonSaveData[] persons;
     }

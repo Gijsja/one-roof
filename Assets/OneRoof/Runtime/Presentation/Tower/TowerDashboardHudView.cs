@@ -1,4 +1,5 @@
 using System;
+using OneRoof.Application.Modes;
 using OneRoof.UI;
 using UnityEngine;
 
@@ -30,7 +31,7 @@ namespace OneRoof.Presentation.Tower
             var sim = _controller?.SimulationSession;
             if (sim == null || _controller.ModeSession == null) return;
 
-            var panel = new Rect(16, 16, 392, IsCollapsed ? 52 : 276);
+            var panel = new Rect(16, 16, 392, IsCollapsed ? 52 : 330);
             GUILayout.BeginArea(panel, StewardTheme.Panel);
             GUILayout.BeginHorizontal();
             GUILayout.Label("ONE ROOF", StewardTheme.Label(17, StewardTheme.Text, true));
@@ -71,6 +72,15 @@ namespace OneRoof.Presentation.Tower
                 var queueColor = snapshot.QueueLength > 0 ? StewardTheme.Amber : StewardTheme.Mint;
                 GUILayout.Label($"TRANSIT   {snapshot.QueueLength} waiting  •  {snapshot.ArrivedCount} arrived  •  {snapshot.Elevators.Count} cars", StewardTheme.Label(12, queueColor, true));
                 GUILayout.Label($"Average completed wait {snapshot.AverageWaitTicks:F1} ticks   /   {severity} pressure", StewardTheme.Label(11, StewardTheme.Muted));
+                if (_controller.ModeSession.CurrentMode == InteractionMode.Data)
+                {
+                    var flow = sim.TreasuryFlow;
+                    GUILayout.Space(5);
+                    StewardTheme.Rule(364);
+                    GUILayout.Label($"DAILY TREASURY  /  LAST SETTLED TICK {sim.LastSettlementTick:N0}", StewardTheme.Label(10, StewardTheme.Muted, true));
+                    GUILayout.Label($"Rent +${flow.Rent:N0}   Tax +${flow.Tax:N0}   Net ${flow.Net:+#,0;-#,0;0}", StewardTheme.Label(11, StewardTheme.Text, true));
+                    GUILayout.Label($"Upkeep -${flow.Upkeep:N0}   Subsidy -${flow.Subsidy:N0}   Construction -${flow.Construction:N0}   Salvage +${flow.ConstructionSalvage:N0}", StewardTheme.Label(10, StewardTheme.Muted));
+                }
                 GUILayout.Space(5);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("INSPECT CAUSE", StewardTheme.ActiveButton, GUILayout.Height(30))) _controller.InspectBottleneck();

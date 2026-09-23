@@ -14,6 +14,25 @@ namespace OneRoof.Domain.Persistence
         public bool sandboxMode;
         public long totalRevenue;
         public long totalExpenses;
+        public int householdLedgerVersion;
+        public int policyVersion;
+        public float rentCapMultiplier;
+        public float commercialTaxRate;
+        public bool transitSubsidyEnabled;
+        public bool quietHoursEnabled;
+        public long lastSettlementTick;
+        public long pendingRent;
+        public long pendingTax;
+        public long pendingUpkeep;
+        public long pendingSubsidy;
+        public long pendingConstruction;
+        public long pendingConstructionSalvage;
+        public long lastDailyRent;
+        public long lastDailyTax;
+        public long lastDailyUpkeep;
+        public long lastDailySubsidy;
+        public long lastDailyConstruction;
+        public long lastDailyConstructionSalvage;
         public int nextElevatorCarId;
         public int nextEntityId;
 
@@ -46,12 +65,14 @@ namespace OneRoof.Domain.Persistence
 
         public PopulationSaveData GetPopulationSaveData() => new PopulationSaveData
         {
+            householdLedgerVersion = householdLedgerVersion,
             households = households,
             persons = persons
         };
 
         public void SetPopulationSaveData(PopulationSaveData pop)
         {
+            householdLedgerVersion = pop?.householdLedgerVersion ?? 0;
             households = pop?.households;
             persons = pop?.persons;
         }
@@ -61,7 +82,25 @@ namespace OneRoof.Domain.Persistence
             cashBalance = cashBalance,
             sandboxMode = sandboxMode,
             totalRevenue = totalRevenue,
-            totalExpenses = totalExpenses
+            totalExpenses = totalExpenses,
+            policyVersion = policyVersion,
+            rentCapMultiplier = rentCapMultiplier,
+            commercialTaxRate = commercialTaxRate,
+            transitSubsidyEnabled = transitSubsidyEnabled,
+            quietHoursEnabled = quietHoursEnabled,
+            lastSettlementTick = lastSettlementTick,
+            pendingRent = pendingRent,
+            pendingTax = pendingTax,
+            pendingUpkeep = pendingUpkeep,
+            pendingSubsidy = pendingSubsidy,
+            pendingConstruction = pendingConstruction,
+            pendingConstructionSalvage = pendingConstructionSalvage,
+            lastDailyRent = lastDailyRent,
+            lastDailyTax = lastDailyTax,
+            lastDailyUpkeep = lastDailyUpkeep,
+            lastDailySubsidy = lastDailySubsidy,
+            lastDailyConstruction = lastDailyConstruction,
+            lastDailyConstructionSalvage = lastDailyConstructionSalvage
         };
 
         public void SetEconomySaveData(EconomySaveData econ)
@@ -72,6 +111,24 @@ namespace OneRoof.Domain.Persistence
                 sandboxMode = econ.sandboxMode;
                 totalRevenue = econ.totalRevenue;
                 totalExpenses = econ.totalExpenses;
+                policyVersion = econ.policyVersion;
+                rentCapMultiplier = econ.rentCapMultiplier;
+                commercialTaxRate = econ.commercialTaxRate;
+                transitSubsidyEnabled = econ.transitSubsidyEnabled;
+                quietHoursEnabled = econ.quietHoursEnabled;
+                lastSettlementTick = econ.lastSettlementTick;
+                pendingRent = econ.pendingRent;
+                pendingTax = econ.pendingTax;
+                pendingUpkeep = econ.pendingUpkeep;
+                pendingSubsidy = econ.pendingSubsidy;
+                pendingConstruction = econ.pendingConstruction;
+                pendingConstructionSalvage = econ.pendingConstructionSalvage;
+                lastDailyRent = econ.lastDailyRent;
+                lastDailyTax = econ.lastDailyTax;
+                lastDailyUpkeep = econ.lastDailyUpkeep;
+                lastDailySubsidy = econ.lastDailySubsidy;
+                lastDailyConstruction = econ.lastDailyConstruction;
+                lastDailyConstructionSalvage = econ.lastDailyConstructionSalvage;
             }
         }
     }
@@ -94,7 +151,13 @@ namespace OneRoof.Domain.Persistence
         public int[] employeeIds;
         public long cashBalance;
         public long lastCustomerRevenue;
+        public long lastContractRevenue;
         public long lastWages;
+        public long lastOperatingCost;
+        public long lastRentPaid;
+        public long lastTaxPaid;
+        public int arrearsDays;
+        public bool wageArrears;
         public bool isInsolvent;
     }
 
@@ -150,6 +213,10 @@ namespace OneRoof.Domain.Persistence
         public int[] memberIds;
         public float budget;
         public float satisfaction;
+        public long cashBalance;
+        public int arrearsDays;
+        public long dailyIncome;
+        public long dailyServiceSpend;
     }
 
     [Serializable]

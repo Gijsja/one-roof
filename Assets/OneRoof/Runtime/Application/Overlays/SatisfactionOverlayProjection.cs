@@ -18,12 +18,13 @@ namespace OneRoof.Application.Overlays
 
     public readonly struct SatisfactionFloorProjection
     {
-        public SatisfactionFloorProjection(int floor, float satisfaction, int residentCount, int grievanceCount)
-        { Floor = floor; Satisfaction = satisfaction; ResidentCount = residentCount; GrievanceCount = grievanceCount; }
+        public SatisfactionFloorProjection(int floor, float satisfaction, int residentCount, int grievanceCount, float averageRentBurden = 0f)
+        { Floor = floor; Satisfaction = satisfaction; ResidentCount = residentCount; GrievanceCount = grievanceCount; AverageRentBurden = averageRentBurden; }
         public int Floor { get; }
         public float Satisfaction { get; }
         public int ResidentCount { get; }
         public int GrievanceCount { get; }
-        public string AccessibilityLabel => $"Floor {Floor}: {Satisfaction:P0} satisfaction, {GrievanceCount} active grievances";
+        public float AverageRentBurden { get; }
+        public string AccessibilityLabel => $"Floor {Floor}: {Satisfaction:P0} satisfaction, average rent burden {AverageRentBurden:P0}, {GrievanceCount} active grievances";
     }
 }

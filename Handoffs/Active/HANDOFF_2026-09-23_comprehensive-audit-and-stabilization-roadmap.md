@@ -576,6 +576,9 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 - **Diff hygiene**: `git diff --check` passed in the isolated worktree.
 - **Working tree**: Existing unrelated changes in the archived handoffs and `Planning/BACKLOG.md` were preserved. This remains the sole active handoff.
 
+- **Phase 4 (ECON-001..004)**: Treasury implementation is in progress in the shared worktree. Household cash and arrears persistence, daily rent/payroll/business settlement, rent/tax/subsidy policy commands, tenant and rent-burden projections, daily treasury HUD flows, and construction salvage accounting are wired. Walk-in household service spend is capped at `$5/resident/day` and allocated across staffed walk-in businesses by staff share. Static reference review and `git diff --check` passed; Unity compilation and tests were not run for this task. The 30-day cash conservation proof is still missing, and `ECON-001` remains ACTIVE; `ECON-002..004` remain READY.
+- **Open Phase 4 gaps**: Household arrears do not yet feed the documented grievance/strain/move-out/faction chain; the current daily settlement calls the combined business cycle before household rent collection, which differs from the ordering in `Docs/12_ECONOMY.md`; and walk-in spending is based on occupancy demand rather than resident visit records. Reconcile these behaviors and add the 30-day conservation proof before marking the ECON rows DONE.
+
 ---
 
 ## 5. Risks and Next Safe Action
@@ -586,6 +589,4 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 3. **Presenter Timing Changes**: Pausing autonomous simulation ticking during `GoldenExpansionPlayModeTests` (`Task 3.1`) alters frame-to-tick ratios in test assertions. Verify and lock tick assertions explicitly.
 
 ### Immediate Next Safe Action
-Begin **Phase 2, Tasks 2.1–2.5** in an isolated worktree, starting with the 40–60 resident view cap and presentation hot-path allocation fixes. Keep the two known EditMode presentation failures visible while adding phase-specific regression coverage.
-5. Fix `TowerPlayableController.cs` event unsubscription deadlock on disable/re-enable.
-6. Run headless Unity compile and EditMode test suite to verify baseline stability.
+Continue **Phase 4, ECON-001**: reconcile the runtime settlement order with `Docs/12_ECONOMY.md`, then add and run the 30-day ledger conservation fixture plus focused save-migration, business-solvency, and policy-flow coverage. Review the documented arrears consequence chain and keep later ECON rows READY until their acceptance evidence exists. Do not mark the implementation complete based on static review alone.

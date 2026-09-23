@@ -24,6 +24,8 @@ namespace OneRoof.Domain.Trips
         private BuildingTopology _topology;
         private HierarchicalTransitGraph _graph;
         private TransitRoutePlanner _planner;
+        private Room[] _foodRooms;
+        private Room[] _lobbyRooms;
 
         private readonly DynamicScheduleArbitrator _arbitrator = new DynamicScheduleArbitrator();
         private int _nextTripId;
@@ -41,6 +43,7 @@ namespace OneRoof.Domain.Trips
             _topology = topology ?? throw new ArgumentNullException(nameof(topology));
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
+            RebuildRoomCandidates();
 
             if (firstTripId <= 0)
             {
@@ -55,6 +58,7 @@ namespace OneRoof.Domain.Trips
             _topology = topology ?? throw new ArgumentNullException(nameof(topology));
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
+            RebuildRoomCandidates();
         }
 
         /// <summary>
@@ -70,7 +74,7 @@ namespace OneRoof.Domain.Trips
         {
             if (population == null) throw new ArgumentNullException(nameof(population));
 
-            var trips = new List<TripRecord>();
+            List<TripRecord> trips = null;
 
             foreach (var person in population.Persons)
             {
@@ -107,11 +111,12 @@ namespace OneRoof.Domain.Trips
                 if (trip != null)
                 {
                     person.UpdateActivity(ActivityKind.Commuting);
+                    if (trips == null) trips = new List<TripRecord>();
                     trips.Add(trip);
                 }
             }
 
-            return trips;
+            return trips == null ? (IReadOnlyList<TripRecord>)Array.Empty<TripRecord>() : trips;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -190,49 +195,40 @@ namespace OneRoof.Domain.Trips
 
         private static WorldLocation? AsLocation(EntityId? roomId) => roomId.HasValue ? WorldLocation.InRoom(roomId.Value) : (WorldLocation?)null;
 
+        private void RebuildRoomCandidates()
+        {
+            var foodRooms = _topology.GetRoomsByContentPrefixes("commercial:", "room:diner");
+            _foodRooms = foodRooms.ToArray();
+            _lobbyRooms = ToArray(_topology.GetRoomsByContentType(FiveFloorTopologyFixture.LobbyContentId));
+        }
+
         private EntityId? FindRoomByContent(ContentId contentId, int floorHint, EntityId personId)
         {
-            var isCommercialFood = contentId == FiveFloorTopologyFixture.CommercialContentId;
-            var matches = new List<EntityId>();
-
-            if (_topology.TryGetFloor(floorHint, out var floor))
-            {
-                foreach (var room in floor.Rooms)
-                {
-                    if (MatchesFoodOrLobby(room.ContentType, contentId, isCommercialFood))
-                    {
-                        matches.Add(room.Id);
-                    }
-                }
-            }
-
-            // Fallback: search all floors (skipping the hint floor to avoid duplicates).
-            foreach (var f in _topology.Floors)
-            {
-                if (f.FloorLevel == floorHint) continue;
-                foreach (var room in f.Rooms)
-                {
-                    if (MatchesFoodOrLobby(room.ContentType, contentId, isCommercialFood))
-                    {
-                        matches.Add(room.Id);
-                    }
-                }
-            }
-
-            if (matches.Count == 0) return null;
-            if (matches.Count == 1) return matches[0];
+            var rooms = contentId == FiveFloorTopologyFixture.CommercialContentId ? _foodRooms : _lobbyRooms;
+            var count = 0;
+            for (var i = 0; i < rooms.Length; i++)
+                if (rooms[i].Floor == floorHint) count++;
+            for (var i = 0; i < rooms.Length; i++)
+                if (rooms[i].Floor != floorHint) count++;
+            if (count == 0) return null;
 
             // Deterministic spread: stable person ID selects the room, so demand splits
             // across diners/lobbies without any per-generator state (ADR-020).
-            var index = Math.Abs(personId.Value % matches.Count);
-            return matches[(int)index];
+            var index = Math.Abs(personId.Value % count);
+            var matchingIndex = 0;
+            for (var i = 0; i < rooms.Length; i++)
+                if (rooms[i].Floor == floorHint && matchingIndex++ == index) return rooms[i].Id;
+            for (var i = 0; i < rooms.Length; i++)
+                if (rooms[i].Floor != floorHint && matchingIndex++ == index) return rooms[i].Id;
+            return null;
         }
 
-        private static bool MatchesFoodOrLobby(ContentId roomContent, ContentId wanted, bool isCommercialFood)
+        private static Room[] ToArray(IReadOnlyList<Room> rooms)
         {
-            if (roomContent == wanted) return true;
-            return isCommercialFood &&
-                (roomContent.Value.StartsWith("commercial:") || roomContent.Value.StartsWith("room:diner"));
+            if (rooms is Room[] roomArray) return roomArray;
+            var copy = new Room[rooms.Count];
+            for (var i = 0; i < rooms.Count; i++) copy[i] = rooms[i];
+            return copy;
         }
     }
 }

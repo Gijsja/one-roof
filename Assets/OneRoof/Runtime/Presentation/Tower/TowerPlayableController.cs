@@ -6,6 +6,7 @@ using OneRoof.Application.Prediction;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Commands;
 using OneRoof.Presentation.Overlays;
+using OneRoof.Presentation.Population;
 using OneRoof.UI.Inspectors;
 using OneRoof.UI.Modes;
 using OneRoof.UI.Prediction;
@@ -79,7 +80,7 @@ namespace OneRoof.Presentation.Tower
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
             _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
-            _room.Initialize(transform, _worldMat, _colorBlock); _resident.Initialize(transform);
+            _room.Initialize(transform, _worldMat, _colorBlock); _resident.ViewPool = Ensure<NpcViewPool>(); _resident.Initialize(transform);
             InitSubcomponents(); CreateWorldGeometry();
         }
 
@@ -265,7 +266,7 @@ namespace OneRoof.Presentation.Tower
         private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection()); }
         private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
         private void ClearWorldGeometry() { _structure.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
-        private void RenderVisualSnapshot() { var projection = _sim.Projection(); SyncPresenterGeometry(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); }
+        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); }
         private static Material CreateWorldMaterial() => new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default") ?? throw new MissingReferenceException("No unlit shader found."));
     }
 }

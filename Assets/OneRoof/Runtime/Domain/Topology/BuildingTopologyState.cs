@@ -38,6 +38,9 @@ namespace OneRoof.Domain.Topology
         private int _nextEntityId;
         private HierarchicalTransitGraph _cachedTransitGraph;
 
+        /// <summary>Changes whenever the room set or its topology changes.</summary>
+        public long RoomsVersion { get; private set; }
+
         public BuildingTopologyState(int startingEntityId = 1000)
         {
             _floorSlabs = new SortedDictionary<int, CellBounds>();
@@ -129,6 +132,7 @@ namespace OneRoof.Domain.Topology
                 }
             }
 
+            RoomsVersion++;
             InvalidateGraph();
         }
 
@@ -310,6 +314,7 @@ namespace OneRoof.Domain.Topology
 
             _roomsById[roomId] = room;
             _roomsByFloor[cmd.Floor].Add(room);
+            RoomsVersion++;
             _portalsById[portalId] = portal;
             if (!_portalsByFloor.ContainsKey(cmd.Floor))
             {
@@ -361,6 +366,7 @@ namespace OneRoof.Domain.Topology
                 floorRooms.Remove(room);
             }
 
+            RoomsVersion++;
             InvalidateGraph();
 
             var evt = new DomainEvent(AllocateId(), new ContentId("event:room_demolished"), tick, new[] { cmd.RoomId });
@@ -452,6 +458,7 @@ namespace OneRoof.Domain.Topology
                 affectedIds.Add(portalId);
             }
 
+            if (affectedIds.Count > 0) RoomsVersion++;
             InvalidateGraph();
 
             var evt = new DomainEvent(AllocateId(), new ContentId("event:elevator_shaft_added"), tick, affectedIds);
@@ -559,6 +566,7 @@ namespace OneRoof.Domain.Topology
                 affectedIds.Add(portalId);
             }
 
+            if (affectedIds.Count > 0) RoomsVersion++;
             InvalidateGraph();
 
             var evt = new DomainEvent(AllocateId(), new ContentId("event:stairwell_built"), tick, affectedIds);
