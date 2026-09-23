@@ -142,7 +142,7 @@ namespace OneRoof.Presentation.Tower
             else if (scrutiny) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             else if (footTraffic) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             else if (businessHealth) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            else if (utilities) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities); }
+            else if (utilities) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
             else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_dataOverlays.ElevatorWait);
             if (p.IsBuildMode && p.SelectedBuildTool == "transit:elevator_car") UpdatePlacementCard();
             else if (!p.IsBuildMode && _placementCard.IsOpen) _placementCard.Close();
@@ -159,6 +159,7 @@ namespace OneRoof.Presentation.Tower
             _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _room.EnsureRoomViews(topo);
             if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
+            if (_utilitiesNetworkLayer != null && _utilitiesNetworkLayer.IsVisible && _dataOverlays != null) _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, topo);
         }
 
         private void HandleKeyboard()
@@ -180,7 +181,7 @@ namespace OneRoof.Presentation.Tower
             if (_scrutinyPresenter.IsVisible) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             if (_footTrafficPresenter.IsVisible) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             if (_businessHealthPresenter.IsVisible) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            if (_utilitiesPresenter.IsVisible) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities); }
+            if (_utilitiesPresenter.IsVisible) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
