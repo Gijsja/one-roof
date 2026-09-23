@@ -14,7 +14,8 @@ namespace OneRoof.Domain.Transit
         InRoom,
         Walking,
         Queued,
-        Riding
+        Riding,
+        Outside
     }
 
     public readonly struct ResidentSpatialPosition
@@ -131,8 +132,10 @@ namespace OneRoof.Domain.Transit
                 {
                     tripId = exec.Trip.Id.Value,
                     personId = exec.Trip.PersonId.Value,
-                    originRoomId = exec.Trip.OriginRoomId.Value,
-                    destinationRoomId = exec.Trip.DestinationRoomId.Value,
+                    originRoomId = exec.Trip.Origin.IsOutside ? 0 : exec.Trip.Origin.RoomId.Value,
+                    destinationRoomId = exec.Trip.Destination.IsOutside ? 0 : exec.Trip.Destination.RoomId.Value,
+                    originLocationKind = (int)exec.Trip.Origin.Kind,
+                    destinationLocationKind = (int)exec.Trip.Destination.Kind,
                     purpose = (int)exec.Trip.Purpose,
                     departureTick = exec.Trip.DepartureTick.Value,
                     state = (int)exec.Trip.State,
@@ -156,10 +159,14 @@ namespace OneRoof.Domain.Transit
 
             foreach (var t in data)
             {
-                var originNode = topology?.TransitGraph?.GetPortalNodeForRoom(new EntityId(t.originRoomId));
-                var destNode = topology?.TransitGraph?.GetPortalNodeForRoom(new EntityId(t.destinationRoomId));
+                var origin = t.originLocationKind == (int)WorldLocationKind.Outside
+                    ? WorldLocation.Outside : WorldLocation.InRoom(new EntityId(t.originRoomId));
+                var destination = t.destinationLocationKind == (int)WorldLocationKind.Outside
+                    ? WorldLocation.Outside : WorldLocation.InRoom(new EntityId(t.destinationRoomId));
+                var originNode = topology?.TransitGraph?.GetNodeForLocation(origin);
+                var destNode = topology?.TransitGraph?.GetNodeForLocation(destination);
                 TransitRoute route = null;
-                if (originNode != null && destNode != null && t.originRoomId != t.destinationRoomId && planner != null)
+                if (originNode != null && destNode != null && !origin.Equals(destination) && planner != null)
                 {
                     route = planner.FindRoute(originNode.Id, destNode.Id);
                 }
@@ -167,8 +174,8 @@ namespace OneRoof.Domain.Transit
                 var trip = new TripRecord(
                     new EntityId(t.tripId),
                     new EntityId(t.personId),
-                    new EntityId(t.originRoomId),
-                    new EntityId(t.destinationRoomId),
+                    origin,
+                    destination,
                     (TripPurpose)t.purpose,
                     new Tick(t.departureTick),
                     route);
@@ -217,7 +224,7 @@ namespace OneRoof.Domain.Transit
 
                 if (person != null)
                 {
-                    person.UpdateLocation(trip.DestinationRoomId);
+                    person.UpdateLocation(trip.Destination);
                     person.UpdateActivity(PurposeToActivity(trip.Purpose));
                     ReconcileArrivalActivity(person, currentTick);
                 }
@@ -250,7 +257,7 @@ namespace OneRoof.Domain.Transit
 
                 if (person != null)
                 {
-                    person.UpdateLocation(trip.DestinationRoomId);
+                    person.UpdateLocation(trip.Destination);
                     person.UpdateActivity(PurposeToActivity(trip.Purpose));
                     ReconcileArrivalActivity(person, currentTick);
                 }
@@ -411,7 +418,7 @@ namespace OneRoof.Domain.Transit
 
             if (person != null)
             {
-                person.UpdateLocation(trip.DestinationRoomId);
+                person.UpdateLocation(trip.Destination);
                 person.UpdateActivity(PurposeToActivity(trip.Purpose));
                 ReconcileArrivalActivity(person, tick);
             }
@@ -431,13 +438,13 @@ namespace OneRoof.Domain.Transit
             if (person == null) return;
             var activeLabel = person.Schedule.ActiveLabelAt(tick);
             if (activeLabel == DailySchedule.LabelSleep &&
-                person.CurrentRoomId.Equals(person.HomeRoomId) &&
+                person.CurrentLocation.Equals(WorldLocation.InRoom(person.HomeRoomId)) &&
                 person.CurrentActivity == ActivityKind.Idle)
             {
                 person.UpdateActivity(ActivityKind.Sleeping);
             }
             else if (activeLabel == DailySchedule.LabelWork &&
-                person.CurrentRoomId.Equals(person.WorkplaceRoomId) &&
+                person.CurrentLocation.Equals(person.WorkplaceLocation) &&
                 person.CurrentActivity == ActivityKind.Idle)
             {
                 person.UpdateActivity(ActivityKind.Working);
@@ -462,12 +469,18 @@ namespace OneRoof.Domain.Transit
                     execution.CurrentFloor,
                     execution.CurrentX,
                     ActivityKind.Commuting,
-                    execution.Trip.DestinationRoomId,
+                    execution.Trip.Destination.IsOutside ? (EntityId?)null : execution.Trip.Destination.RoomId,
                     phase);
             }
 
             if (population != null && population.TryGetPerson(personId, out var person))
             {
+                if (person.CurrentLocation.IsOutside && topology?.TransitGraph?.OutsideNode != null)
+                {
+                    var outside = topology.TransitGraph.OutsideNode;
+                    return new ResidentSpatialPosition(personId, outside.Floor, outside.Location.X,
+                        person.CurrentActivity, null, ResidentMovementPhase.Outside);
+                }
                 var roomId = person.CurrentRoomId.Value > 0 ? person.CurrentRoomId : person.HomeRoomId;
                 if (topology != null && topology.TryGetRoom(roomId, out var room))
                 {

@@ -21,7 +21,7 @@ namespace OneRoof.Presentation.Tower
         private bool _isDragging;
         private Vector2 _boundsX = new Vector2(-15f, 15f);
         private Vector2 _boundsY = new Vector2(-2f, 15f);
-        private Vector3 _defaultPosition = new Vector3(-1.6f, 3.5f, -10f);
+        private Vector3 _defaultPosition = new Vector3(0.2f, 3.5f, -10f);
         private float _defaultOrthoSize = 6.8f;
 
         public Camera Camera
@@ -99,8 +99,12 @@ namespace OneRoof.Presentation.Tower
             }
             ctrl.Camera = cam;
 
-            var defaultOrtho = Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
-            var defaultPos = new Vector3(-1.6f, centerY, -10f);
+            // The ground-start slab occupies only a small part of the five-floor
+            // overview. Frame its lobby beside the left dock until the tower grows.
+            var groundStart = floorCount == 1;
+            var defaultOrtho = groundStart ? 3.2f : Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
+            // At multi-floor scale leave a readable slice of city beyond the lobby.
+            var defaultPos = new Vector3(groundStart ? -4.6f : 0.2f, centerY, -10f);
             ctrl.SetOverviewDefaults(defaultPos, defaultOrtho);
             ctrl.SetBounds(-16f, 16f, TowerStructurePresenter.FloorY(0) - 2f, TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
 

@@ -15,6 +15,7 @@ namespace OneRoof.Domain.Transit
         private readonly Dictionary<EntityId, List<TransitEdge>> _outgoingEdges;
         private readonly Dictionary<CellCoordinate, TransitNode> _nodesByLocation;
         private readonly Dictionary<EntityId, List<TransitNode>> _portalNodesByRoomId;
+        private TransitNode _outsideNode;
 
         public HierarchicalTransitGraph(IEnumerable<TransitNode> nodes, IEnumerable<TransitEdge> edges)
         {
@@ -33,6 +34,7 @@ namespace OneRoof.Domain.Transit
                     _nodesByLocation[node.Location] = node;
                     _outgoingEdges[node.Id] = new List<TransitEdge>();
                     nodeList.Add(node);
+                    if (node.Type == TransitNodeType.Outside) _outsideNode = node;
 
                     if (node.RoomId.HasValue)
                     {
@@ -98,6 +100,11 @@ namespace OneRoof.Domain.Transit
             return null;
         }
 
+        public TransitNode GetNodeForLocation(WorldLocation location) =>
+            location.IsOutside ? _outsideNode : GetPortalNodeForRoom(location.RoomId);
+
+        public TransitNode OutsideNode => _outsideNode;
+
         public static HierarchicalTransitGraph FromBuildingTopology(BuildingTopology topology)
         {
             if (topology == null)
@@ -154,6 +161,31 @@ namespace OneRoof.Domain.Transit
                         edges.Add(new TransitEdge(b.Id, a.Id, walkDistance, TransitMode.Walk));
                     }
                 }
+            }
+
+            // The street edge is attached only to the ground-floor lobby entrance.
+            // No floor-local shortcut can bypass the lobby boundary.
+            foreach (var floor in topology.Floors)
+            {
+                if (floor.FloorLevel != 0) continue;
+                foreach (var room in floor.Rooms)
+                {
+                    if (!room.ContentType.Value.Contains("lobby")) continue;
+                    TransitNode entrance = null;
+                    foreach (var node in nodes)
+                        if (node.RoomId.HasValue && node.RoomId.Value.Equals(room.Id) &&
+                            (entrance == null || node.Location.X > entrance.Location.X)) entrance = node;
+                    if (entrance == null) continue;
+                    var outsideX = Math.Max(room.Bounds.MaxX + 4, entrance.Location.X + 2);
+                    var outside = new TransitNode(new EntityId(nextNodeId++), TransitNodeType.Outside,
+                        new CellCoordinate(outsideX, 0));
+                    nodes.Add(outside);
+                    var distance = outsideX - entrance.Location.X;
+                    edges.Add(new TransitEdge(outside.Id, entrance.Id, distance, TransitMode.Walk));
+                    edges.Add(new TransitEdge(entrance.Id, outside.Id, distance, TransitMode.Walk));
+                    break;
+                }
+                break;
             }
 
             // 3. Connect vertical elevator shaft stops across floors

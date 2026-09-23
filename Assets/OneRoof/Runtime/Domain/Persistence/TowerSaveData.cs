@@ -159,7 +159,9 @@ namespace OneRoof.Domain.Persistence
         public int householdId;
         public int homeRoomId;
         public int workplaceRoomId;
+        public int workplaceLocationKind;
         public int currentRoomId;
+        public int currentLocationKind;
         public int currentActivity;
         public int trait;
         public int[] personalityFacets;
@@ -217,6 +219,8 @@ namespace OneRoof.Domain.Persistence
         public int personId;
         public int originRoomId;
         public int destinationRoomId;
+        public int originLocationKind;
+        public int destinationLocationKind;
         public int purpose;
         public long departureTick;
         public int state;

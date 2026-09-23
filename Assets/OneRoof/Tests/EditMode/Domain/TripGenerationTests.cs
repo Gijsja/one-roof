@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
 using OneRoof.Domain.Time;
@@ -12,6 +13,78 @@ namespace OneRoof.Domain.Tests.EditMode
 {
     public sealed class TripGenerationTests
     {
+        [Test]
+        public void OutsideRouteCrossesTheGroundLobbyEntrance()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var graph = topology.TransitGraph;
+            var outside = graph.OutsideNode;
+            Assert.That(outside, Is.Not.Null);
+            Assert.That(outside.Type, Is.EqualTo(TransitNodeType.Outside));
+
+            var home = FiftyResidentFixture.Create().Persons[0].HomeRoomId;
+            var route = new TransitRoutePlanner(graph).FindRoute(outside.Id, graph.GetPortalNodeForRoom(home).Id);
+            Assert.That(route, Is.Not.Null);
+            Assert.That(route.Legs.Count, Is.GreaterThan(0));
+            Assert.That(route.Legs[0].FromNodeId, Is.EqualTo(outside.Id));
+            Assert.That(graph.GetOutgoingEdges(outside.Id).Count, Is.EqualTo(1), "The street edge must enter through one lobby door.");
+        }
+
+        [Test]
+        public void MoveInStartsOutsideAndArrivesAtHome()
+        {
+            var sim = OneRoof.Domain.TowerSimulation.CreateStandardFiveFloor();
+            var person = sim.Population.Persons[0];
+            person.UpdateLocation(WorldLocation.Outside);
+            var trip = sim.TripGenerator.CreateMoveInTrip(person, sim.Clock.CurrentTick);
+            Assert.That(trip.Origin.IsOutside, Is.True);
+            Assert.That(trip.Destination.RoomId, Is.EqualTo(person.HomeRoomId));
+            sim.Transit.SubmitTrip(trip, sim.Topology, sim.Clock.CurrentTick, sim.Population);
+            for (var i = 1; i <= 100 && sim.Transit.IsPersonTravelling(person.Id); i++)
+                sim.Transit.Advance(new Tick(i), sim.Topology, sim.ElevatorBank, sim.Population);
+            Assert.That(sim.Transit.IsPersonTravelling(person.Id), Is.False);
+            Assert.That(person.CurrentLocation, Is.EqualTo(WorldLocation.InRoom(person.HomeRoomId)));
+        }
+
+        [Test]
+        public void ExternalWorkTripRoutesOutThroughLobby()
+        {
+            var sim = OneRoof.Domain.TowerSimulation.CreateStandardFiveFloor();
+            var sample = sim.Population.Persons[0];
+            var worker = new PersonRecord(new EntityId(90001), new EntityId(90002), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            var population = new PopulationState(new[] { worker }, null);
+            TripRecord workTrip = null;
+            var workTick = 0;
+            for (var tick = 1; tick < DailySchedule.TicksPerDay; tick++)
+            {
+                var trips = sim.TripGenerator.GenerateTripsForTick(new Tick(tick - 1), new Tick(tick), population);
+                if (trips.Count == 0 || trips[0].Purpose != TripPurpose.Work) continue;
+                workTrip = trips[0];
+                workTick = tick;
+                break;
+            }
+            Assert.That(workTrip, Is.Not.Null);
+            Assert.That(workTrip.Destination.IsOutside, Is.True);
+            Assert.That(workTrip.PlannedRoute.DestinationNodeId, Is.EqualTo(sim.Topology.TransitGraph.OutsideNode.Id));
+            sim.Transit.SubmitTrip(workTrip, sim.Topology, new Tick(workTick), population);
+            for (var tick = workTick + 1; tick < workTick + 300 && sim.Transit.IsPersonTravelling(worker.Id); tick++)
+                sim.Transit.Advance(new Tick(tick), sim.Topology, sim.ElevatorBank, population);
+            Assert.That(worker.CurrentLocation.IsOutside, Is.True);
+
+            TripRecord homeTrip = null;
+            for (var tick = workTick + 1; tick <= DailySchedule.TicksPerDay; tick++)
+            {
+                if (worker.Schedule.ActiveLabelAt(new Tick(tick)) != DailySchedule.LabelSleep ||
+                    worker.Schedule.ActiveLabelAt(new Tick(tick - 1)) == DailySchedule.LabelSleep) continue;
+                var trips = sim.TripGenerator.GenerateTripsForTick(new Tick(tick - 1), new Tick(tick), population);
+                if (trips.Count > 0) homeTrip = trips[0];
+                break;
+            }
+            Assert.That(homeTrip, Is.Not.Null);
+            Assert.That(homeTrip.Origin.IsOutside, Is.True);
+            Assert.That(homeTrip.Destination.RoomId, Is.EqualTo(worker.HomeRoomId));
+        }
         // ── Morning commute — core acceptance criterion ────────────────────────
 
         [Test]

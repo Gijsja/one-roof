@@ -30,7 +30,8 @@ namespace OneRoof.Application.Inspectors
                 $"Activity: {person.Activity}",
                 $"Household: #{person.HouseholdId}",
                 $"Home: room #{person.HomeRoomId}",
-                $"Workplace: room #{person.WorkplaceRoomId}",
+                person.WorksOutside ? "Workplace: Outside" : $"Workplace: room #{person.WorkplaceRoomId}",
+                person.IsOutside ? "Current location: Outside" : "Current location: tower",
                 person.Role == SpecialistRole.None
                     ? (person.IsTraining ? $"Training: {person.TrainingRole} ({person.TrainingProgress:P0})" : "Specialist role: none yet")
                     : $"Specialist role: {person.Role}"

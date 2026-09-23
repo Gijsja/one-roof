@@ -1,5 +1,6 @@
 using System;
 using OneRoof.Application.Prediction;
+using OneRoof.UI;
 using UnityEngine;
 
 namespace OneRoof.UI.Prediction
@@ -60,10 +61,11 @@ namespace OneRoof.UI.Prediction
 
             EnsureStyles();
 
-            var cardRect = new Rect(Screen.width - 360, Screen.height - 340, 340, 260);
-            GUILayout.BeginArea(cardRect, GUI.skin.window);
+            var cardRect = new Rect(Screen.width - 376, Screen.height - 322, 360, 306);
+            GUILayout.BeginArea(cardRect, StewardTheme.Panel);
 
-            GUILayout.Label($"PREVIEW: {_currentProjection.ItemName}", _headerStyle);
+            GUILayout.Label("BUILD  /  IMPACT PREVIEW", StewardTheme.Label(10, StewardTheme.Mint, true));
+            GUILayout.Label(_currentProjection.ItemName, _headerStyle);
             GUILayout.Label($"Cost: ${_currentProjection.Cost}  •  Status: {(_currentProjection.IsValid ? "Valid" : "Blocked")}");
             GUILayout.Space(6);
 
@@ -84,13 +86,13 @@ namespace OneRoof.UI.Prediction
                 GUILayout.Label(_currentProjection.ConfidenceLabel, _confidenceStyle);
                 GUILayout.Space(6);
 
-                if (GUILayout.Button("Confirm Build", _confirmButtonStyle, GUILayout.Height(30)))
+                if (GUILayout.Button("CONFIRM BUILD", _confirmButtonStyle, GUILayout.Height(30)))
                 {
                     Confirm();
                 }
             }
 
-            if (GUILayout.Button("Cancel Preview", GUILayout.Height(22)))
+            if (GUILayout.Button("CANCEL", StewardTheme.Button, GUILayout.Height(25)))
             {
                 Close();
             }
@@ -105,12 +107,7 @@ namespace OneRoof.UI.Prediction
                 return;
             }
 
-            _headerStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.25f, 0.85f, 1f) }
-            };
+            _headerStyle = StewardTheme.Label(16, StewardTheme.Text, true);
 
             _metricStyle = new GUIStyle(GUI.skin.label)
             {
@@ -133,12 +130,7 @@ namespace OneRoof.UI.Prediction
                 normal = { textColor = new Color(0.7f, 0.85f, 0.95f) }
             };
 
-            _confirmButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.2f, 0.9f, 0.6f) }
-            };
+            _confirmButtonStyle = StewardTheme.ActiveButton;
         }
     }
 }

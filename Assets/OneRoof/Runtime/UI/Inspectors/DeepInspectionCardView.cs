@@ -1,4 +1,5 @@
 using OneRoof.Application.Inspectors;
+using OneRoof.UI;
 using UnityEngine;
 
 namespace OneRoof.UI.Inspectors
@@ -26,25 +27,28 @@ namespace OneRoof.UI.Inspectors
         {
             if (!IsOpen || _currentProjection == null) return;
             EnsureStyles();
-            GUILayout.BeginArea(new Rect(Screen.width - 360, 80, 340, 360), GUI.skin.window);
+            GUILayout.BeginArea(new Rect(Screen.width - 376, 16, 360, 408), StewardTheme.Panel);
+            GUILayout.Label("INSPECT  /  CAUSE CHAIN", StewardTheme.Label(10, StewardTheme.Mint, true));
             GUILayout.Label(_currentProjection.Title, _headerStyle);
-            GUILayout.Space(6);
-            GUILayout.Label("CURRENT STATE", _labelStyle);
+            GUILayout.Space(4);
+            GUILayout.Label("CURRENT STATE", StewardTheme.Label(10, StewardTheme.Muted, true));
             GUILayout.Label(_currentProjection.Symptom, _labelStyle);
-            GUILayout.Space(6);
-            GUILayout.Label("DETAILS", _labelStyle);
+            GUILayout.Space(5);
+            StewardTheme.Rule(332);
+            GUILayout.Label("CONTRIBUTING FACTORS", StewardTheme.Label(10, StewardTheme.Muted, true));
             foreach (var detail in _currentProjection.Details) GUILayout.Label($"• {detail}", _labelStyle);
             GUILayout.FlexibleSpace();
+            GUILayout.Label("SYSTEM RESPONSE", StewardTheme.Label(10, StewardTheme.Mint, true));
             GUILayout.Label(_currentProjection.SuggestedResponse, _labelStyle);
-            if (GUILayout.Button("Close", GUILayout.Height(24))) Close();
+            if (GUILayout.Button("CLOSE", StewardTheme.Button, GUILayout.Height(28))) Close();
             GUILayout.EndArea();
         }
 
         private void EnsureStyles()
         {
             if (_headerStyle != null) return;
-            _headerStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, .85f, .2f) } };
-            _labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true, normal = { textColor = new Color(.88f, .92f, .98f) } };
+            _headerStyle = StewardTheme.Label(16, StewardTheme.Text, true);
+            _labelStyle = StewardTheme.Label(12, StewardTheme.Text);
         }
     }
 }

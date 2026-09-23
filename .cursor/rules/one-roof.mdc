@@ -4,6 +4,18 @@ globs: *
 alwaysApply: true
 ---
 
-Always read and strictly follow [AGENTS.md](mdc:AGENTS.md).
-Follow required reading order: Docs/01_GAME_VISION.md -> Docs/02_ARCHITECTURE.md -> Docs/03_DATA_CONTRACTS.md -> Planning/BACKLOG.md -> Handoffs/Active/.
-Respect layer boundaries: Domain (pure C#) -> Application (projections, noEngineReferences) -> Presentation (Unity views, pooling).
+Always read and strictly follow [AGENTS.md](mdc:AGENTS.md) and [CONTEXT.md](mdc:CONTEXT.md).
+
+## North Star
+Achieve the **Beta Boundary (City Status)**: 30 floors, 300 persistent residents, physical utilities, 4 factions, policy decrees, 8 data overlays, 6 adaptive crisis chains, and sustaining City Status for 30 in-game days under strict performance budgets (<4 ms tick, 60 FPS presentation).
+
+## Reading Order
+Docs/01_GAME_VISION.md -> Docs/02_ARCHITECTURE.md -> Docs/03_DATA_CONTRACTS.md -> Docs/04_UX_CONTRACT.md -> Docs/09_CAUSE_CHAIN_INSPECTOR.md -> Docs/12_ECONOMY.md -> Planning/BACKLOG.md -> Handoffs/Active/
+
+## Core Invariants
+- **Domain Purity**: `OneRoof.Domain` is pure C# (`noEngineReferences: true`, 0 UnityEngine references).
+- **Projections Only**: Presentation and UI read immutable snapshots/projections; UI dispatches commands, never directly mutates simulation records.
+- **Cause Chain**: Symptom → overlay → inspector cause → systems response → measured feedback. No direct resident micro-management.
+- **Validation**: Headless Unity 6000.3.24f1 batchmode runs in isolated worktrees. Never pass `-quit` with `-runTests`. See Docs/10_DEVELOPMENT_WORKFLOW.md.
+- **Handoff Hygiene**: Maintain exactly one active handoff in `Handoffs/Active/`. Move completed handoffs to `Handoffs/Archive/`. Always commit paired `.meta` files.
+

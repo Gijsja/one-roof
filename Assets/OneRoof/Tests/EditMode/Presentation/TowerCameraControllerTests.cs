@@ -7,6 +7,22 @@ namespace OneRoof.Presentation.Tests.EditMode
     public sealed class TowerCameraControllerTests
     {
         [Test]
+        public void EnsureTowerCamera_GroundStartFramesTheSingleFloor()
+        {
+            Camera cam = null;
+            try
+            {
+                cam = TowerCameraController.EnsureTowerCamera(1, null, resetView: true);
+                Assert.That(cam.orthographicSize, Is.EqualTo(3.2f).Within(0.001f));
+                Assert.That(cam.transform.position.x, Is.EqualTo(-4.6f).Within(0.001f));
+            }
+            finally
+            {
+                if (cam != null) Object.DestroyImmediate(cam.gameObject);
+            }
+        }
+
+        [Test]
         public void CameraController_PanBy_ClampsWithinConfiguredBounds()
         {
             var go = new GameObject("TestCam");
@@ -146,7 +162,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                 // Reset view (e.g. simulation reset or focus)
                 TowerCameraController.EnsureTowerCamera(5, null, resetView: true);
 
-                Assert.That(cam.transform.position.x, Is.EqualTo(-1.6f).Within(0.001f));
+                Assert.That(cam.transform.position.x, Is.EqualTo(0.2f).Within(0.001f));
                 Assert.That(cam.orthographicSize, Is.EqualTo(Mathf.Max(6.8f, 6 * 1.15f)).Within(0.001f));
             }
             finally

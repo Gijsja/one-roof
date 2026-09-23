@@ -7,6 +7,14 @@ namespace OneRoof.UI.Tests.EditMode
 {
     public sealed class ModeShellBarControllerTests
     {
+        [Test]
+        public void BuildPaletteRect_LeavesTheDashboardClearAtEditorGameViewHeight()
+        {
+            var palette = ModeShellBarController.BuildPaletteRect(718);
+            Assert.That(palette.yMin, Is.GreaterThanOrEqualTo(292f));
+            Assert.That(palette.yMax, Is.LessThanOrEqualTo(610f));
+        }
+
         private GameObject _holder;
         private ModeShellBarController _controller;
 
@@ -103,7 +111,7 @@ namespace OneRoof.UI.Tests.EditMode
             var text = ModeShellBarController.BuildModeStatusText(projection);
 
             Assert.That(text, Does.Contain("MODE: MANAGE"));
-            Assert.That(text, Does.Contain("OR-902"));
+            Assert.That(text, Does.Contain("Steward policies are coming soon"));
         }
 
         [Test]
@@ -121,7 +129,7 @@ namespace OneRoof.UI.Tests.EditMode
             var projection = new ModeShellProjection(
                 InteractionMode.Data, InteractionMode.Inspect, null, null, null, null, null, "overlay:utilities");
 
-            Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Overlay: overlay:utilities"));
+            Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Overlay: UTILITIES"));
         }
     }
 }

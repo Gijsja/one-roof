@@ -9,7 +9,8 @@ namespace OneRoof.Application.Transit
         Riding,
         Arrived,
         InRoom,
-        Walking
+        Walking,
+        Outside
     }
 
     public readonly struct TransitResidentProjection

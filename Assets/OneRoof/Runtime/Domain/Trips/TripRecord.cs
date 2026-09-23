@@ -23,16 +23,20 @@ namespace OneRoof.Domain.Trips
             TripPurpose purpose,
             Tick departureTick,
             TransitRoute plannedRoute)
+            : this(id, personId, WorldLocation.InRoom(originRoomId), WorldLocation.InRoom(destinationRoomId), purpose, departureTick, plannedRoute)
+        {
+        }
+
+        public TripRecord(EntityId id, EntityId personId, WorldLocation origin, WorldLocation destination,
+            TripPurpose purpose, Tick departureTick, TransitRoute plannedRoute)
         {
             id.EnsureValid();
             personId.EnsureValid();
-            originRoomId.EnsureValid();
-            destinationRoomId.EnsureValid();
 
             Id = id;
             PersonId = personId;
-            OriginRoomId = originRoomId;
-            DestinationRoomId = destinationRoomId;
+            Origin = origin;
+            Destination = destination;
             Purpose = purpose;
             DepartureTick = departureTick;
             PlannedRoute = plannedRoute; // nullable — null when origin == destination or no route found
@@ -49,12 +53,14 @@ namespace OneRoof.Domain.Trips
 
         // ── Spatial ───────────────────────────────────────────────────────────
 
-        public EntityId OriginRoomId { get; }
+        public WorldLocation Origin { get; }
+        public EntityId OriginRoomId => Origin.IsOutside ? throw new InvalidOperationException("Outside has no room ID.") : Origin.RoomId;
 
-        public EntityId DestinationRoomId { get; }
+        public WorldLocation Destination { get; }
+        public EntityId DestinationRoomId => Destination.IsOutside ? throw new InvalidOperationException("Outside has no room ID.") : Destination.RoomId;
 
         /// <summary>True when origin and destination rooms are the same (no travel needed).</summary>
-        public bool IsLocal => OriginRoomId.Equals(DestinationRoomId);
+        public bool IsLocal => Origin.Equals(Destination);
 
         // ── Intent & timing ───────────────────────────────────────────────────
 
@@ -137,6 +143,6 @@ namespace OneRoof.Domain.Trips
         }
 
         public override string ToString() =>
-            $"Trip {Id} [{State}] Person {PersonId}: {OriginRoomId} → {DestinationRoomId} ({Purpose}) @{DepartureTick}";
+            $"Trip {Id} [{State}] Person {PersonId}: {Origin} → {Destination} ({Purpose}) @{DepartureTick}";
     }
 }

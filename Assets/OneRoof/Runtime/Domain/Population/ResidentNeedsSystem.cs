@@ -76,7 +76,7 @@ namespace OneRoof.Domain.Population
                     // 24/7: overnight hygiene must not death-spiral across repeated
                     // day cycles. Residents at home freshen up while asleep; residents
                     // sleeping away from home keep decaying.
-                    if (person.CurrentRoomId.Equals(person.HomeRoomId))
+                    if (!person.CurrentLocation.IsOutside && person.CurrentRoomId.Equals(person.HomeRoomId))
                     {
                         hygiene += HomeHygieneRecoveryRate * 0.2f;
                     }
@@ -120,7 +120,7 @@ namespace OneRoof.Domain.Population
                 case ActivityKind.Idle:
                 default:
                     // When idle in home apartment, personal hygiene and rest can recover if low
-                    var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
+                    var isAtHome = !person.CurrentLocation.IsOutside && person.CurrentRoomId.Equals(person.HomeRoomId);
                     if (isAtHome)
                     {
                         if (hygiene < 0.9f)

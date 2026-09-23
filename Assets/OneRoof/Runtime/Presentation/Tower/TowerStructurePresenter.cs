@@ -44,6 +44,9 @@ namespace OneRoof.Presentation.Tower
                 _renderedFloorCount++;
             }
 
+            AdoptSingle("Street Edge");
+            AdoptSingle("Street Horizon");
+
         }
 
         public void EnsureFloorViews(TowerTopologyProjection topology)
@@ -138,7 +141,21 @@ namespace OneRoof.Presentation.Tower
                     ApplyFloorGeometry(pair.Key, pair.Value);
                     _appliedSlabs[pair.Key] = pair.Value;
                 }
+                if (topology.TryGetFloorSlab(0, out var ground)) EnsureStreetEdge(ground);
             }
+        }
+
+        private void EnsureStreetEdge(CellBounds ground)
+        {
+            var right = -2.4f + (ground.MaxX + 1) * 0.5f;
+            if (_parent.Find("Street Edge") == null)
+                CreateQuad("Street Edge", new Color(0.18f, 0.23f, 0.29f), Vector3.zero, Vector2.one);
+            if (_parent.Find("Street Horizon") == null)
+                CreateQuad("Street Horizon", new Color(0.38f, 0.48f, 0.55f), Vector3.zero, Vector2.one);
+            UpdateQuad("Street Edge", new Vector3(right + 1.15f, FloorY(0) - 0.72f, 0.4f),
+                new Vector2(2.3f, 0.22f), new Color(0.18f, 0.23f, 0.29f));
+            UpdateQuad("Street Horizon", new Vector3(right + 1.15f, FloorY(0) - 0.86f, 0.3f),
+                new Vector2(2.3f, 0.04f), new Color(0.38f, 0.48f, 0.55f));
         }
 
         private void DestroyNamedView(string name)

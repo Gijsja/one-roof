@@ -1,6 +1,7 @@
 using System;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Modes.Commands;
+using OneRoof.UI;
 using UnityEngine;
 
 namespace OneRoof.UI.Modes
@@ -22,6 +23,7 @@ namespace OneRoof.UI.Modes
         private GUIStyle _toolButtonStyle;
         private GUIStyle _activeToolButtonStyle;
         private GUIStyle _demolishActiveButtonStyle;
+        private Vector2 _paletteScroll;
 
         public ModeShellSession Session
         {
@@ -35,12 +37,16 @@ namespace OneRoof.UI.Modes
 
         // IMGUI uses top-origin coordinates. Placement uses these same bounds to
         // exclude visible controls before mapping a pointer to tower cells.
-        public static Rect BuildPaletteRect(int screenHeight) => new Rect(20, screenHeight - 360, 620, 288);
+        public static Rect BuildPaletteRect(int screenHeight)
+        {
+            var height = Mathf.Clamp(screenHeight - 420f, 180f, 300f);
+            return new Rect(16, screenHeight - 116f - height, 620, height);
+        }
 
-        public static Rect ModeBarRect(int screenHeight) => new Rect(20, screenHeight - 70, 520, 50);
+        public static Rect ModeBarRect(int screenHeight) => new Rect(16, screenHeight - 68, 620, 52);
 
         public static Rect ContextRect(int screenHeight, bool isBuildMode) =>
-            new Rect(20, screenHeight - (isBuildMode ? 198 : 105), isBuildMode ? 620 : 520, 32);
+            new Rect(16, screenHeight - 108, 620, 32);
 
         private void Update()
         {
@@ -134,16 +140,17 @@ namespace OneRoof.UI.Modes
             {
                 DrawBuildPalette(projection);
             }
+            if (projection.IsDataMode) DrawDataPalette(projection);
 
             var barRect = ModeBarRect(Screen.height);
 
-            GUILayout.BeginArea(barRect, GUI.skin.box);
+            GUILayout.BeginArea(barRect, StewardTheme.Panel);
             GUILayout.BeginHorizontal();
 
-            DrawModeButton("Inspect [I]", InteractionMode.Inspect, projection.IsInspectMode);
-            DrawModeButton("Build [B]", InteractionMode.Build, projection.IsBuildMode);
-            DrawModeButton("Data [D]", InteractionMode.Data, projection.IsDataMode);
-            DrawModeButton("Manage [M]", InteractionMode.Manage, projection.IsManageMode);
+            DrawModeButton("INSPECT  2", InteractionMode.Inspect, projection.IsInspectMode);
+            DrawModeButton("BUILD  1", InteractionMode.Build, projection.IsBuildMode);
+            DrawModeButton("DATA  3", InteractionMode.Data, projection.IsDataMode);
+            DrawModeButton("MANAGE  4", InteractionMode.Manage, projection.IsManageMode);
 
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
@@ -154,7 +161,12 @@ namespace OneRoof.UI.Modes
         private void DrawBuildPalette(ModeShellProjection projection)
         {
             var paletteRect = BuildPaletteRect(Screen.height);
-            GUILayout.BeginArea(paletteRect, GUI.skin.box);
+            GUILayout.BeginArea(paletteRect, StewardTheme.Panel);
+            GUILayout.Label("BUILD THE TOWER", StewardTheme.Label(15, StewardTheme.Text, true));
+            GUILayout.Label("Choose a system, then place it in the cutaway.", StewardTheme.Label(11, StewardTheme.Muted));
+            _paletteScroll = GUILayout.BeginScrollView(_paletteScroll, false, true,
+                GUILayout.Height(paletteRect.height - 70f));
+            GUILayout.Label("SPACE & USE", StewardTheme.Label(10, StewardTheme.Mint, true));
 
             // Row 1: Zoning & Structure
             GUILayout.BeginHorizontal();
@@ -165,6 +177,7 @@ namespace OneRoof.UI.Modes
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
+            GUILayout.Label("SERVICES", StewardTheme.Label(10, StewardTheme.Mint, true));
 
             // Row 2: Services
             GUILayout.BeginHorizontal();
@@ -175,6 +188,7 @@ namespace OneRoof.UI.Modes
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
+            GUILayout.Label("POWER", StewardTheme.Label(10, StewardTheme.Mint, true));
 
             // Row 3: Physical utilities
             GUILayout.BeginHorizontal();
@@ -185,6 +199,7 @@ namespace OneRoof.UI.Modes
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
+            GUILayout.Label("WATER & WASTE", StewardTheme.Label(10, StewardTheme.Mint, true));
 
             // Row 4: Water & waste utilities
             GUILayout.BeginHorizontal();
@@ -194,15 +209,12 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Waste Chute\n$800 (2c)", "utility:waste_chute", projection.SelectedBuildTool == "utility:waste_chute");
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(2);
-
             // Row 5: Ground collection
             GUILayout.BeginHorizontal();
             DrawToolButton("Waste Collection\n$1.6k (4c)", "utility:waste_collection", projection.SelectedBuildTool == "utility:waste_collection");
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(2);
-
+            GUILayout.Label("MOVEMENT & REMOVAL", StewardTheme.Label(10, StewardTheme.Mint, true));
             // Row 6: Transit & Demolition
             GUILayout.BeginHorizontal();
             DrawToolButton("Stairs\n$500 (2c)", "transit:stairwell", projection.SelectedBuildTool == "transit:stairwell");
@@ -211,7 +223,33 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Bulldoze\nReclaim 50%", "demolish:room", projection.SelectedBuildTool == "demolish:room", isDestructive: true);
             GUILayout.EndHorizontal();
 
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void DrawDataPalette(ModeShellProjection projection)
+        {
+            GUILayout.BeginArea(new Rect(16, Screen.height - 282, 620, 166), StewardTheme.Panel);
+            GUILayout.Label("READ THE TOWER", StewardTheme.Label(15, StewardTheme.Text, true));
+            GUILayout.Label("Choose a pattern, then select a floor or resident to trace its cause.", StewardTheme.Label(11, StewardTheme.Muted));
+            GUILayout.BeginHorizontal();
+            DrawOverlay("ELEVATOR WAIT", "overlay:elevator_wait", projection.ActiveOverlayId);
+            DrawOverlay("FOOT TRAFFIC", "overlay:foot_traffic", projection.ActiveOverlayId);
+            DrawOverlay("POPULATION", "overlay:population", projection.ActiveOverlayId);
+            DrawOverlay("SATISFACTION", "overlay:satisfaction", projection.ActiveOverlayId);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            DrawOverlay("SCRUTINY", "overlay:scrutiny", projection.ActiveOverlayId);
+            DrawOverlay("BUSINESS", "overlay:business_health", projection.ActiveOverlayId);
+            DrawOverlay("UTILITIES", "overlay:utilities", projection.ActiveOverlayId);
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        private void DrawOverlay(string label, string id, string active)
+        {
+            if (GUILayout.Button(label, id == active ? _activeButtonStyle : _normalButtonStyle,
+                    GUILayout.Width(144), GUILayout.Height(32))) Session.SetActiveOverlay(id);
         }
 
         private void DrawToolButton(string label, string toolId, bool isSelected, bool isDestructive = false)
@@ -219,7 +257,7 @@ namespace OneRoof.UI.Modes
             var style = isSelected
                 ? (isDestructive ? _demolishActiveButtonStyle : _activeToolButtonStyle)
                 : _toolButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(38), GUILayout.Width(144)))
+            if (GUILayout.Button(label, style, GUILayout.Height(38), GUILayout.Width(132)))
             {
                 if (isSelected)
                 {
@@ -235,7 +273,7 @@ namespace OneRoof.UI.Modes
         private void DrawModeButton(string label, InteractionMode mode, bool isActive)
         {
             var style = isActive ? _activeButtonStyle : _normalButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(36), GUILayout.Width(118)))
+            if (GUILayout.Button(label, style, GUILayout.Height(32), GUILayout.Width(144)))
             {
                 if (mode == InteractionMode.Build)
                 {
@@ -274,16 +312,16 @@ namespace OneRoof.UI.Modes
             {
                 if (!string.IsNullOrEmpty(projection.SelectedBuildTool))
                 {
-                    statusText += $"  |  Tool: {projection.SelectedBuildTool}  (Left-click grid to place, Right-click to cancel)";
+                    statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  Click to place · Right-click to cancel";
                 }
                 else
                 {
-                    statusText += "  |  Select a tool from the Build Palette below";
+                    statusText += "  /  Choose a tool from the palette";
                 }
             }
             else if (projection.IsDataMode && !string.IsNullOrEmpty(projection.ActiveOverlayId))
             {
-                statusText += $"  |  Overlay: {projection.ActiveOverlayId}";
+                statusText += $"  /  Overlay: {ReadableName(projection.ActiveOverlayId)}";
             }
             else if (projection.IsInspectMode && projection.SelectedEntityId.HasValue)
             {
@@ -291,10 +329,17 @@ namespace OneRoof.UI.Modes
             }
             else if (projection.IsManageMode)
             {
-                statusText += "  |  Steward policies (rent caps, transit subsidies, quiet hours, commercial tax) arrive with OR-902; treasury and leasing run automatically";
+                statusText += "  /  Treasury and leasing update automatically. Steward policies are coming soon.";
             }
 
             return statusText;
+        }
+
+        private static string ReadableName(string id)
+        {
+            var separator = id.LastIndexOf(':');
+            var name = separator >= 0 ? id.Substring(separator + 1) : id;
+            return name.Replace('_', ' ').ToUpperInvariant();
         }
 
         private void EnsureStyles()
@@ -304,56 +349,13 @@ namespace OneRoof.UI.Modes
                 return;
             }
 
-            _normalButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Normal
-            };
-
-            _activeButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.2f, 0.9f, 0.6f) }
-            };
-
-            _bannerStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 14,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
-            };
-
-            _contextStyle = new GUIStyle(GUI.skin.box)
-            {
-                fontSize = 11,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = new Color(0.9f, 0.95f, 1f) }
-            };
-
-            _toolButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 10,
-                fontStyle = FontStyle.Normal,
-                alignment = TextAnchor.MiddleCenter
-            };
-
-            _activeToolButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 10,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(0.2f, 0.95f, 0.65f) }
-            };
-
-            _demolishActiveButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 10,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(1f, 0.45f, 0.25f) }
-            };
+            _normalButtonStyle = StewardTheme.Button;
+            _activeButtonStyle = StewardTheme.ActiveButton;
+            _bannerStyle = StewardTheme.Label(14, StewardTheme.Text, true);
+            _contextStyle = StewardTheme.Label(11, StewardTheme.Muted, true);
+            _toolButtonStyle = StewardTheme.Button;
+            _activeToolButtonStyle = StewardTheme.ActiveButton;
+            _demolishActiveButtonStyle = StewardTheme.WarningButton;
         }
     }
 }

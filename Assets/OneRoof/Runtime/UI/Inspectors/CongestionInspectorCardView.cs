@@ -2,6 +2,7 @@ using System;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Modes.Commands;
+using OneRoof.UI;
 using UnityEngine;
 
 namespace OneRoof.UI.Inspectors
@@ -67,36 +68,38 @@ namespace OneRoof.UI.Inspectors
 
             EnsureStyles();
 
-            var cardRect = new Rect(Screen.width - 360, 80, 340, 310);
-            GUILayout.BeginArea(cardRect, GUI.skin.window);
+            var cardRect = new Rect(Screen.width - 376, 16, 360, 370);
+            GUILayout.BeginArea(cardRect, StewardTheme.Panel);
+
+            GUILayout.Label("INSPECT  /  TRANSIT", StewardTheme.Label(10, StewardTheme.Mint, true));
 
             GUILayout.Label(_currentProjection.Title, _headerStyle);
             GUILayout.Space(6);
 
-            GUILayout.Label("SYMPTOM:", _symptomStyle);
-            GUILayout.Label(_currentProjection.SymptomDescription);
+            GUILayout.Label("SYMPTOM", _symptomStyle);
+            GUILayout.Label(_currentProjection.SymptomDescription, _causeStyle);
             GUILayout.Space(6);
 
-            GUILayout.Label("CONTRIBUTING CAUSES:", _symptomStyle);
+            GUILayout.Label("CONTRIBUTING CAUSES", _symptomStyle);
             for (var i = 0; i < _currentProjection.ContributingCauses.Count; i++)
             {
                 GUILayout.Label($"• {_currentProjection.ContributingCauses[i]}", _causeStyle);
             }
             GUILayout.Space(8);
 
-            GUILayout.Label("RECOMMENDED RESPONSE:", _symptomStyle);
-            GUILayout.Label(_currentProjection.SuggestedResponseAction);
+            GUILayout.Label("SYSTEM RESPONSE", _symptomStyle);
+            GUILayout.Label(_currentProjection.SuggestedResponseAction, _causeStyle);
             GUILayout.Space(8);
 
             if (_currentProjection.CanDirectRouteToBuild)
             {
-                if (GUILayout.Button("Open Build Mode (Add Capacity)", _actionButtonStyle, GUILayout.Height(34)))
+                if (GUILayout.Button("BUILD MORE CAPACITY", _actionButtonStyle, GUILayout.Height(34)))
                 {
                     ExecuteDirectResponse();
                 }
             }
 
-            if (GUILayout.Button("Close", GUILayout.Height(24)))
+            if (GUILayout.Button("CLOSE", StewardTheme.Button, GUILayout.Height(28)))
             {
                 Close();
             }
@@ -111,33 +114,10 @@ namespace OneRoof.UI.Inspectors
                 return;
             }
 
-            _headerStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(1f, 0.45f, 0.35f) }
-            };
-
-            _symptomStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 11,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.9f, 0.95f, 1f) }
-            };
-
-            _causeStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 11,
-                wordWrap = true,
-                normal = { textColor = new Color(0.85f, 0.88f, 0.92f) }
-            };
-
-            _actionButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.2f, 0.9f, 0.6f) }
-            };
+            _headerStyle = StewardTheme.Label(16, StewardTheme.Text, true);
+            _symptomStyle = StewardTheme.Label(10, StewardTheme.Muted, true);
+            _causeStyle = StewardTheme.Label(12, StewardTheme.Text);
+            _actionButtonStyle = StewardTheme.ActiveButton;
         }
     }
 }

@@ -71,11 +71,11 @@ namespace OneRoof.Application.Population
             if (hasActiveTrip)
             {
                 isInTransit = true;
-                currentRoomId = trip.OriginRoomId;
+                currentRoomId = trip.Origin.IsOutside ? person.HomeRoomId : trip.Origin.RoomId;
                 waitTicks = trip.WaitTicks;
-                destRoomId = trip.DestinationRoomId.Value;
+                destRoomId = trip.Destination.IsOutside ? (int?)null : trip.Destination.RoomId.Value;
 
-                if (_topology.TryGetRoom(trip.DestinationRoomId, out var destRoom))
+                if (!trip.Destination.IsOutside && _topology.TryGetRoom(trip.Destination.RoomId, out var destRoom))
                 {
                     destFloor = destRoom.Floor;
                 }

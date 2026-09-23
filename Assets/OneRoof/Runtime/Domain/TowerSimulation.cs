@@ -123,7 +123,12 @@ namespace OneRoof.Domain
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)
             {
-                Leasing.EvaluateLeasingDemand(Topology, Population, ElevatorBank, RandomStream, currentTick, ref _nextEntityId);
+                var arrivals = Leasing.EvaluateLeasingDemand(Topology, Population, ElevatorBank, RandomStream, currentTick, ref _nextEntityId);
+                foreach (var person in arrivals)
+                {
+                    var moveIn = TripGenerator.CreateMoveInTrip(person, currentTick);
+                    if (moveIn != null) Transit.SubmitTrip(moveIn, Topology, currentTick, Population);
+                }
                 Businesses.Advance(Topology, Population, ref _nextEntityId);
             }
 

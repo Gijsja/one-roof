@@ -23,17 +23,19 @@ namespace OneRoof.Domain.Population
             DailySchedule schedule,
             IEnumerable<NeedState> needs,
             IEnumerable<PersonTrait> traits,
-            IEnumerable<PersonalityFacet> personalityFacets = null)
+            IEnumerable<PersonalityFacet> personalityFacets = null,
+            bool worksOutside = false)
         {
             id.EnsureValid();
             householdId.EnsureValid();
             homeRoomId.EnsureValid();
-            workplaceRoomId.EnsureValid();
+            if (!worksOutside) workplaceRoomId.EnsureValid();
 
             Id = id;
             HouseholdId = householdId;
             HomeRoomId = homeRoomId;
             WorkplaceRoomId = workplaceRoomId;
+            WorkplaceLocation = worksOutside ? WorldLocation.Outside : WorldLocation.InRoom(workplaceRoomId);
             Schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
 
             _needs = needs != null
@@ -53,6 +55,7 @@ namespace OneRoof.Domain.Population
 
             _currentActivity = ActivityKind.Idle;
             _currentRoomId = homeRoomId;
+            _currentLocation = WorldLocation.InRoom(homeRoomId);
         }
 
         // ── Identity ──────────────────────────────────────────────────────────
@@ -65,9 +68,14 @@ namespace OneRoof.Domain.Population
 
         public EntityId WorkplaceRoomId { get; }
 
+        public WorldLocation WorkplaceLocation { get; }
+
+        public WorldLocation CurrentLocation => _currentLocation;
+
         public EntityId CurrentRoomId => _currentRoomId;
 
         private EntityId _currentRoomId;
+        private WorldLocation _currentLocation;
 
         // ── Schedule & activity ───────────────────────────────────────────────
 
@@ -95,8 +103,13 @@ namespace OneRoof.Domain.Population
         /// <summary>Updates the resident's current room location. Called upon trip arrival.</summary>
         public void UpdateLocation(EntityId roomId)
         {
-            roomId.EnsureValid();
-            _currentRoomId = roomId;
+            UpdateLocation(WorldLocation.InRoom(roomId));
+        }
+
+        public void UpdateLocation(WorldLocation location)
+        {
+            _currentLocation = location;
+            if (!location.IsOutside) _currentRoomId = location.RoomId;
         }
 
         /// <summary>

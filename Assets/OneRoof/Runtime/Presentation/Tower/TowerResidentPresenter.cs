@@ -27,6 +27,7 @@ namespace OneRoof.Presentation.Tower
         // so walkers face where they travel and idle poses keep their last heading.
         private readonly List<float> _lastWalkX = new List<float>();
         private readonly List<float> _walkFacing = new List<float>();
+        private const float WalkPresentationSpeed = 2.4f;
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
@@ -187,6 +188,14 @@ namespace OneRoof.Presentation.Tower
 
                 switch (resident.Status)
                 {
+                    case TransitResidentStatus.Outside:
+                    {
+                        var outsideX = -2.4f + resident.CellX * 0.5f + 0.25f;
+                        residentTransform.position = new Vector3(outsideX, TowerStructurePresenter.FloorY(0) - 0.58f, -0.2f);
+                        skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
+                        skeletal?.SetAnimationClip(NpcAnimationClip.Idle);
+                        break;
+                    }
                     case TransitResidentStatus.InRoom:
                     case TransitResidentStatus.Arrived:
                     {
@@ -251,7 +260,14 @@ namespace OneRoof.Presentation.Tower
                         var walkFloor = resident.Floor;
                         if (walkFloor < 0 || walkFloor >= floorCount) walkFloor = 0;
                         var walkY = TowerStructurePresenter.FloorY(walkFloor) - 0.58f;
-                        residentTransform.position = new Vector3(walkX, walkY, -0.2f);
+                        var walkTarget = new Vector3(walkX, walkY, -0.2f);
+                        // The simulation advances in fixed discrete ticks. Interpolate the
+                        // visible resident toward each new walking projection every frame.
+                        // Editor tests and non-play presentation remain deterministic.
+                        if (UnityEngine.Application.isPlaying && Time.deltaTime > 0f)
+                            residentTransform.position = Vector3.MoveTowards(residentTransform.position, walkTarget, WalkPresentationSpeed * Time.deltaTime);
+                        else
+                            residentTransform.position = walkTarget;
                         // Face travel direction, latched per resident so pauses keep heading.
                         EnsureWalkMemory(i, walkX);
                         var heading = _walkFacing[i];

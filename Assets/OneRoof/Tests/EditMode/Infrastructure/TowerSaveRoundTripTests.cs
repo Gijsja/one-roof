@@ -26,6 +26,33 @@ namespace OneRoof.Infrastructure.Tests.EditMode
         }
 
         [Test]
+        public void ExportAndRestore_MidMoveIn_PreservesOutsideEndpointAndRoute()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var person = sim.Population.Persons[0];
+            person.UpdateLocation(WorldLocation.Outside);
+            var trip = sim.TripGenerator.CreateMoveInTrip(person, sim.Clock.CurrentTick);
+            sim.Transit.SubmitTrip(trip, sim.Topology, sim.Clock.CurrentTick, sim.Population);
+            sim.AdvanceOneTick();
+
+            var data = sim.ExportSaveData();
+            var metadata = new SaveEnvelopeMetadata(new SchemaVersion(1), sim.Clock.CurrentTick,
+                new RandomStreamState(1337, 1337, 0), "2026-09-23T00:00:00Z", "0.5.1");
+            var json = _serializer.Serialize(new SaveEnvelope<TowerSaveData>(metadata, data));
+            var loaded = _serializer.Deserialize<TowerSaveData>(json, new SchemaVersion(1));
+            Assert.That(loaded.IsSuccess, Is.True);
+            var restored = TowerSimulation.RestoreFromSaveData(loaded.Value.StatePayload);
+
+            Assert.That(restored.Population.GetPerson(person.Id).CurrentLocation.IsOutside, Is.True);
+            Assert.That(restored.Transit.ActiveTrips[0].Trip.Origin.IsOutside, Is.True);
+            Assert.That(restored.Transit.ActiveTrips[0].Trip.PlannedRoute, Is.Not.Null);
+            for (var i = 2; i <= 100 && restored.Transit.IsPersonTravelling(person.Id); i++)
+                restored.Transit.Advance(new Tick(i), restored.Topology, restored.ElevatorBank, restored.Population);
+            Assert.That(restored.Population.GetPerson(person.Id).CurrentLocation,
+                Is.EqualTo(WorldLocation.InRoom(person.HomeRoomId)));
+        }
+
+        [Test]
         public void ExportAndRestore_FreshTower_StateMatchesExactly()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor();

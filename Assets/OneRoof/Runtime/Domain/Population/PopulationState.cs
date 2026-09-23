@@ -166,7 +166,9 @@ namespace OneRoof.Domain.Population
                     householdId = p.HouseholdId.Value,
                     homeRoomId = p.HomeRoomId.Value,
                     workplaceRoomId = p.WorkplaceRoomId.Value,
+                    workplaceLocationKind = (int)p.WorkplaceLocation.Kind,
                     currentRoomId = p.CurrentRoomId.Value,
+                    currentLocationKind = (int)p.CurrentLocation.Kind,
                     currentActivity = (int)p.CurrentActivity,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
                     personalityFacets = FacetIds(p),
@@ -238,9 +240,11 @@ namespace OneRoof.Domain.Population
                         new EntityId(p.workplaceRoomId),
                         schedule,
                         needs,
-                        traits, facets);
+                        traits, facets, p.workplaceLocationKind == (int)WorldLocationKind.Outside);
 
-                    person.UpdateLocation(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId));
+                    person.UpdateLocation(p.currentLocationKind == (int)WorldLocationKind.Outside
+                        ? WorldLocation.Outside
+                        : WorldLocation.InRoom(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId)));
                     person.UpdateActivity((ActivityKind)p.currentActivity);
                     var role = Enum.IsDefined(typeof(SpecialistRole), p.specialistRole) ? (SpecialistRole)p.specialistRole : SpecialistRole.None;
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;

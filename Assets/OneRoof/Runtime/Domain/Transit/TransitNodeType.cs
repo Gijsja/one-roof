@@ -5,7 +5,8 @@ namespace OneRoof.Domain.Transit
         RoomPortal,
         Walkway,
         ElevatorStop,
-        StairLanding
+        StairLanding,
+        Outside
     }
 
     public enum TransitMode

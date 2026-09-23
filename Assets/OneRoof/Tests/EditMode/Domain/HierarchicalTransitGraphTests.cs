@@ -12,7 +12,8 @@ namespace OneRoof.Domain.Tests.EditMode
         {
             var graph = TwoFloorTransitFixture.CreateGraph();
 
-            Assert.That(graph.Nodes.Count, Is.EqualTo(4));
+            Assert.That(graph.Nodes.Count, Is.EqualTo(5));
+            Assert.That(graph.OutsideNode, Is.Not.Null);
             Assert.That(graph.Edges.Count, Is.GreaterThan(0));
 
             var elevatorNodeFloor0 = graph.GetNodeAt(new CellCoordinate(0, 0));

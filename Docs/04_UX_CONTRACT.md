@@ -1,13 +1,15 @@
 # UX Contract
 
-## Primary verbs
+## Primary verbs & Mode Shell
 
-| Mode | Responsibility |
-| --- | --- |
-| Build | Structure, rooms, transit, utilities, services, decoration, zones |
-| Manage | Economy, policies, tenants, staff, transit rules, emergency priorities |
-| Inspect | People, households, businesses, factions, rooms, floors, systems |
-| Data | Heatmaps, flows, coverage, risk, and influence |
+The player interacts through a unified mode shell bar (`ModeShellBarController`) styled with `StewardTheme`:
+
+| Mode | Hotkey | Responsibility |
+| --- | --- | --- |
+| **Build** | `1` | Structure, rooms, transit, utilities, services; categorized palette (`Space & Use`, `Services`, `Utilities`, `Movement & Removal`) |
+| **Inspect** | `2` | Detailed drill-down into people, households, businesses, factions, rooms, floors, and systems via deep cards |
+| **Data** | `3` | Read the tower via 8 specialized overlays displaying flows, intensity, pressure, and risk |
+| **Manage** | `4` | Economy, policy decrees (rent caps, transit subsidies, quiet hours, tax rates), tenant leases, staff |
 
 ## Explanation chain
 
@@ -23,24 +25,26 @@ The inspector is a cause chain, not a flat stat dump: it names the symptom, expo
 
 ## Beta overlays
 
-- Foot traffic
-- Elevator wait
-- Population
-- Satisfaction
-- Noise
-- Business health
-- Faction tension
-- Utilities
+| Overlay ID | Primary Visual Channel | Data Source | Corresponding Cause / Risk |
+| --- | --- | --- | --- |
+| `overlay:elevator_wait` | Animated flow paths & queue bars | `ElevatorBankCongestionProjection` | Shaft capacity shortage, floor bottlenecks |
+| `overlay:foot_traffic` | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
+| `overlay:population` | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
+| `overlay:satisfaction` | Soft regional glow + pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, rent burden |
+| `overlay:noise` | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into apartments |
+| `overlay:business_health` | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, commercial rent burden |
+| `overlay:faction_tension` | Regional tension contours + glyphs | `FactionState` | Policy grievances, strain, protest/strike risk |
+| `overlay:utilities` | Network pipe/cable flow & pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
 
 Do not render every overlay as a heatmap. Use heatmaps for intensity, animated paths for flow, soft regions for influence, and reach contours for service coverage.
 
 ## Placement preview
 
-A preview must show cost, invalid conditions, footprint, utility connections, and the most important predicted consequences. Predictions are estimates and must be labeled when confidence is low.
+A preview must show cost, invalid conditions, footprint, utility connections, and the most important predicted consequences (`PlacementGhostPresenter` / `PlacementPreviewCardView`). Predictions are estimates and must be labeled when confidence is low. Placement queries domain validity via `TowerSimulation.CanExecute(ICommand)`.
 
 ## Accessibility baseline
 
-- All overlay meaning has a non-color channel.
+- All overlay meaning has a non-color channel (glyphs, text, shapes).
 - Simulation speed and pause are keyboard accessible.
 - UI scaling and remappable controls are planned from the first playable.
 - Critical event information is available as text and audio-independent feedback.

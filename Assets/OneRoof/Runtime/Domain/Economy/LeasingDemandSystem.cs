@@ -89,10 +89,6 @@ namespace OneRoof.Domain.Economy
                 });
             }
 
-            var fallbackWorkplaceId = potentialWorkplaces.Count > 0
-                ? potentialWorkplaces[0].Id
-                : vacantApartments[0].Id;
-
             var newResidents = new List<PersonRecord>();
             var leaseCount = Math.Min(vacantApartments.Count, MaxLeasesPerCycle);
 
@@ -104,7 +100,7 @@ namespace OneRoof.Domain.Economy
 
                 var workplaceId = potentialWorkplaces.Count > 0
                     ? potentialWorkplaces[i % potentialWorkplaces.Count].Id
-                    : fallbackWorkplaceId;
+                    : default;
 
                 var rng = random ?? new DeterministicRandomStream((ulong)nextEntityId);
                 var traitKind = (i % 2 == 0) ? PersonTraitKind.EarlyBird : PersonTraitKind.Frugal;
@@ -124,7 +120,8 @@ namespace OneRoof.Domain.Economy
                     workplaceId,
                     schedule,
                     needs,
-                    new[] { trait });
+                    new[] { trait }, worksOutside: potentialWorkplaces.Count == 0);
+                person.UpdateLocation(WorldLocation.Outside);
 
                 var household = new HouseholdRecord(
                     householdId,

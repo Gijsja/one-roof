@@ -86,11 +86,11 @@ namespace OneRoof.Domain.Trips
 
                 if (purpose == null) continue;
 
-                var destinationRoomId = ResolveDestinationRoom(person, purpose.Value);
-                if (!destinationRoomId.HasValue) continue;
+                var destination = ResolveDestination(person, purpose.Value);
+                if (!destination.HasValue) continue;
 
-                var originRoomId = person.CurrentRoomId.Value > 0 ? person.CurrentRoomId : person.HomeRoomId;
-                if (originRoomId.Equals(destinationRoomId.Value))
+                var origin = person.CurrentLocation;
+                if (origin.Equals(destination.Value))
                 {
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
                     TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
@@ -99,8 +99,8 @@ namespace OneRoof.Domain.Trips
 
                 var trip = BuildTrip(
                     person.Id,
-                    originRoomId,
-                    destinationRoomId.Value,
+                    origin,
+                    destination.Value,
                     purpose.Value,
                     currentTick);
 
@@ -118,34 +118,39 @@ namespace OneRoof.Domain.Trips
 
         private TripRecord BuildTrip(
             EntityId personId,
-            EntityId originRoomId,
-            EntityId destinationRoomId,
+            WorldLocation origin,
+            WorldLocation destination,
             TripPurpose purpose,
             Tick departureTick)
         {
             var tripId = new EntityId(_nextTripId++);
-
-            // For Work trips the origin is home; for Food trips origin is workplace;
-            // for Leisure trips origin is food room; for Home trips origin is leisure room.
-            // For first-playable we use the person's home room as the tracked origin for all
-            // outbound trips and workplace for return legs — the route planner handles cost.
-            var originNode = _graph.GetPortalNodeForRoom(originRoomId);
-            var destNode   = _graph.GetPortalNodeForRoom(destinationRoomId);
+            // Route from the resident's current endpoint, including the street edge.
+            var originNode = _graph.GetNodeForLocation(origin);
+            var destNode   = _graph.GetNodeForLocation(destination);
 
             TransitRoute route = null;
-            if (originNode != null && destNode != null && !originRoomId.Equals(destinationRoomId))
+            if (originNode != null && destNode != null && !origin.Equals(destination))
             {
                 route = _planner.FindRoute(originNode.Id, destNode.Id);
             }
 
+            if (route == null && !origin.Equals(destination)) return null;
+
             return new TripRecord(
                 tripId,
                 personId,
-                originRoomId,
-                destinationRoomId,
+                origin,
+                destination,
                 purpose,
                 departureTick,
                 route);
+        }
+
+        public TripRecord CreateMoveInTrip(PersonRecord person, Tick tick)
+        {
+            if (person == null) throw new ArgumentNullException(nameof(person));
+            if (!person.CurrentLocation.IsOutside) return null;
+            return BuildTrip(person.Id, WorldLocation.Outside, WorldLocation.InRoom(person.HomeRoomId), TripPurpose.Home, tick);
         }
 
         private static TripPurpose? LabelToPurpose(string label)
@@ -158,30 +163,32 @@ namespace OneRoof.Domain.Trips
             return null;
         }
 
-        private EntityId? ResolveDestinationRoom(PersonRecord person, TripPurpose purpose)
+        private WorldLocation? ResolveDestination(PersonRecord person, TripPurpose purpose)
         {
             switch (purpose)
             {
                 case TripPurpose.Work:
-                    return person.WorkplaceRoomId;
+                    return person.WorkplaceLocation;
 
                 case TripPurpose.Home:
                 case TripPurpose.Hygiene:
-                    return person.HomeRoomId;
+                    return WorldLocation.InRoom(person.HomeRoomId);
 
                 case TripPurpose.Food:
                     // Distribute diners deterministically across all matching commercial rooms
                     // so a second diner actually relieves 24/7 meal demand.
-                    return FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id);
+                    return AsLocation(FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id));
 
                 case TripPurpose.Leisure:
                     // Distribute across all lobbies the same way.
-                    return FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: 0, personId: person.Id);
+                    return AsLocation(FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: 0, personId: person.Id));
 
                 default:
                     return null;
             }
         }
+
+        private static WorldLocation? AsLocation(EntityId? roomId) => roomId.HasValue ? WorldLocation.InRoom(roomId.Value) : (WorldLocation?)null;
 
         private EntityId? FindRoomByContent(ContentId contentId, int floorHint, EntityId personId)
         {

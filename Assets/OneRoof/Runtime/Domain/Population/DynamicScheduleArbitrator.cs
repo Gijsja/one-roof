@@ -33,7 +33,7 @@ namespace OneRoof.Domain.Population
             var hygiene = person.GetNeedSatisfaction(NeedKind.Hygiene);
             var social = person.GetNeedSatisfaction(NeedKind.Social);
 
-            var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
+            var isAtHome = person.CurrentLocation.Equals(OneRoof.Domain.Identity.WorldLocation.InRoom(person.HomeRoomId));
 
             // 1. Critical exhaustion override: must return home to rest
             if (energy < CriticalEnergyThreshold)
@@ -106,8 +106,8 @@ namespace OneRoof.Domain.Population
                 return ArbitrateMidBlockRecovery(person, activeLabel);
             }
 
-            var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
-            var isAtWork = person.CurrentRoomId.Equals(person.WorkplaceRoomId);
+            var isAtHome = person.CurrentLocation.Equals(OneRoof.Domain.Identity.WorldLocation.InRoom(person.HomeRoomId));
+            var isAtWork = person.CurrentLocation.Equals(person.WorkplaceLocation);
             var hunger = person.GetNeedSatisfaction(NeedKind.Hunger);
             var social = person.GetNeedSatisfaction(NeedKind.Social);
 
@@ -172,8 +172,8 @@ namespace OneRoof.Domain.Population
         /// </summary>
         private TripPurpose? ArbitrateMidBlockRecovery(PersonRecord person, string activeLabel)
         {
-            var isAtHome = person.CurrentRoomId.Equals(person.HomeRoomId);
-            var isAtWork = person.CurrentRoomId.Equals(person.WorkplaceRoomId);
+            var isAtHome = person.CurrentLocation.Equals(OneRoof.Domain.Identity.WorldLocation.InRoom(person.HomeRoomId));
+            var isAtWork = person.CurrentLocation.Equals(person.WorkplaceLocation);
             var hunger = person.GetNeedSatisfaction(NeedKind.Hunger);
             var social = person.GetNeedSatisfaction(NeedKind.Social);
 

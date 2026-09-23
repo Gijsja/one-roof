@@ -5,10 +5,14 @@
 One Roof is a vertical-city simulation where the player shapes architecture, infrastructure, leases, and policy while autonomous residents form routines, relationships, businesses, and factions ([Docs/01_GAME_VISION.md](file:///home/geisha/Vibecode/UnityAI/one-roof/Docs/01_GAME_VISION.md)).
 
 - **First Proof (Milestones 0–4):** Five floors, 50 persistent residents, observable elevator congestion, explainable wait overlay, second-elevator capacity intervention, and golden acceptance verification. *(STATUS: COMPLETE)*
-- **Interactive Expansion (Milestone 5):** Dynamic slab/room construction, economy treasury, demand-driven leasing, bulldozer demolition, stairwells, 9-sliced room backdrops, interactive camera navigation, environment prop families, holographic build shaders, and resident room living. *(STATUS: COMPLETE)*
-- **Living Society & Economy (Milestones 6–8):** Resident needs, personality facets, satisfaction/strain/scrutiny, specialist roles, commercial leases, business health/foot-traffic overlays, physical power/water/waste networks with degradation and technician response. *(STATUS: COMPLETE through OR-803)*
-- **Social Fabric & Beta Exit (Milestones 9–10):** Relationship graph, factions, policy decrees, noise/faction overlays, blueprints, crisis pressure, City Status. *(STATUS: READY — no implementation yet)*
-- **Beta Boundary (Milestone 10):** 30 floors, 300 persistent residents, full room diversity (residential, office, retail, clinic, maintenance, security, utility), physical utilities (power, water, waste), resident needs, 4 faction archetypes, policy decrees, 8 data overlays, 6 crisis event chains, and sustaining **City Status** under strict performance budgets (<4ms simulation tick, 60 FPS presentation).
+- **Interactive Expansion (Milestone 5):** Dynamic slab/room construction, economy treasury, demand-driven leasing, bulldozer demolition, stairwells, 9-sliced room backdrops, interactive camera navigation, environment prop families, holographic build shaders, split presenters, and resident room living. *(STATUS: COMPLETE)*
+- **Living Society & Psychology (Milestone 6):** Five core resident needs, personality facets, satisfaction, grievances, strain, scrutiny external pressure, soft specialist roles, Spine 2D modular rig, and 24/7 daily cycle. *(STATUS: COMPLETE)*
+- **Commercial Economy & Services (Milestone 7):** Expanded commercial zoning (retail, clinic, workshop, security), lease lifecycle, local hiring, business solvency, foot traffic, and three-car elevator limits. *(STATUS: COMPLETE)*
+- **Physical Utilities & Infrastructure (Milestone 8):** Physical electrical grid, plumbing & waste networks, infrastructure degradation, technician repairs, and utilities overlay. *(STATUS: COMPLETE)*
+- **Outside World Boundary (Milestone 10.4):** First-class `WorldLocation` endpoint (`Room` / `Outside`), lobby-only street edge routing, layered parallax city skyline, day/night lighting, and demand move-in arrivals. *(STATUS: COMPLETE)*
+- **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and 8 contracted data overlays under `StewardTheme`. *(STATUS: COMPLETE)*
+- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per `Docs/12_ECONOMY.md`. *(STATUS: READY)*
+- **Social Fabric & Beta Exit (Milestones 9–10):** Inter-resident relationship graph, 4 factions, policy decrees, noise/tension overlays, blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY)*
 
 ---
 
@@ -16,21 +20,18 @@ One Roof is a vertical-city simulation where the player shapes architecture, inf
 
 ```mermaid
 graph TD
-    M0["M0: Foundation (DONE)"] --> M1["M1: Tower Kernel (DONE)"]
-    M1 --> M2["M2: Vertical Movement (DONE)"]
-    M2 --> M3["M3: Living First Playable (DONE)"]
-    M3 --> M4["M4: Understand & Respond (DONE)"]
-    M4 --> M51["M5.1: Dynamic Building & Expansion (DONE)"]
-    M51 --> M52["M5.2: Sliced Architecture, Camera & Anchors (DONE)"]
-    M52 --> M53["M5.3: Shaders, Props & Room Living (DONE)"]
-    M53 --> M53a["M5.3a: Architecture Deepening (DONE)"]
-    M53a --> M54["M5.4: Anchor Docking & Inspection Depth (DONE)"]
-    M54 --> M6["M6: Resident Psychology, Needs & Spine 2D (DONE)"]
-    M6 --> M7["M7: Commercial Leases, Businesses & Services (DONE)"]
+    M0["M0–M4: Proof & Loop (DONE)"] --> M5["M5: Dynamic Expansion & Architecture (DONE)"]
+    M5 --> M6["M6: Resident Needs, Spine 2D & Daily Cycle (DONE)"]
+    M6 --> M7["M7: Commercial Leases & Services (DONE)"]
     M7 --> M8["M8: Physical Utilities (DONE)"]
-    M8 --> M9["M9: Social Networks, Factions & Policy Decrees (READY)"]
-    M9 --> M10["M10: 30-Floor Scale, Blueprints & Beta Exit (READY)"]
-    style M53a fill:#065f46,color:#fff,stroke:#065f46
+    M8 --> M104["M10.4: Outside World Boundary (DONE)"]
+    M104 --> ECON["ECON: Closed-Loop Unit Economics (READY)"]
+    ECON --> M9["M9: Social Fabric, Factions & Decrees (READY)"]
+    M9 --> M10["M10: 30-Floor Scale, Crises & City Status (READY)"]
+    style M104 fill:#065f46,color:#fff,stroke:#065f46
+    style ECON fill:#1e3a8a,color:#fff,stroke:#3b82f6
+    style M9 fill:#374151,color:#fff,stroke:#6b7280
+    style M10 fill:#374151,color:#fff,stroke:#6b7280
 ```
 
 ---
@@ -332,6 +333,40 @@ graph TD
   - **Overlay 8: Utilities Flow & Pressure Overlay** visualizing power load, water pressure head, and waste capacity.
 
 **Exit Criteria:** Power, water, and waste flow through vertical shafts; height creates pressure/voltage drop; brownouts disable elevators; maintenance technicians service equipment; Utilities overlay operational.
+
+---
+
+### M10.4 — Outside World Boundary & Resident Arrivals *(DONE)*
+**Goal:** Establish a persistent world location beyond the tower boundary for resident arrivals, external employment, and visual city parallax. Completed per `ADR-071` through `ADR-073`.
+
+- [x] **`OR-1004` (Outside World Endpoint & Demand Arrivals):**
+  - First-class `WorldLocation` endpoint (`Room` or `Outside`) in resident and trip contracts.
+  - Street-edge graph node connected only to ground-floor lobby portal.
+  - Demand move-ins and external workers cross the boundary; routes reconstruct from typed endpoints on load.
+  - Three-depth parallax skyline (`OutsideCityPresenter`) moving with camera pan, day/night lighting derivation, and smooth walking presentation.
+
+**Exit Criteria:** Residents move in from Outside across lobby entrance; external commuters route smoothly; skyline adjusts to camera and day/night clock; save/load round-trips cleanly.
+
+---
+
+### ECON — Closed-Loop Unit Economics *(READY — per Docs/12_ECONOMY.md)*
+**Goal:** Implement closed-loop cash conservation across treasury, households, and businesses, unblocking realistic stakes for rent, wages, and policy decrees.
+
+- **`ECON-001` (Closed-Loop Household Cash & Daily Settlement):**
+  - Add `long cashBalance` and `arrearsDays` to `HouseholdRecord`.
+  - Daily rent collection at `tick % 1440 == 0` deducts household cash and credits treasury (replaces flat minting).
+  - 30-day cash conservation test fixture.
+- **`ECON-002` (Commercial Rent & Demand-Capped Business Revenue):**
+  - Businesses pay per-cell rent and tax to treasury; customer revenue is capped by staffed capacity and tower occupancy.
+  - Insolvent businesses stop paying rent, become vacant after 7 days, and appear on Overlay 6.
+- **`ECON-003` (Policy Decrees Domain Value Object):**
+  - Implement `PolicyDecreeState` (rent caps, commercial tax rate, transit subsidy, quiet hours).
+  - Validates through `TowerSimulation.CanExecute`, emits domain events, and hooks into `ScrutinyState` (pre-wires OR-902).
+- **`ECON-004` (Economic Explanation Wiring & Golden Acceptance):**
+  - Wire `TreasuryFlowProjection`, tenant margin indicators on Overlay 6, and resident rent burden on Overlay 4.
+  - End-to-end 30-day ledger conservation proof: arrears → grievance → move-out chain demonstrable.
+
+**Exit Criteria:** Cash is strictly conserved across treasury + households + businesses (except documented sources/sinks); daily settlement executes without per-tick scans; economic cause-chain demonstrable in inspector.
 
 ---
 

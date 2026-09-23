@@ -5,8 +5,8 @@
 ## Project Summary
 
 - Project root: `/home/geisha/Vibecode/UnityAI/one-roof`
-- Last analyzed: 2026-09-21
-- Last analyzed commit: `a76d298a632520c278c7d43e5ca278ba8290ef7a`
+- Last analyzed: 2026-09-23
+- Last analyzed commit: `b00d715` (HEAD)
 - One Roof is a deterministic, pure-C# vertical-city simulation with a Unity cutaway presentation.
 
 ## Confirmed Environment
@@ -30,78 +30,66 @@
 
 | Path | Purpose | Confidence | Evidence |
 | --- | --- | --- | --- |
-| `Assets/OneRoof/Runtime/Domain` | Pure deterministic simulation records and aggregates | Confirmed | `OneRoof.Domain.asmdef`, `Docs/02_ARCHITECTURE.md` |
-| `Assets/OneRoof/Runtime/Application` | Commands, projections, inspectors, overlays, simulation session | Confirmed | assembly and representative sources |
-| `Assets/OneRoof/Runtime/Presentation` | Cutaway world, resident, overlay, and camera views | Confirmed | assembly and presenters |
-| `Assets/OneRoof/Runtime/UI` | Mode shell and inspector/prediction views | Confirmed | assembly |
-| `Assets/OneRoof/Runtime/Content` | Immutable authored content contracts | Confirmed | assembly and `NpcContentRegistry.cs` |
-| `Assets/OneRoof/Editor` | Tower and AssetLab scene authoring/validation | Confirmed | `TowerSceneBuilder.cs`, `AssetLabValidator.cs` |
+| `Assets/OneRoof/Runtime/Domain` | Pure deterministic simulation records and aggregates (0 UnityEngine references) | Confirmed | `OneRoof.Domain.asmdef`, `Docs/02_ARCHITECTURE.md` |
+| `Assets/OneRoof/Runtime/Application` | Commands, projections, inspectors, overlays, simulation session | Confirmed | `OneRoof.Application.asmdef` |
+| `Assets/OneRoof/Runtime/Presentation` | Cutaway world, Spine NPC views, parallax city, atmosphere, overlays | Confirmed | `OneRoof.Presentation.asmdef` |
+| `Assets/OneRoof/Runtime/UI` | StewardTheme, ModeShellBarController, inspection and prediction cards | Confirmed | `OneRoof.UI.asmdef` |
+| `Assets/OneRoof/Runtime/Content` | Immutable authored content contracts, sprite/wardrobe registries | Confirmed | `OneRoof.Content.asmdef` |
+| `Assets/OneRoof/Editor` | Tower scene authoring, validation, and AssetLab tools | Confirmed | `OneRoof.Editor.asmdef` |
 
 ## Assembly Boundaries
 
 | Assembly | Responsibility | Key references | Notes |
 | --- | --- | --- | --- |
-| `OneRoof.Domain` | Simulation state | none | `noEngineReferences: true` |
-| `OneRoof.Application` | Commands/projections/use cases | Domain | Presentation reads its immutable projections |
-| `OneRoof.Content` | Content records | Domain | No mutable campaign state |
-| `OneRoof.Presentation` | Unity views and world interaction | Domain, Application, Content, UI, Input System | Owns view-only state |
-| `OneRoof.UI` | Mode/inspector UI | Application, Domain | Dispatches commands rather than mutating state |
+| `OneRoof.Domain` | Pure simulation state & aggregates | none | `noEngineReferences: true` |
+| `OneRoof.Application` | Commands, projections, session, data overlays | Domain | `noEngineReferences: true` |
+| `OneRoof.Content` | Content definitions and catalogs | Domain | No mutable campaign state |
+| `OneRoof.Infrastructure` | Persistence and schema migration | Domain, Application | Atomic file writes |
+| `OneRoof.Presentation` | Unity views, Spine NPCs, camera, city parallax | Domain, Application, Content, UI, Input | Owns view-only state |
+| `OneRoof.UI` | Mode shell dock, palettes, deep cards | Application, Domain | Dispatches commands, reads projections |
+
+## Key Presenters & Subsystems
+
+- `TowerPlayableController`: Lean composition root (~150 lines) routing `TowerProjection` snapshots to deep presenters.
+- `TowerStructurePresenter`: Floor slabs, columns, baseline geometry, ground slab expansion.
+- `ElevatorBankPresenter`: Shaft geometry, rails, cars, queue indicators (up to 3 cars per bank).
+- `RoomPresenter`: 9-sliced room backdrops, door/window fixtures, demolition transitions.
+- `TowerResidentPresenter`: Pooled Spine 2D NPCs, 8-layer wardrobe compositor, interaction point docking.
+- `OutsideCityPresenter`: 3-depth parallax skyline, day/night lighting, and street edge boundary.
+- `TowerAtmospherePresenter`: Day/night cycle mapping ticks to 24-hour time and unlit lighting tint.
+- `TowerDataOverlays`: Consolidated lazy projection provider for the 8 contracted data overlays.
+- `ModeShellBarController` & `StewardTheme`: Unified UI shell managing Build, Inspect, Data, and Manage modes.
 
 ## Scenes And Startup Flow
 
 - Enabled build scenes: `Assets/Scenes/Tower.unity`, then `Assets/Scenes/Testbed_Transit.unity`.
-- `Tower` is the likely interactive startup scene; `TowerSceneBuilder` creates a `Tower World` object with `TowerPlayableController`.
+- `Tower` is the interactive startup scene; `TowerSceneBuilder` creates a `Tower World` object with `TowerPlayableController`.
+- `Tower_GroundStart.unity` is a lightweight from-scratch starting topology scene.
 - `AssetLab.unity` is an editor-only validation preview and is not in Build Settings.
 
-## Architecture
+## Architecture & Data Contracts
 
 | Pattern | Finding | Confidence | Evidence |
 | --- | --- | --- | --- |
 | Domain/presentation boundary | Pure Domain state is projected into Unity presenters by stable IDs | Confirmed | `Docs/02_ARCHITECTURE.md`, assemblies |
-| Composition root | `TowerPlayableController` coordinates four deep presenters and UI adapters | Confirmed | `TowerPlayableController.cs` |
-| Fixed simulation tick | Session advances separately from frame rendering | Confirmed | `TowerPlayableController.cs`, architecture doc |
-| Save state | Aggregate-owned serialization inside one versioned envelope | Confirmed | architecture doc and save tests |
-
-## Coding Conventions
-
-- Namespace style: `OneRoof.<layer>.<feature>`.
-- Runtime Unity code uses sealed presenters/components, explicit `Initialize`, private fields, and XML intent comments for non-obvious classes.
-- Domain code avoids Unity references; presentation consumes snapshots/projections.
-- Tests use NUnit fixtures under matching layer-specific EditMode assemblies.
+| Ports & adapters | Placement validation lives behind `TowerSimulation.CanExecute(ICommand)` | Confirmed | ADR-038, `ARCH-003` |
+| Aggregate-owned serialization | Sub-aggregates own `ToSaveData()` / `FromSaveData()` inside one envelope | Confirmed | ADR-039, `ARCH-004` |
+| Outside boundary | First-class `WorldLocation` endpoint (`Room` or `Outside`) | Confirmed | ADR-071, ADR-072 |
+| Day clock | Simulation tick mapped to 24-hour presentation cycle (1440 ticks/day) | Confirmed | ADR-067, ADR-068 |
+| Unit economics | Closed-loop cash conservation model across treasury, households, businesses | Confirmed | `Docs/12_ECONOMY.md` |
 
 ## Testing And Validation
 
-- EditMode tests are split by runtime assembly; PlayMode golden acceptance tests are present.
-- The Tower working-version hardening pass records 360/360 EditMode and 5/5 PlayMode tests passing on 2026-09-21.
-- A `StandaloneLinux64` player build completed successfully from an isolated worktree on 2026-09-21.
+- EditMode tests: 450+ tests passing across layer assemblies.
+- PlayMode tests: 5+ golden acceptance tests passing.
+- One-shot headless batchmode runs in isolated worktrees are the required validation workflow.
 - CI compile/test workflow remains blocked on the GitHub `UNITY_LICENSE` secret (`OR-005`).
-
-## Available Unity Tooling
-
-| Capability | Status | Evidence |
-| --- | --- | --- |
-| Live Editor control | intentionally unavailable | Project uses isolated headless validation |
-| `unity.buildsettings.read` | available from serialized settings | `ProjectSettings/EditorBuildSettings.asset` |
-| `unity.asset.search` | available from repository | workspace filesystem |
-| `unity.package.read` | available from repository | `Packages/manifest.json` |
-| `unity.tests.run` | available headlessly | Unity built-in batch test runner |
 
 ## Important Constraints
 
-- Player actions affect systems, not individual residents.
-- The cause chain must remain symptom → overlay → inspector → systems-level response.
+- Player actions affect systems, never individual residents directly.
+- The cause chain must remain: symptom → overlay → inspector → systems-level response.
 - Steady-state simulation ticks must not allocate; presentation must remain projection-driven.
 - Do not put Unity references in save data or the Domain assembly.
-
-## Unknowns And Confidence
-
-- Live Editor control is intentionally out of scope; compilation and tests run headlessly in isolated worktrees.
-- No first-party networking usage was found in the inspected assemblies; the installed multiplayer-center package alone is not treated as a multiplayer implementation.
-
-## Source Files Inspected
-
-- `AGENTS.md`, `Planning/BACKLOG.md`, `Docs/01_GAME_VISION.md`, `Docs/02_ARCHITECTURE.md`, `Docs/03_DATA_CONTRACTS.md`, `Docs/04_UX_CONTRACT.md`, `Docs/09_CAUSE_CHAIN_INSPECTOR.md`
-- `Packages/manifest.json`, `ProjectSettings/ProjectVersion.txt`, `ProjectSettings/EditorBuildSettings.asset`
-- `TowerPlayableController.cs`, `TowerStructurePresenter.cs`, `RoomPresenter.cs`, `ElevatorBankPresenter.cs`, `TowerSimulationSession.cs`, `TowerProjection.cs`
 
 <!-- unity-onboarding:generated:end -->

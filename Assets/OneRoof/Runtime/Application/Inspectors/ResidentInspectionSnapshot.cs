@@ -13,6 +13,8 @@ namespace OneRoof.Application.Inspectors
             HouseholdId = person.HouseholdId.Value;
             HomeRoomId = person.HomeRoomId.Value;
             WorkplaceRoomId = person.WorkplaceRoomId.Value;
+            WorksOutside = person.WorkplaceLocation.IsOutside;
+            IsOutside = person.CurrentLocation.IsOutside;
             Role = person.Specialization.Role;
             TrainingRole = person.Specialization.TrainingRole;
             TrainingProgress = person.Specialization.TrainingProgress;
@@ -31,6 +33,8 @@ namespace OneRoof.Application.Inspectors
         public int HouseholdId { get; }
         public int HomeRoomId { get; }
         public int WorkplaceRoomId { get; }
+        public bool WorksOutside { get; }
+        public bool IsOutside { get; }
         public SpecialistRole Role { get; }
         public SpecialistRole TrainingRole { get; }
         public float TrainingProgress { get; }

@@ -325,7 +325,8 @@ namespace OneRoof.Domain.Tests.EditMode
 
             var snapshot = state.ToSnapshot();
             Assert.That(snapshot.FloorCount, Is.EqualTo(5));
-            Assert.That(state.TransitGraph.Nodes.Count, Is.EqualTo(23));
+            Assert.That(state.TransitGraph.Nodes.Count, Is.EqualTo(24));
+            Assert.That(state.TransitGraph.OutsideNode, Is.Not.Null);
         }
     }
 }

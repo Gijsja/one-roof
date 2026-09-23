@@ -124,7 +124,7 @@ namespace OneRoof.Application.Tower
         {
             var count = 0;
             foreach (var person in _simulation.Population.Persons)
-                if (person.CurrentRoomId.Equals(roomId)) count++;
+                if (!person.CurrentLocation.IsOutside && person.CurrentRoomId.Equals(roomId)) count++;
             return count;
         }
 
@@ -311,6 +311,9 @@ namespace OneRoof.Application.Tower
 
                 switch (spatial.Phase)
                 {
+                    case ResidentMovementPhase.Outside:
+                        status = TransitResidentStatus.Outside;
+                        break;
                     case ResidentMovementPhase.InRoom:
                         status = TransitResidentStatus.InRoom;
                         arrivedCount++;
