@@ -47,6 +47,39 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Construction_UsesShaderFadeForChildrenCreatedAfterBegin_ThenRestoresMaterial()
+        {
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
+            Assert.That(shader, Is.Not.Null, "The installed All In 1 shader must be available to city presentation.");
+            var root = new GameObject("Construction");
+            var source = new Material(Shader.Find("Sprites/Default"));
+            try
+            {
+                var effects = root.AddComponent<VisualEffectsPresenter>();
+                effects.BeginConstruction(1f);
+                var child = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                child.transform.SetParent(root.transform, false);
+                var renderer = child.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial = source;
+
+                effects.Advance(0.25f);
+                Assert.That(renderer.sharedMaterial.shader, Is.EqualTo(shader));
+                Assert.That(renderer.sharedMaterial.IsKeywordEnabled("FADE_ON"), Is.True);
+                var block = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(block);
+                Assert.That(block.GetFloat("_FadeAmount"), Is.EqualTo(0.75f).Within(0.001f));
+
+                effects.Advance(0.75f);
+                Assert.That(renderer.sharedMaterial, Is.SameAs(source));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(source);
+            }
+        }
+
+        [Test]
         public void RoomPresenter_UsesDomainInteractionPointForDockCoordinate()
         {
             var roomId = new EntityId(9);

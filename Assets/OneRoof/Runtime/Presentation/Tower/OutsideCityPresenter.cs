@@ -38,6 +38,7 @@ namespace OneRoof.Presentation.Tower
         private MaterialPropertyBlock _block;
         private Camera _camera;
         private Material _material;
+        private Material _windowMaterial;
         private Mesh _quad;
         private Transform _root;
         private int _groundMaxX = int.MinValue;
@@ -57,6 +58,14 @@ namespace OneRoof.Presentation.Tower
             if (material == null) throw new ArgumentNullException(nameof(material));
             _camera = camera;
             _material = material;
+            var windowShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
+            if (windowShader != null && _windowMaterial == null)
+            {
+                _windowMaterial = new Material(windowShader) { name = "Outside City Window Glow" };
+                _windowMaterial.EnableKeyword("GLOW_ON");
+                _windowMaterial.SetColor("_GlowColor", new Color(1f, 0.48f, 0.16f));
+                _windowMaterial.SetFloat("_Glow", 0.65f);
+            }
         }
 
         public void SyncGround(CellBounds ground, int floorCount)
@@ -121,6 +130,7 @@ namespace OneRoof.Presentation.Tower
                             var windowY = streetY + 0.58f + row * 0.82f;
                             var window = CreateQuad(layerRoot, $"Window {i}-{row}-{column}", windowX,
                                 windowY, 0.19f, 0.25f, Depth[layer] - 0.08f, new Color(1f, 0.70f, 0.34f));
+                            if (_windowMaterial != null) window.sharedMaterial = _windowMaterial;
                             _windows.Add(window);
                         }
                     }
@@ -138,8 +148,10 @@ namespace OneRoof.Presentation.Tower
                     var lampX = 3f + i * 6.5f;
                     CreateQuad(layerRoot, $"Lamp post {i}", lampX, streetY + 0.42f, 0.055f, 1.18f,
                         3.7f, new Color(0.28f, 0.37f, 0.43f));
-                    _windows.Add(CreateQuad(layerRoot, $"Lamp light {i}", lampX, streetY + 1.03f,
-                        0.30f, 0.12f, 3.65f, new Color(1f, 0.70f, 0.34f)));
+                    var lamp = CreateQuad(layerRoot, $"Lamp light {i}", lampX, streetY + 1.03f,
+                        0.30f, 0.12f, 3.65f, new Color(1f, 0.70f, 0.34f));
+                    if (_windowMaterial != null) lamp.sharedMaterial = _windowMaterial;
+                    _windows.Add(lamp);
                 }
             }
         }
@@ -164,7 +176,14 @@ namespace OneRoof.Presentation.Tower
             }
             var windowColor = Color.Lerp(new Color(0.24f, 0.36f, 0.43f),
                 new Color(1f, 0.70f, 0.34f), night);
-            foreach (var window in _windows) SetColor(window, windowColor);
+            foreach (var window in _windows)
+            {
+                SetColor(window, windowColor);
+                if (_windowMaterial == null) continue;
+                window.GetPropertyBlock(_block);
+                _block.SetFloat("_Glow", Mathf.Lerp(0.08f, 0.65f, night));
+                window.SetPropertyBlock(_block);
+            }
         }
 
         public void UpdateParallax()
@@ -177,7 +196,12 @@ namespace OneRoof.Presentation.Tower
         }
 
         private void LateUpdate() => UpdateParallax();
-        private void OnDestroy() => Clear();
+        private void OnDestroy()
+        {
+            Clear();
+            DestroyOwned(_windowMaterial);
+            _windowMaterial = null;
+        }
 
         public void Clear()
         {
