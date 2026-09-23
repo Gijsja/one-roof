@@ -2,7 +2,7 @@
 
 ## Overview & Vision Boundary
 
-One Roof is a vertical-city simulation where the player shapes architecture, infrastructure, leases, and policy while autonomous residents form routines, relationships, businesses, and factions ([Docs/01_GAME_VISION.md](file:///home/geisha/Vibecode/UnityAI/one-roof/Docs/01_GAME_VISION.md)).
+One Roof is a vertical-city simulation where the player acts as the building manager, called the Steward in the interface. They shape architecture, infrastructure, leases, and policy while autonomous residents form routines, relationships, businesses, and factions ([Game Vision](../Docs/01_GAME_VISION.md)).
 
 - **First Proof (Milestones 0–4):** Five floors, 50 persistent residents, observable elevator congestion, explainable wait overlay, second-elevator capacity intervention, and golden acceptance verification. *(STATUS: COMPLETE)*
 - **Interactive Expansion (Milestone 5):** Dynamic slab/room construction, economy treasury, demand-driven leasing, bulldozer demolition, stairwells, 9-sliced room backdrops, interactive camera navigation, environment prop families, holographic build shaders, split presenters, and resident room living. *(STATUS: COMPLETE)*
@@ -10,9 +10,29 @@ One Roof is a vertical-city simulation where the player shapes architecture, inf
 - **Commercial Economy & Services (Milestone 7):** Expanded commercial zoning (retail, clinic, workshop, security), lease lifecycle, local hiring, business solvency, foot traffic, and three-car elevator limits. *(STATUS: COMPLETE)*
 - **Physical Utilities & Infrastructure (Milestone 8):** Physical electrical grid, plumbing & waste networks, infrastructure degradation, technician repairs, and utilities overlay. *(STATUS: COMPLETE)*
 - **Outside World Boundary (Milestone 10.4):** First-class `WorldLocation` endpoint (`Room` / `Outside`), lobby-only street edge routing, layered parallax city skyline, day/night lighting, and demand move-in arrivals. *(STATUS: COMPLETE)*
-- **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and 8 contracted data overlays under `StewardTheme`. *(STATUS: COMPLETE)*
-- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per `Docs/12_ECONOMY.md`. *(STATUS: READY)*
-- **Social Fabric & Beta Exit (Milestones 9–10):** Inter-resident relationship graph, 4 factions, policy decrees, noise/tension overlays, blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY)*
+- **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and overlay selection under `StewardTheme`. *(STATUS: COMPLETE; spatial overlay rendering remains OR-1006)*
+- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: ACTIVE; acceptance proofs remain open)*
+- **Social Fabric & Beta Exit (Milestones 9–10):** Inter-resident relationship graph, 4 factions, policy decrees, noise/tension overlays, blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY; dependent stabilization and economy acceptance remain open)*
+
+### Creative direction and player promise
+
+The player should feel responsible for a place, not omnipotent over its people. *Fallout Shelter* informs the readable cutaway, quick construction feedback, and pleasure of seeing a tower come alive. *This War of Mine* informs the weight of scarce capacity, rent, and unequal hardship. *Observer* informs close environmental inspection: the player sees clues in rooms, sounds, movement, and records before a system failure becomes a dashboard number. These are reference qualities, not features to reproduce. One Roof remains a noncombat, single-building management simulation with autonomous residents and an optimistic but fragile tone.
+
+Each session should produce this arc: **notice** an inhabitant-scale symptom → **trace** it through an overlay and cause-chain inspector → **choose** a building-level lever with a visible cost → **watch** the next shifts and daily trend → **remember** the outcome through persistent people and places. A crisis is meaningful only when this chain works for both its aggregate effect and at least one affected household or business. The player can pause, compare options, and recover; urgency comes from simulated consequences rather than hidden timers or forced reflex play.
+
+### North Star scorecard
+
+| Boundary | Player-visible proof | Acceptance gate |
+| --- | --- | --- |
+| 30 floors, 300 persistent residents | A navigable city-sized cutaway with inspectable households, work, and commutes | Deterministic 30-floor fixture; stable IDs and outcomes across save/load |
+| Physical transit, power, water, waste, maintenance | Breakdowns propagate through specific rooms, journeys, and services | Each network has a reproducible failure, repair or capacity response, and measured recovery |
+| Four factions and policy decrees | Distinct demands and conflicting responses to the same managerial choice | Each faction has a legible grievance, approval change, and civil action path |
+| Eight overlays | The manager can locate causes without reading a wall of numbers | Each overlay renders its contracted visual channel, has a non-colour cue, and links to inspection |
+| Six adaptive crisis chains | Pressure arises from actual tower conditions and affects named residents | Each has trigger, warning, cause, systems-level response, aftermath, and save/load coverage |
+| City Status for 30 days | A campaign board explains eligibility, streak, threats, and recovery | 30 consecutive in-game days pass under explicit conditions; failure explains which condition broke |
+| Performance | Scrolling and inspecting remain responsive at scale | Tick p95 <4 ms, 60 FPS, <=60 pooled visible residents, <120 draw calls, <180 MB uncompressed textures on recorded reference hardware |
+
+The scorecard is a delivery target, not a claim that all rows are implemented. Current code and acceptance status are tracked in [Backlog](BACKLOG.md); the active audit handoff lists blockers that must be cleared before the scale gate.
 
 ---
 
@@ -25,7 +45,7 @@ graph TD
     M6 --> M7["M7: Commercial Leases & Services (DONE)"]
     M7 --> M8["M8: Physical Utilities (DONE)"]
     M8 --> M104["M10.4: Outside World Boundary (DONE)"]
-    M104 --> ECON["ECON: Closed-Loop Unit Economics (READY)"]
+    M104 --> ECON["ECON: Closed-Loop Unit Economics (ACTIVE)"]
     ECON --> M9["M9: Social Fabric, Factions & Decrees (READY)"]
     M9 --> M10["M10: 30-Floor Scale, Crises & City Status (READY)"]
     style M104 fill:#065f46,color:#fff,stroke:#065f46
@@ -291,7 +311,7 @@ graph TD
   - Automated seam testing runner, rig validation, and Addressables bundle packaging.
 - [x] **`OR-604` (Milestone 6.3 — Scrutiny):**
   - Wider-city attention rises with expansion speed, inequality, unresolved crises, and aggressive policy; balanced service and crisis responses reduce it.
-  - High Scrutiny modulates external-event pressure and can temporarily constrain expansion without turning into a cartoon-invasion loop.
+  - High Scrutiny modulates external-event pressure. Any temporary expansion constraint must come from an explicit, inspectable event with a cause and expiry; Scrutiny alone is never an instant build veto (ADR-065).
 - **`OR-605` (Milestone 6.3 — Soft Specialist Roles & Training):**
   - Training and service capacity let residents acquire Maintenance, Security, Service, and later Knowledge roles without individual assignment.
 
@@ -349,7 +369,7 @@ graph TD
 
 ---
 
-### ECON — Closed-Loop Unit Economics *(READY — per Docs/12_ECONOMY.md)*
+### ECON — Closed-Loop Unit Economics *(ACTIVE — acceptance proofs open; see Docs/12_ECONOMY.md)*
 **Goal:** Implement closed-loop cash conservation across treasury, households, and businesses, unblocking realistic stakes for rent, wages, and policy decrees.
 
 - **`ECON-001` (Closed-Loop Household Cash & Daily Settlement):**
@@ -371,7 +391,7 @@ graph TD
 ---
 
 ### M9 — Social Fabric, Factions & Policy Decrees *(READY — no implementation yet)*
-**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. Next up: OR-901.
+**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. The manager should understand who bears a cost and who benefits before signing a decree. Next up: OR-901 after the economy proof.
 
 - **`OR-901` (Relationship Graph & 4 Faction Archetypes):**
   - Affinity formation: Residents build friendships through shared workplaces, neighboring apartments, and elevator encounters.
@@ -387,8 +407,15 @@ graph TD
   - **Overlay 5: Noise Overlay** displaying acoustic bleed from elevators, workshops, and diners into residential units.
   - **Overlay 7: Faction Tension Overlay** exposing regional dissatisfaction hot-spots.
   - Faction civil actions: Rent strikes, lobby protests, and work slowdowns emerge from faction strain plus scrutiny thresholds.
+- **`OR-904` (Manager's Decision Record & Resident Consequences):**
+  - A dated, persistent record links each enacted decree and major incident to its cost, affected floors/households/businesses, faction reactions, and observed changes over following days.
+  - Select representative residents through stable IDs and existing projections; do not author a separate story state or let the player command them.
+  - Copy names hardship precisely and leaves room for recovery. The same household can improve, deteriorate, move out, or return through simulation rules rather than scripted punishment.
+- **`OR-905` (Playable Management Onboarding):**
+  - Teach Build, Inspect, Data, and Manage through the five-floor congestion problem: notice a queue, inspect its cause, preview a second elevator, pay for it, and observe the result.
+  - Introduce rent and utilities as the tower expands. Let experienced players skip instructions; retain contextual help and keyboard access.
 
-**Exit Criteria:** 4 factions form and track member allegiance; Steward decree panel functional; policy changes alter faction relations; protests/strikes occur upon severe tension; Noise and Faction Tension overlays operational.
+**Exit Criteria:** 4 factions form and track member allegiance; the decree panel shows direct and delayed tradeoffs; policies alter faction relations; protests/strikes occur upon severe tension; Noise and Faction Tension overlays render their promised visual channels; a decision can be traced to a changed resident or business outcome; the first management lesson is completable without hidden knowledge.
 
 ---
 
@@ -397,23 +424,38 @@ graph TD
 
 - **`OR-1001` (Blueprints & Rapid Expansion Tooling):**
   - Floor copy/paste blueprints, multi-room zoning templates, and slab batch construction.
+  - Before confirmation, show aggregate cost, utility and transit capacity warnings, affected leases, and invalid cells. Batch actions are atomic or explain partial execution; undo follows the domain command boundary where supported.
   - Performance budgets enforced: 300 persistent entities, 60 pooled visible views, <4ms tick budget, 60 FPS presentation.
 - **`OR-1002` (Adaptive Crisis Pressure & Personal Consequences):**
-  - Systems-driven crises, modulated by Scrutiny, test player response and create consequences through individual Needs and Strain:
-    1. *Elevator Cable Failure:* Major shaft outage requiring emergency stairs and evacuation.
-    2. *Electrical Substation Fire:* Cascading blackout shutting down pumps and lights.
-    3. *Summer Heatwave:* HVAC overload causing extreme resident agitation.
-    4. *Viral Outbreak:* Contagion spreading through crowded elevator cabs, requiring clinic quarantine.
-    5. *Transit Workers Strike:* Walkout halting elevator operations unless union demands are met.
-    6. *City Safety Inspection:* Municipal audit evaluating building code compliance, fire exits, and utility reserves.
-- **`OR-1003` (Beta Boundary Golden Acceptance Test):**
-  - Campaign goal: Achieve and sustain **City Status** for 30 in-game days.
-  - Full five-point explanation chain verified for every crisis: Symptom → Overlay → Inspector → Player Response → Measurable Outcome.
-  - Complete release-like profiling and handoff documentation.
-- **`ART-005` (Milestone 6.2 — Audio Soundscapes & Environmental Atmosphere):**
-  - Surface-reactive corridor footsteps, elevator mechanical foley, roomtones, and volumetric window lighting.
+  - A deterministic director chooses eligible crises from actual network load, wear, crowding, grievances, faction tension, season-like conditions, and Scrutiny. It prevents duplicate stacking, telegraphs avoidable risks, applies bounded cooldowns, and records why a crisis was selected. No hidden random disaster overrides a healthy tower.
+  - Six chains, each with warning → incident → propagation → management levers → aftermath:
 
-**Exit Criteria:** 30 floors and 300 persistent residents running deterministically; all 8 overlays and adaptive crisis pressure are operational; City Status achieved; performance budgets verified on reference hardware.
+    | Chain | Warning and propagation | Manager response and measurable recovery |
+    | --- | --- | --- |
+    | Elevator cable failure | Wear, queues, and reduced redundancy precede a shaft outage; residents reroute or become delayed | Fund repair capacity, add alternate stairs or bank capacity; track stranded trips, waits, and recovery time |
+    | Substation fire | Overload and poor condition precede power loss; lifts, pumps, and businesses lose service | Isolate load, repair infrastructure, provide redundancy; track served floors, service downtime, and affected households |
+    | Heatwave | Demand exceeds cooling/service capacity; sleep, hygiene, and clinic demand deteriorate | Shift capacity and policy, expand services; track need deficits, clinic load, and strain |
+    | Viral outbreak | Crowded shared routes and weak care access raise exposure risk | Reduce crowding, support clinic capacity, use proportionate building policy; track exposure, service access, and recovery |
+    | Transit workers' strike | Unpaid wages or faction grievances precede a slowdown | Repair wage/lease conditions, negotiate through decrees, increase alternatives; track service coverage and approval |
+    | City safety inspection | Scrutiny plus documented hazards prompts a dated inspection event | Resolve cited conditions before an explicit deadline; track findings, compliance, and expiry of any temporary restriction |
+
+  - Crises affect actual resident Needs, Satisfaction, Strain, and business/treasury ledgers. They allow preparation and recovery and never require direct control of a resident. Fatality, combat, and graphic horror are outside the Beta Boundary.
+- **`OR-1003` (Beta Boundary Golden Acceptance Test):**
+  - Campaign goal: Achieve and sustain **City Status** for 30 consecutive in-game days. Evaluate at each daily settlement, beginning only after all gates pass: at least 30 operational floors, at least 300 persistent residents, at least 95% daily power/water/waste service coverage, nonnegative treasury after settlement, average Satisfaction at least 60/100, fewer than 20% of residents in the high-Strain band, and Scrutiny below 80/100. These are initial design thresholds to validate and freeze in the domain/content contract during OR-1005; the board shows the exact thresholds in the shipped build.
+  - Full five-point explanation chain verified for every crisis: Symptom → Overlay → Inspector → Player Response → Measurable Outcome.
+  - A lost streak names the failing gate and retains a recoverable tower; save/load mid-streak preserves day count, crisis state, and all contributing systems.
+  - Complete release-like profiling and handoff documentation.
+- **`OR-1005` (Campaign Board, Pacing & End States):**
+  - Expose milestone progress, daily trend, at-risk gates, and specific next interventions in the existing Manage/Inspect shell. Mark a successful 30-day hold with a review of the tower and its residents; support continued sandbox play afterward.
+  - Validate early, middle, and late campaign pacing with repeatable seeded runs. Record why the tower failed or recovered; tune through content data, not scripted rescues.
+- **`OR-1006` (Presentation & Accessibility Beta Pass):**
+  - Replace remaining debug overlay text with the eight contracted spatial visual channels; ensure readable zoom levels, non-colour cues, text equivalents, adjustable UI scale, remappable controls, and complete pause/speed keyboard paths.
+  - Use a restrained day/night light and sound mix already established by `ART-005`: warm inhabited rooms, mechanical ambience, and localized failures. Do not imply cues that the simulation cannot explain.
+- **`OR-1007` (Save, Recovery & Content QA):**
+  - Verify autosave atomicity and migration from supported saves, replay determinism across a crisis and 30-day hold, and graceful handling of corrupt saves. Exercise empty/partial tower states and demolition during active trips.
+  - Audit text, audio, and visual cues for the human-centered tone and for consistent cause/effect labels. Resolve the active stabilization blockers before the release candidate.
+
+**Exit Criteria:** 30 floors and 300 persistent residents running deterministically; all 8 overlays and six adaptive crisis chains meet the five-point explanation contract; City Status is achieved and held for 30 days in a reproducible seeded campaign; management onboarding, accessibility, save/recovery, and performance gates pass on recorded reference hardware.
 
 ---
 

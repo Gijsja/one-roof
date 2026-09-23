@@ -14,7 +14,9 @@ Build one enormous mixed-use tower, then live with the society that forms inside
 
 ## Player role
 
-The player is the tower's Steward: developer, mayor, and systems designer. They shape structure, services, leases, policy, capacity, and zone-level priorities; inspect outcomes; and respond to crises. They cannot directly order an individual resident to perform an action. Control is exercised through systems, not personal commands.
+The player is the building manager, called the **Steward** in the interface. They are accountable for a single inhabited building: its structure, services, leases, policy, capacity, and zone-level priorities. They inspect outcomes, make tradeoffs under pressure, and respond to crises. They cannot directly order an individual resident to perform an action. Control is exercised through systems, not personal commands.
+
+The tonal reference points are *This War of Mine* (the human cost of scarce resources), *Fallout Shelter* (an immediately readable inhabited cutaway and satisfying expansion), and *Observer* (close, unsettling environmental investigation). One Roof takes their emotional and presentation lessons without copying their setting, combat, or direct character control. Its own tone remains optimistic but fragile: a competent manager can improve lives, and every hard decision has a traceable cause and consequence.
 
 ## Core loop
 
@@ -62,5 +64,7 @@ Five floors, fifty residents, apartments, offices, one shop, utilities, stairs, 
 - The Needs → Satisfaction → Strain model and Scrutiny pressure resource.
 - Eight overlays and adaptive, systems-driven crisis pressure with personal consequences.
 - One campaign goal: sustain City Status.
+
+City Status is an earned, inspectable operating condition, not a population counter. The building must support its people, finances, essential services, and civic legitimacy through 30 consecutive in-game days. The campaign shows which condition is at risk, why, and what the manager can change.
 
 Deferred: multiplayer, multiple towers, street simulation, detailed crime/politics, full furniture editing, mobile/console, user-facing generation, and large personality matrices.
