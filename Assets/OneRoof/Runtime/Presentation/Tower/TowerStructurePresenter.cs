@@ -21,9 +21,13 @@ namespace OneRoof.Presentation.Tower
         private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
         private readonly Dictionary<int, CellBounds> _appliedSlabs = new Dictionary<int, CellBounds>();
         private int _renderedFloorCount;
+        private FloorDeckPresenter _floorDecks;
 
         public int RenderedFloorCount => _renderedFloorCount;
         public IReadOnlyList<GameObject> StructureObjects => _structureObjects;
+        public FloorDeckPresenter FloorDecks => _floorDecks;
+
+        public void BindFloorDeckPresenter(FloorDeckPresenter decks) => _floorDecks = decks;
 
         public static float FloorY(int floor) => BaseFloorY + floor * DefaultFloorHeight;
 
@@ -143,6 +147,8 @@ namespace OneRoof.Presentation.Tower
                 }
                 if (topology.TryGetFloorSlab(0, out var ground)) EnsureStreetEdge(ground);
             }
+
+            _floorDecks?.EnsureFloorDecks(topology);
         }
 
         private void EnsureStreetEdge(CellBounds ground)
@@ -185,6 +191,7 @@ namespace OneRoof.Presentation.Tower
             _authoredObjects.Clear();
             _appliedSlabs.Clear();
             _renderedFloorCount = 0;
+            _floorDecks?.Clear();
         }
 
         /// <summary>

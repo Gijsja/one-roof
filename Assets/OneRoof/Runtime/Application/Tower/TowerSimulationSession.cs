@@ -12,6 +12,7 @@ using OneRoof.Domain.Population;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
+using OneRoof.Domain.Trips;
 
 namespace OneRoof.Application.Tower
 {
@@ -311,6 +312,9 @@ namespace OneRoof.Application.Tower
             }
 
             var roomOccupantCounts = new Dictionary<EntityId, int>();
+            var travelPurposes = new Dictionary<EntityId, string>(_simulation.Transit.ActiveTripCount);
+            foreach (var execution in _simulation.Transit.ActiveTrips)
+                travelPurposes[execution.Trip.PersonId] = TravelPurposeLabel(execution.Trip);
             var residents = new List<TransitResidentProjection>(_simulation.ResidentCount);
             var arrivedCount = 0;
 
@@ -325,6 +329,8 @@ namespace OneRoof.Application.Tower
                 int targetFloor = floor;
                 int slotInRoom = 0;
                 int waitTicks = 0;
+                var purposeLabel = travelPurposes.TryGetValue(person.Id, out var travelPurpose)
+                    ? travelPurpose : PurposeLabel(person.CurrentPurpose);
 
                 switch (spatial.Phase)
                 {
@@ -381,7 +387,8 @@ namespace OneRoof.Application.Tower
                     roomId?.Value,
                     activity,
                     slotInRoom,
-                    waitTicks));
+                    waitTicks,
+                    purposeLabel));
             }
 
             var elevators = new List<ElevatorProjection>(_simulation.ElevatorBank.Cars.Count);
@@ -412,6 +419,37 @@ namespace OneRoof.Application.Tower
             _cachedTick = _simulation.CurrentTick;
             _cachedVersion = _version;
             return _cachedTransitProjection;
+        }
+
+        private static string PurposeLabel(ResidentPurposeKind purpose)
+        {
+            switch (purpose)
+            {
+                case ResidentPurposeKind.Sleeping: return "Sleeping";
+                case ResidentPurposeKind.WorkingInside: return "Working";
+                case ResidentPurposeKind.WorkingOutside: return "Working outside";
+                case ResidentPurposeKind.EatingAtDiner: return "Eating at diner";
+                case ResidentPurposeKind.Sitting: return "Sitting";
+                case ResidentPurposeKind.Reading: return "Reading";
+                case ResidentPurposeKind.Learning: return "Learning";
+                case ResidentPurposeKind.Chilling: return "Chilling";
+                case ResidentPurposeKind.Socializing: return "Socializing";
+                default: return null;
+            }
+        }
+
+        private static string TravelPurposeLabel(TripRecord trip)
+        {
+            switch (trip.Purpose)
+            {
+                case TripPurpose.Work:
+                    return trip.Destination.IsOutside ? "Working outside" : "Working";
+                case TripPurpose.Food: return "Eating at diner";
+                case TripPurpose.Home: return "Returning home";
+                case TripPurpose.Leisure: return "Socializing";
+                case TripPurpose.Hygiene: return "Freshening up";
+                default: return null;
+            }
         }
 
         private void BumpVersion(bool topologyChanged = false)

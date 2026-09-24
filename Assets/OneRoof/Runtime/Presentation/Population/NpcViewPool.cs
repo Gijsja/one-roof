@@ -163,11 +163,10 @@ namespace OneRoof.Presentation.Population
                 return _sharedMaterial;
             }
 
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
-            if (shader == null)
-            {
-                shader = Shader.Find("Sprites/Default");
-            }
+            var shader = Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default");
 
             if (shader != null)
             {

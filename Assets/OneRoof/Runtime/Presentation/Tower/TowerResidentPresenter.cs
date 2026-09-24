@@ -38,7 +38,7 @@ namespace OneRoof.Presentation.Tower
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
-        public int ResidentCount => _residentViews.Count;
+        public int ResidentCount => _viewPool != null ? _targetResidentCount : _residentViews.Count;
 
         public NpcViewPool ViewPool
         {
@@ -61,7 +61,7 @@ namespace OneRoof.Presentation.Tower
             if (viewIndex >= 0 && viewIndex < _residentSkeletons.Count)
             {
                 var skeletal = _residentSkeletons[viewIndex];
-                if (skeletal != null && skeletal.MainRenderer != null)
+                if (skeletal != null && skeletal.gameObject.activeInHierarchy && skeletal.MainRenderer != null)
                 {
                     sprite = skeletal.MainRenderer.sprite;
                     residentTransform = skeletal.transform;
@@ -85,7 +85,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _residentSkeletons.Count; i++)
             {
                 var skeletal = _residentSkeletons[i];
-                if (skeletal == null || skeletal.transform == null) continue;
+                if (skeletal == null || !skeletal.gameObject.activeInHierarchy || skeletal.transform == null) continue;
 
                 var pos = (Vector2)skeletal.transform.position + new Vector2(0f, 0.35f);
                 var distSqr = (pos - worldPos).sqrMagnitude;
@@ -228,16 +228,18 @@ namespace OneRoof.Presentation.Tower
                     skeletal = i < _residentSkeletons.Count ? _residentSkeletons[i] : null;
                 }
 
+                // Outside is a real simulation location. Keep its view absent until
+                // a return trip enters the tower instead of parking it on the street.
+                if (resident.Status == TransitResidentStatus.Outside)
+                {
+                    if (_viewPool == null) residentTransform.gameObject.SetActive(false);
+                    continue;
+                }
+                if (_viewPool == null && !residentTransform.gameObject.activeSelf)
+                    residentTransform.gameObject.SetActive(true);
+
                 switch (resident.Status)
                 {
-                    case TransitResidentStatus.Outside:
-                    {
-                        var outsideX = -2.4f + resident.CellX * 0.5f + 0.25f;
-                        residentTransform.position = new Vector3(outsideX, TowerStructurePresenter.FloorY(0) - 0.58f, -0.2f);
-                        skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
-                        skeletal?.SetAnimationClip(NpcAnimationClip.Idle);
-                        break;
-                    }
                     case TransitResidentStatus.InRoom:
                     case TransitResidentStatus.Arrived:
                     {
@@ -412,10 +414,7 @@ namespace OneRoof.Presentation.Tower
                 var agitation = resident.Status == TransitResidentStatus.Queued
                     ? Mathf.Clamp01((resident.WaitTicks - 10f) / 20f)
                     : 0f;
-                var effects = skeletal != null
-                    ? skeletal.GetComponent<VisualEffectsPresenter>() ?? skeletal.gameObject.AddComponent<VisualEffectsPresenter>()
-                    : null;
-                effects?.SetAgitation(agitation);
+                skeletal?.VisualEffects?.SetAgitation(agitation);
 
                 skeletal?.ApplyProceduralAnimation(time);
             }
@@ -459,13 +458,14 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < snapshot.Residents.Count && _visibleResidentIds.Count < limit; i++)
             {
                 var resident = snapshot.Residents[i];
+                if (resident.Status == TransitResidentStatus.Outside) continue;
                 var floor = Mathf.Max(0, resident.Floor);
                 var y = TowerStructurePresenter.FloorY(floor) - 0.2f;
                 var x = -2.4f + resident.CellX * 0.5f + 0.25f;
                 if (_camera != null)
                 {
                     var viewport = _camera.WorldToViewportPoint(new Vector3(x, y, 0f));
-                    if (viewport.z <= 0f || viewport.y < 0f || viewport.y > 1f) continue;
+                    if (viewport.z <= 0f || viewport.y < -0.1f || viewport.y > 1.1f || viewport.x < -0.1f || viewport.x > 1.1f) continue;
                 }
                 _visibleResidentIds.Add(resident.ResidentId);
             }

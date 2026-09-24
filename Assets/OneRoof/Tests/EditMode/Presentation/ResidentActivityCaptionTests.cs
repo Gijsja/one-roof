@@ -41,6 +41,30 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void TowerCaption_NamesPurposeAndWalkingDestination()
+        {
+            var dinerWalk = new TransitResidentProjection(1, 0, TransitResidentStatus.Walking,
+                purposeLabel: "Eating at diner");
+            var dinerArrival = new TransitResidentProjection(1, 0, TransitResidentStatus.InRoom,
+                purposeLabel: "Eating at diner");
+            var reading = new TransitResidentProjection(2, 1, TransitResidentStatus.InRoom,
+                purposeLabel: "Reading");
+            var learning = new TransitResidentProjection(3, 1, TransitResidentStatus.InRoom,
+                purposeLabel: "Learning");
+            var chilling = new TransitResidentProjection(4, 1, TransitResidentStatus.InRoom,
+                purposeLabel: "Chilling");
+            var homeWalk = new TransitResidentProjection(5, 1, TransitResidentStatus.Walking,
+                purposeLabel: "Returning home");
+
+            Assert.That(ResidentActivityCaption.For(dinerWalk), Is.EqualTo("To diner"));
+            Assert.That(ResidentActivityCaption.For(dinerArrival), Is.EqualTo("Eating at diner"));
+            Assert.That(ResidentActivityCaption.For(reading), Is.EqualTo("Reading"));
+            Assert.That(ResidentActivityCaption.For(learning), Is.EqualTo("Learning"));
+            Assert.That(ResidentActivityCaption.For(chilling), Is.EqualTo("Chilling"));
+            Assert.That(ResidentActivityCaption.For(homeWalk), Is.EqualTo("Going home"));
+        }
+
+        [Test]
         public void RigCaption_ClearsWhenViewIsReused()
         {
             var go = new GameObject("CaptionTestResident");

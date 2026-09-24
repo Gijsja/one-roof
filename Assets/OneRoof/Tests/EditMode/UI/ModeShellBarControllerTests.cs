@@ -36,6 +36,7 @@ namespace OneRoof.UI.Tests.EditMode
         {
             _holder = new GameObject("ModeShellBarTestHolder");
             _controller = _holder.AddComponent<ModeShellBarController>();
+            _controller.Session = new ModeShellSession();
         }
 
         [TearDown]
@@ -52,6 +53,14 @@ namespace OneRoof.UI.Tests.EditMode
         {
             Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
             Assert.That(_controller.CurrentProjection.IsInspectMode, Is.True);
+        }
+
+        [Test]
+        public void Controller_DoesNotAllocateSessionBeforeInjection()
+        {
+            _controller.Session = null;
+            Assert.That(_controller.Session, Is.Null);
+            Assert.That(_controller.ActiveMode, Is.EqualTo(InteractionMode.Inspect));
         }
 
         [Test]

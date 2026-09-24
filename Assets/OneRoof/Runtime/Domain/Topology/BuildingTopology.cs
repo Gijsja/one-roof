@@ -122,7 +122,7 @@ namespace OneRoof.Domain.Topology
             if (string.IsNullOrEmpty(firstPrefix) && string.IsNullOrEmpty(secondPrefix)) return matches;
             foreach (var entry in _roomsByContentType)
             {
-                var value = entry.Key.Value;
+                var value = entry.Key.Value ?? string.Empty;
                 var matchesFirst = !string.IsNullOrEmpty(firstPrefix) && value.StartsWith(firstPrefix, StringComparison.Ordinal);
                 var matchesSecond = !string.IsNullOrEmpty(secondPrefix) && value.StartsWith(secondPrefix, StringComparison.Ordinal);
                 if (!matchesFirst && !matchesSecond) continue;

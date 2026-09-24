@@ -109,7 +109,7 @@ namespace OneRoof.Domain.Scrutiny
             // Mean-reversion (Value term in relief) guarantees even chronically
             // bad conditions settle below saturation instead of ratcheting to a
             // permanent 100%: scrutiny stays a live signal for the event system.
-            Value = Clamp(Value + (pressure * .20f) - relief - (Value * .06f));
+            Value = Clamp(Value + (pressure * .20f) - relief - (Value * .065f));
             _recentExpansionPressure = Clamp(_recentExpansionPressure - .02f);
             _recentPolicyPressure = Clamp(_recentPolicyPressure - .01f);
 

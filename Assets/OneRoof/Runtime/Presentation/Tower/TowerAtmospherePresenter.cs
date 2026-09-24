@@ -225,7 +225,7 @@ namespace OneRoof.Presentation.Tower
             var size = new Vector3(14f, top - bottom, 1f);
             if (_nightTint == null)
             {
-                var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+                var shader = Shader.Find("OneRoof/Unlit") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
                 if (shader == null) return;
                 _nightTint = new GameObject("NightTint");
                 _nightTint.transform.SetParent(transform, false);
@@ -265,7 +265,7 @@ namespace OneRoof.Presentation.Tower
             var mesh = CreateWindowLightCone(room);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = go.AddComponent<MeshRenderer>();
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+            var shader = Shader.Find("OneRoof/Unlit") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
             if (shader == null) throw new MissingReferenceException("No unlit shader found for window-light volume.");
             var material = new Material(shader);
             material.color = new Color(1f, 0.77f, 0.36f, 0.34f);

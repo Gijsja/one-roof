@@ -240,8 +240,9 @@ namespace OneRoof.Presentation.Tower
         private static Material CreateGhostMaterial(out bool isAllIn1Shader)
         {
             var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+                ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
                 ?? Shader.Find("Sprites/Default");
 
             if (shader == null)

@@ -66,14 +66,16 @@ namespace OneRoof.Domain.Transit
                         continue;
                     }
 
-                    var alt = smallestDistance + edge.Cost;
-                    if (alt < distances[edge.ToNodeId])
+                    var alt = (long)smallestDistance + edge.Cost;
+                    if (alt > int.MaxValue) alt = int.MaxValue;
+                    var altInt = (int)alt;
+                    if (altInt < distances[edge.ToNodeId])
                     {
                         // Remove old entry before updating (SortedSet requires remove+re-add to re-sort)
                         unvisited.Remove((distances[edge.ToNodeId], edge.ToNodeId.Value, edge.ToNodeId));
-                        distances[edge.ToNodeId] = alt;
+                        distances[edge.ToNodeId] = altInt;
                         previousEdge[edge.ToNodeId] = edge;
-                        unvisited.Add((alt, edge.ToNodeId.Value, edge.ToNodeId));
+                        unvisited.Add((altInt, edge.ToNodeId.Value, edge.ToNodeId));
                     }
                 }
             }
@@ -85,9 +87,13 @@ namespace OneRoof.Domain.Transit
 
             var path = new List<TransitEdge>();
             var curr = destinationNodeId;
+            var visitedInPath = new HashSet<EntityId>();
             while (!curr.Equals(originNodeId))
             {
-                var edge = previousEdge[curr];
+                if (!visitedInPath.Add(curr) || !previousEdge.TryGetValue(curr, out var edge))
+                {
+                    return null; // Cycle or broken chain detected
+                }
                 path.Add(edge);
                 curr = edge.FromNodeId;
             }

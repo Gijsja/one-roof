@@ -575,13 +575,13 @@ namespace OneRoof.Domain
                 var salvageRefund = cost / 2;
 
                 var result = Topology.Execute(cmd, Clock.CurrentTick);
-                if (result.Accepted && salvageRefund > 0)
-                {
-                    Economy.RecordConstructionSalvage(salvageRefund);
-                }
-
                 if (result.Accepted)
                 {
+                    if (salvageRefund > 0)
+                    {
+                        Economy.RecordConstructionSalvage(salvageRefund);
+                    }
+                    Businesses.RemoveBusinessForRoom(cmd.RoomId);
                     SyncTransitServices();
                 }
 
@@ -591,6 +591,7 @@ namespace OneRoof.Domain
             var fallbackResult = Topology.Execute(cmd, Clock.CurrentTick);
             if (fallbackResult.Accepted)
             {
+                Businesses.RemoveBusinessForRoom(cmd.RoomId);
                 SyncTransitServices();
             }
 
@@ -703,7 +704,11 @@ namespace OneRoof.Domain
         }
 
 
-        public static TowerSimulation CreateStandardFiveFloor(TowerEconomyState economy = null, IRandomStream randomStream = null, bool enqueueMorningRush = false)
+        public static TowerSimulation CreateStandardFiveFloor(
+            TowerEconomyState economy = null,
+            IRandomStream randomStream = null,
+            bool enqueueMorningRush = false,
+            long settlementPeriod = DailySchedule.TicksPerDay)
         {
             var clock = new SimulationClock(new Tick(0));
             var topologyState = BuildingTopologyState.CreateWithFixture();
@@ -718,7 +723,8 @@ namespace OneRoof.Domain
                 population,
                 elevatorBank,
                 economy,
-                randomStream);
+                randomStream,
+                settlementPeriod: settlementPeriod);
 
             if (enqueueMorningRush)
             {
@@ -772,7 +778,7 @@ namespace OneRoof.Domain
         /// workplaces appear. Economy, utilities, commute, routines, and
         /// expansion all run through the standard tick loop from tick zero.
         /// </summary>
-        public static TowerSimulation CreateGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury, IRandomStream randomStream = null)
+        public static TowerSimulation CreateGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury, IRandomStream randomStream = null, long settlementPeriod = DailySchedule.TicksPerDay)
         {
             var clock = new SimulationClock(new Tick(0));
             var topologyState = new BuildingTopologyState(startingEntityId: 2000);
@@ -800,7 +806,9 @@ namespace OneRoof.Domain
                 population,
                 elevatorBank,
                 new TowerEconomyState(startingTreasury),
-                randomStream);
+                randomStream,
+                null,
+                settlementPeriod);
         }
 
         public TowerSaveData ExportSaveData()
@@ -827,8 +835,11 @@ namespace OneRoof.Domain
         public static TowerSimulation RestoreFromSaveData(TowerSaveData data, IRandomStream randomStream = null)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
-
-            var clock = new SimulationClock(new Tick(data.simulationTick));
+            if (data.floorSlabs == null || data.rooms == null || data.portals == null ||
+                data.households == null || data.persons == null)
+                throw new ArgumentException("Save payload is missing required tower data.", nameof(data));
+            var tick = data.simulationTick >= 0 ? data.simulationTick : 0;
+            var clock = new SimulationClock(new Tick(tick));
             var topology = BuildingTopologyState.FromSaveData(data.GetTopologySaveData(), data.nextEntityId > 0 ? data.nextEntityId : 3000);
             var population = PopulationState.FromSaveData(data.GetPopulationSaveData(), randomStream);
             var elevatorBank = ElevatorBank.FromSaveData(data.elevatorBank);
@@ -844,6 +855,24 @@ namespace OneRoof.Domain
             sim.Transit.RestoreFromSaveData(data.activeTrips, sim.Topology, sim.Planner);
             sim.SyncTransitServices();
             return sim;
+        }
+
+        /// <summary>Safe boundary for loading untrusted or damaged save payloads.</summary>
+        public static bool TryRestoreFromSaveData(TowerSaveData data, out TowerSimulation simulation, out string error,
+            IRandomStream randomStream = null)
+        {
+            simulation = null;
+            error = null;
+            try
+            {
+                simulation = RestoreFromSaveData(data, randomStream);
+                return true;
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
+            {
+                error = "Save payload is invalid or damaged.";
+                return false;
+            }
         }
     }
 }

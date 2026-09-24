@@ -265,7 +265,8 @@ namespace OneRoof.Application.Overlays
                 else if (age < 50) values.AdultCount++;
                 else values.OlderAdultCount++;
 
-                var budget = _session.GetHousehold(person.HouseholdId).Budget;
+                var household = _session.GetHousehold(person.HouseholdId);
+                var budget = household != null ? household.Budget : 0.5f;
                 if (budget < .55f) values.LimitedResourceCount++;
                 else if (budget < .8f) values.StableResourceCount++;
                 else values.ComfortableResourceCount++;
@@ -356,9 +357,12 @@ namespace OneRoof.Application.Overlays
             var failedByFloor = new Dictionary<int, int>();
             foreach (var item in operations.Equipment) if (item.IsFailed) failedByFloor[item.Floor] = failedByFloor.TryGetValue(item.Floor, out var count) ? count + 1 : 1;
             var floors = new List<UtilitiesFloorProjection>();
-            for (var floor = 0; floor < _session.FloorCount; floor++)
+            var plumbingByFloor = new Dictionary<int, OneRoof.Domain.Infrastructure.WaterWasteFloorProjection>();
+            foreach (var plumbing in waterWaste.Floors) plumbingByFloor[plumbing.Floor] = plumbing;
+            foreach (var electrical in power.Floors)
             {
-                var electrical = power.Floors[floor]; var plumbing = waterWaste.Floors[floor];
+                var floor = electrical.Floor;
+                if (!plumbingByFloor.TryGetValue(floor, out var plumbing)) continue;
                 failedByFloor.TryGetValue(floor, out var failures);
                 floors.Add(new UtilitiesFloorProjection(floor, electrical.Voltage, electrical.BrownoutReason.ToString(), plumbing.WaterPressure, plumbing.WaterFailure.ToString(), plumbing.WasteFailure.ToString(), failures,
                     electrical.RiserColumn, plumbing.WaterRiserColumn, plumbing.WasteChuteColumn, electrical.IsConnected, plumbing.HasWaterService, plumbing.HasWasteCollection));

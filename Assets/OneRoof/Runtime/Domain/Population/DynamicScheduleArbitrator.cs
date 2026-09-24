@@ -92,14 +92,18 @@ namespace OneRoof.Domain.Population
         {
             if (person == null) return null;
             if (person.CurrentActivity == ActivityKind.Commuting) return null;
+            if (person.HasCommittedPurposeAt(tick)) return null;
+
+            var activeLabel = person.Schedule.ActiveLabelAt(tick);
+            if (person.CurrentPurpose == ResidentPurposeKind.WorkingOutside &&
+                person.CurrentLocation.IsOutside && activeLabel != DailySchedule.LabelWork)
+                return TripPurpose.Home;
 
             var urgent = ArbitrateUrgentNeed(person);
             if (urgent.HasValue)
             {
                 return urgent.Value;
             }
-
-            var activeLabel = person.Schedule.ActiveLabelAt(tick);
 
             if (!isBlockTransition)
             {
@@ -176,6 +180,17 @@ namespace OneRoof.Domain.Population
             var isAtWork = person.CurrentLocation.Equals(person.WorkplaceLocation);
             var hunger = person.GetNeedSatisfaction(NeedKind.Hunger);
             var social = person.GetNeedSatisfaction(NeedKind.Social);
+
+            // A minimum-length episode can span a schedule boundary. Once it
+            // releases, catch up to the block that is now active.
+            if (person.CurrentPurpose != ResidentPurposeKind.None)
+            {
+                if (activeLabel == DailySchedule.LabelSleep && !isAtHome) return TripPurpose.Home;
+                if (activeLabel == DailySchedule.LabelWork && !isAtWork) return TripPurpose.Work;
+                if (activeLabel == DailySchedule.LabelEat &&
+                    person.CurrentActivity != ActivityKind.Eating && hunger < SatisfiedNeedThreshold)
+                    return TripPurpose.Food;
+            }
 
             // 1. Finished meal: hunger restored but resident still sits in the diner.
             if (person.CurrentActivity == ActivityKind.Eating && hunger >= SatisfiedNeedThreshold)

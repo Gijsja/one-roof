@@ -32,6 +32,7 @@ namespace OneRoof.Application.Inspectors
             var details = new List<string>
             {
                 $"Activity: {person.Activity}",
+                $"Purpose: {(resident.HasValue ? resident.Value.PurposeLabel ?? "Unassigned" : "Unassigned")}",
                 $"Household: #{person.HouseholdId}",
                 $"Home: room #{person.HomeRoomId}",
                 person.WorksOutside ? "Workplace: Outside" : $"Workplace: room #{person.WorkplaceRoomId}",

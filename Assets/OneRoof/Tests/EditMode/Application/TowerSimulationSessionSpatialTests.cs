@@ -80,6 +80,28 @@ namespace OneRoof.Application.Tests.EditMode
         }
 
         [Test]
+        public void TransitProjection_WalkingTripCarriesItsDestinationPurpose()
+        {
+            var session = new TowerSimulationSession();
+            string walkingPurpose = null;
+            for (var tick = 0; tick < 100 && walkingPurpose == null; tick++)
+            {
+                session.AdvanceOneTick();
+                var residents = session.TransitProjection().Residents;
+                for (var i = 0; i < residents.Count; i++)
+                {
+                    if (residents[i].Status != TransitResidentStatus.Walking ||
+                        string.IsNullOrEmpty(residents[i].PurposeLabel)) continue;
+                    walkingPurpose = residents[i].PurposeLabel;
+                    break;
+                }
+            }
+
+            Assert.That(walkingPurpose, Is.Not.Null,
+                "An active walking trip must project its destination purpose after commuting clears the settled purpose.");
+        }
+
+        [Test]
         public void CongestionProjection_SameTick_ReusesImmutableSnapshot()
         {
             var session = new TowerSimulationSession();

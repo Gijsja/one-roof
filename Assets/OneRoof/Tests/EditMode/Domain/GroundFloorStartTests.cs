@@ -47,7 +47,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void FromScratchLoop_EconomyUtilitiesCommuteRoutineAndExpansion()
         {
-            var sim = TowerSimulation.CreateGroundFloorStart();
+            var sim = TowerSimulation.CreateGroundFloorStart(settlementPeriod: 50);
             var startingCash = sim.Economy.CashBalance;
 
             // ── 1. Widen the ground slab, then zone a diner workplace plus a home ──
@@ -170,7 +170,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void StairsOnlyAccess_CommutersReachWorkWithoutElevator()
         {
-            var sim = TowerSimulation.CreateGroundFloorStart();
+            var sim = TowerSimulation.CreateGroundFloorStart(settlementPeriod: 50);
             AssertAccepted(sim.ExpandGroundSlab(new ExpandGroundSlabCommand(-20, 23)));
             AssertAccepted(sim.BuildRoom(new BuildRoomCommand(0, -14, -5, new ContentId("commercial:diner"), 5)));
             AssertAccepted(sim.BuildRoom(new BuildRoomCommand(0, -20, -15, new ContentId("residential:apartment"), 5)));

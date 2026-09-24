@@ -49,9 +49,13 @@ namespace OneRoof.Presentation.Population
                         : FloorLabel(WaitingForFloor, "Waiting · F", resident.DestinationFloor);
                 case TransitResidentStatus.Riding:
                     return FloorLabel(LiftToFloor, "Lift to F", resident.DestinationFloor);
-                case TransitResidentStatus.Walking: return "Walking";
+                case TransitResidentStatus.Walking:
+                    return WalkingPurpose(resident.PurposeLabel);
                 case TransitResidentStatus.Outside: return "Outside";
             }
+
+            if (!string.IsNullOrEmpty(resident.PurposeLabel))
+                return resident.PurposeLabel;
 
             switch (resident.Activity)
             {
@@ -61,6 +65,25 @@ namespace OneRoof.Presentation.Population
                 case ActivityKind.Leisure: return "Relaxing";
                 case ActivityKind.Commuting: return "Commuting";
                 default: return "At home";
+            }
+        }
+
+        private static string WalkingPurpose(string purpose)
+        {
+            switch (purpose)
+            {
+                case "Eating at diner": return "To diner";
+                case "Working": return "To work";
+                case "Working outside": return "To outside work";
+                case "Sleeping":
+                case "Sitting":
+                case "Reading":
+                case "Learning":
+                case "Chilling": return "Going home";
+                case "Returning home": return "Going home";
+                case "Socializing": return "To visit";
+                case "Freshening up": return "To wash";
+                default: return "Walking";
             }
         }
 

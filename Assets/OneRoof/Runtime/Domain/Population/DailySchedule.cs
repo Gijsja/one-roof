@@ -100,7 +100,11 @@ namespace OneRoof.Domain.Population
             var minSleep   = Math.Max(2, (int)(baseSleepEnd * 0.5f));
             var maxSleep   = isSliceScale ? baseSleepEnd + 8 : 660L;
             var sleepEnd   = Clamp(baseSleepEnd  + traitShift + jitter1, minSleep, maxSleep);
-            var workEnd    = Clamp(baseWorkEnd   + traitShift + jitter2, sleepEnd + (isSliceScale ? 20 : 240), isSliceScale ? 250 : 1100);
+            // Keep full-day shifts at exactly eight in-game hours. Jitter shifts
+            // the whole shift, rather than shortening or lengthening it.
+            var workEnd    = isSliceScale
+                ? Clamp(baseWorkEnd + traitShift + jitter2, sleepEnd + 20, 250)
+                : sleepEnd + 480;
             var eatEnd     = Clamp(baseEatEnd    + traitShift + jitter3, workEnd  + (isSliceScale ? 15 : 60),  isSliceScale ? 350 : 1200);
 
             var blocks = new List<ScheduleBlock>(4)

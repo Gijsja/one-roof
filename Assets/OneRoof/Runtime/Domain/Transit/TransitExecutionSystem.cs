@@ -326,6 +326,7 @@ namespace OneRoof.Domain.Transit
                 if (trip.PlannedRoute?.Legs == null)
                 {
                     CancelInvalidRestoredTrip(trip);
+                    person?.UpdateActivity(ActivityKind.Idle);
                     _activeTrips.RemoveAt(i);
                     _activeTripsByPerson.Remove(trip.PersonId);
                     continue;
@@ -445,14 +446,15 @@ namespace OneRoof.Domain.Transit
             ActiveTripExecution execution,
             HierarchicalTransitGraph graph)
         {
-            if (execution?.Trip?.PlannedRoute == null || graph == null ||
-                execution.CurrentLegIndex >= execution.Trip.PlannedRoute.Legs.Count)
+            var activeRoute = execution?.Route ?? execution?.Trip?.PlannedRoute;
+            if (activeRoute == null || graph == null ||
+                execution.CurrentLegIndex >= activeRoute.Legs.Count)
             {
                 return false;
             }
 
-            var currentNodeId = execution.Trip.PlannedRoute.Legs[execution.CurrentLegIndex].FromNodeId;
-            var destinationNodeId = execution.Trip.PlannedRoute.DestinationNodeId;
+            var currentNodeId = activeRoute.Legs[execution.CurrentLegIndex].FromNodeId;
+            var destinationNodeId = activeRoute.DestinationNodeId;
             var availableEdges = new List<TransitEdge>();
             foreach (var edge in graph.Edges)
             {
@@ -492,6 +494,7 @@ namespace OneRoof.Domain.Transit
                 person.UpdateLocation(trip.Destination);
                 person.UpdateActivity(PurposeToActivity(trip.Purpose));
                 ReconcileArrivalActivity(person, tick);
+                ResidentPurposeSystem.AdvancePerson(person, tick);
             }
 
             _activeTrips.RemoveAt(listIndex);
@@ -513,6 +516,13 @@ namespace OneRoof.Domain.Transit
                 person.CurrentActivity == ActivityKind.Idle)
             {
                 person.UpdateActivity(ActivityKind.Sleeping);
+            }
+            else if ((activeLabel == DailySchedule.LabelLeisure || activeLabel == DailySchedule.LabelEat) &&
+                person.CurrentLocation.Equals(WorldLocation.InRoom(person.HomeRoomId)) &&
+                person.CurrentActivity == ActivityKind.Sleeping &&
+                person.GetNeedSatisfaction(NeedKind.Energy) >= DynamicScheduleArbitrator.CriticalEnergyThreshold)
+            {
+                person.UpdateActivity(ActivityKind.Leisure);
             }
             else if (activeLabel == DailySchedule.LabelWork &&
                 person.CurrentLocation.Equals(person.WorkplaceLocation) &&

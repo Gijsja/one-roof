@@ -92,12 +92,23 @@ namespace OneRoof.Domain.Economy
             return result;
         }
 
+        public bool RemoveBusinessForRoom(EntityId roomId)
+        {
+            var idx = _businesses.FindIndex(b => b.RoomId.Equals(roomId));
+            if (idx >= 0)
+            {
+                _businesses.RemoveAt(idx);
+                return true;
+            }
+            return false;
+        }
+
         public static BusinessState FromSaveData(BusinessSaveData[] data)
         {
             if (data == null) return new BusinessState();
             var businesses = new List<BusinessRecord>();
             for (var i = 0; i < data.Length; i++)
-                if (data[i] != null && data[i].id > 0 && data[i].roomId > 0)
+                if (data[i] != null && data[i].id > 0 && data[i].roomId > 0 && !string.IsNullOrEmpty(data[i].contentType))
                     businesses.Add(BusinessRecord.FromSaveData(data[i]));
             return new BusinessState(businesses);
         }
@@ -205,6 +216,8 @@ namespace OneRoof.Domain.Economy
             if (IsInsolvent)
             {
                 ArrearsDays = IncrementSaturated(ArrearsDays);
+                LastOperatingCost = OperatingCostPerDay;
+                CashBalance = SaturateSubtract(CashBalance, LastOperatingCost);
                 return;
             }
 
@@ -217,7 +230,7 @@ namespace OneRoof.Domain.Economy
             else
             {
                 LastWages = wages;
-                CashBalance -= wages;
+                CashBalance = SaturateSubtract(CashBalance, wages);
                 PayEmployees(population);
             }
 
@@ -237,17 +250,17 @@ namespace OneRoof.Domain.Economy
             {
                 LastRentPaid = CalculateRent(room, policy.RentCapMultiplier);
                 LastTaxPaid = CalculateTax(LastCustomerRevenue + LastContractRevenue, policy.CommercialTaxRate);
-                CashBalance -= LastRentPaid + LastTaxPaid;
+                CashBalance = SaturateSubtract(CashBalance, LastRentPaid + LastTaxPaid);
                 if (LastRentPaid > 0) treasury.RecordBusinessRentReceipt(LastRentPaid);
                 if (LastTaxPaid > 0) treasury.RecordTaxReceipt(LastTaxPaid);
             }
 
             LastOperatingCost = OperatingCostPerDay;
-            CashBalance -= LastOperatingCost;
+            CashBalance = SaturateSubtract(CashBalance, LastOperatingCost);
             if (CashBalance < InsolvencyThreshold)
             {
                 IsInsolvent = true;
-                ArrearsDays = 1;
+                ArrearsDays = IncrementSaturated(ArrearsDays);
             }
             else if (CashBalance < 0)
             {
@@ -337,7 +350,7 @@ namespace OneRoof.Domain.Economy
             var demandCap = (int)Math.Floor(WalkInDemandPerRoomCell * room.Capacity * (double)occupancyFactor);
             var customers = Math.Min(customersByStaff, Math.Max(0, demandCap));
             long gross = (long)customers * WalkInTicket(ContentType);
-            if (quietHours) gross = (long)Math.Floor(gross * 0.9d);
+            if (quietHours) gross = (gross * 9L) / 10L;
             return gross;
         }
 
@@ -347,7 +360,8 @@ namespace OneRoof.Domain.Economy
         private static long CalculateRent(Room room, float rentMultiplier)
         {
             var ratePerCell = IsReducedRentBusiness(room.ContentType) ? 5 : 8;
-            return (long)Math.Round(room.Bounds.Width * ratePerCell * (double)rentMultiplier, MidpointRounding.AwayFromZero);
+            var mult = IsReducedRentBusiness(room.ContentType) ? 1.0d : (double)rentMultiplier;
+            return (long)Math.Round(room.Bounds.Width * ratePerCell * mult, MidpointRounding.AwayFromZero);
         }
 
         private static long CalculateTax(long grossRevenue, float rate) =>
@@ -422,10 +436,19 @@ namespace OneRoof.Domain.Economy
         private static SpecialistRole PreferredRole(ContentId contentType)
         {
             var value = contentType.Value ?? string.Empty;
-            if (value.Contains("maintenance")) return SpecialistRole.Maintenance;
-            if (value.Contains("security")) return SpecialistRole.Security;
-            if (value.Contains("office")) return SpecialistRole.Knowledge;
+            if (value.IndexOf("maintenance", StringComparison.OrdinalIgnoreCase) >= 0) return SpecialistRole.Maintenance;
+            if (value.IndexOf("security", StringComparison.OrdinalIgnoreCase) >= 0) return SpecialistRole.Security;
+            if (value.IndexOf("office", StringComparison.OrdinalIgnoreCase) >= 0) return SpecialistRole.Knowledge;
             return SpecialistRole.Service;
+        }
+
+        private static long SaturateSubtract(long balance, long amount)
+        {
+            const long minimumBalance = -1_000_000L;
+            if (balance <= minimumBalance) return minimumBalance;
+            if (amount <= 0) return balance;
+            if (balance < amount + minimumBalance) return minimumBalance;
+            return balance - amount;
         }
 
         private static int IncrementSaturated(int value) => value == int.MaxValue ? int.MaxValue : value + 1;

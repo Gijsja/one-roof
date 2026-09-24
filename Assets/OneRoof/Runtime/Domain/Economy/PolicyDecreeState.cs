@@ -30,20 +30,16 @@ namespace OneRoof.Domain.Economy
             bool transitSubsidyEnabled,
             bool quietHoursEnabled)
         {
-            if (!IsAllowedRentCapMultiplier(rentCapMultiplier))
-            {
-                throw new ArgumentOutOfRangeException(nameof(rentCapMultiplier), rentCapMultiplier,
-                    "Rent cap must be 0.7, 1.0, or 1.3.");
-            }
+            if (FloatEquals(rentCapMultiplier, LowRentCapMultiplier)) RentCapMultiplier = LowRentCapMultiplier;
+            else if (FloatEquals(rentCapMultiplier, NeutralRentCapMultiplier)) RentCapMultiplier = NeutralRentCapMultiplier;
+            else if (FloatEquals(rentCapMultiplier, HighRentCapMultiplier)) RentCapMultiplier = HighRentCapMultiplier;
+            else throw new ArgumentOutOfRangeException(nameof(rentCapMultiplier), rentCapMultiplier, "Rent cap must be 0.7, 1.0, or 1.3.");
 
-            if (!IsAllowedCommercialTaxRate(commercialTaxRate))
-            {
-                throw new ArgumentOutOfRangeException(nameof(commercialTaxRate), commercialTaxRate,
-                    "Commercial tax must be 0%, 10%, or 20%.");
-            }
+            if (FloatEquals(commercialTaxRate, NoCommercialTaxRate)) CommercialTaxRate = NoCommercialTaxRate;
+            else if (FloatEquals(commercialTaxRate, StandardCommercialTaxRate)) CommercialTaxRate = StandardCommercialTaxRate;
+            else if (FloatEquals(commercialTaxRate, HighCommercialTaxRate)) CommercialTaxRate = HighCommercialTaxRate;
+            else throw new ArgumentOutOfRangeException(nameof(commercialTaxRate), commercialTaxRate, "Commercial tax must be 0%, 10%, or 20%.");
 
-            RentCapMultiplier = rentCapMultiplier;
-            CommercialTaxRate = commercialTaxRate;
             TransitSubsidyEnabled = transitSubsidyEnabled;
             QuietHoursEnabled = quietHoursEnabled;
         }
@@ -60,24 +56,26 @@ namespace OneRoof.Domain.Economy
         public bool QuietHoursEnabled { get; }
 
         /// <summary>Whether this decree uses either setting identified as extreme by ECON-003.</summary>
-        public bool IsAggressive => RentCapMultiplier == HighRentCapMultiplier ||
-                                    CommercialTaxRate == HighCommercialTaxRate;
+        public bool IsAggressive => FloatEquals(RentCapMultiplier, HighRentCapMultiplier) ||
+                                    FloatEquals(CommercialTaxRate, HighCommercialTaxRate);
+
+        public static bool FloatEquals(float a, float b) => Math.Abs(a - b) < 0.001f;
 
         public static bool IsAllowedRentCapMultiplier(float value) =>
-            value == LowRentCapMultiplier ||
-            value == NeutralRentCapMultiplier ||
-            value == HighRentCapMultiplier;
+            FloatEquals(value, LowRentCapMultiplier) ||
+            FloatEquals(value, NeutralRentCapMultiplier) ||
+            FloatEquals(value, HighRentCapMultiplier);
 
         public static bool IsAllowedCommercialTaxRate(float value) =>
-            value == NoCommercialTaxRate ||
-            value == StandardCommercialTaxRate ||
-            value == HighCommercialTaxRate;
+            FloatEquals(value, NoCommercialTaxRate) ||
+            FloatEquals(value, StandardCommercialTaxRate) ||
+            FloatEquals(value, HighCommercialTaxRate);
 
         public bool Equals(PolicyDecreeState other)
         {
             return other != null &&
-                   RentCapMultiplier == other.RentCapMultiplier &&
-                   CommercialTaxRate == other.CommercialTaxRate &&
+                   FloatEquals(RentCapMultiplier, other.RentCapMultiplier) &&
+                   FloatEquals(CommercialTaxRate, other.CommercialTaxRate) &&
                    TransitSubsidyEnabled == other.TransitSubsidyEnabled &&
                    QuietHoursEnabled == other.QuietHoursEnabled;
         }

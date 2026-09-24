@@ -230,6 +230,12 @@ namespace OneRoof.Domain.Persistence
         public int currentRoomId;
         public int currentLocationKind;
         public int currentActivity;
+        public int currentPurpose;
+        public long purposeStartedAtTick;
+        public long purposeEndsAtTick;
+        public string[] scheduleLabels;
+        public long[] scheduleStartTicks;
+        public long[] scheduleEndTicks;
         public int trait;
         public int[] personalityFacets;
         public float wellbeingSatisfaction;

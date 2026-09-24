@@ -26,6 +26,7 @@ namespace OneRoof.Domain.Trips
         private TransitRoutePlanner _planner;
         private Room[] _foodRooms;
         private Room[] _lobbyRooms;
+        private readonly Dictionary<EntityId, long> _failedRouteCooldowns = new Dictionary<EntityId, long>();
 
         private readonly DynamicScheduleArbitrator _arbitrator = new DynamicScheduleArbitrator();
         private int _nextTripId;
@@ -79,6 +80,10 @@ namespace OneRoof.Domain.Trips
             foreach (var person in population.Persons)
             {
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
+                if (person.CurrentPurpose == ResidentPurposeKind.None)
+                    ResidentPurposeSystem.AdvancePerson(person, currentTick);
+                if (person.HasCommittedPurposeAt(currentTick)) continue;
+                if (_failedRouteCooldowns.TryGetValue(person.Id, out var cooldownUntil) && currentTick.Value < cooldownUntil) continue;
 
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
                 var currentLabel  = person.Schedule.ActiveLabelAt(currentTick);
@@ -88,7 +93,11 @@ namespace OneRoof.Domain.Trips
                     ? (_arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: true) ?? LabelToPurpose(currentLabel))
                     : _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: false);
 
-                if (purpose == null) continue;
+                if (purpose == null)
+                {
+                    ResidentPurposeSystem.AdvancePerson(person, currentTick);
+                    continue;
+                }
 
                 var destination = ResolveDestination(person, purpose.Value);
                 if (!destination.HasValue) continue;
@@ -96,6 +105,7 @@ namespace OneRoof.Domain.Trips
                 var origin = person.CurrentLocation;
                 if (origin.Equals(destination.Value))
                 {
+                    _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
                     TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
                     continue;
@@ -110,9 +120,14 @@ namespace OneRoof.Domain.Trips
 
                 if (trip != null)
                 {
+                    _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(ActivityKind.Commuting);
                     if (trips == null) trips = new List<TripRecord>();
                     trips.Add(trip);
+                }
+                else
+                {
+                    _failedRouteCooldowns[person.Id] = currentTick.Value + 60;
                 }
             }
 
@@ -197,7 +212,7 @@ namespace OneRoof.Domain.Trips
 
         private void RebuildRoomCandidates()
         {
-            var foodRooms = _topology.GetRoomsByContentPrefixes("commercial:", "room:diner");
+            var foodRooms = _topology.GetRoomsByContentPrefixes("commercial:diner", "room:diner");
             _foodRooms = foodRooms.ToArray();
             _lobbyRooms = ToArray(_topology.GetRoomsByContentType(FiveFloorTopologyFixture.LobbyContentId));
         }
@@ -205,22 +220,32 @@ namespace OneRoof.Domain.Trips
         private EntityId? FindRoomByContent(ContentId contentId, int floorHint, EntityId personId)
         {
             var rooms = contentId == FiveFloorTopologyFixture.CommercialContentId ? _foodRooms : _lobbyRooms;
-            var count = 0;
-            for (var i = 0; i < rooms.Length; i++)
-                if (rooms[i].Floor == floorHint) count++;
-            for (var i = 0; i < rooms.Length; i++)
-                if (rooms[i].Floor != floorHint) count++;
-            if (count == 0) return null;
+            if (rooms == null || rooms.Length == 0) return null;
 
-            // Deterministic spread: stable person ID selects the room, so demand splits
-            // across diners/lobbies without any per-generator state (ADR-020).
-            var index = Math.Abs(personId.Value % count);
-            var matchingIndex = 0;
+            // Preference 1: Candidate rooms on the local floor
+            var localCount = 0;
             for (var i = 0; i < rooms.Length; i++)
-                if (rooms[i].Floor == floorHint && matchingIndex++ == index) return rooms[i].Id;
-            for (var i = 0; i < rooms.Length; i++)
-                if (rooms[i].Floor != floorHint && matchingIndex++ == index) return rooms[i].Id;
-            return null;
+            {
+                if (rooms[i].Floor == floorHint) localCount++;
+            }
+
+            if (localCount > 0)
+            {
+                var targetIndex = Math.Abs(personId.Value % localCount);
+                var currentIndex = 0;
+                for (var i = 0; i < rooms.Length; i++)
+                {
+                    if (rooms[i].Floor == floorHint)
+                    {
+                        if (currentIndex == targetIndex) return rooms[i].Id;
+                        currentIndex++;
+                    }
+                }
+            }
+
+            // Preference 2: Deterministic distribution across all candidate rooms
+            var index = Math.Abs(personId.Value % rooms.Length);
+            return rooms[index].Id;
         }
 
         private static Room[] ToArray(IReadOnlyList<Room> rooms)

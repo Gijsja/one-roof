@@ -230,18 +230,20 @@ namespace OneRoof.Presentation.Population
                 ActivityCaption.anchor = TextAnchor.MiddleCenter;
                 ActivityCaption.alignment = TextAlignment.Center;
                 ActivityCaption.fontSize = 48;
-                ActivityCaption.characterSize = 0.12f;
                 ActivityCaption.color = new Color(0.08f, 0.13f, 0.19f);
                 captionGo.GetComponent<MeshRenderer>().sortingOrder = 27;
             }
+            // Captions sit above every visible resident; keep them compact at
+            // gameplay zoom so neighbouring routines remain distinguishable.
+            ActivityCaption.characterSize = 0.055f;
             var backgroundGo = EmoteAnchor.Find("CaptionBackground")?.gameObject;
             if (backgroundGo == null)
             {
                 backgroundGo = new GameObject("CaptionBackground");
                 backgroundGo.transform.SetParent(EmoteAnchor, false);
                 backgroundGo.transform.localPosition = new Vector3(0.06f, -0.015f, 0.01f);
-                backgroundGo.transform.localScale = new Vector3(1.06f, 0.18f, 1f);
             }
+            backgroundGo.transform.localScale = CaptionBackgroundScale(_caption);
             var background = backgroundGo.GetComponent<SpriteRenderer>();
             if (background == null)
             {
@@ -331,10 +333,17 @@ namespace OneRoof.Presentation.Population
             ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(caption));
             var background = EmoteAnchor.Find("CaptionBackground").GetComponent<SpriteRenderer>();
             background.enabled = !string.IsNullOrEmpty(caption);
+            background.transform.localScale = CaptionBackgroundScale(caption);
             EmoteRenderer.transform.localPosition = string.IsNullOrEmpty(caption)
                 ? Vector3.zero : new Vector3(-0.42f, 0f, -0.01f);
             EmoteRenderer.transform.localScale = string.IsNullOrEmpty(caption)
                 ? Vector3.one : new Vector3(2.4f, 2.4f, 1f);
+        }
+
+        private static Vector3 CaptionBackgroundScale(string caption)
+        {
+            var width = Mathf.Clamp(0.18f + (caption?.Length ?? 0) * 0.057f, 0.58f, 1.18f);
+            return new Vector3(width, 0.12f, 1f);
         }
 
         private static Sprite GetCaptionBackgroundSprite()

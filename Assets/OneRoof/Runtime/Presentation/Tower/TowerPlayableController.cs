@@ -22,10 +22,12 @@ namespace OneRoof.Presentation.Tower
     }
 
     /// <summary>Presentation coordinator routing projection snapshots to four deep presenters.</summary>
-    [ExecuteAlways, DisallowMultipleComponent]
+    [ExecuteAlways, DisallowMultipleComponent, DefaultExecutionOrder(-100)]
     public sealed class TowerPlayableController : MonoBehaviour
     {
         public const int InitialResidentCount = 50, InitialFloorCount = 5;
+
+        public void SetPaused(bool paused) => _isPaused = paused;
 
         [SerializeField] private TowerStartMode _startMode = TowerStartMode.StandardFiveFloor;
 
@@ -45,8 +47,11 @@ namespace OneRoof.Presentation.Tower
         private TowerDashboardHudView _hudView;
         private TowerAtmospherePresenter _atmosphere;
         private OutsideCityPresenter _outside;
+        private PixelRainPresenter _pixelRain;
 
         private readonly TowerStructurePresenter _structure = new TowerStructurePresenter();
+        private readonly FloorDeckPresenter _floorDecks = new FloorDeckPresenter();
+        private readonly BuildingExteriorPresenter _exterior = new BuildingExteriorPresenter();
         private readonly ElevatorBankPresenter _elevator = new ElevatorBankPresenter();
         private readonly RoomPresenter _room = new RoomPresenter();
         private readonly TowerResidentPresenter _resident = new TowerResidentPresenter();
@@ -63,9 +68,10 @@ namespace OneRoof.Presentation.Tower
         public UtilitiesOverlayPresenter UtilitiesPresenter => _utilitiesPresenter;
         public GridPlacementController GridPlacement => _gridPlacement; public PlacementGhostPresenter GhostPresenter => _ghostPresenter;
         public InspectSelectionController InspectSelection => _inspectSelection; public InspectOutlinePresenter InspectOutline => _inspectOutline;
-        public TowerStructurePresenter StructurePresenter => _structure; public ElevatorBankPresenter ElevatorPresenter => _elevator;
+        public TowerStructurePresenter StructurePresenter => _structure; public FloorDeckPresenter FloorDeckPresenter => _floorDecks; public BuildingExteriorPresenter ExteriorPresenter => _exterior; public ElevatorBankPresenter ElevatorPresenter => _elevator;
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
         public TowerAtmospherePresenter AtmospherePresenter => _atmosphere;
+        public PixelRainPresenter RainPresenter => _pixelRain;
         public TowerStartMode StartMode => _startMode;
         public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
@@ -79,7 +85,11 @@ namespace OneRoof.Presentation.Tower
             _dataOverlays = new TowerDataOverlays(_sim); _predictor = new ElevatorPlacementPredictor();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
-            _structure.Initialize(transform, _worldMat, _colorBlock); _elevator.Initialize(transform, _worldMat, _colorBlock);
+            _structure.Initialize(transform, _worldMat, _colorBlock);
+            _floorDecks.Initialize(transform, _worldMat, _colorBlock);
+            _structure.BindFloorDeckPresenter(_floorDecks);
+            _exterior.Initialize(transform, _worldMat, _colorBlock);
+            _elevator.Initialize(transform, _worldMat, _colorBlock);
             _room.Initialize(transform, _worldMat, _colorBlock); _resident.ViewPool = Ensure<NpcViewPool>(); _resident.Initialize(transform);
             InitSubcomponents(); CreateWorldGeometry();
         }
@@ -155,6 +165,7 @@ namespace OneRoof.Presentation.Tower
             _atmosphere = Ensure<TowerAtmospherePresenter>(); _atmosphere.Initialize();
             var camera = TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
             _outside = Ensure<OutsideCityPresenter>(); _outside.Initialize(camera, _worldMat);
+            _pixelRain = Ensure<PixelRainPresenter>(); _pixelRain.Initialize(camera, _worldMat);
             if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
         }
 
@@ -189,8 +200,9 @@ namespace OneRoof.Presentation.Tower
             var topo = _sim?.TopologyProjection(); var fl = topo != null ? topo.FloorCount : InitialFloorCount;
             var minFloor = _sim?.ElevatorMinFloor ?? 0;
             var maxFloor = _sim?.ElevatorMaxFloor ?? (fl - 1);
-            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _room.EnsureRoomViews(topo);
+            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo); _room.EnsureRoomViews(topo);
             if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
+            _pixelRain?.SyncTopology(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
             if (_utilitiesNetworkLayer != null && _utilitiesNetworkLayer.IsVisible && _dataOverlays != null) _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, topo);
         }
@@ -265,8 +277,20 @@ namespace OneRoof.Presentation.Tower
         private void SeedMorningRush() => _sim?.SeedMorningRush();
         private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection()); }
         private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
-        private void ClearWorldGeometry() { _structure.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
-        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); }
-        private static Material CreateWorldMaterial() => new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default") ?? throw new MissingReferenceException("No unlit shader found."));
+        private void ClearWorldGeometry() { _structure.Clear(); _floorDecks?.Clear(); _exterior.Clear(); _pixelRain?.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
+        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime); }
+        private static Material CreateWorldMaterial()
+        {
+            var authored = Resources.Load<Material>("Materials/OneRoofWorldMaterial");
+            if (authored != null) return new Material(authored) { name = "Tower World Material" };
+
+            var shader = Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default")
+                ?? throw new MissingReferenceException("No unlit shader found.");
+
+            return new Material(shader) { name = "Tower World Material" };
+        }
     }
 }

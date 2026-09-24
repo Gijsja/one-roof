@@ -10,13 +10,34 @@ namespace OneRoof.Application.Tower
     {
         private readonly Dictionary<int, IReadOnlyList<Room>> _roomsByFloor = new Dictionary<int, IReadOnlyList<Room>>();
 
-        internal TowerTopologyProjection(BuildingTopologyState topology)
+        public TowerTopologyProjection(BuildingTopologyState topology)
         {
+            if (topology == null) throw new System.ArgumentNullException(nameof(topology));
             FloorCount = topology.FloorCount;
             Rooms = new ReadOnlyDictionary<EntityId, Room>(new Dictionary<EntityId, Room>(topology.Rooms));
             FloorSlabs = new ReadOnlyDictionary<int, CellBounds>(new Dictionary<int, CellBounds>(topology.FloorSlabs));
             for (var floor = 0; floor < FloorCount; floor++)
                 _roomsByFloor[floor] = new ReadOnlyCollection<Room>(new List<Room>(topology.GetRoomsOnFloor(floor)));
+        }
+
+        public TowerTopologyProjection(IReadOnlyDictionary<int, CellBounds> floorSlabs, IReadOnlyDictionary<EntityId, Room> rooms = null)
+        {
+            FloorSlabs = new ReadOnlyDictionary<int, CellBounds>(new Dictionary<int, CellBounds>(floorSlabs ?? new Dictionary<int, CellBounds>()));
+            Rooms = new ReadOnlyDictionary<EntityId, Room>(new Dictionary<EntityId, Room>(rooms ?? new Dictionary<EntityId, Room>()));
+            FloorCount = FloorSlabs.Count;
+            foreach (var room in Rooms.Values)
+            {
+                if (!_roomsByFloor.TryGetValue(room.Floor, out var list))
+                {
+                    var newList = new List<Room>();
+                    _roomsByFloor[room.Floor] = newList;
+                    newList.Add(room);
+                }
+                else
+                {
+                    ((List<Room>)list).Add(room);
+                }
+            }
         }
 
         public int FloorCount { get; }

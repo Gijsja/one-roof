@@ -3,6 +3,7 @@ using NUnit.Framework;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Domain.Population;
+using OneRoof.Presentation.Population;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
 
@@ -54,6 +55,70 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var view = _presenter.ResidentViews[i];
                 Assert.That(view, Is.Not.Null);
                 Assert.That(view.transform.position.z, Is.Not.EqualTo(0f)); // Positioned with depth offset
+            }
+        }
+
+        [Test]
+        public void OutsideResident_IsHiddenAndReturnsOnArrival()
+        {
+            var session = new TowerSimulationSession();
+            _presenter.EnsureResidentViews(1);
+            var outside = new TowerProjection(10L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.Outside)
+                }, new List<ElevatorProjection>());
+
+            _presenter.UpdateResidentPositions(outside, session.TopologyProjection(), 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeInHierarchy, Is.False);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out _), Is.False);
+            Assert.That(_presenter.TryGetResidentAt(Vector2.zero, 10f, out _, out _, out _, out _), Is.False);
+
+            var returned = new TowerProjection(11L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.Walking)
+                }, new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(returned, session.TopologyProjection(), 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeInHierarchy, Is.True);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out _), Is.True);
+        }
+
+        [Test]
+        public void OutsideResident_ReleasesPooledViewForVisibleNeighbor()
+        {
+            var poolObject = new GameObject("Test_Npc_Pool");
+            try
+            {
+                var pool = poolObject.AddComponent<NpcViewPool>();
+                pool.MaxCapacity = 1;
+                _presenter.ViewPool = pool;
+                _presenter.EnsureResidentViews(2);
+                var session = new TowerSimulationSession();
+                var first = new TowerProjection(10L, 0, 0, 0f,
+                    new List<TransitResidentProjection>
+                    {
+                        new TransitResidentProjection(100, 0, TransitResidentStatus.Walking)
+                    }, new List<ElevatorProjection>());
+                _presenter.UpdateResidentPositions(first, session.TopologyProjection(), 0f);
+                Assert.That(pool.ActiveCount, Is.EqualTo(1));
+
+                var next = new TowerProjection(11L, 0, 0, 0f,
+                    new List<TransitResidentProjection>
+                    {
+                        new TransitResidentProjection(100, 0, TransitResidentStatus.Outside),
+                        new TransitResidentProjection(101, 0, TransitResidentStatus.Walking)
+                    }, new List<ElevatorProjection>());
+                _presenter.UpdateResidentPositions(next, session.TopologyProjection(), 0f);
+
+                Assert.That(pool.TryGetView(100, out _), Is.False);
+                Assert.That(pool.TryGetView(101, out _), Is.True);
+                Assert.That(pool.ActiveCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                _presenter.ViewPool = null;
+                Object.DestroyImmediate(poolObject);
             }
         }
 

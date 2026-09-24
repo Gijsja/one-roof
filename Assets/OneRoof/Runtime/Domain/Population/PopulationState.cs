@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Randomness;
+using OneRoof.Domain.Time;
 
 namespace OneRoof.Domain.Population
 {
@@ -164,6 +165,17 @@ namespace OneRoof.Domain.Population
                     else if (need.Kind == NeedKind.Purpose) purpose = need.Satisfaction;
                 }
 
+                var scheduleBlocks = p.Schedule.Blocks;
+                var scheduleLabels = new string[scheduleBlocks.Count];
+                var scheduleStarts = new long[scheduleBlocks.Count];
+                var scheduleEnds = new long[scheduleBlocks.Count];
+                for (var i = 0; i < scheduleBlocks.Count; i++)
+                {
+                    scheduleLabels[i] = scheduleBlocks[i].Label;
+                    scheduleStarts[i] = scheduleBlocks[i].StartTick.Value;
+                    scheduleEnds[i] = scheduleBlocks[i].EndTick.Value;
+                }
+
                 personList.Add(new PersonSaveData
                 {
                     id = p.Id.Value,
@@ -174,6 +186,12 @@ namespace OneRoof.Domain.Population
                     currentRoomId = p.CurrentRoomId.Value,
                     currentLocationKind = (int)p.CurrentLocation.Kind,
                     currentActivity = (int)p.CurrentActivity,
+                    currentPurpose = (int)p.CurrentPurpose,
+                    purposeStartedAtTick = p.PurposeStartedAtTick,
+                    purposeEndsAtTick = p.PurposeEndsAtTick,
+                    scheduleLabels = scheduleLabels,
+                    scheduleStartTicks = scheduleStarts,
+                    scheduleEndTicks = scheduleEnds,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
                     personalityFacets = FacetIds(p),
                     wellbeingSatisfaction = p.Wellbeing.Satisfaction,
@@ -228,7 +246,7 @@ namespace OneRoof.Domain.Population
                 {
                     var traitKind = Enum.IsDefined(typeof(PersonTraitKind), p.trait) ? (PersonTraitKind)p.trait : PersonTraitKind.EarlyBird;
                     var trait = new PersonTrait(traitKind);
-                    var schedule = DailySchedule.Standard(trait, rng, baseSleepEnd: 15);
+                    var schedule = RestoreSchedule(p, trait, rng);
 
                     var energy = p.energySatisfaction > 0f ? p.energySatisfaction : (p.restSatisfaction > 0f ? p.restSatisfaction : 1f);
                     var hygiene = p.hygieneSatisfaction > 0f ? p.hygieneSatisfaction : 1f;
@@ -248,7 +266,9 @@ namespace OneRoof.Domain.Population
                         new EntityId(p.id),
                         new EntityId(p.householdId),
                         new EntityId(p.homeRoomId),
-                        new EntityId(p.workplaceRoomId),
+                        p.workplaceLocationKind == (int)WorldLocationKind.Outside
+                            ? default
+                            : new EntityId(p.workplaceRoomId),
                         schedule,
                         needs,
                         traits, facets, p.workplaceLocationKind == (int)WorldLocationKind.Outside);
@@ -257,6 +277,9 @@ namespace OneRoof.Domain.Population
                         ? WorldLocation.Outside
                         : WorldLocation.InRoom(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId)));
                     person.UpdateActivity((ActivityKind)p.currentActivity);
+                    if (Enum.IsDefined(typeof(ResidentPurposeKind), p.currentPurpose))
+                        person.RestorePurpose((ResidentPurposeKind)p.currentPurpose,
+                            p.purposeStartedAtTick, p.purposeEndsAtTick);
                     var role = Enum.IsDefined(typeof(SpecialistRole), p.specialistRole) ? (SpecialistRole)p.specialistRole : SpecialistRole.None;
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
                     person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);
@@ -266,6 +289,24 @@ namespace OneRoof.Domain.Population
             }
 
             return new PopulationState(persons, households);
+        }
+
+        private static DailySchedule RestoreSchedule(PersonSaveData data, PersonTrait trait, IRandomStream rng)
+        {
+            var labels = data.scheduleLabels;
+            var starts = data.scheduleStartTicks;
+            var ends = data.scheduleEndTicks;
+            if (labels != null && starts != null && ends != null && labels.Length > 0 &&
+                labels.Length == starts.Length && labels.Length == ends.Length)
+            {
+                var blocks = new List<ScheduleBlock>(labels.Length);
+                for (var i = 0; i < labels.Length; i++)
+                    blocks.Add(new ScheduleBlock(labels[i], new Tick(starts[i]), new Tick(ends[i])));
+                return DailySchedule.FromBlocks(blocks);
+            }
+
+            // Legacy saves lacked schedule blocks; retain their historical fixture schedule.
+            return DailySchedule.Standard(trait, rng, baseSleepEnd: 15);
         }
 
         private static int[] FacetIds(PersonRecord person)

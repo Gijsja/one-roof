@@ -104,9 +104,9 @@ namespace OneRoof.Presentation.Tests.EditMode
                     if (_holder.transform.GetChild(i).name == "Floor Slab 0") namedSlabs++;
                 Assert.That(namedSlabs, Is.EqualTo(1));
                 var slab = _holder.transform.Find("Floor Slab 0");
-                Assert.That(slab.position.x, Is.EqualTo(-1.65f).Within(0.01f));
+                Assert.That(slab.position.x, Is.EqualTo(-1.40f).Within(0.01f));
                 Assert.That(slab.position.y, Is.EqualTo(TowerStructurePresenter.FloorY(0)).Within(0.01f));
-                Assert.That(slab.localScale.x, Is.EqualTo(15.5f).Within(0.01f));
+                Assert.That(slab.localScale.x, Is.EqualTo(16.0f).Within(0.01f));
                 var block = new MaterialPropertyBlock();
                 slab.GetComponent<MeshRenderer>().GetPropertyBlock(block);
                 Assert.That(block.GetColor("_BaseColor").r, Is.EqualTo(0.11f).Within(0.01f));

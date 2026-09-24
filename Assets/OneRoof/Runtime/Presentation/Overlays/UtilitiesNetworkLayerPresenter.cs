@@ -491,8 +491,9 @@ namespace OneRoof.Presentation.Overlays
             if (_portTexture == null) _portTexture = CreatePortNodeTexture();
 
             var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+                ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
                 ?? Shader.Find("Sprites/Default");
 
             if (shader == null) throw new MissingReferenceException("No unlit or sprite shader available for UtilitiesNetworkLayerPresenter.");

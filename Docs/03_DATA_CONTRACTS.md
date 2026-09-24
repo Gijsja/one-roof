@@ -56,6 +56,8 @@ SchemaVersion integer save/content version
 
 - All gameplay time comes from the simulation clock (`Tick`).
 - Day cycle: `DailySchedule.TicksPerDay = 1440` (tick 0 = midnight). `DayClock.FromTick` maps simulation ticks into `DayPhase` (day index, 24-hour HH:MM time, night phase) for deterministic presentation and daily settlement.
+- Resident purposes are person-owned domain state with an absolute start and minimum end tick. A completed trip starts the destination activity on arrival. Outside employment keeps a resident at `Outside` for at least 480 ticks after arrival; diner meals last at least 30 ticks and home activities at least 60 ticks. A pending minimum survives save/load, and a full-day standard work block lasts exactly 480 ticks.
+- Person saves carry their schedule blocks and current purpose interval. Older saves without these fields retain their legacy schedule reconstruction and acquire a new purpose interval on the next eligible tick.
 - Random outcomes use injected, seedable xorshift64 streams.
 - Save files persist seed and stream position where outcomes would otherwise change after load.
 

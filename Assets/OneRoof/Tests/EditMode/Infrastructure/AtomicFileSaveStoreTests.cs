@@ -53,6 +53,7 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             var loadResult = store.Load(filePath);
             Assert.That(loadResult.IsSuccess, Is.False);
             Assert.That(loadResult.ErrorReason, Is.EqualTo(LoadErrorReason.FileNotFound));
+            Assert.That(loadResult.ErrorMessage, Does.Not.Contain(_testDirectory));
         }
 
         [Test]
@@ -84,6 +85,7 @@ namespace OneRoof.Infrastructure.Tests.EditMode
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(File.ReadAllText(filePath), Is.EqualTo(updatedContent));
             Assert.That(File.Exists(filePath + ".tmp"), Is.False, "Temp file must be cleaned up after atomic replace");
+            Assert.That(Directory.GetFiles(_testDirectory, "overwrite.save.*.tmp.bak"), Is.Empty);
         }
 
         [Test]

@@ -16,6 +16,7 @@ namespace OneRoof.Presentation.Population
     {
         private static readonly Dictionary<string, Sprite> SpriteCache =
             new Dictionary<string, Sprite>();
+        private static readonly HashSet<Sprite> OwnedFallbackSprites = new HashSet<Sprite>();
 
         public static Sprite GetResidentSprite(int residentIndex)
         {
@@ -71,11 +72,24 @@ namespace OneRoof.Presentation.Population
 
         public static void ClearCache()
         {
+            foreach (var sprite in OwnedFallbackSprites)
+            {
+                if (sprite == null) continue;
+                if (sprite.texture != null)
+                {
+                    if (UnityEngine.Application.isPlaying) Object.Destroy(sprite.texture);
+                    else Object.DestroyImmediate(sprite.texture);
+                }
+                if (UnityEngine.Application.isPlaying) Object.Destroy(sprite);
+                else Object.DestroyImmediate(sprite);
+            }
+            OwnedFallbackSprites.Clear();
             SpriteCache.Clear();
         }
 
         private static Sprite GetOrCreateFallbackSprite(string key, int seed)
         {
+            if (SpriteCache.TryGetValue(key, out var cached) && cached != null) return cached;
             const int width = 64;
             const int height = 128;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
@@ -126,7 +140,10 @@ namespace OneRoof.Presentation.Population
             // Pivot at bottom-center (0.5, 0.0) matching 512 PPU
             var rect = new Rect(0, 0, width, height);
             var pivot = new Vector2(0.5f, 0.0f);
-            return Sprite.Create(texture, rect, pivot, 128f);
+            var sprite = Sprite.Create(texture, rect, pivot, 128f);
+            OwnedFallbackSprites.Add(sprite);
+            SpriteCache[key] = sprite;
+            return sprite;
         }
     }
 }

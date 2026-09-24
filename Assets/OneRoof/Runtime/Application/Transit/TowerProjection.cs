@@ -24,7 +24,8 @@ namespace OneRoof.Application.Transit
             int? roomId = null,
             ActivityKind activity = ActivityKind.Idle,
             int slotInRoom = 0,
-            int waitTicks = 0)
+            int waitTicks = 0,
+            string purposeLabel = null)
         {
             ResidentId = residentId;
             DestinationFloor = destinationFloor;
@@ -35,6 +36,7 @@ namespace OneRoof.Application.Transit
             Activity = activity;
             SlotInRoom = slotInRoom;
             WaitTicks = waitTicks;
+            PurposeLabel = purposeLabel;
         }
 
         public int ResidentId { get; }
@@ -54,6 +56,9 @@ namespace OneRoof.Application.Transit
         public int SlotInRoom { get; }
 
         public int WaitTicks { get; }
+
+        /// <summary>Human-readable purpose resolved from the resident's persistent routine.</summary>
+        public string PurposeLabel { get; }
     }
 
     public readonly struct ElevatorProjection

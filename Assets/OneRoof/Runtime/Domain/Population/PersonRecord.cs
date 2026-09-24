@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Time;
 
 namespace OneRoof.Domain.Population
 {
@@ -14,6 +15,9 @@ namespace OneRoof.Domain.Population
     {
         private readonly List<NeedState> _needs;
         private ActivityKind _currentActivity;
+        private ResidentPurposeKind _currentPurpose;
+        private long _purposeStartedAtTick;
+        private long _purposeEndsAtTick;
 
         public PersonRecord(
             EntityId id,
@@ -82,6 +86,11 @@ namespace OneRoof.Domain.Population
         public DailySchedule Schedule { get; }
 
         public ActivityKind CurrentActivity => _currentActivity;
+        public ResidentPurposeKind CurrentPurpose => _currentPurpose;
+        public long PurposeStartedAtTick => _purposeStartedAtTick;
+        public long PurposeEndsAtTick => _purposeEndsAtTick;
+        public bool HasCommittedPurposeAt(Tick tick) =>
+            _currentPurpose != ResidentPurposeKind.None && tick.Value < _purposeEndsAtTick;
 
         // ── Needs & traits ────────────────────────────────────────────────────
 
@@ -97,7 +106,30 @@ namespace OneRoof.Domain.Population
         /// <summary>Updates the resident's current activity. Called by the schedule resolution system.</summary>
         public void UpdateActivity(ActivityKind activity)
         {
+            if (_currentActivity != activity)
+            {
+                _currentPurpose = ResidentPurposeKind.None;
+                _purposeStartedAtTick = 0;
+                _purposeEndsAtTick = 0;
+            }
             _currentActivity = activity;
+        }
+
+        public void CommitPurpose(ResidentPurposeKind purpose, Tick startTick, long minimumTicks)
+        {
+            if (minimumTicks <= 0) throw new ArgumentOutOfRangeException(nameof(minimumTicks));
+            _currentPurpose = purpose;
+            _purposeStartedAtTick = startTick.Value;
+            _purposeEndsAtTick = checked(startTick.Value + minimumTicks);
+        }
+
+        public void RestorePurpose(ResidentPurposeKind purpose, long startedAtTick, long endsAtTick)
+        {
+            if (purpose == ResidentPurposeKind.None || startedAtTick < 0 || endsAtTick <= startedAtTick)
+                return;
+            _currentPurpose = purpose;
+            _purposeStartedAtTick = startedAtTick;
+            _purposeEndsAtTick = endsAtTick;
         }
 
         /// <summary>Updates the resident's current room location. Called upon trip arrival.</summary>
@@ -108,6 +140,12 @@ namespace OneRoof.Domain.Population
 
         public void UpdateLocation(WorldLocation location)
         {
+            if (!_currentLocation.Equals(location))
+            {
+                _currentPurpose = ResidentPurposeKind.None;
+                _purposeStartedAtTick = 0;
+                _purposeEndsAtTick = 0;
+            }
             _currentLocation = location;
             if (!location.IsOutside) _currentRoomId = location.RoomId;
         }

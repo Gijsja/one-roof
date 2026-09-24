@@ -202,7 +202,10 @@ namespace OneRoof.Presentation.Tower
             }
             _auraRenderer = _auraObject.GetComponent<MeshRenderer>();
             var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
-                ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+                ?? Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default");
             if (shader != null)
             {
                 _auraMaterial = new Material(shader) { renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent };

@@ -131,7 +131,8 @@ namespace OneRoof.Domain.Population
         {
             if (requested <= 0) return 0;
             var dailyCap = MemberIds.Count * 5L;
-            var available = Math.Max(0, dailyCap - DailyServiceSpend);
+            var availableCash = Math.Max(0L, CashBalance);
+            var available = Math.Min(availableCash, Math.Max(0L, dailyCap - DailyServiceSpend));
             var paid = Math.Min(requested, available);
             if (paid <= 0) return 0;
             DailyServiceSpend += paid;
@@ -142,8 +143,12 @@ namespace OneRoof.Domain.Population
         public float CalculateRentBurden(long dailyRentDue)
         {
             if (dailyRentDue <= 0) return 0f;
-            if (DailyIncome <= 0) return 1f;
-            return Clamp((float)dailyRentDue / DailyIncome, 0f, 1f);
+            if (DailyIncome > 0)
+            {
+                var incomeBurden = (float)dailyRentDue / DailyIncome;
+                return Clamp(Math.Min(incomeBurden, 1f - Budget), 0f, 1f);
+            }
+            return Clamp(1f - Budget, 0f, 1f);
         }
 
         /// <summary>Updates delinquency after a daily settlement.</summary>
