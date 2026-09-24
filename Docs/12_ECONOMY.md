@@ -18,7 +18,7 @@ Baseline issues identified before the ECON implementation (the remaining accepta
 5. **Flat commercial rent.** `200/room/cycle` regardless of size, archetype, or solvency.
 6. **No sinks beyond construction.** No upkeep, no policy costs.
 
-The shared worktree now contains the household, business, policy, and treasury-flow implementation described below. It remains in progress: the 30-day conservation proof and arrears consequence chain are not complete, and the runtime settlement order still differs from the target order in §5.
+The household, business, policy, and treasury-flow implementation described below is complete. The 30-day conservation fixture and settlement ordering were validated in the ECON closeout. Faction affinity and actual move-out decisions belong to OR-901 and later resident lifecycle work.
 
 ## 2. Principles
 
@@ -70,16 +70,16 @@ Inspector shows tier (destitute/struggling/stable/affluent), never the raw float
    subsidies ( §8 ). Record `TreasuryFlowProjection{rent, tax, upkeep, subsidy, construction,
    constructionSalvage}`.
 5. **Delinquency.** Household cash `< 0` → `arrearsDays++`, else decay to 0.
-   `arrearsDays > 30` → grievance + strain driver + move-out risk + Tenant-Union affinity
-   hook (OR-901). Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
+   `arrearsDays > 30` → grievance + once-daily strain driver + inspector stress explanation. Base strain and recovery are scaled by the fraction of a settlement day advanced each tick. Tenant-Union
+   affinity and actual move-out decisions are later OR-901/resident-lifecycle work. Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
    paying rent, are flagged for re-lease after 7 days, and appear on Overlay 6.
 
-**Current runtime ordering gap:** `TowerSimulation.AdvanceOneTick` currently calls the combined
-business cycle (payroll, household walk-in spend, business revenue/rent/tax/operating cost)
-before collecting household residential rent. The sequence above remains the target contract;
-the implementation must be reconciled before the ECON slice is marked complete. Walk-in
-spending is limited to `$5/resident/day` and apportioned by staffed share across walk-in
-businesses, using occupancy-derived demand rather than recorded resident visits.
+`TowerSimulation.AdvanceOneTick` executes payroll, residential rent, the remaining business
+cycle, treasury expenses, and final arrears evaluation in that order. Walk-in spending is
+limited to `$5/resident/day` and apportioned by staffed share across walk-in businesses.
+Within each business, eligible households contribute proportionally to remaining daily
+spending capacity, with stable ID ordering for integer remainders.
+Occupancy-derived demand is the aggregate service proxy; individual visits are not recorded.
 
 ## 6. Rates (per day)
 
@@ -128,8 +128,8 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
 
 - **Overlay 6 Business Health** (extends `BusinessHealthFloorProjection`, immutable):
   per-tenant `rentPaid, wageBill, margin, arrears/insolvent` + existing solvency badges.
-- **Overlay 4 Satisfaction:** `rentBurden` contributor becomes `rent/income` ratio instead of
-  raw budget (`ResidentWellbeingSystem.cs:21` replaced by ledger-derived value).
+- **Overlay 4 Satisfaction:** `rentBurden` uses the greater of rent/income and reserve pressure
+  when income is recorded, and reserve pressure before the first paycheck.
 - **New `TreasuryFlowProjection`** (Data mode + treasury card): daily
   `{rent, tax, upkeep, subsidy, construction, constructionSalvage, net}` with deterministic ordering.
 - **Resident card:** income / rent / food / net trajectory + arrears countdown.
@@ -150,9 +150,9 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
 
 ## 11. Sliced implementation status
 
-- **ECON-001 implementation:** household cash, rent deduction, arrears, daily settlement, and legacy-save migration are wired. The 30-day conservation fixture remains outstanding.
-- **ECON-002 implementation:** per-cell rent, tax remittance, demand-capped revenue, insolvency, and seven-day re-lease status are wired; validate the business ledger before completion.
-- **ECON-003 implementation:** `PolicyDecreeState`, command validation, domain events, scrutiny hooks, and save persistence are wired; the OR-902 decree panel remains separate backlog work.
-- **ECON-004 implementation:** treasury and tenant projections, inspector details, resident rent burden, and Data-mode flow display are wired. Golden ledger acceptance (30-day conservation plus arrears-to-grievance/move-out consequence chain) remains outstanding.
+- **ECON-001:** household cash, rent deduction, arrears, daily settlement, legacy-save migration, and a 30-day conservation fixture are complete.
+- **ECON-002:** per-cell rent, tax remittance, demand-capped revenue, insolvency, and seven-day re-lease status are complete.
+- **ECON-003:** `PolicyDecreeState`, command validation, domain events, scrutiny hooks, and save persistence are complete; the OR-902 decree panel remains separate backlog work.
+- **ECON-004:** treasury and tenant projections, inspector details, income-and-reserve rent burden, Data-mode flow display, and golden ledger acceptance are complete. Prolonged arrears produce a lease-risk grievance, once-daily added strain, and an inspector stress explanation. Actual move-out and Tenant Union affinity depend on the later resident lifecycle and OR-901 faction work.
 
-See `Planning/BACKLOG.md` for row status and the active handoff for the next safe action. Do not mark an ECON row DONE until its acceptance evidence exists.
+See `Planning/BACKLOG.md` and the archived ECON handoff for validation evidence.

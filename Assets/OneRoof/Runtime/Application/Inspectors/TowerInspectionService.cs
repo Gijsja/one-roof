@@ -47,6 +47,7 @@ namespace OneRoof.Application.Inspectors
                 $"Daily cash change: ${dailyNet:+#,0;-#,0;0}",
                 $"Rent arrears: {household.ArrearsDays} day(s)"
             };
+            if (household.ArrearsDays > 30) details.Add("Prolonged rent arrears are causing household stress.");
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
             details.Add($"Satisfaction: {person.Satisfaction:P0}");

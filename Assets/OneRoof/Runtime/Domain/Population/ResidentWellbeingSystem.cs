@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Economy;
+using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
 
 namespace OneRoof.Domain.Population
@@ -14,7 +15,7 @@ namespace OneRoof.Domain.Population
         // Update, so this scratch buffer never escapes the system.
         private readonly List<string> _grievanceBuffer = new List<string>(3);
 
-        public void Advance(PopulationState population, ElevatorBank elevatorBank, float serviceEfficiencyMultiplier = 1f, float rentMultiplier = 1f, bool transitSubsidyEnabled = false)
+        public void Advance(PopulationState population, ElevatorBank elevatorBank, float serviceEfficiencyMultiplier = 1f, float rentMultiplier = 1f, bool transitSubsidyEnabled = false, bool applyDailyArrearsStrain = false, float dayFraction = 1f / DailySchedule.TicksPerDay)
         {
             if (population == null) return;
             var averageWait = elevatorBank == null ? 0f : elevatorBank.AverageWaitTicks;
@@ -27,16 +28,20 @@ namespace OneRoof.Domain.Population
                 var rentDue = (long)Math.Round(household.MemberIds.Count * (double)TowerEconomyState.RentPerResidentPerDay * rentMultiplier, MidpointRounding.AwayFromZero);
                 var rentBurden = household.CalculateRentBurden(rentDue);
                 var rentAffordability = Clamp(1f - rentBurden);
+                var prolongedArrears = household.ArrearsDays > 30;
+                if (prolongedArrears) rentAffordability = Math.Min(rentAffordability, 0.2f);
                 var service = Clamp(0.80f * serviceEfficiencyMultiplier);
                 var events = 1f;
                 var satisfaction = (commute + crowding + noise + rentAffordability + service + events) / 6f;
                 _grievanceBuffer.Clear();
                 if (commute < GrievanceThreshold) _grievanceBuffer.Add("Long elevator waits are disrupting daily travel.");
                 if (rentAffordability < GrievanceThreshold) _grievanceBuffer.Add("Household budget is under rent pressure.");
+                if (prolongedArrears) _grievanceBuffer.Add("Unpaid rent puts our lease at risk.");
                 if (noise < GrievanceThreshold) _grievanceBuffer.Add("Crowded travel is creating persistent noise stress.");
                 var pressure = 1f - satisfaction;
                 var multiplier = FacetMultiplier(person, commute, rentAffordability, service, noise);
-                var strain = Clamp(person.Wellbeing.Strain + (pressure * multiplier * 0.015f) - (satisfaction > .85f ? .01f : 0f));
+                var dailyStrainChange = pressure * multiplier * 0.015f - (satisfaction > .85f ? .01f : 0f);
+                var strain = Clamp(person.Wellbeing.Strain + dailyStrainChange * dayFraction + (prolongedArrears && applyDailyArrearsStrain ? .01f : 0f));
                 person.Wellbeing.Update(satisfaction, strain, commute, crowding, noise, rentAffordability, service, events, _grievanceBuffer);
             }
         }

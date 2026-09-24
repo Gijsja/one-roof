@@ -209,7 +209,6 @@ namespace OneRoof.Domain.Economy
                 var household = _settlementHouseholds[i];
                 var rentDue = CalculateResidentialRentDue(household);
                 household.AdjustCashBalance(-rentDue);
-                household.UpdateArrearsDays();
                 totalRent += rentDue;
             }
 

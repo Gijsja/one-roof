@@ -91,6 +91,9 @@ namespace OneRoof.Domain.Population
         /// <summary>Walk-in food and service spending already transferred by this household today.</summary>
         public long DailyServiceSpend { get; private set; }
 
+        /// <summary>Cash this household can still spend on walk-in services today.</summary>
+        public long AvailableServiceSpend => Math.Min(Math.Max(0L, CashBalance), Math.Max(0L, MemberIds.Count * 5L - DailyServiceSpend));
+
         // ── Mutation methods ──────────────────────────────────────────────────
 
         /// <summary>Compatibility adapter that converts a normalized budget delta into cash.</summary>
@@ -130,10 +133,7 @@ namespace OneRoof.Domain.Population
         public long SpendOnService(long requested)
         {
             if (requested <= 0) return 0;
-            var dailyCap = MemberIds.Count * 5L;
-            var availableCash = Math.Max(0L, CashBalance);
-            var available = Math.Min(availableCash, Math.Max(0L, dailyCap - DailyServiceSpend));
-            var paid = Math.Min(requested, available);
+            var paid = Math.Min(requested, AvailableServiceSpend);
             if (paid <= 0) return 0;
             DailyServiceSpend += paid;
             AdjustCashBalance(-paid);
@@ -144,10 +144,7 @@ namespace OneRoof.Domain.Population
         {
             if (dailyRentDue <= 0) return 0f;
             if (DailyIncome > 0)
-            {
-                var incomeBurden = (float)dailyRentDue / DailyIncome;
-                return Clamp(Math.Min(incomeBurden, 1f - Budget), 0f, 1f);
-            }
+                return Clamp(Math.Max((float)dailyRentDue / DailyIncome, 1f - Budget), 0f, 1f);
             return Clamp(1f - Budget, 0f, 1f);
         }
 

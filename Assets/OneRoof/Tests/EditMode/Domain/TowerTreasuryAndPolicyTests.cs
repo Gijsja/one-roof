@@ -7,6 +7,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
 using OneRoof.Domain.Time;
+using OneRoof.Domain.Topology;
 
 namespace OneRoof.Domain.Tests.EditMode
 {
@@ -119,6 +120,39 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void HouseholdRecord_RentBurdenUsesIncomeEvenWhenCashReserveIsHigh()
+        {
+            var household = new HouseholdRecord(new EntityId(1), new[] { new EntityId(101) },
+                new EntityId(20), budget: 1f, satisfaction: 0.8f, cashBalance: 10000);
+            household.RecordDailyIncome(6);
+
+            Assert.That(household.CalculateRentBurden(12), Is.EqualTo(1f));
+            household.BeginDailySettlement();
+            Assert.That(household.CalculateRentBurden(12), Is.EqualTo(0f),
+                "Without a recorded paycheck, a full reserve covers the immediate rent burden.");
+        }
+
+        [Test]
+        public void WalkInSpend_IsSharedAcrossEligibleHouseholds()
+        {
+            var worker = CreatePerson(101, PersonalityFacetKind.Resilient, householdId: 1);
+            var other = CreatePerson(102, PersonalityFacetKind.Resilient, householdId: 2);
+            var first = new HouseholdRecord(new EntityId(1), new[] { worker.Id }, new EntityId(20), .5f, .8f, cashBalance: 100);
+            var second = new HouseholdRecord(new EntityId(2), new[] { other.Id }, new EntityId(21), .5f, .8f, cashBalance: 100);
+            var population = new PopulationState(new[] { worker, other }, new[] { first, second });
+            var room = new Room(new EntityId(301), new ContentId("commercial:diner"), new CellBounds(0, 0, 0), Array.Empty<EntityId>(), 1);
+            var business = new BusinessRecord(new EntityId(900), room.Id, room.ContentType, cashBalance: 100);
+            business.ReconcileEmployees(population, room.Capacity);
+
+            business.ProcessCycle(population, room, null, 1f, PolicyDecreeState.Default,
+                new[] { first, second }, walkInSpendBudget: 6);
+
+            Assert.That(business.LastCustomerRevenue, Is.EqualTo(6));
+            Assert.That(first.DailyServiceSpend, Is.EqualTo(3));
+            Assert.That(second.DailyServiceSpend, Is.EqualTo(3));
+        }
+
+        [Test]
         public void BusinessRecord_ProcessCycle_InsolventTenantAccruesOperatingCostsAndArrears()
         {
             var population = FiftyResidentFixture.Create();
@@ -188,6 +222,63 @@ namespace OneRoof.Domain.Tests.EditMode
                 Assert.That(after.ArrearsDays, Is.EqualTo(before.ArrearsDays));
                 Assert.That(after.IsInsolvent, Is.EqualTo(before.IsInsolvent));
             }
+        }
+
+        [Test]
+        public void ThirtyDailySettlements_ConserveCashAcrossAllLedgersAndExplicitSourcesAndSinks()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor(settlementPeriod: 50);
+            for (var day = 1; day <= 30; day++)
+            {
+                var before = TotalCash(sim);
+                var householdsBefore = sim.Population.Households.Count;
+                for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
+
+                long contractRevenue = 0;
+                long operatingCosts = 0;
+                foreach (var business in sim.Businesses.Businesses)
+                {
+                    contractRevenue += business.LastContractRevenue;
+                    operatingCosts += business.LastOperatingCost;
+                }
+                var moveInSource = (sim.Population.Households.Count - householdsBefore) * HouseholdRecord.DefaultStartingCash;
+                var expected = before + moveInSource + contractRevenue - operatingCosts
+                    - sim.Economy.LastDailyUpkeep - sim.Economy.LastDailySubsidy;
+                Assert.That(TotalCash(sim), Is.EqualTo(expected), $"Cash conservation failed on day {day}.");
+                Assert.That(sim.Economy.LastSettlementTick, Is.EqualTo(day * 50));
+            }
+        }
+
+        [Test]
+        public void ProlongedHouseholdArrears_ProduceLeaseGrievanceAndAdditionalStrain()
+        {
+            var person = CreatePerson(101, PersonalityFacetKind.Resilient, householdId: 1);
+            var household = new HouseholdRecord(new EntityId(1), new[] { person.Id }, new EntityId(20),
+                budget: 0f, satisfaction: 0.5f, cashBalance: -100, arrearsDays: 31);
+            var population = new PopulationState(new[] { person }, new[] { household });
+            var wellbeing = new ResidentWellbeingSystem();
+
+            wellbeing.Advance(population, null);
+            var strainWithoutDailyPenalty = person.Wellbeing.Strain;
+            wellbeing.Advance(population, null);
+            var secondTickStrain = person.Wellbeing.Strain;
+            wellbeing.Advance(population, null, applyDailyArrearsStrain: true);
+
+            Assert.That(person.Wellbeing.Grievances, Has.Some.Contains("Unpaid rent puts our lease at risk."));
+            Assert.That(person.Wellbeing.RentBurden, Is.LessThan(0.48f));
+            Assert.That(secondTickStrain - strainWithoutDailyPenalty, Is.LessThan(0.01f));
+            Assert.That(person.Wellbeing.Strain - secondTickStrain, Is.GreaterThan(0.01f));
+            for (var tick = 0; tick < 300; tick++) wellbeing.Advance(population, null);
+            Assert.That(person.Wellbeing.Strain, Is.LessThan(0.05f),
+                "Several hours of simulated ticks must not saturate a daily strain consequence.");
+        }
+
+        private static long TotalCash(TowerSimulation sim)
+        {
+            long total = sim.Economy.CashBalance;
+            foreach (var household in sim.Population.Households) total += household.CashBalance;
+            foreach (var business in sim.Businesses.Businesses) total += business.CashBalance;
+            return total;
         }
 
         [Test]

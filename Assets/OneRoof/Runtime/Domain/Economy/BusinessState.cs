@@ -55,7 +55,8 @@ namespace OneRoof.Domain.Economy
             PopulationState population,
             TowerEconomyState treasury,
             float occupancyFactor,
-            PolicyDecreeState policy)
+            PolicyDecreeState policy,
+            bool payrollAlreadyProcessed = false)
         {
             if (population == null) return;
             _businesses.Sort((left, right) => left.Id.Value.CompareTo(right.Id.Value));
@@ -77,8 +78,15 @@ namespace OneRoof.Domain.Economy
                 var serviceBudget = _businesses[i].IsWalkIn && totalWalkInStaff > 0
                     ? dailyServiceBudget * _businesses[i].EmployeeIds.Count / totalWalkInStaff
                     : 0;
-                _businesses[i].ProcessCycle(population, room, treasury, occupancyFactor, policy ?? PolicyDecreeState.Default, _orderedHouseholds, serviceBudget);
+                _businesses[i].ProcessCycle(population, room, treasury, occupancyFactor, policy ?? PolicyDecreeState.Default, _orderedHouseholds, serviceBudget, payrollAlreadyProcessed);
             }
+        }
+
+        public void ProcessPayroll(PopulationState population)
+        {
+            _businesses.Sort((left, right) => left.Id.Value.CompareTo(right.Id.Value));
+            for (var i = 0; i < _businesses.Count; i++)
+                _businesses[i].ProcessPayroll(population);
         }
 
         /// <summary>Compatibility entry point for callers not yet wired to daily topology and treasury settlement.</summary>
@@ -202,16 +210,11 @@ namespace OneRoof.Domain.Economy
             float occupancyFactor,
             PolicyDecreeState policy,
             IReadOnlyList<HouseholdRecord> orderedHouseholds,
-            long walkInSpendBudget)
+            long walkInSpendBudget,
+            bool payrollAlreadyProcessed = false)
         {
             if (population == null) return;
-            LastCustomerRevenue = 0;
-            LastContractRevenue = 0;
-            LastWages = 0;
-            LastOperatingCost = 0;
-            LastRentPaid = 0;
-            LastTaxPaid = 0;
-            WageArrears = false;
+            if (!payrollAlreadyProcessed) ProcessPayroll(population);
 
             if (IsInsolvent)
             {
@@ -222,18 +225,6 @@ namespace OneRoof.Domain.Economy
             }
 
             policy = policy ?? PolicyDecreeState.Default;
-            var wages = CalculatePayroll(population);
-            if (CashBalance - wages < InsolvencyThreshold)
-            {
-                WageArrears = wages > 0;
-            }
-            else
-            {
-                LastWages = wages;
-                CashBalance = SaturateSubtract(CashBalance, wages);
-                PayEmployees(population);
-            }
-
             var factor = NormalizeOccupancy(occupancyFactor);
             if (room != null && IsWalkInBusiness(ContentType))
             {
@@ -269,6 +260,27 @@ namespace OneRoof.Domain.Economy
             else
             {
                 ArrearsDays = 0;
+            }
+        }
+
+        public void ProcessPayroll(PopulationState population)
+        {
+            LastCustomerRevenue = 0;
+            LastContractRevenue = 0;
+            LastWages = 0;
+            LastOperatingCost = 0;
+            LastRentPaid = 0;
+            LastTaxPaid = 0;
+            WageArrears = false;
+            if (population == null || IsInsolvent) return;
+            var wages = CalculatePayroll(population);
+            if (CashBalance - wages < InsolvencyThreshold)
+                WageArrears = wages > 0;
+            else
+            {
+                LastWages = wages;
+                CashBalance = SaturateSubtract(CashBalance, wages);
+                PayEmployees(population);
             }
         }
 
@@ -331,16 +343,21 @@ namespace OneRoof.Domain.Economy
 
         private static long SpendWalkInRevenue(IReadOnlyList<HouseholdRecord> households, long revenue)
         {
-            if (households == null) return 0;
-            var remaining = revenue;
+            if (households == null || revenue <= 0) return 0;
+            long totalAvailable = 0;
+            for (var i = 0; i < households.Count; i++) totalAvailable += households[i].AvailableServiceSpend;
+            if (totalAvailable <= 0) return 0;
+            var target = Math.Min(revenue, totalAvailable);
             long paidTotal = 0;
-            for (var i = 0; i < households.Count && remaining > 0; i++)
+            for (var i = 0; i < households.Count; i++)
             {
-                var spend = households[i].SpendOnService(remaining);
-                if (spend <= 0) continue;
-                paidTotal += spend;
-                remaining -= spend;
+                var share = target * households[i].AvailableServiceSpend / totalAvailable;
+                paidTotal += households[i].SpendOnService(share);
             }
+            // Integer remainders are at most one unit per household. Stable ID order
+            // resolves ties without letting the first household fund the whole sale.
+            for (var i = 0; i < households.Count && paidTotal < target; i++)
+                paidTotal += households[i].SpendOnService(1);
             return paidTotal;
         }
 

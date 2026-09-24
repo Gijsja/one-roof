@@ -121,7 +121,9 @@ namespace OneRoof.Domain
             Needs.Advance(Population, currentTick);
             Specialists.Advance(Population, Topology, currentTick);
             UtilityOperations.Advance(Topology, Population);
-            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled);
+            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
+                applyDailyArrearsStrain: currentTick.Value % _settlementPeriod == 0,
+                dayFraction: 1f / _settlementPeriod);
             Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
@@ -140,12 +142,14 @@ namespace OneRoof.Domain
             if (currentTick.Value % _settlementPeriod == 0)
             {
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].BeginDailySettlement();
-                Businesses.ProcessBusinessCycle(Topology, Population, Economy, CalculateResidentialOccupancyFactor(), Economy.Policy);
+                Businesses.ProcessPayroll(Population);
                 Economy.ProcessRentCycle(Topology, Population);
+                Businesses.ProcessBusinessCycle(Topology, Population, Economy, CalculateResidentialOccupancyFactor(), Economy.Policy, payrollAlreadyProcessed: true);
                 var utilityCellCount = CountUtilityCells();
                 var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
                 Economy.ChargeDailyExpense(upkeep, subsidy: false);
                 Economy.ChargeDailyExpense(Economy.Policy.DailyTransitSubsidy, subsidy: true);
+                for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].UpdateArrearsDays();
                 Economy.CompleteDailySettlement(currentTick.Value);
             }
 
