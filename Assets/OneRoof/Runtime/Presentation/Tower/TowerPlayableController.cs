@@ -22,10 +22,12 @@ namespace OneRoof.Presentation.Tower
     }
 
     /// <summary>Presentation coordinator routing projection snapshots to four deep presenters.</summary>
-    [ExecuteAlways, DisallowMultipleComponent]
+    [ExecuteAlways, DisallowMultipleComponent, DefaultExecutionOrder(-100)]
     public sealed class TowerPlayableController : MonoBehaviour
     {
         public const int InitialResidentCount = 50, InitialFloorCount = 5;
+
+        public void SetPaused(bool paused) => _isPaused = paused;
 
         [SerializeField] private TowerStartMode _startMode = TowerStartMode.StandardFiveFloor;
 

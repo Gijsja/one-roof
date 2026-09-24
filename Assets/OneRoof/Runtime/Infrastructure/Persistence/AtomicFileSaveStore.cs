@@ -16,7 +16,14 @@ namespace OneRoof.Infrastructure.Persistence
 
     public sealed class AtomicFileSaveStore : IFileSaveStore
     {
+        private static readonly object FileGate = new object();
+
         public SaveResult Save(string filePath, string content)
+        {
+            lock (FileGate) return SaveCore(filePath, content);
+        }
+
+        private static SaveResult SaveCore(string filePath, string content)
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
@@ -50,15 +57,38 @@ namespace OneRoof.Infrastructure.Persistence
                 // Atomically replace target — File.Replace is an atomic rename on same-filesystem
                 // paths (maps to rename(2) on Linux) and has no window where both files are absent.
                 // If no prior save exists we fall back to a plain Move (nothing to lose).
-                if (File.Exists(resolvedPath))
+                var backupPath = tempPath + ".bak";
+                const int maxAttempts = 5;
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    File.Replace(tempPath, resolvedPath, null);
+                    try
+                    {
+                        if (File.Exists(resolvedPath))
+                        {
+                            File.Replace(tempPath, resolvedPath, backupPath, ignoreMetadataErrors: true);
+                            if (File.Exists(backupPath))
+                            {
+                                try { File.Delete(backupPath); } catch { }
+                            }
+                        }
+                        else
+                        {
+                            File.Move(tempPath, resolvedPath);
+                        }
+                        return SaveResult.Success();
+                    }
+                    catch (FileNotFoundException) when (!File.Exists(resolvedPath))
+                    {
+                        File.Move(tempPath, resolvedPath);
+                        return SaveResult.Success();
+                    }
+                    catch (IOException ex) when (attempt < maxAttempts && IsSharingViolation(ex))
+                    {
+                        System.Threading.Thread.Sleep(25 * (1 << (attempt - 1)));
+                    }
                 }
-                else
-                {
-                    File.Move(tempPath, resolvedPath);
-                }
-                return SaveResult.Success();
+
+                return SaveResult.Failure($"Failed to save to '{Path.GetFileName(resolvedPath)}' after retries.");
             }
             catch (Exception ex)
             {
@@ -75,11 +105,16 @@ namespace OneRoof.Infrastructure.Persistence
                     // Ignore secondary cleanup error
                 }
 
-                return SaveResult.Failure($"Failed to save to '{resolvedPath}': {ex.Message}");
+                return SaveResult.Failure($"Failed to save '{Path.GetFileName(resolvedPath)}' ({ex.GetType().Name}).");
             }
         }
 
         public LoadResult<string> Load(string filePath)
+        {
+            lock (FileGate) return LoadCore(filePath);
+        }
+
+        private static LoadResult<string> LoadCore(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
@@ -95,7 +130,7 @@ namespace OneRoof.Infrastructure.Persistence
             {
                 if (!File.Exists(resolvedPath))
                 {
-                    return LoadResult<string>.Failure(LoadErrorReason.FileNotFound, $"Save file '{resolvedPath}' does not exist.");
+                    return LoadResult<string>.Failure(LoadErrorReason.FileNotFound, $"Save file '{Path.GetFileName(resolvedPath)}' does not exist.");
                 }
 
                 var content = File.ReadAllText(resolvedPath);
@@ -103,11 +138,16 @@ namespace OneRoof.Infrastructure.Persistence
             }
             catch (Exception ex)
             {
-                return LoadResult<string>.Failure(LoadErrorReason.IoError, $"IO error reading '{resolvedPath}': {ex.Message}");
+                return LoadResult<string>.Failure(LoadErrorReason.IoError, $"Failed to read '{Path.GetFileName(resolvedPath)}' ({ex.GetType().Name}).");
             }
         }
 
         public bool Delete(string filePath)
+        {
+            lock (FileGate) return DeleteCore(filePath);
+        }
+
+        private static bool DeleteCore(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !TryResolveAuthorizedPath(filePath, out var resolvedPath))
             {
@@ -128,6 +168,27 @@ namespace OneRoof.Infrastructure.Persistence
                 if (File.Exists(tempPath))
                 {
                     File.Delete(tempPath);
+                }
+
+                var backupPath = resolvedPath + ".bak";
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+
+                var directory = Path.GetDirectoryName(resolvedPath);
+                var filename = Path.GetFileName(resolvedPath);
+                if (Directory.Exists(directory))
+                {
+                    var pattern = filename + ".*.tmp";
+                    foreach (var tmpFile in Directory.EnumerateFiles(directory, pattern))
+                    {
+                        try { File.Delete(tmpFile); } catch { }
+                    }
+                    foreach (var backupFile in Directory.EnumerateFiles(directory, pattern + ".bak"))
+                    {
+                        try { File.Delete(backupFile); } catch { }
+                    }
                 }
             }
             catch
@@ -167,6 +228,13 @@ namespace OneRoof.Infrastructure.Persistence
             {
                 return false;
             }
+        }
+
+        private static bool IsSharingViolation(IOException exception)
+        {
+            const int sharingViolation = unchecked((int)0x80070020);
+            const int lockViolation = unchecked((int)0x80070021);
+            return exception.HResult == sharingViolation || exception.HResult == lockViolation;
         }
     }
 }

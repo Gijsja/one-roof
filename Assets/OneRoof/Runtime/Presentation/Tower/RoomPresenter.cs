@@ -295,7 +295,7 @@ namespace OneRoof.Presentation.Tower
         private static bool HasMatchingTheme(Transform roomRoot, string contentType)
         {
             var backdrop = roomRoot.GetComponent<RoomBackdropPresenter>();
-            return backdrop != null && string.Equals(backdrop.RoomTheme, contentType, StringComparison.Ordinal);
+            return backdrop == null || string.Equals(backdrop.RoomTheme, contentType, StringComparison.Ordinal);
         }
 
         public void Clear()

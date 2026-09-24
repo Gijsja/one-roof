@@ -38,7 +38,7 @@ namespace OneRoof.Presentation.Tower
 
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
-        public int ResidentCount => _residentViews.Count;
+        public int ResidentCount => _viewPool != null ? _targetResidentCount : _residentViews.Count;
 
         public NpcViewPool ViewPool
         {
@@ -411,10 +411,7 @@ namespace OneRoof.Presentation.Tower
                 var agitation = resident.Status == TransitResidentStatus.Queued
                     ? Mathf.Clamp01((resident.WaitTicks - 10f) / 20f)
                     : 0f;
-                var effects = skeletal != null
-                    ? skeletal.GetComponent<VisualEffectsPresenter>() ?? skeletal.gameObject.AddComponent<VisualEffectsPresenter>()
-                    : null;
-                effects?.SetAgitation(agitation);
+                skeletal?.VisualEffects?.SetAgitation(agitation);
 
                 skeletal?.ApplyProceduralAnimation(time);
             }
@@ -464,7 +461,7 @@ namespace OneRoof.Presentation.Tower
                 if (_camera != null)
                 {
                     var viewport = _camera.WorldToViewportPoint(new Vector3(x, y, 0f));
-                    if (viewport.z <= 0f || viewport.y < 0f || viewport.y > 1f) continue;
+                    if (viewport.z <= 0f || viewport.y < -0.1f || viewport.y > 1.1f || viewport.x < -0.1f || viewport.x > 1.1f) continue;
                 }
                 _visibleResidentIds.Add(resident.ResidentId);
             }

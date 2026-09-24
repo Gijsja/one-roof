@@ -261,10 +261,9 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void BusinessCycle_ReconcilesLeaseStaffAndPaysWagesFromCustomerRevenue()
+        public void BusinessCycle_ReconcilesLeaseStaffAndRecordsWageArrearsWithoutOpeningCash()
         {
-            var sim = TowerSimulation.CreateStandardFiveFloor();
-            var budgetBefore = sim.Population.Households[0].Budget;
+            var sim = TowerSimulation.CreateStandardFiveFloor(settlementPeriod: 50);
 
             for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
 
@@ -272,15 +271,15 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(diner, Is.Not.Null);
             Assert.That(diner.EmployeeIds.Count, Is.EqualTo(20), "Diner staffing must not exceed room capacity.");
             Assert.That(diner.LastCustomerRevenue, Is.GreaterThan(0));
-            Assert.That(diner.LastWages, Is.GreaterThan(0));
-            Assert.That(diner.CashBalance, Is.EqualTo(diner.LastCustomerRevenue - diner.LastWages - 35));
-            Assert.That(sim.Population.Households[0].Budget, Is.GreaterThan(budgetBefore));
+            Assert.That(diner.LastWages, Is.Zero, "Payroll precedes customer receipts; a new tenant has no opening cash.");
+            Assert.That(diner.WageArrears, Is.True);
+            Assert.That(diner.CashBalance, Is.EqualTo(diner.LastCustomerRevenue - diner.LastRentPaid - diner.LastTaxPaid - diner.LastOperatingCost));
         }
 
         [Test]
         public void BusinessState_SaveRoundTrip_PreservesTenantFinancesAndMembership()
         {
-            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var sim = TowerSimulation.CreateStandardFiveFloor(settlementPeriod: 50);
             for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
 
             var save = sim.ExportSaveData();

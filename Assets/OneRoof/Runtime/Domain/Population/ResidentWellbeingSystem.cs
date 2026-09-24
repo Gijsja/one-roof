@@ -20,27 +20,28 @@ namespace OneRoof.Domain.Population
             var averageWait = elevatorBank == null ? 0f : elevatorBank.AverageWaitTicks;
             foreach (var person in population.Persons)
             {
-                var household = population.GetHousehold(person.HouseholdId);
+                if (!population.TryGetHousehold(person.HouseholdId, out var household) || household == null) continue;
                 var commute = Clamp(1f - (person.CurrentActivity == ActivityKind.Commuting ? 0.22f : 0f) - averageWait * 0.01f + (transitSubsidyEnabled ? 0.1f : 0f));
                 var crowding = 0.82f;
                 var noise = person.CurrentActivity == ActivityKind.Commuting ? 0.70f : 0.88f;
                 var rentDue = (long)Math.Round(household.MemberIds.Count * (double)TowerEconomyState.RentPerResidentPerDay * rentMultiplier, MidpointRounding.AwayFromZero);
-                var rent = household.CalculateRentBurden(rentDue);
+                var rentBurden = household.CalculateRentBurden(rentDue);
+                var rentAffordability = Clamp(1f - rentBurden);
                 var service = Clamp(0.80f * serviceEfficiencyMultiplier);
                 var events = 1f;
-                var satisfaction = (commute + crowding + noise + rent + service + events) / 6f;
+                var satisfaction = (commute + crowding + noise + rentAffordability + service + events) / 6f;
                 _grievanceBuffer.Clear();
                 if (commute < GrievanceThreshold) _grievanceBuffer.Add("Long elevator waits are disrupting daily travel.");
-                if (rent < GrievanceThreshold) _grievanceBuffer.Add("Household budget is under rent pressure.");
+                if (rentAffordability < GrievanceThreshold) _grievanceBuffer.Add("Household budget is under rent pressure.");
                 if (noise < GrievanceThreshold) _grievanceBuffer.Add("Crowded travel is creating persistent noise stress.");
                 var pressure = 1f - satisfaction;
-                var multiplier = FacetMultiplier(person, commute, rent, service, noise);
+                var multiplier = FacetMultiplier(person, commute, rentAffordability, service, noise);
                 var strain = Clamp(person.Wellbeing.Strain + (pressure * multiplier * 0.015f) - (satisfaction > .85f ? .01f : 0f));
-                person.Wellbeing.Update(satisfaction, strain, commute, crowding, noise, rent, service, events, _grievanceBuffer);
+                person.Wellbeing.Update(satisfaction, strain, commute, crowding, noise, rentAffordability, service, events, _grievanceBuffer);
             }
         }
 
-        public static float FacetMultiplier(PersonRecord person, float commute, float rent, float service, float noise)
+        public static float FacetMultiplier(PersonRecord person, float commute, float rentAffordability, float service, float noise)
         {
             var multiplier = 1f;
             foreach (var facet in person.PersonalityFacets)
@@ -48,7 +49,7 @@ namespace OneRoof.Domain.Population
                 switch (facet.Kind)
                 {
                     case PersonalityFacetKind.CommuteSensitive: if (commute < .7f) multiplier += .45f; break;
-                    case PersonalityFacetKind.FinanciallyCautious: if (rent < .7f) multiplier += .35f; break;
+                    case PersonalityFacetKind.FinanciallyCautious: if (rentAffordability < .7f) multiplier += .35f; break;
                     case PersonalityFacetKind.ServiceExpectant: if (service < .7f) multiplier += .30f; break;
                     case PersonalityFacetKind.PrivacySeeking: if (noise < .75f) multiplier += .25f; break;
                     case PersonalityFacetKind.Resilient: multiplier -= .35f; break;

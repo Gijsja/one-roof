@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using OneRoof.Application.Transit;
 using OneRoof.Content;
+using OneRoof.Presentation.Tower;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Population
@@ -27,6 +28,7 @@ namespace OneRoof.Presentation.Population
         public SpriteRenderer StatusPlateRenderer { get; private set; }
         public SpriteRenderer EmoteRenderer { get; private set; }
         public Transform EmoteAnchor { get; private set; }
+        public VisualEffectsPresenter VisualEffects { get; private set; }
 
         public int ResidentIndex { get; private set; } = -1;
         public NpcContentRecord ContentRecord { get; private set; }
@@ -108,6 +110,7 @@ namespace OneRoof.Presentation.Population
 
             Root = transform;
             _bones[NpcRigDefinition.BoneRoot] = Root;
+            VisualEffects = GetComponent<VisualEffectsPresenter>() ?? gameObject.AddComponent<VisualEffectsPresenter>();
 
             // 1. Build Spine bone hierarchy according to NpcRigDefinition
             Hip = EnsureBone(Root, NpcRigDefinition.BoneHip, new Vector3(0f, NpcRigDefinition.HipHeight, 0f));

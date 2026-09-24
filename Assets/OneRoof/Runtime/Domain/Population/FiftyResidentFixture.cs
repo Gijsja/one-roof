@@ -66,11 +66,13 @@ namespace OneRoof.Domain.Population
 
             // Build households (one per apartment).
             var households = new List<HouseholdRecord>(TotalHouseholds);
+            var initialBudgets = new float[TotalHouseholds];
             for (var i = 0; i < TotalHouseholds; i++)
             {
                 var householdId = new EntityId(HouseholdIdBase + i + 1);
                 var homeRoomId  = residentialRooms[i];
                 var budget      = Clamp01((rng.NextInt(40, 101)) / 100f); // 40–100 % wealth
+                initialBudgets[i] = budget;
                 households.Add(new HouseholdRecord(
                     householdId,
                     memberIds:    Array.Empty<EntityId>(), // filled below after persons created
@@ -133,7 +135,7 @@ namespace OneRoof.Domain.Population
                     src.Id,
                     householdMembers[i],
                     src.HomeRoomId,
-                    src.Budget,
+                    initialBudgets[i],
                     src.Satisfaction));
             }
 

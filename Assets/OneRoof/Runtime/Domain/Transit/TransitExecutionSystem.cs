@@ -326,6 +326,7 @@ namespace OneRoof.Domain.Transit
                 if (trip.PlannedRoute?.Legs == null)
                 {
                     CancelInvalidRestoredTrip(trip);
+                    person?.UpdateActivity(ActivityKind.Idle);
                     _activeTrips.RemoveAt(i);
                     _activeTripsByPerson.Remove(trip.PersonId);
                     continue;
@@ -445,14 +446,15 @@ namespace OneRoof.Domain.Transit
             ActiveTripExecution execution,
             HierarchicalTransitGraph graph)
         {
-            if (execution?.Trip?.PlannedRoute == null || graph == null ||
-                execution.CurrentLegIndex >= execution.Trip.PlannedRoute.Legs.Count)
+            var activeRoute = execution?.Route ?? execution?.Trip?.PlannedRoute;
+            if (activeRoute == null || graph == null ||
+                execution.CurrentLegIndex >= activeRoute.Legs.Count)
             {
                 return false;
             }
 
-            var currentNodeId = execution.Trip.PlannedRoute.Legs[execution.CurrentLegIndex].FromNodeId;
-            var destinationNodeId = execution.Trip.PlannedRoute.DestinationNodeId;
+            var currentNodeId = activeRoute.Legs[execution.CurrentLegIndex].FromNodeId;
+            var destinationNodeId = activeRoute.DestinationNodeId;
             var availableEdges = new List<TransitEdge>();
             foreach (var edge in graph.Edges)
             {

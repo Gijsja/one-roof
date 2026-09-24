@@ -27,13 +27,13 @@ namespace OneRoof.UI.Modes
 
         public ModeShellSession Session
         {
-            get => _session ?? (_session = new ModeShellSession());
+            get => _session;
             set => _session = value;
         }
 
-        public InteractionMode ActiveMode => Session.CurrentMode;
+        public InteractionMode ActiveMode => _session != null ? _session.CurrentMode : InteractionMode.Inspect;
 
-        public ModeShellProjection CurrentProjection => Session.Projection();
+        public ModeShellProjection CurrentProjection => _session?.Projection();
 
         // IMGUI uses top-origin coordinates. Placement uses these same bounds to
         // exclude visible controls before mapping a pointer to tower cells.
@@ -51,6 +51,8 @@ namespace OneRoof.UI.Modes
         public static bool IsPointerOverControls(Vector2 screenPosition, int screenHeight, ModeShellProjection projection)
         {
             var imguiPosition = new Vector2(screenPosition.x, screenHeight - screenPosition.y);
+            if (new Rect(16, 16, 392, 330).Contains(imguiPosition))
+                return true;
             if (ModeBarRect(screenHeight).Contains(imguiPosition) ||
                 ContextRect(screenHeight, projection.IsBuildMode).Contains(imguiPosition))
                 return true;
@@ -63,11 +65,15 @@ namespace OneRoof.UI.Modes
 
         private void Update()
         {
-            HandleKeyboardShortcuts();
+            if (_session != null)
+            {
+                HandleKeyboardShortcuts();
+            }
         }
 
         public void HandleKeyboardShortcuts()
         {
+            if (_session == null) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard != null)
@@ -119,6 +125,7 @@ namespace OneRoof.UI.Modes
 
         public void OnBuildModeRequested()
         {
+            if (_session == null) return;
             if (Session.CurrentMode == InteractionMode.Build)
             {
                 if (string.IsNullOrEmpty(Session.Projection().SelectedBuildTool))
@@ -143,6 +150,7 @@ namespace OneRoof.UI.Modes
 
         private void OnGUI()
         {
+            if (_session == null) return;
             EnsureStyles();
 
             var projection = CurrentProjection;

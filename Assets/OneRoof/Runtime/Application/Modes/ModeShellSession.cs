@@ -100,6 +100,7 @@ namespace OneRoof.Application.Modes
 
         public void SetPlacementTarget(int? floor, int? cellX)
         {
+            if (_state.TargetFloor == floor && _state.TargetCellX == cellX) return;
             _state.SetPlacementTarget(floor, cellX);
             ModeChanged?.Invoke(Projection());
         }
