@@ -405,6 +405,7 @@ namespace OneRoof.Presentation.Tower
                 {
                     skeletal?.SetEmote(NpcEmoteKind.None);
                 }
+                skeletal?.SetCaption(ResidentActivityCaption.For(resident));
 
                 // Waiting is the person-scale half of the congestion explanation chain.
                 // The aura starts only after a legible delay and reaches full intensity at 30 ticks.

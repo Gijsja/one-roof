@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using OneRoof.Application.Transit;
 using OneRoof.Content;
+using OneRoof.Presentation.Tower;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Population
@@ -27,6 +28,8 @@ namespace OneRoof.Presentation.Population
         public SpriteRenderer StatusPlateRenderer { get; private set; }
         public SpriteRenderer EmoteRenderer { get; private set; }
         public Transform EmoteAnchor { get; private set; }
+        public TextMesh ActivityCaption { get; private set; }
+        public VisualEffectsPresenter VisualEffects { get; private set; }
 
         public int ResidentIndex { get; private set; } = -1;
         public NpcContentRecord ContentRecord { get; private set; }
@@ -59,6 +62,8 @@ namespace OneRoof.Presentation.Population
         private static Sprite _limbSprite;
         private static Sprite _handSprite;
         private static Sprite _footSprite;
+        private static Sprite _captionBackgroundSprite;
+        private string _caption;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticCaches()
@@ -68,6 +73,7 @@ namespace OneRoof.Presentation.Population
             _limbSprite = null;
             _handSprite = null;
             _footSprite = null;
+            _captionBackgroundSprite = null;
         }
 
         private void Awake()
@@ -96,6 +102,7 @@ namespace OneRoof.Presentation.Population
 
             SetTransitStatus(TransitResidentStatus.Queued);
             SetEmote(NpcEmoteKind.None);
+            SetCaption(null);
         }
 
         public void EnsureHierarchy()
@@ -108,6 +115,7 @@ namespace OneRoof.Presentation.Population
 
             Root = transform;
             _bones[NpcRigDefinition.BoneRoot] = Root;
+            VisualEffects = GetComponent<VisualEffectsPresenter>() ?? gameObject.AddComponent<VisualEffectsPresenter>();
 
             // 1. Build Spine bone hierarchy according to NpcRigDefinition
             Hip = EnsureBone(Root, NpcRigDefinition.BoneHip, new Vector3(0f, NpcRigDefinition.HipHeight, 0f));
@@ -208,6 +216,43 @@ namespace OneRoof.Presentation.Population
                 EmoteRenderer.enabled = CurrentEmote != NpcEmoteKind.None;
             }
 
+            var captionGo = EmoteAnchor.Find("ActivityCaption")?.gameObject;
+            if (captionGo == null)
+            {
+                captionGo = new GameObject("ActivityCaption");
+                captionGo.transform.SetParent(EmoteAnchor, false);
+                captionGo.transform.localPosition = new Vector3(0.09f, -0.015f, -0.02f);
+            }
+            ActivityCaption = captionGo.GetComponent<TextMesh>();
+            if (ActivityCaption == null)
+            {
+                ActivityCaption = captionGo.AddComponent<TextMesh>();
+                ActivityCaption.anchor = TextAnchor.MiddleCenter;
+                ActivityCaption.alignment = TextAlignment.Center;
+                ActivityCaption.fontSize = 48;
+                ActivityCaption.characterSize = 0.12f;
+                ActivityCaption.color = new Color(0.08f, 0.13f, 0.19f);
+                captionGo.GetComponent<MeshRenderer>().sortingOrder = 27;
+            }
+            var backgroundGo = EmoteAnchor.Find("CaptionBackground")?.gameObject;
+            if (backgroundGo == null)
+            {
+                backgroundGo = new GameObject("CaptionBackground");
+                backgroundGo.transform.SetParent(EmoteAnchor, false);
+                backgroundGo.transform.localPosition = new Vector3(0.06f, -0.015f, 0.01f);
+                backgroundGo.transform.localScale = new Vector3(1.06f, 0.18f, 1f);
+            }
+            var background = backgroundGo.GetComponent<SpriteRenderer>();
+            if (background == null)
+            {
+                background = backgroundGo.AddComponent<SpriteRenderer>();
+                background.sprite = GetCaptionBackgroundSprite();
+                background.color = new Color(0.91f, 0.96f, 0.98f, 0.93f);
+                background.sortingOrder = 24;
+            }
+            background.enabled = !string.IsNullOrEmpty(_caption);
+            ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(_caption));
+
             // Bind-pose carry for procedural locomotion: hip bob/sway offsets compose on top.
             if (Hip != null) _hipBasePos = Hip.localPosition;
         }
@@ -275,6 +320,32 @@ namespace OneRoof.Presentation.Population
                     EmoteRenderer.sprite = EmoteSpriteCatalog.GetSprite(emote, 0);
                 }
             }
+        }
+
+        public void SetCaption(string caption)
+        {
+            EnsureHierarchy();
+            if (_caption == caption) return;
+            _caption = caption;
+            ActivityCaption.text = caption ?? string.Empty;
+            ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(caption));
+            var background = EmoteAnchor.Find("CaptionBackground").GetComponent<SpriteRenderer>();
+            background.enabled = !string.IsNullOrEmpty(caption);
+            EmoteRenderer.transform.localPosition = string.IsNullOrEmpty(caption)
+                ? Vector3.zero : new Vector3(-0.42f, 0f, -0.01f);
+            EmoteRenderer.transform.localScale = string.IsNullOrEmpty(caption)
+                ? Vector3.one : new Vector3(2.4f, 2.4f, 1f);
+        }
+
+        private static Sprite GetCaptionBackgroundSprite()
+        {
+            if (_captionBackgroundSprite != null) return _captionBackgroundSprite;
+            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.SetPixel(0, 0, Color.white);
+            texture.Apply();
+            _captionBackgroundSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1),
+                new Vector2(0.5f, 0.5f), 1f);
+            return _captionBackgroundSprite;
         }
 
         public void SetAnimationClip(NpcAnimationClip animation) => CurrentAnimation = animation;

@@ -53,6 +53,7 @@ namespace OneRoof.Presentation.Population
 
         public void Unbind()
         {
+            if (_skeletalHierarchy != null) _skeletalHierarchy.SetCaption(null);
             BoundEntityId = null;
             CurrentProjection = default;
             gameObject.SetActive(false);
@@ -60,6 +61,11 @@ namespace OneRoof.Presentation.Population
 
         private void EnsureRendererAndPropertyBlock()
         {
+            if (_skeletalHierarchy == null)
+            {
+                _skeletalHierarchy = GetComponent<NpcSkeletalHierarchy>();
+            }
+
             if (_renderer == null)
             {
                 _renderer = GetComponent<MeshRenderer>();
@@ -79,7 +85,8 @@ namespace OneRoof.Presentation.Population
 
             if (_skeletalHierarchy != null)
             {
-                _skeletalHierarchy.Initialize(projection.PersonId - 1);
+                if (_skeletalHierarchy.ResidentIndex != projection.PersonId - 1)
+                    _skeletalHierarchy.Initialize(projection.PersonId - 1);
                 if (_skeletalHierarchy.MainRenderer != null)
                 {
                     _skeletalHierarchy.MainRenderer.color = Color.Lerp(Color.white, color, 0.35f);
@@ -118,6 +125,7 @@ namespace OneRoof.Presentation.Population
                             break;
                     }
                 }
+                _skeletalHierarchy.SetCaption(ResidentActivityCaption.For(projection));
             }
             else if (_spriteRenderer != null)
             {
