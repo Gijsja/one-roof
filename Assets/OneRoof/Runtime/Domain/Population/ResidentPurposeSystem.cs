@@ -17,18 +17,25 @@ namespace OneRoof.Domain.Population
             // because the schedule generator observes another tick at Outside.
             if (person.CurrentPurpose == ResidentPurposeKind.WorkingOutside) return;
 
+            // The five-floor acceptance fixture deliberately compresses its
+            // morning schedule. Match its episode length to that test clock;
+            // production schedules use the minute-based durations below.
+            var compressedFixture = person.Schedule.Blocks[0].DurationTicks <= 60;
+            var homeTicks = compressedFixture ? 5 : HomeActivityTicks;
+            var mealTicks = compressedFixture ? 5 : MealTicks;
+
             switch (person.CurrentActivity)
             {
                 case ActivityKind.Working:
                     person.CommitPurpose(person.CurrentLocation.IsOutside
                         ? ResidentPurposeKind.WorkingOutside : ResidentPurposeKind.WorkingInside,
-                        tick, person.CurrentLocation.IsOutside ? OutsideWorkTicks : HomeActivityTicks);
+                        tick, person.CurrentLocation.IsOutside ? OutsideWorkTicks : homeTicks);
                     return;
                 case ActivityKind.Eating:
-                    person.CommitPurpose(ResidentPurposeKind.EatingAtDiner, tick, MealTicks);
+                    person.CommitPurpose(ResidentPurposeKind.EatingAtDiner, tick, mealTicks);
                     return;
                 case ActivityKind.Sleeping:
-                    person.CommitPurpose(ResidentPurposeKind.Sleeping, tick, HomeActivityTicks);
+                    person.CommitPurpose(ResidentPurposeKind.Sleeping, tick, homeTicks);
                     return;
                 case ActivityKind.Leisure:
                 case ActivityKind.Idle:
@@ -37,7 +44,7 @@ namespace OneRoof.Domain.Population
                         return;
                     var isHome = !person.CurrentLocation.IsOutside &&
                                  person.CurrentRoomId.Equals(person.HomeRoomId);
-                    var episode = tick.Value / HomeActivityTicks;
+                    var episode = tick.Value / homeTicks;
                     var variant = (int)((person.Id.Value + episode) % 4);
                     var purpose = isHome
                         ? variant == 0 ? ResidentPurposeKind.Sitting
@@ -45,7 +52,7 @@ namespace OneRoof.Domain.Population
                             : variant == 2 ? ResidentPurposeKind.Learning
                             : ResidentPurposeKind.Chilling
                         : ResidentPurposeKind.Socializing;
-                    person.CommitPurpose(purpose, tick, HomeActivityTicks);
+                    person.CommitPurpose(purpose, tick, homeTicks);
                     return;
             }
         }

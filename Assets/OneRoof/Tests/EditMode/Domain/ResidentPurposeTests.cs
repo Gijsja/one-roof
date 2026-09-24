@@ -58,8 +58,9 @@ namespace OneRoof.Domain.Tests.EditMode
         public void MealAndHomePurposeHoldForMinimumTimeAfterArrival()
         {
             var sample = FiftyResidentFixture.Create().Persons[0];
+            var schedule = DailySchedule.Standard(sample.Traits[0], new DeterministicRandomStream(42));
             var person = new PersonRecord(new EntityId(99011), sample.HouseholdId, sample.HomeRoomId,
-                sample.WorkplaceRoomId, sample.Schedule, sample.Needs, sample.Traits);
+                sample.WorkplaceRoomId, schedule, sample.Needs, sample.Traits);
             person.UpdateActivity(ActivityKind.Eating);
             ResidentPurposeSystem.AdvancePerson(person, new Tick(100));
             Assert.That(person.CurrentPurpose, Is.EqualTo(ResidentPurposeKind.EatingAtDiner));
