@@ -2,6 +2,7 @@ using System;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Modes.Commands;
 using OneRoof.UI;
+using OneRoof.UI.Management;
 using UnityEngine;
 
 namespace OneRoof.UI.Modes
@@ -48,19 +49,25 @@ namespace OneRoof.UI.Modes
         public static Rect ContextRect(int screenHeight, bool isBuildMode) =>
             new Rect(16, screenHeight - 108, 620, 32);
 
+        public static Rect DataPaletteRect(int screenHeight) => new Rect(16, screenHeight - 332, 620, 216);
+
         public static bool IsPointerOverControls(Vector2 screenPosition, int screenHeight, ModeShellProjection projection)
         {
             var imguiPosition = new Vector2(screenPosition.x, screenHeight - screenPosition.y);
             if (new Rect(16, 16, 392, 330).Contains(imguiPosition))
                 return true;
+            if (ManagementOnboardingView.PanelRect(Screen.width).Contains(imguiPosition)) return true;
             if (ModeBarRect(screenHeight).Contains(imguiPosition) ||
                 ContextRect(screenHeight, projection.IsBuildMode).Contains(imguiPosition))
                 return true;
             if (projection.IsBuildMode && string.IsNullOrEmpty(projection.SelectedBuildTool) &&
                 BuildPaletteRect(screenHeight).Contains(imguiPosition))
                 return true;
+            if (projection.IsManageMode && (PolicyDecreePanelView.PanelRect(Screen.width, screenHeight).Contains(imguiPosition) ||
+                DecisionRecordView.PanelRect(Screen.width, screenHeight).Contains(imguiPosition)))
+                return true;
             return projection.IsDataMode &&
-                   new Rect(16, screenHeight - 282, 620, 166).Contains(imguiPosition);
+                   DataPaletteRect(screenHeight).Contains(imguiPosition);
         }
 
         private void Update()
@@ -250,7 +257,7 @@ namespace OneRoof.UI.Modes
 
         private void DrawDataPalette(ModeShellProjection projection)
         {
-            GUILayout.BeginArea(new Rect(16, Screen.height - 282, 620, 166), StewardTheme.Panel);
+            GUILayout.BeginArea(DataPaletteRect(Screen.height), StewardTheme.Panel);
             GUILayout.Label("READ THE TOWER", StewardTheme.Label(15, StewardTheme.Text, true));
             GUILayout.Label("Choose a pattern, then select a floor or resident to trace its cause.", StewardTheme.Label(11, StewardTheme.Muted));
             GUILayout.BeginHorizontal();
@@ -263,6 +270,10 @@ namespace OneRoof.UI.Modes
             DrawOverlay("SCRUTINY", "overlay:scrutiny", projection.ActiveOverlayId);
             DrawOverlay("BUSINESS", "overlay:business_health", projection.ActiveOverlayId);
             DrawOverlay("UTILITIES", "overlay:utilities", projection.ActiveOverlayId);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            DrawOverlay("NOISE", "overlay:noise", projection.ActiveOverlayId);
+            DrawOverlay("FACTIONS", "overlay:faction_tension", projection.ActiveOverlayId);
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }
@@ -322,9 +333,7 @@ namespace OneRoof.UI.Modes
         }
 
         /// <summary>
-        /// Pure status-line builder for the mode context bar. Manage mode has no
-        /// decree panel yet (OR-902 READY), so it names the upcoming systems-level
-        /// levers instead of leaving the player at a dead-end mode label.
+        /// Pure status-line builder for the mode context bar.
         /// </summary>
         public static string BuildModeStatusText(ModeShellProjection projection)
         {
@@ -350,7 +359,7 @@ namespace OneRoof.UI.Modes
             }
             else if (projection.IsManageMode)
             {
-                statusText += "  /  Treasury and leasing update automatically. Steward policies are coming soon.";
+                statusText += "  /  Compare a decree, then confirm it. Tab selects; arrows change; Enter confirms.";
             }
 
             return statusText;

@@ -5,6 +5,7 @@ using OneRoof.Presentation.Overlays;
 using OneRoof.Presentation.Tower;
 using OneRoof.UI.Inspectors;
 using OneRoof.UI.Modes;
+using OneRoof.UI.Management;
 using OneRoof.UI.Prediction;
 using UnityEngine;
 
@@ -64,6 +65,30 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_controller.InspectOutline, Is.Not.Null);
             Assert.That(_controller.InspectSelection, Is.Not.Null);
             Assert.That(_controller.InspectSelection.ModeSession, Is.SameAs(_controller.ModeSession));
+        }
+
+        [Test]
+        public void M9ManageAndSocialOverlaysAreReachableFromModeShell()
+        {
+            var panel = _holder.GetComponent<PolicyDecreePanelView>();
+            var history = _holder.GetComponent<DecisionRecordView>();
+            Assert.That(panel?.Draft, Is.Not.Null);
+            Assert.That(history, Is.Not.Null);
+            Assert.That(_controller.Onboarding, Is.Not.Null);
+
+            _controller.ModeSession.SwitchMode(InteractionMode.Manage);
+            Assert.That(_controller.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Manage));
+
+            _controller.ShowNoiseOverlay();
+            var noise = _holder.GetComponent<NoiseOverlayPresenter>();
+            Assert.That(noise.IsVisible, Is.True);
+            Assert.That(noise.CurrentOverlay, Is.Not.Null);
+
+            _controller.ShowFactionTensionOverlay();
+            var factions = _holder.GetComponent<FactionTensionOverlayPresenter>();
+            Assert.That(factions.IsVisible, Is.True);
+            Assert.That(factions.CurrentOverlay, Is.Not.Null);
+            Assert.That(noise.IsVisible, Is.False);
         }
 
         [Test]

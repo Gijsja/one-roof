@@ -192,9 +192,10 @@ namespace OneRoof.Domain.Economy
             return floorSpan * stairWidth * CostPerStairCell;
         }
 
-        public long ProcessRentCycle(BuildingTopologyState topology, PopulationState population)
+        public long ProcessRentCycle(BuildingTopologyState topology, PopulationState population, float collectionMultiplier = 1f)
         {
             if (topology == null || population == null) return 0;
+            if (collectionMultiplier < 0f || collectionMultiplier > 1f) throw new ArgumentOutOfRangeException(nameof(collectionMultiplier));
 
             long totalRent = 0;
             _settlementHouseholds.Clear();
@@ -207,7 +208,8 @@ namespace OneRoof.Domain.Economy
             for (var i = 0; i < _settlementHouseholds.Count; i++)
             {
                 var household = _settlementHouseholds[i];
-                var rentDue = CalculateResidentialRentDue(household);
+                // Collective withholding reduces cash transferred by this cycle. No separate fee or duplicate receipt is created.
+                var rentDue = (long)Math.Floor(CalculateResidentialRentDue(household) * (double)collectionMultiplier);
                 household.AdjustCashBalance(-rentDue);
                 totalRent += rentDue;
             }

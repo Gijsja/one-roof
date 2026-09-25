@@ -5,10 +5,12 @@ using OneRoof.Application.Overlays;
 using OneRoof.Application.Prediction;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Commands;
+using EntityId = OneRoof.Domain.Identity.EntityId;
 using OneRoof.Presentation.Overlays;
 using OneRoof.Presentation.Population;
 using OneRoof.UI.Inspectors;
 using OneRoof.UI.Modes;
+using OneRoof.UI.Management;
 using OneRoof.UI.Prediction;
 using UnityEngine;
 
@@ -40,11 +42,15 @@ namespace OneRoof.Presentation.Tower
         private FootTrafficOverlayPresenter _footTrafficPresenter;
         private BusinessHealthOverlayPresenter _businessHealthPresenter;
         private UtilitiesOverlayPresenter _utilitiesPresenter;
+        private NoiseOverlayPresenter _noisePresenter;
+        private FactionTensionOverlayPresenter _factionTensionPresenter;
         private UtilitiesNetworkLayerPresenter _utilitiesNetworkLayer;
         private CongestionInspectorCardView _inspectorCard; private PlacementPreviewCardView _placementCard;
         private GridPlacementController _gridPlacement; private PlacementGhostPresenter _ghostPresenter;
         private InspectSelectionController _inspectSelection; private InspectOutlinePresenter _inspectOutline;
         private TowerDashboardHudView _hudView;
+        private readonly ManagementOnboarding _onboarding = new ManagementOnboarding();
+        private DecisionRecordView _decisionRecord;
         private TowerAtmospherePresenter _atmosphere;
         private OutsideCityPresenter _outside;
         private PixelRainPresenter _pixelRain;
@@ -75,6 +81,7 @@ namespace OneRoof.Presentation.Tower
         public TowerStartMode StartMode => _startMode;
         public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
+        public ManagementOnboarding Onboarding => _onboarding;
 
         public void Initialize()
         {
@@ -116,6 +123,17 @@ namespace OneRoof.Presentation.Tower
                 _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected;
                 _utilitiesPresenter.NetworkSelected += OnUtilityNetworkSelected;
             }
+            if (_noisePresenter != null) { _noisePresenter.RoomInspectionRequested -= InspectNoiseSource; _noisePresenter.RoomInspectionRequested += InspectNoiseSource; }
+            if (_factionTensionPresenter != null) { _factionTensionPresenter.FloorInspectionRequested -= InspectFactionFloor; _factionTensionPresenter.FloorInspectionRequested += InspectFactionFloor; }
+            if (_decisionRecord != null)
+            {
+                _decisionRecord.ResidentInspectionRequested -= InspectDecisionResident;
+                _decisionRecord.ResidentInspectionRequested += InspectDecisionResident;
+                _decisionRecord.BusinessInspectionRequested -= InspectDecisionBusiness;
+                _decisionRecord.BusinessInspectionRequested += InspectDecisionBusiness;
+                _decisionRecord.FloorInspectionRequested -= InspectFactionFloor;
+                _decisionRecord.FloorInspectionRequested += InspectFactionFloor;
+            }
         }
 
         private void UnsubscribeEvents()
@@ -128,6 +146,14 @@ namespace OneRoof.Presentation.Tower
             {
                 _utilitiesPresenter.InspectionRequested -= InspectUtilities;
                 _utilitiesPresenter.NetworkSelected -= OnUtilityNetworkSelected;
+            }
+            if (_noisePresenter != null) _noisePresenter.RoomInspectionRequested -= InspectNoiseSource;
+            if (_factionTensionPresenter != null) _factionTensionPresenter.FloorInspectionRequested -= InspectFactionFloor;
+            if (_decisionRecord != null)
+            {
+                _decisionRecord.ResidentInspectionRequested -= InspectDecisionResident;
+                _decisionRecord.BusinessInspectionRequested -= InspectDecisionBusiness;
+                _decisionRecord.FloorInspectionRequested -= InspectFactionFloor;
             }
         }
 
@@ -146,6 +172,8 @@ namespace OneRoof.Presentation.Tower
         private void InitSubcomponents()
         {
             (_modeBar = Ensure<ModeShellBarController>()).Session = _mode;
+            Ensure<PolicyDecreePanelView>().Bind(_sim, _mode);
+            (_decisionRecord = Ensure<DecisionRecordView>()).Bind(_sim, _mode);
             (_overlayPresenter = Ensure<ElevatorWaitOverlayPresenter>()).SetVisible(false);
             (_satisfactionPresenter = Ensure<SatisfactionOverlayPresenter>()).SetVisible(false);
             (_populationPresenter = Ensure<PopulationOverlayPresenter>()).SetVisible(false);
@@ -153,19 +181,22 @@ namespace OneRoof.Presentation.Tower
             (_footTrafficPresenter = Ensure<FootTrafficOverlayPresenter>()).SetVisible(false);
             (_businessHealthPresenter = Ensure<BusinessHealthOverlayPresenter>()).SetVisible(false);
             (_utilitiesPresenter = Ensure<UtilitiesOverlayPresenter>()).SetVisible(false);
+            (_noisePresenter = Ensure<NoiseOverlayPresenter>()).SetVisible(false);
+            (_factionTensionPresenter = Ensure<FactionTensionOverlayPresenter>()).SetVisible(false);
             (_utilitiesNetworkLayer = Ensure<UtilitiesNetworkLayerPresenter>()).SetVisible(false);
             (_inspectorCard = Ensure<CongestionInspectorCardView>()).Session = _mode;
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
             _gridPlacement.SimulationSession = _sim; _gridPlacement.GhostPresenter = _ghostPresenter;
             (_hudView = Ensure<TowerDashboardHudView>()).Controller = this;
+            Ensure<ManagementOnboardingView>().Lesson = _onboarding;
             _inspectOutline = Ensure<InspectOutlinePresenter>(); (_inspectSelection = Ensure<InspectSelectionController>()).ModeSession = _mode;
             _inspectSelection.SimulationSession = _sim; _inspectSelection.RoomPresenter = _room; _inspectSelection.ElevatorPresenter = _elevator;
             _inspectSelection.ResidentPresenter = _resident; _inspectSelection.OutlinePresenter = _inspectOutline;
             _atmosphere = Ensure<TowerAtmospherePresenter>(); _atmosphere.Initialize();
             var camera = TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
             _outside = Ensure<OutsideCityPresenter>(); _outside.Initialize(camera, _worldMat);
-            _pixelRain = Ensure<PixelRainPresenter>(); _pixelRain.Initialize(camera, _worldMat);
+            _pixelRain = Ensure<PixelRainPresenter>(); _pixelRain.Initialize(camera);
             if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
         }
 
@@ -173,13 +204,17 @@ namespace OneRoof.Presentation.Tower
 
         private void OnModeChanged(ModeShellProjection p)
         {
+            if (p.IsDataMode) _onboarding.ObserveOverlay(p.ActiveOverlayId);
+            if (p.IsManageMode) _onboarding.ObserveManageMode(true);
             var satisfaction = p.IsDataMode && p.ActiveOverlayId == "overlay:satisfaction";
             var population = p.IsDataMode && p.ActiveOverlayId == "overlay:population";
             var scrutiny = p.IsDataMode && p.ActiveOverlayId == "overlay:scrutiny";
             var footTraffic = p.IsDataMode && p.ActiveOverlayId == "overlay:foot_traffic";
             var businessHealth = p.IsDataMode && p.ActiveOverlayId == "overlay:business_health";
             var utilities = p.IsDataMode && p.ActiveOverlayId == "overlay:utilities";
-            _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction && !population && !scrutiny && !footTraffic && !businessHealth && !utilities); _satisfactionPresenter.SetVisible(satisfaction); _populationPresenter.SetVisible(population); _scrutinyPresenter.SetVisible(scrutiny); _footTrafficPresenter.SetVisible(footTraffic); _businessHealthPresenter.SetVisible(businessHealth); _utilitiesPresenter.SetVisible(utilities);
+            var noise = p.IsDataMode && p.ActiveOverlayId == "overlay:noise";
+            var factionTension = p.IsDataMode && p.ActiveOverlayId == "overlay:faction_tension";
+            _overlayPresenter.SetVisible(p.IsDataMode && !satisfaction && !population && !scrutiny && !footTraffic && !businessHealth && !utilities && !noise && !factionTension); _satisfactionPresenter.SetVisible(satisfaction); _populationPresenter.SetVisible(population); _scrutinyPresenter.SetVisible(scrutiny); _footTrafficPresenter.SetVisible(footTraffic); _businessHealthPresenter.SetVisible(businessHealth); _utilitiesPresenter.SetVisible(utilities); _noisePresenter.SetVisible(noise); _factionTensionPresenter.SetVisible(factionTension);
             _utilitiesNetworkLayer.SetVisible(utilities);
             if (satisfaction) _satisfactionPresenter.UpdateOverlay(_dataOverlays.Satisfaction);
             else if (population) _populationPresenter.UpdateOverlay(_dataOverlays.Population);
@@ -187,6 +222,8 @@ namespace OneRoof.Presentation.Tower
             else if (footTraffic) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             else if (businessHealth) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
             else if (utilities) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
+            else if (noise) _noisePresenter.UpdateOverlay(_dataOverlays.Noise);
+            else if (factionTension) _factionTensionPresenter.UpdateOverlay(_dataOverlays.FactionTension, _sim.TopologyProjection());
             else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_dataOverlays.ElevatorWait);
             if (p.IsBuildMode && p.SelectedBuildTool == "transit:elevator_car") UpdatePlacementCard();
             else if (!p.IsBuildMode && _placementCard.IsOpen) _placementCard.Close();
@@ -220,6 +257,9 @@ namespace OneRoof.Presentation.Tower
         private void UpdateOverlayAndPredictions()
         {
             var c = _sim.CongestionProjection();
+            _onboarding.ObserveQueue(c.TotalQueued, c.AverageWaitTicks);
+            _onboarding.ObserveMeasuredWait(c.AverageWaitTicks);
+            _onboarding.ObserveMeasuredQueue(c.TotalQueued);
             if (_overlayPresenter.IsVisible) _overlayPresenter.UpdateOverlay(_dataOverlays.ElevatorWait);
             if (_satisfactionPresenter.IsVisible) _satisfactionPresenter.UpdateOverlay(_dataOverlays.Satisfaction);
             if (_populationPresenter.IsVisible) _populationPresenter.UpdateOverlay(_dataOverlays.Population);
@@ -227,10 +267,12 @@ namespace OneRoof.Presentation.Tower
             if (_footTrafficPresenter.IsVisible) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             if (_businessHealthPresenter.IsVisible) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
             if (_utilitiesPresenter.IsVisible) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
+            if (_noisePresenter.IsVisible) _noisePresenter.UpdateOverlay(_dataOverlays.Noise);
+            if (_factionTensionPresenter.IsVisible) _factionTensionPresenter.UpdateOverlay(_dataOverlays.FactionTension, _sim.TopologyProjection());
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
         }
 
-        public void InspectBottleneck() { _mode.SwitchMode(InteractionMode.Inspect); var c = _sim.CongestionProjection(); var ov = _dataOverlays.ElevatorWait; _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car")); }
+        public void InspectBottleneck() { _mode.SwitchMode(InteractionMode.Inspect); var c = _sim.CongestionProjection(); var ov = _dataOverlays.ElevatorWait; _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car")); _onboarding.ObserveInspector(true); }
 
         public void ToggleDataOverlay() { if (_mode.CurrentMode == InteractionMode.Data) _mode.SwitchMode(InteractionMode.Inspect); else { _mode.SwitchMode(InteractionMode.Data); _mode.SetActiveOverlay("overlay:elevator_wait"); } }
         public void ShowSatisfactionOverlay() { _mode.SetActiveOverlay("overlay:satisfaction"); }
@@ -239,6 +281,28 @@ namespace OneRoof.Presentation.Tower
         public void ShowFootTrafficOverlay() { _mode.SetActiveOverlay("overlay:foot_traffic"); }
         public void ShowBusinessHealthOverlay() { _mode.SetActiveOverlay("overlay:business_health"); }
         public void ShowUtilitiesOverlay() { _mode.SetActiveOverlay("overlay:utilities"); }
+        public void ShowNoiseOverlay() { _mode.SetActiveOverlay("overlay:noise"); }
+        public void ShowFactionTensionOverlay() { _mode.SetActiveOverlay("overlay:faction_tension"); }
+        private void InspectNoiseSource(EntityId roomId)
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.ShowDetails(InspectTargetKind.Room, roomId.Value);
+        }
+        private void InspectFactionFloor(int floor)
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.DetailCard.Inspect(new TowerInspectionService(_sim).InspectFactionFloor(floor));
+        }
+        private void InspectDecisionResident(int residentId)
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.ShowDetails(InspectTargetKind.Resident, residentId);
+        }
+        private void InspectDecisionBusiness(int businessId)
+        {
+            _mode.SwitchMode(InteractionMode.Inspect);
+            _inspectSelection.DetailCard.Inspect(new TowerInspectionService(_sim).InspectBusiness(businessId));
+        }
         private void OnUtilityNetworkSelected(UtilitiesNetworkLayerPresenter.NetworkKind network) => _utilitiesNetworkLayer.Select(network);
         public void InspectPopulationFloor(int floor)
         {
@@ -255,11 +319,17 @@ namespace OneRoof.Presentation.Tower
             _mode.SwitchMode(InteractionMode.Inspect);
             _inspectSelection.DetailCard.Inspect(new TowerInspectionService(_sim).InspectUtilities());
         }
-        private void UpdatePlacementCard() => _placementCard.SetPreview(_predictor.PredictAddition(_sim.CongestionProjection()), OnConfirmElevatorPlacement);
+        private void UpdatePlacementCard()
+        {
+            var preview = _predictor.PredictAddition(_sim.CongestionProjection());
+            _placementCard.SetPreview(preview, OnConfirmElevatorPlacement);
+            _onboarding.ObservePreview(preview.IsValid, preview.EstimatedImprovementPercentage);
+        }
         public void ShowPlacementPreview() { if (_mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build); if (_mode.Projection().SelectedBuildTool != "transit:elevator_car") _mode.SelectBuildTool("transit:elevator_car"); UpdatePlacementCard(); }
         public void OnConfirmElevatorPlacement()
         {
             var result = _sim.AddCapacity();
+            _onboarding.ObserveCapacityBuilt(result.Accepted);
             _placementCard.Close();
             if (result.Accepted) _elevator.EnsureElevatorViews(_sim.ElevatorCarCount);
         }

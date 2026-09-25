@@ -125,7 +125,7 @@ namespace OneRoof.UI.Tests.EditMode
         }
 
         [Test]
-        public void BuildModeStatusText_ManageMode_NamesUpcomingLeversInsteadOfDeadEnd()
+        public void BuildModeStatusText_ManageMode_NamesDecreeInteraction()
         {
             var projection = new ModeShellProjection(
                 InteractionMode.Manage, InteractionMode.Inspect, null, null, null, null, null, null);
@@ -133,7 +133,7 @@ namespace OneRoof.UI.Tests.EditMode
             var text = ModeShellBarController.BuildModeStatusText(projection);
 
             Assert.That(text, Does.Contain("MODE: MANAGE"));
-            Assert.That(text, Does.Contain("Steward policies are coming soon"));
+            Assert.That(text, Does.Contain("Compare a decree"));
         }
 
         [Test]

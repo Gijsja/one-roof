@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.CivilAction;
+using OneRoof.Domain.Decisions;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Events;
 using OneRoof.Domain.Infrastructure;
@@ -9,6 +11,7 @@ using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
 using OneRoof.Domain.Scrutiny;
+using OneRoof.Domain.Social;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
@@ -58,6 +61,9 @@ namespace OneRoof.Domain
             UtilityOperations = new UtilityOperationsState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
+            Factions = new FactionState();
+            CivilActions = new CivilActionState();
+            Decisions = new DecisionRecordState();
         }
 
         public SimulationClock Clock { get; }
@@ -88,6 +94,31 @@ namespace OneRoof.Domain
         public UtilityOperationsState UtilityOperations { get; private set; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
+        public FactionState Factions { get; private set; }
+        public CivilActionState CivilActions { get; private set; }
+        public DecisionRecordState Decisions { get; private set; }
+
+        private List<CivilActionSignal> BuildCivilActionSignals()
+        {
+            var signals = new List<CivilActionSignal>(Factions.Factions.Count);
+            foreach (var faction in Factions.Factions)
+            {
+                var people = new List<int>();
+                var floors = new SortedSet<int>();
+                foreach (var support in Factions.Supports)
+                {
+                    if (support.FactionId != faction.Id || !support.IsMember) continue;
+                    people.Add(support.ResidentId.Value);
+                    floors.Add(support.HomeFloor);
+                }
+                people.Sort();
+                var floorArray = new int[floors.Count];
+                floors.CopyTo(floorArray);
+                signals.Add(new CivilActionSignal(faction.Id, faction.Pressure, faction.MemberCount,
+                    faction.TopGrievance, people.ToArray(), floorArray));
+            }
+            return signals;
+        }
 
         public long CurrentTick => Clock.CurrentTick.Value;
 
@@ -123,7 +154,8 @@ namespace OneRoof.Domain
             UtilityOperations.Advance(Topology, Population);
             Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
                 applyDailyArrearsStrain: currentTick.Value % _settlementPeriod == 0,
-                dayFraction: 1f / _settlementPeriod);
+                dayFraction: 1f / _settlementPeriod,
+                quietHoursEnabled: Economy.Policy.QuietHoursEnabled && DayPhase.IsNight);
             Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
@@ -143,14 +175,20 @@ namespace OneRoof.Domain
             {
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].BeginDailySettlement();
                 Businesses.ProcessPayroll(Population);
-                Economy.ProcessRentCycle(Topology, Population);
-                Businesses.ProcessBusinessCycle(Topology, Population, Economy, CalculateResidentialOccupancyFactor(), Economy.Policy, payrollAlreadyProcessed: true);
+                Economy.ProcessRentCycle(Topology, Population, CivilActions.ResidentialRentCollectionMultiplier);
+                Businesses.ProcessBusinessCycle(Topology, Population, Economy,
+                    CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier,
+                    Economy.Policy, payrollAlreadyProcessed: true);
                 var utilityCellCount = CountUtilityCells();
                 var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
                 Economy.ChargeDailyExpense(upkeep, subsidy: false);
                 Economy.ChargeDailyExpense(Economy.Policy.DailyTransitSubsidy, subsidy: true);
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].UpdateArrearsDays();
                 Economy.CompleteDailySettlement(currentTick.Value);
+                Factions.Evaluate(Population, Topology, Businesses, Economy.Policy, currentTick.Value);
+                CivilActions.Evaluate(currentTick.Value, BuildCivilActionSignals(), Scrutiny.Value);
+                Decisions.ObserveSettlement(this);
+                Decisions.RecordCivilPhases(this);
             }
 
             // 3. Generate scheduled routine trips when schedule blocks transition
@@ -161,7 +199,7 @@ namespace OneRoof.Domain
             }
 
             // 4. Advance transit execution (walking legs, elevator queues, riding cars)
-            Transit.Advance(currentTick, Topology, ElevatorBank, Population);
+            Transit.Advance(currentTick, Topology, ElevatorBank, Population, CivilActions.LobbyCapacityMultiplier);
         }
 
         public void SyncTransitServices()
@@ -416,6 +454,7 @@ namespace OneRoof.Domain
             var nextPolicy = command.Policy;
             if (Economy.Policy == nextPolicy) return CommandResult.Success();
 
+            var oldPolicy = Economy.Policy;
             Economy.SetPolicy(nextPolicy);
             if (nextPolicy.IsAggressive)
             {
@@ -423,6 +462,7 @@ namespace OneRoof.Domain
                                (nextPolicy.CommercialTaxRate == PolicyDecreeState.HighCommercialTaxRate ? .08f : 0f);
                 Scrutiny.RecordAggressivePolicy(severity);
             }
+            Decisions.RecordDecree(this, oldPolicy, nextPolicy);
 
             var changeEvent = new DomainEvent(
                 new EntityId(_nextEntityId++),
@@ -832,6 +872,9 @@ namespace OneRoof.Domain
             data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
             data.businesses = Businesses.ToSaveData();
             data.utilityOperations = UtilityOperations.ToSaveData();
+            data.factions = Factions.ToSaveData();
+            data.civilActions = CivilActions.ToSaveData();
+            data.decisions = Decisions.ToSaveData();
 
             return data;
         }
@@ -853,6 +896,9 @@ namespace OneRoof.Domain
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
             sim.Businesses = BusinessState.FromSaveData(data.businesses);
             sim.UtilityOperations = UtilityOperationsState.FromSaveData(data.utilityOperations);
+            sim.Factions = FactionState.FromSaveData(data.factions, population);
+            sim.CivilActions = CivilActionState.FromSaveData(data.civilActions);
+            sim.Decisions = DecisionRecordState.FromSaveData(data.decisions);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 

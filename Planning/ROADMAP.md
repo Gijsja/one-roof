@@ -11,8 +11,9 @@ One Roof is a vertical-city simulation where the player acts as the building man
 - **Physical Utilities & Infrastructure (Milestone 8):** Physical electrical grid, plumbing & waste networks, infrastructure degradation, technician repairs, and utilities overlay. *(STATUS: COMPLETE)*
 - **Outside World Boundary (Milestone 10.4):** First-class `WorldLocation` endpoint (`Room` / `Outside`), lobby-only street edge routing, layered parallax city skyline, day/night lighting, and demand move-in arrivals. *(STATUS: COMPLETE)*
 - **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and overlay selection under `StewardTheme`. *(STATUS: COMPLETE; spatial overlay rendering remains OR-1006)*
-- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: ACTIVE; acceptance proofs remain open)*
-- **Social Fabric & Beta Exit (Milestones 9–10):** Inter-resident relationship graph, 4 factions, policy decrees, noise/tension overlays, blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY; dependent stabilization and economy acceptance remain open)*
+- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: COMPLETE)*
+- **Social Fabric (Milestone 9):** Bounded relationship graph, 4 factions, policy decrees, noise/tension overlays, civil actions, decision record, and playable management onboarding. *(STATUS: COMPLETE; spatial visual QA continues in OR-1006)*
+- **Beta Exit (Milestone 10):** Blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY)*
 
 ### Creative direction and player promise
 
@@ -46,7 +47,7 @@ graph TD
     M7 --> M8["M8: Physical Utilities (DONE)"]
     M8 --> M104["M10.4: Outside World Boundary (DONE)"]
     M104 --> ECON["ECON: Closed-Loop Unit Economics (ACTIVE)"]
-    ECON --> M9["M9: Social Fabric, Factions & Decrees (READY)"]
+    ECON --> M9["M9: Social Fabric, Factions & Decrees (DONE)"]
     M9 --> M10["M10: 30-Floor Scale, Crises & City Status (READY)"]
     style M104 fill:#065f46,color:#fff,stroke:#065f46
     style ECON fill:#1e3a8a,color:#fff,stroke:#3b82f6
@@ -390,8 +391,8 @@ graph TD
 
 ---
 
-### M9 — Social Fabric, Factions & Policy Decrees *(READY — no implementation yet)*
-**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. The manager should understand who bears a cost and who benefits before signing a decree. Next up: OR-901 after the economy proof.
+### M9 — Social Fabric, Factions & Policy Decrees *(COMPLETE)*
+**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. The manager can compare who bears a cost and who benefits before signing a decree. The [M9 execution brief](M9_FACTIONS_AND_MANAGEMENT_EXECUTION.md) records slice boundaries and acceptance evidence. Isolated Unity validation: 547/547 EditMode and 8/8 PlayMode passed. Reference-hardware profiling and final spatial visual QA remain Beta exit checks.
 
 - **`OR-901` (Relationship Graph & 4 Faction Archetypes):**
   - Affinity formation: Residents build friendships through shared workplaces, neighboring apartments, and elevator encounters.
@@ -401,7 +402,7 @@ graph TD
     3. **Merchant Guild:** Retail and restaurant owners focused on customer foot traffic and low commercial tax.
     4. **Civic & Eco Council:** Environmentalists demanding low waste, noise control, and green public spaces.
 - **`OR-902` (Manage Mode: Steward Policy & Decree Panel):**
-  - Player enacts policies: Rent caps, transit subsidies, quiet hours, express elevator lanes, commercial tax adjustments.
+  - Player enacts the four existing `PolicyDecreeState` settings: rent caps, transit subsidies, quiet hours, and commercial tax adjustments. Express elevator lanes require a separately specified transit command and are outside OR-902.
   - Faction approval reacts to policies and living standards; policies also affect Satisfaction, Strain, and Scrutiny.
 - **`OR-903` (Faction Tension & Noise Overlays / Civil Actions):**
   - **Overlay 5: Noise Overlay** displaying acoustic bleed from elevators, workshops, and diners into residential units.
@@ -467,14 +468,12 @@ graph TD
 | 2 | **Foot Traffic** | DONE | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
 | 3 | **Population** | DONE | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
 | 4 | **Satisfaction** | DONE | Soft regional glow plus value/pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, high rent |
-| 5 | **Noise** | READY (OR-903) | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into bedrooms |
+| 5 | **Noise** | DONE (OR-903) | Room acoustic contours plus text | `NoiseOverlayProjector` | Room activity near occupied rooms |
 | 6 | **Business Health** | DONE | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, excessive commercial rent |
-| 7 | **Faction Tension** | READY (OR-903) | Regional tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
+| 7 | **Faction Tension** | DONE (OR-903) | Floor tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
 | 8 | **Utilities** | DONE | Network pipe/cable flow pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
 
-> Note: current overlay presenters are IMGUI text/debug views, not yet the
-> contracted visual channels above. Replacing them with heatmaps, flow vectors,
-> contours, and coverage rendering is open UX work; see `Docs/04_UX_CONTRACT.md`.
+> Note: noise and faction overlays now draw world-aligned contours with text and glyphs. Other overlay presenters still need the spatial visual and accessibility review tracked by OR-1006; see `Docs/04_UX_CONTRACT.md`.
 
 ---
 

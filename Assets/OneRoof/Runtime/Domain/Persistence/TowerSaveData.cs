@@ -48,6 +48,9 @@ namespace OneRoof.Domain.Persistence
         public ScrutinySaveData scrutiny;
         public BusinessSaveData[] businesses;
         public UtilityOperationsSaveData utilityOperations;
+        public FactionSaveData factions;
+        public CivilActionSaveData civilActions;
+        public DecisionRecordSaveData decisions;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData
         {

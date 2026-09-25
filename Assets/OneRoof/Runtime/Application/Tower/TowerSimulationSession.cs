@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Economy;
+using OneRoof.Application.Decisions;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Transit;
 using OneRoof.Domain;
@@ -97,6 +98,9 @@ namespace OneRoof.Application.Tower
             _simulation.Economy.LastDailyConstructionSalvage);
 
         public long LastSettlementTick => _simulation.Economy.LastSettlementTick;
+
+        /// <summary>Immutable decision history for Manage and inspector views.</summary>
+        public DecisionRecordProjection DecisionHistory() => DecisionProjectionService.Capture(_simulation);
 
         internal ElevatorBankSnapshot ElevatorSnapshot() => _simulation.ElevatorBank.Snapshot();
 

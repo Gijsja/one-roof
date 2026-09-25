@@ -3,6 +3,7 @@
   "rootNamespace": "OneRoof.UI",
   "references": [
     "OneRoof.Application",
+    "OneRoof.Domain",
     "Unity.InputSystem"
   ],
   "includePlatforms": [],
