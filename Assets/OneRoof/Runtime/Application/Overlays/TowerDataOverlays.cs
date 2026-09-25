@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using OneRoof.Application.Economy;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
-using OneRoof.Application.Social;
 using OneRoof.Domain.Transit;
 
 namespace OneRoof.Application.Overlays
@@ -21,8 +20,6 @@ namespace OneRoof.Application.Overlays
         private FootTrafficOverlayProjection _cachedFootTraffic;
         private BusinessHealthOverlayProjection _cachedBusinessHealth;
         private UtilitiesOverlayProjection _cachedUtilities;
-        private NoiseOverlayProjection _cachedNoise;
-        private FactionTensionOverlayProjection _cachedFactionTension;
 
         public TowerDataOverlays(TowerSimulationSession session)
         {
@@ -94,29 +91,6 @@ namespace OneRoof.Application.Overlays
                 return _cachedUtilities;
             }
         }
-        public NoiseOverlayProjection Noise
-        {
-            get
-            {
-                EnsureCurrentState();
-                if (_cachedNoise == null)
-                    _cachedNoise = NoiseOverlayProjector.Project(_session.CurrentTick,
-                        _session.TopologyProjection().Rooms, _session.Persons,
-                        _session.Simulation.Economy.Policy.QuietHoursEnabled && _session.DayPhase.IsNight);
-                return _cachedNoise;
-            }
-        }
-        public FactionTensionOverlayProjection FactionTension
-        {
-            get
-            {
-                EnsureCurrentState();
-                if (_cachedFactionTension == null)
-                    _cachedFactionTension = FactionTensionOverlayProjector.Project(_session.CurrentTick,
-                        FactionProjectionService.Capture(_session.Simulation), _session.FloorCount);
-                return _cachedFactionTension;
-            }
-        }
 
         private void EnsureCurrentState()
         {
@@ -133,8 +107,6 @@ namespace OneRoof.Application.Overlays
             _cachedFootTraffic = null;
             _cachedBusinessHealth = null;
             _cachedUtilities = null;
-            _cachedNoise = null;
-            _cachedFactionTension = null;
         }
 
         public static ElevatorWaitOverlayProjection ProjectElevatorWait(ElevatorBankCongestionProjection congestion)

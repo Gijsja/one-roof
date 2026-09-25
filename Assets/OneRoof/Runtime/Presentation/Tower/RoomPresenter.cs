@@ -214,10 +214,10 @@ namespace OneRoof.Presentation.Tower
                 if (isResidential || isOffice || isDiner || isLobby || isRetail || isClinic || isMaintenance || isSecurity || isUtility)
                 {
                     var backdropPresenter = roomRoot.AddComponent<RoomBackdropPresenter>();
-                    backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
+                    backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide, _worldMaterial);
 
                     var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
-                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
+                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide, _worldMaterial);
                     _furnishings[room.Id] = furnishingPresenter;
                 }
 
@@ -242,7 +242,7 @@ namespace OneRoof.Presentation.Tower
                 else if (isStairwell)
                 {
                     var stairBackdrop = roomRoot.AddComponent<RoomBackdropPresenter>();
-                    stairBackdrop.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide);
+                    stairBackdrop.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide, _worldMaterial);
                     CreateQuad($"Stair Tread 1 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.30f, y - 0.45f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Tread 2 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX - 0.10f, y - 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
                     CreateQuad($"Stair Tread 3 {room.Id}", new Color(0.55f, 0.65f, 0.78f), new Vector3(centerX + 0.10f, y + 0.15f, 0.55f), new Vector2(0.35f, 0.06f), roomRoot.transform);
@@ -353,6 +353,7 @@ namespace OneRoof.Presentation.Tower
             var renderer = signObj.AddComponent<SpriteRenderer>();
             renderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.ExitSign);
             renderer.sortingOrder = -4;
+            if (_worldMaterial != null) renderer.sharedMaterial = _worldMaterial;
 
             _roomObjects.Add(signObj);
         }

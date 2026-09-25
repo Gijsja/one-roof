@@ -149,6 +149,11 @@ namespace OneRoof.Presentation.Tower
                 _shaftPenthouse.transform.position = new Vector3(shaftCenterX, topY + 0.08f, 0.1f);
                 _shaftPitBuffer.transform.position = new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f);
 
+                SetRendererColor(_shaftCavity.GetComponent<MeshRenderer>(), new Color(0.08f, 0.11f, 0.16f));
+                SetRendererColor(_shaftRailLeft.GetComponent<MeshRenderer>(), new Color(0.48f, 0.58f, 0.72f));
+                SetRendererColor(_shaftRailRight.GetComponent<MeshRenderer>(), new Color(0.48f, 0.58f, 0.72f));
+                SetRendererColor(_shaftColumnLeft.GetComponent<MeshRenderer>(), new Color(0.35f, 0.45f, 0.58f));
+                SetRendererColor(_shaftColumnRight.GetComponent<MeshRenderer>(), new Color(0.35f, 0.45f, 0.58f));
                 SetRendererColor(_shaftPenthouse.GetComponent<MeshRenderer>(), penthouseColor);
                 SetRendererColor(_shaftPitBuffer.GetComponent<MeshRenderer>(), pitBufferColor);
             }
@@ -361,7 +366,12 @@ namespace OneRoof.Presentation.Tower
 
         private void SetRendererColor(MeshRenderer renderer, Color color)
         {
-            if (_colorBlock != null && renderer != null)
+            if (renderer == null) return;
+            if (_worldMaterial != null && renderer.sharedMaterial != _worldMaterial)
+            {
+                renderer.sharedMaterial = _worldMaterial;
+            }
+            if (_colorBlock != null)
             {
                 _colorBlock.SetColor("_BaseColor", color);
                 _colorBlock.SetColor("_Color", color);

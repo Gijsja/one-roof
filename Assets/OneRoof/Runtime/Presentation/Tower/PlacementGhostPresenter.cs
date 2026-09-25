@@ -224,7 +224,7 @@ namespace OneRoof.Presentation.Tower
 
             if (_ghostRenderer != null)
             {
-                if (_ghostRenderer.sharedMaterial == null)
+                if (_ghostRenderer.sharedMaterial != _ghostMaterial)
                 {
                     _ghostRenderer.sharedMaterial = _ghostMaterial;
                 }
@@ -239,7 +239,8 @@ namespace OneRoof.Presentation.Tower
 
         private static Material CreateGhostMaterial(out bool isAllIn1Shader)
         {
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
                 ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")

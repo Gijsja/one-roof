@@ -33,6 +33,7 @@ namespace OneRoof.Presentation.Tower
         private Transform _rooflineRoot;
         private Transform _fixturesRoot;
         private Transform _terracesRoot;
+        private Transform _volumetricLightRoot;
 
         private readonly List<GameObject> _leftWallSlices = new List<GameObject>();
         private readonly List<GameObject> _rightWallSlices = new List<GameObject>();
@@ -40,6 +41,16 @@ namespace OneRoof.Presentation.Tower
         private readonly List<GameObject> _rightSpandrels = new List<GameObject>();
         private readonly List<GameObject> _terraceObjects = new List<GameObject>();
         private readonly List<GameObject> _roofObjects = new List<GameObject>();
+
+        private readonly List<GameObject> _leftWindowFrames = new List<GameObject>();
+        private readonly List<GameObject> _leftWindowGlasses = new List<GameObject>();
+        private readonly List<GameObject> _leftWindowSills = new List<GameObject>();
+        private readonly List<GameObject> _rightWindowFrames = new List<GameObject>();
+        private readonly List<GameObject> _rightWindowGlasses = new List<GameObject>();
+        private readonly List<GameObject> _rightWindowSills = new List<GameObject>();
+        private readonly List<GameObject> _volumetricCones = new List<GameObject>();
+        private readonly List<Mesh> _coneMeshes = new List<Mesh>();
+        private readonly List<WindowLightingEntry> _windowLightingEntries = new List<WindowLightingEntry>();
 
         private int _renderedFloorCount = -1;
         private CellBounds _renderedGroundSlab;
@@ -49,6 +60,15 @@ namespace OneRoof.Presentation.Tower
         public OutsideStageBounds StageBounds => _stageBounds;
         public int RenderedFloorCount => _renderedFloorCount;
         public Transform Root => _root;
+        public Transform VolumetricLightRoot => _volumetricLightRoot;
+
+        public IReadOnlyList<GameObject> LeftWindowFrames => _leftWindowFrames;
+        public IReadOnlyList<GameObject> LeftWindowGlasses => _leftWindowGlasses;
+        public IReadOnlyList<GameObject> LeftWindowSills => _leftWindowSills;
+        public IReadOnlyList<GameObject> RightWindowFrames => _rightWindowFrames;
+        public IReadOnlyList<GameObject> RightWindowGlasses => _rightWindowGlasses;
+        public IReadOnlyList<GameObject> RightWindowSills => _rightWindowSills;
+        public IReadOnlyList<GameObject> VolumetricCones => _volumetricCones;
 
         // Palette
         private static readonly Color WallCoreColor = new Color(0.18f, 0.22f, 0.28f);
@@ -63,11 +83,49 @@ namespace OneRoof.Presentation.Tower
         private static readonly Color FixtureMetalColor = new Color(0.30f, 0.38f, 0.46f);
         private static readonly Color BeaconGlowColor = new Color(1.0f, 0.25f, 0.15f);
 
+        public static readonly Color WindowFrameColor = new Color(0.24f, 0.30f, 0.38f);
+        public static readonly Color WindowSillColor = new Color(0.34f, 0.42f, 0.52f);
+        public static readonly Color WindowDayColor = new Color(0.35f, 0.52f, 0.65f, 0.70f);
+        public static readonly Color WindowNightLitColor = new Color(1.00f, 0.74f, 0.38f, 0.95f);
+        public static readonly Color WindowNightDarkColor = new Color(0.12f, 0.15f, 0.20f, 0.75f);
+        public static readonly Color ConeDayColor = new Color(0.92f, 0.96f, 1.0f, 0.20f);
+        public static readonly Color ConeNightLitColor = new Color(1.00f, 0.78f, 0.38f, 0.32f);
+        public static readonly Color ConeNightDarkColor = new Color(0f, 0f, 0f, 0f);
+
+        private readonly struct WindowLightingEntry
+        {
+            public readonly MeshRenderer GlassRenderer;
+            public readonly MeshRenderer ConeRenderer;
+            public readonly int Floor;
+            public readonly bool IsLeft;
+
+            public WindowLightingEntry(MeshRenderer glassRenderer, MeshRenderer coneRenderer, int floor, bool isLeft)
+            {
+                GlassRenderer = glassRenderer;
+                ConeRenderer = coneRenderer;
+                Floor = floor;
+                IsLeft = isLeft;
+            }
+        }
+
         public void Initialize(Transform parent, Material worldMaterial, MaterialPropertyBlock colorBlock)
         {
             _parent = parent;
             _worldMaterial = worldMaterial;
             _colorBlock = colorBlock ?? new MaterialPropertyBlock();
+
+            // Configure the shared world material for alpha-blended transparent rendering.
+            // This allows cone geometry (vertex alpha = 0 at tips) to fade out correctly
+            // while all structural quads (alpha = 1) appear fully opaque.
+            if (_worldMaterial != null)
+            {
+                _worldMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _worldMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _worldMaterial.SetInt("_ZWrite", 0);
+                _worldMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                _worldMaterial.SetOverrideTag("RenderType", "Transparent");
+            }
+
             Clear();
         }
 
@@ -102,6 +160,7 @@ namespace OneRoof.Presentation.Tower
             _renderedTopSlab = topSlab;
 
             BuildFacades(topology, floorCount);
+            EnsureExteriorWindows(topology, floorCount);
             BuildRoofline(topology, floorCount, topSlab);
             BuildSetbackTerraces(topology, floorCount);
             CalculateStageBounds(floorCount, groundSlab, topSlab);
@@ -127,6 +186,7 @@ namespace OneRoof.Presentation.Tower
             _rooflineRoot = EnsureChildTransform(_root, "Roofline & Capping");
             _fixturesRoot = EnsureChildTransform(_rooflineRoot, "Rooftop Fixtures");
             _terracesRoot = EnsureChildTransform(_root, "Setback Terraces");
+            _volumetricLightRoot = EnsureChildTransform(_root, "Exterior Volumetric Lighting");
         }
 
         private static Transform EnsureChildTransform(Transform parent, string name)
@@ -228,6 +288,87 @@ namespace OneRoof.Presentation.Tower
                     new Vector3(f1Right + WallThickness + 0.02f, downCenterR, -0.05f),
                     new Vector2(0.04f, downHeightR));
             }
+        }
+
+        private void EnsureExteriorWindows(TowerTopologyProjection topology, int floorCount)
+        {
+            _windowLightingEntries.Clear();
+
+            // Left Facade Windows & Light Cones
+            for (var f = 0; f < floorCount; f++)
+            {
+                var slab = topology != null && topology.TryGetFloorSlab(f, out var s) ? s : new CellBounds(f, -14, 16);
+                var worldLeft = -2.4f + slab.MinX * 0.5f;
+                var floorY = TowerStructurePresenter.FloorY(f);
+                var windowX = worldLeft - 0.16f;
+                var centerY = floorY + 0.03f;
+
+                // Window Frame Header (Z = -0.05m)
+                var frameObj = UpdateOrCreateQuad(_leftFacadeRoot, $"Left Window Frame {f}", WindowFrameColor,
+                    new Vector3(windowX, floorY + 0.46f, -0.05f),
+                    new Vector2(0.24f, 0.08f));
+                if (!_leftWindowFrames.Contains(frameObj)) _leftWindowFrames.Add(frameObj);
+
+                // Window Sill (Z = -0.05m)
+                var sillObj = UpdateOrCreateQuad(_leftFacadeRoot, $"Left Window Sill {f}", WindowSillColor,
+                    new Vector3(windowX, floorY - 0.40f, -0.05f),
+                    new Vector2(0.26f, 0.06f));
+                if (!_leftWindowSills.Contains(sillObj)) _leftWindowSills.Add(sillObj);
+
+                // Recessed Window Glass (Z = 0.00m) — uses shared _worldMaterial
+                var glassObj = UpdateOrCreateQuad(_leftFacadeRoot, $"Left Window Glass {f}", WindowDayColor,
+                    new Vector3(windowX, centerY, 0.00f),
+                    new Vector2(0.20f, 0.78f));
+                if (!_leftWindowGlasses.Contains(glassObj)) _leftWindowGlasses.Add(glassObj);
+
+                // Volumetric Light Cone (Z = -0.20m, projects outward to the left, dir = -1)
+                var coneObj = UpdateOrCreateLightCone(_volumetricLightRoot, $"Left Light Cone {f}",
+                    new Vector3(windowX, centerY, 0f), 1.20f, -1f);
+                if (!_volumetricCones.Contains(coneObj)) _volumetricCones.Add(coneObj);
+
+                var glassRenderer = glassObj.GetComponent<MeshRenderer>();
+                var coneRenderer = coneObj.GetComponent<MeshRenderer>();
+                _windowLightingEntries.Add(new WindowLightingEntry(glassRenderer, coneRenderer, f, true));
+            }
+
+            // Right Facade Windows & Light Cones (Upper floors, f >= 1)
+            for (var f = 1; f < floorCount; f++)
+            {
+                var slab = topology != null && topology.TryGetFloorSlab(f, out var s) ? s : new CellBounds(f, -14, 16);
+                var worldRight = -2.4f + (slab.MaxX + 1) * 0.5f;
+                var floorY = TowerStructurePresenter.FloorY(f);
+                var windowX = worldRight + 0.16f;
+                var centerY = floorY + 0.03f;
+
+                // Window Frame Header (Z = -0.05m)
+                var frameObj = UpdateOrCreateQuad(_rightFacadeRoot, $"Right Window Frame {f}", WindowFrameColor,
+                    new Vector3(windowX, floorY + 0.46f, -0.05f),
+                    new Vector2(0.24f, 0.08f));
+                if (!_rightWindowFrames.Contains(frameObj)) _rightWindowFrames.Add(frameObj);
+
+                // Window Sill (Z = -0.05m)
+                var sillObj = UpdateOrCreateQuad(_rightFacadeRoot, $"Right Window Sill {f}", WindowSillColor,
+                    new Vector3(windowX, floorY - 0.40f, -0.05f),
+                    new Vector2(0.26f, 0.06f));
+                if (!_rightWindowSills.Contains(sillObj)) _rightWindowSills.Add(sillObj);
+
+                // Recessed Window Glass (Z = 0.00m) — uses shared _worldMaterial
+                var glassObj = UpdateOrCreateQuad(_rightFacadeRoot, $"Right Window Glass {f}", WindowDayColor,
+                    new Vector3(windowX, centerY, 0.00f),
+                    new Vector2(0.20f, 0.78f));
+                if (!_rightWindowGlasses.Contains(glassObj)) _rightWindowGlasses.Add(glassObj);
+
+                // Volumetric Light Cone (Z = -0.20m, projects outward to the right, dir = +1)
+                var coneObj = UpdateOrCreateLightCone(_volumetricLightRoot, $"Right Light Cone {f}",
+                    new Vector3(windowX, centerY, 0f), 1.20f, 1f);
+                if (!_volumetricCones.Contains(coneObj)) _volumetricCones.Add(coneObj);
+
+                var glassRenderer = glassObj.GetComponent<MeshRenderer>();
+                var coneRenderer = coneObj.GetComponent<MeshRenderer>();
+                _windowLightingEntries.Add(new WindowLightingEntry(glassRenderer, coneRenderer, f, false));
+            }
+
+            UpdateWindowLighting(new DayPhase(1, 12, 0, false));
         }
 
         private void BuildRoofline(TowerTopologyProjection topology, int floorCount, CellBounds topSlab)
@@ -405,6 +546,12 @@ namespace OneRoof.Presentation.Tower
 
         public void UpdateLighting(DayPhase phase)
         {
+            UpdateAviationBeacons(phase);
+            UpdateWindowLighting(phase);
+        }
+
+        private void UpdateAviationBeacons(DayPhase phase)
+        {
             if (_fixturesRoot == null) return;
             // Beacon light pulses at night and dims by day
             var hour = phase.Hour + phase.Minute / 60f;
@@ -423,6 +570,44 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
+        public void UpdateWindowLighting(DayPhase phase)
+        {
+            var hour = phase.Hour + phase.Minute / 60f;
+            // Smooth continuous night factor: 1.0 fully at night, 0.0 fully by day.
+            // Dawn ramp: 5.5h (full night) → 6.5h (full day). Dusk ramp: 19.5h → 20.5h.
+            float smoothNight;
+            if (hour < 5.5f || hour >= 20.5f)
+                smoothNight = 1f;
+            else if (hour < 6.5f)
+                smoothNight = 6.5f - hour;          // 1.0 at 5.5h → 0.0 at 6.5h
+            else if (hour < 19.5f)
+                smoothNight = 0f;
+            else
+                smoothNight = hour - 19.5f;         // 0.0 at 19.5h → 1.0 at 20.5h
+
+            for (var i = 0; i < _windowLightingEntries.Count; i++)
+            {
+                var entry = _windowLightingEntries[i];
+                var isOccupied = entry.IsLeft
+                    ? ((entry.Floor * 7 + 3) % 5 != 0)
+                    : ((entry.Floor * 13 + 2) % 5 != 0);
+
+                if (entry.GlassRenderer != null)
+                {
+                    var targetNightGlass = isOccupied ? WindowNightLitColor : WindowNightDarkColor;
+                    var currentGlassColor = Color.Lerp(WindowDayColor, targetNightGlass, smoothNight);
+                    SetColor(entry.GlassRenderer, currentGlassColor);
+                }
+
+                if (entry.ConeRenderer != null)
+                {
+                    var targetNightCone = isOccupied ? ConeNightLitColor : ConeNightDarkColor;
+                    var currentConeColor = Color.Lerp(ConeDayColor, targetNightCone, smoothNight);
+                    SetColor(entry.ConeRenderer, currentConeColor);
+                }
+            }
+        }
+
         public void Clear()
         {
             if (_root != null)
@@ -431,26 +616,48 @@ namespace OneRoof.Presentation.Tower
                 else Object.DestroyImmediate(_root.gameObject);
             }
 
+            for (var i = 0; i < _coneMeshes.Count; i++)
+            {
+                var m = _coneMeshes[i];
+                if (m != null)
+                {
+                    if (UnityEngine.Application.isPlaying) Object.Destroy(m);
+                    else Object.DestroyImmediate(m);
+                }
+            }
+            _coneMeshes.Clear();
+
             _root = null;
             _leftFacadeRoot = null;
             _rightFacadeRoot = null;
             _rooflineRoot = null;
             _fixturesRoot = null;
             _terracesRoot = null;
+            _volumetricLightRoot = null;
+
             _leftWallSlices.Clear();
             _rightWallSlices.Clear();
             _leftSpandrels.Clear();
             _rightSpandrels.Clear();
+            _leftWindowFrames.Clear();
+            _leftWindowGlasses.Clear();
+            _leftWindowSills.Clear();
+            _rightWindowFrames.Clear();
+            _rightWindowGlasses.Clear();
+            _rightWindowSills.Clear();
+            _volumetricCones.Clear();
+            _windowLightingEntries.Clear();
             _terraceObjects.Clear();
             _roofObjects.Clear();
             _renderedFloorCount = -1;
         }
 
-        private GameObject UpdateOrCreateQuad(Transform parent, string name, Color color, Vector3 pos, Vector2 size)
+        private GameObject UpdateOrCreateQuad(Transform parent, string name, Color color, Vector3 pos, Vector2 size, Material mat = null)
         {
             var child = parent.Find(name);
             GameObject go;
             MeshRenderer renderer;
+            var targetMat = mat ?? _worldMaterial;
             if (child == null)
             {
                 go = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -463,12 +670,13 @@ namespace OneRoof.Presentation.Tower
                     else Object.DestroyImmediate(col);
                 }
                 renderer = go.GetComponent<MeshRenderer>();
-                renderer.sharedMaterial = _worldMaterial;
+                renderer.sharedMaterial = targetMat;
             }
             else
             {
                 go = child.gameObject;
                 renderer = go.GetComponent<MeshRenderer>();
+                if (targetMat != null) renderer.sharedMaterial = targetMat;
             }
 
             go.transform.localPosition = pos;
@@ -477,9 +685,102 @@ namespace OneRoof.Presentation.Tower
             return go;
         }
 
+        private GameObject UpdateOrCreateLightCone(
+            Transform parent, string name, Vector3 origin, float length, float direction)
+        {
+            if (parent == null) return null;
+            var child = parent.Find(name);
+            GameObject go;
+            MeshFilter filter;
+            MeshRenderer renderer;
+            Mesh mesh;
+
+            if (child == null)
+            {
+                go = new GameObject(name);
+                go.transform.SetParent(parent, false);
+                filter = go.AddComponent<MeshFilter>();
+                renderer = go.AddComponent<MeshRenderer>();
+                mesh = CreateLightConeMesh(origin, length, direction, name);
+                filter.sharedMesh = mesh;
+                _coneMeshes.Add(mesh);
+            }
+            else
+            {
+                go = child.gameObject;
+                filter = go.GetComponent<MeshFilter>();
+                if (filter == null) filter = go.AddComponent<MeshFilter>();
+                renderer = go.GetComponent<MeshRenderer>();
+                if (renderer == null) renderer = go.AddComponent<MeshRenderer>();
+
+                mesh = filter.sharedMesh;
+                if (mesh == null)
+                {
+                    mesh = CreateLightConeMesh(origin, length, direction, name);
+                    filter.sharedMesh = mesh;
+                    _coneMeshes.Add(mesh);
+                }
+                else
+                {
+                    UpdateLightConeMesh(mesh, origin, length, direction);
+                }
+            }
+
+            go.transform.localPosition = new Vector3(0f, 0f, -0.20f);
+            // Cones share the world material; transparency is achieved through vertex color
+            // alpha gradient (tips = alpha 0) and the alpha blend mode on the shared material.
+            if (_worldMaterial != null) renderer.sharedMaterial = _worldMaterial;
+            SetColor(renderer, ConeDayColor);
+
+            return go;
+        }
+
+        private static Mesh CreateLightConeMesh(Vector3 origin, float length, float direction, string name)
+        {
+            var mesh = new Mesh { name = name };
+            UpdateLightConeMesh(mesh, origin, length, direction);
+            return mesh;
+        }
+
+        private static void UpdateLightConeMesh(Mesh mesh, Vector3 origin, float length, float direction)
+        {
+            var v0 = new Vector3(origin.x, origin.y + 0.35f, 0f);
+            var v1 = new Vector3(origin.x + direction * length, origin.y + 0.60f, 0f);
+            var v2 = new Vector3(origin.x + direction * length, origin.y - 0.70f, 0f);
+            var v3 = new Vector3(origin.x, origin.y - 0.35f, 0f);
+
+            mesh.vertices = new[] { v0, v1, v2, v3 };
+            mesh.triangles = new[]
+            {
+                0, 1, 2,
+                0, 2, 3,
+                0, 2, 1,
+                0, 3, 2
+            };
+            mesh.colors = new[]
+            {
+                new Color(1f, 1f, 1f, 1f),
+                new Color(1f, 1f, 1f, 0f),
+                new Color(1f, 1f, 1f, 0f),
+                new Color(1f, 1f, 1f, 1f)
+            };
+            mesh.uv = new[]
+            {
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(1f, 0f),
+                new Vector2(0f, 0f)
+            };
+            mesh.RecalculateBounds();
+        }
+
+
         private void SetColor(MeshRenderer renderer, Color color)
         {
-            if (renderer == null || _colorBlock == null) return;
+            if (renderer == null) return;
+            if (_worldMaterial != null && renderer.sharedMaterial != _worldMaterial)
+                renderer.sharedMaterial = _worldMaterial;
+            if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(_colorBlock);
             _colorBlock.SetColor("_BaseColor", color);
             _colorBlock.SetColor("_Color", color);

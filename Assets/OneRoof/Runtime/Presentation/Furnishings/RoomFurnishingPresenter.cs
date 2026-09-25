@@ -12,6 +12,7 @@ namespace OneRoof.Presentation.Furnishings
     public class RoomFurnishingPresenter : MonoBehaviour
     {
         private readonly List<GameObject> _placedProps = new List<GameObject>();
+        private Material _sharedMaterial;
 
         public IReadOnlyList<GameObject> PlacedProps => _placedProps;
 
@@ -56,8 +57,9 @@ namespace OneRoof.Presentation.Furnishings
             return false;
         }
 
-        public void FurnishRoom(string roomTheme, float width, float height, bool isWestSide)
+        public void FurnishRoom(string roomTheme, float width, float height, bool isWestSide, Material sharedMaterial = null)
         {
+            _sharedMaterial = sharedMaterial;
             ClearProps();
 
             var lowerTheme = (roomTheme ?? "").ToLowerInvariant();
@@ -267,6 +269,7 @@ namespace OneRoof.Presentation.Furnishings
             var sr = propObj.AddComponent<SpriteRenderer>();
             sr.sprite = PropCatalog.GetPropSprite(contentId);
             sr.sortingOrder = -2;
+            if (_sharedMaterial != null) sr.sharedMaterial = _sharedMaterial;
 
             _placedProps.Add(propObj);
             return propObj;

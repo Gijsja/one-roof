@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Application.Overlays;
-using OneRoof.Application.Social;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 
@@ -57,10 +56,6 @@ namespace OneRoof.Application.Inspectors
             details.Add($"Rent burden: {person.RentBurden:P0}");
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
             foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
-            var social = FactionProjectionService.Capture(_session.Simulation);
-            foreach (var support in social.ResidentSupports)
-                if (support.ResidentId == residentId)
-                    details.Add($"Faction {support.FactionId}: {support.Support:P0} support{(support.IsMember ? " (member)" : "")}; driver: {support.Driver}.");
 
             var symptom = !resident.HasValue
                 ? "Resident location is not currently available."
@@ -90,51 +85,6 @@ namespace OneRoof.Application.Inspectors
                 ? "Room occupancy exceeds its authored capacity."
                 : $"Room is operating at {occupants} of {room.Capacity} capacity.";
             return new InspectorDetailProjection($"Room #{roomId}", symptom, details, "Use Build mode to change capacity or add supporting rooms.");
-        }
-
-        public InspectorDetailProjection InspectFactionFloor(int floor)
-        {
-            var overlay = new TowerDataOverlays(_session).FactionTension;
-            foreach (var region in overlay.Floors)
-            {
-                if (region.Floor != floor) continue;
-                var details = new List<string>
-                {
-                    $"Support signals: {region.SupporterCount}",
-                    $"Average support pressure: {region.AveragePressure:P0} ({region.Tier})",
-                    $"Leading faction: {region.LeadingFactionName}",
-                    $"Top grievance: {region.TopGrievance}",
-                    $"Trend: {region.Trend}"
-                };
-                return new InspectorDetailProjection($"Floor {floor} Faction Tension",
-                    region.SupporterCount == 0 ? "No faction support is recorded on this floor." : region.AccessibilityLabel,
-                    details,
-                    "Review affected households, transit, services, and the decree panel; then compare the next daily settlement.");
-            }
-            return null;
-        }
-
-        public InspectorDetailProjection InspectBusiness(int businessId)
-        {
-            foreach (var business in _session.Simulation.Businesses.Businesses)
-            {
-                if (business.Id.Value != businessId) continue;
-                var details = new List<string>
-                {
-                    $"Room: #{business.RoomId.Value}; type: {business.ContentType}",
-                    $"Staff: {business.EmployeeIds.Count}",
-                    $"Cash: ${business.CashBalance:N0}",
-                    $"Last revenue: ${business.LastCustomerRevenue + business.LastContractRevenue:N0}",
-                    $"Last wages: ${business.LastWages:N0}; rent: ${business.LastRentPaid:N0}; tax: ${business.LastTaxPaid:N0}",
-                    $"Arrears: {business.ArrearsDays} day(s); wage arrears: {(business.WageArrears ? "yes" : "no")}",
-                    $"Insolvent: {(business.IsInsolvent ? "yes" : "no")}; re-lease eligible: {(business.IsVacantForReLease ? "yes" : "no")}."
-                };
-                return new InspectorDetailProjection($"Business #{businessId}",
-                    business.IsInsolvent ? "This business cannot cover its obligations." : "This business is operating.",
-                    details, "Review foot traffic, commercial rent, tax, staffing capacity, and service access through tower-level controls.");
-            }
-            return new InspectorDetailProjection($"Business #{businessId}", "This business has closed or moved out.",
-                new[] { "Its dated decision record remains available as historical evidence." }, "Review current business demand and leasing in Manage mode.");
         }
 
         public InspectorDetailProjection InspectElevatorBank()

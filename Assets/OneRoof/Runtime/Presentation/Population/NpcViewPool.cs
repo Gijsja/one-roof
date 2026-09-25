@@ -147,7 +147,7 @@ namespace OneRoof.Presentation.Population
             go.transform.SetParent(transform, false);
 
             var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
-            skeletal.Initialize(index - 1);
+            skeletal.Initialize(index - 1, GetOrCreateSharedMaterial());
 
             var view = go.AddComponent<NpcView>();
             go.SetActive(false);

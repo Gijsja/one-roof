@@ -588,7 +588,13 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 - **Full PlayMode:** same command with `-testPlatform PlayMode`, `/tmp/one-roof-audit-playmode.xml`, and `/tmp/one-roof-audit-playmode.log` → exit `0`, **7/7 passed**, 0 failed/skipped.
 - **Audit-only staged snapshot:** Repeated validation after excluding the separate emote/caption working-tree changes. EditMode `/tmp/one-roof-audit-staged-editmode.xml` → exit `0`, **490/490 passed**; PlayMode `/tmp/one-roof-audit-staged-playmode.xml` → exit `0`, **7/7 passed**. Both used the same Unity executable, timeout, headless arguments, and isolated worktree above.
 - `git diff --check` passed; `OneRoof.Domain.asmdef` still has `noEngineReferences: true` and no Domain C# file references `UnityEngine`. The separate resident emote/artwork changes in the shared working tree were preserved.
-- **Remaining audit scope:** This update does not close the 49-finding registry. The 30-day cash-conservation proof and settlement-order reconciliation remain open, along with later roadmap work including controller decomposition, scale profiling, and save migration/integrity decisions. Keep this handoff active.
+- **Remaining audit scope:** This update does not close the 49-finding registry. Later roadmap work includes controller decomposition, scale profiling, and save migration/integrity decisions. Keep this handoff active.
+
+### 2026-09-24 economy closeout
+
+- ECON-001–004 acceptance is recorded in `Handoffs/Archive/ECON-001-004_closed-loop-economy.md`. Payroll precedes residential rent; business and treasury settlement follow; arrears are evaluated after all daily cash flows.
+- A 30-day fixture checks the combined household, business, and treasury balance against move-in and contract sources and operating, upkeep, and subsidy sinks. Prolonged arrears now produce an explicit grievance, additional strain, and a resident inspector lease-risk flag.
+- Unity 6000.3.24f1 compiled in an isolated worktree. The focused economy suite passed 10/10 and the final complete EditMode suite passed 523/523. The separate faction affinity and actual move-out mechanisms remain OR-901/resident lifecycle scope.
 
 ---
 
@@ -600,4 +606,4 @@ The 49 findings are grouped into 6 sequenced, dependency-ordered engineering pha
 3. **Presenter Timing Changes**: Pausing autonomous simulation ticking during `GoldenExpansionPlayModeTests` (`Task 3.1`) alters frame-to-tick ratios in test assertions. Verify and lock tick assertions explicitly.
 
 ### Immediate Next Safe Action
-Continue **Phase 4, ECON-001**: reconcile the runtime settlement order with `Docs/12_ECONOMY.md`, then add and run the 30-day ledger conservation fixture plus focused save-migration, business-solvency, and policy-flow coverage. Review the documented arrears consequence chain and keep later ECON rows READY until their acceptance evidence exists. Do not mark the implementation complete based on static review alone.
+Continue the remaining stabilization roadmap. ECON-001–004 are closed; use the archived economy handoff for the validation record. Keep faction affinity and actual move-out decisions with OR-901 and resident lifecycle work.

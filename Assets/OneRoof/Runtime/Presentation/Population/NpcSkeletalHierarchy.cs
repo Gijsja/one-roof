@@ -64,6 +64,22 @@ namespace OneRoof.Presentation.Population
         private static Sprite _footSprite;
         private static Sprite _captionBackgroundSprite;
         private string _caption;
+        private Material _sharedMaterial;
+        private static Material s_defaultSharedMaterial;
+
+        public static Material GetOrCreateDefaultSharedMaterial()
+        {
+            if (s_defaultSharedMaterial != null) return s_defaultSharedMaterial;
+            var shader = Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default");
+            if (shader != null)
+            {
+                s_defaultSharedMaterial = new Material(shader) { name = "Npc_DefaultSharedMaterial" };
+            }
+            return s_defaultSharedMaterial;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticCaches()
@@ -74,6 +90,7 @@ namespace OneRoof.Presentation.Population
             _handSprite = null;
             _footSprite = null;
             _captionBackgroundSprite = null;
+            s_defaultSharedMaterial = null;
         }
 
         private void Awake()
@@ -81,9 +98,32 @@ namespace OneRoof.Presentation.Population
             EnsureHierarchy();
         }
 
-        public void Initialize(int residentIndex)
+        public void ApplySharedMaterial(Material material)
+        {
+            if (material == null) return;
+            _sharedMaterial = material;
+            if (MainRenderer != null) MainRenderer.sharedMaterial = material;
+            if (StatusPlateRenderer != null) StatusPlateRenderer.sharedMaterial = material;
+            if (EmoteRenderer != null) EmoteRenderer.sharedMaterial = material;
+            if (EmoteAnchor != null)
+            {
+                var background = EmoteAnchor.Find("CaptionBackground")?.GetComponent<SpriteRenderer>();
+                if (background != null) background.sharedMaterial = material;
+            }
+            foreach (var slot in _wardrobeSlots.Values)
+            {
+                if (slot != null) slot.sharedMaterial = material;
+            }
+            foreach (var limb in _limbRenderers.Values)
+            {
+                if (limb != null) limb.sharedMaterial = material;
+            }
+        }
+
+        public void Initialize(int residentIndex, Material defaultMaterial = null)
         {
             EnsureHierarchy();
+            ApplySharedMaterial(defaultMaterial ?? GetOrCreateDefaultSharedMaterial());
             ResidentIndex = residentIndex;
             _facing = 1f;
             ContentRecord = ResidentSpriteCatalog.GetRecord(residentIndex);
@@ -156,6 +196,7 @@ namespace OneRoof.Presentation.Population
                     slotTransform = slot.transform;
                     renderer = slot.AddComponent<SpriteRenderer>();
                 }
+                if (_sharedMaterial != null) renderer.sharedMaterial = _sharedMaterial;
                 slotTransform.SetParent(parent, false);
                 renderer.sortingOrder = 16 + (int)layer;
                 renderer.enabled = true;
@@ -173,6 +214,7 @@ namespace OneRoof.Presentation.Population
             {
                 MainRenderer = gameObject.AddComponent<SpriteRenderer>();
             }
+            if (_sharedMaterial != null) MainRenderer.sharedMaterial = _sharedMaterial;
             MainRenderer.sortingOrder = 15;
 
             // 3. Underfoot status plate shadow / disc
@@ -192,6 +234,7 @@ namespace OneRoof.Presentation.Population
                 StatusPlateRenderer.sprite = CreateDiscSprite();
                 StatusPlateRenderer.sortingOrder = 10;
             }
+            if (_sharedMaterial != null) StatusPlateRenderer.sharedMaterial = _sharedMaterial;
 
             // 4. Overhead Emote Bubble Anchor & Renderer
             var emoteGo = transform.Find("EmoteBubble")?.gameObject;
@@ -215,6 +258,7 @@ namespace OneRoof.Presentation.Population
             {
                 EmoteRenderer.enabled = CurrentEmote != NpcEmoteKind.None;
             }
+            if (_sharedMaterial != null) EmoteRenderer.sharedMaterial = _sharedMaterial;
 
             var captionGo = EmoteAnchor.Find("ActivityCaption")?.gameObject;
             if (captionGo == null)
@@ -252,6 +296,7 @@ namespace OneRoof.Presentation.Population
                 background.color = new Color(0.91f, 0.96f, 0.98f, 0.93f);
                 background.sortingOrder = 24;
             }
+            if (_sharedMaterial != null) background.sharedMaterial = _sharedMaterial;
             background.enabled = !string.IsNullOrEmpty(_caption);
             ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(_caption));
 
@@ -801,6 +846,7 @@ namespace OneRoof.Presentation.Population
             renderer.sprite = sprite;
             renderer.color = color;
             renderer.sortingOrder = sortingOrder;
+            if (_sharedMaterial != null) renderer.sharedMaterial = _sharedMaterial;
             _limbRenderers[key] = renderer;
         }
 

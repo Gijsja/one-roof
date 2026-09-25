@@ -17,8 +17,11 @@ namespace OneRoof.Presentation.Architecture
         public float Width { get; private set; }
         public float Height { get; private set; }
 
-        public void Setup(string roomTheme, float width, float height, float worldLeft, float worldRight, float centerY, bool isWestSide)
+        private Material _sharedMaterial;
+
+        public void Setup(string roomTheme, float width, float height, float worldLeft, float worldRight, float centerY, bool isWestSide, Material sharedMaterial = null)
         {
+            _sharedMaterial = sharedMaterial;
             RoomTheme = roomTheme;
             Width = width;
             Height = height;
@@ -33,6 +36,7 @@ namespace OneRoof.Presentation.Architecture
             BackdropRenderer.drawMode = SpriteDrawMode.Sliced;
             BackdropRenderer.size = new Vector2(Mathf.Max(0.5f, width - 0.04f), height);
             BackdropRenderer.sortingOrder = -10;
+            if (_sharedMaterial != null) BackdropRenderer.sharedMaterial = _sharedMaterial;
 
             var lowerTheme = (roomTheme ?? "").ToLowerInvariant();
             var isResidential = lowerTheme.Contains("residential") || lowerTheme.Contains("apartment");
@@ -86,6 +90,7 @@ namespace OneRoof.Presentation.Architecture
                 SconceRenderer = sconceObj.AddComponent<SpriteRenderer>();
                 SconceRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.WallSconce);
                 SconceRenderer.sortingOrder = -4;
+                if (_sharedMaterial != null) SconceRenderer.sharedMaterial = _sharedMaterial;
             }
         }
 
@@ -102,6 +107,7 @@ namespace OneRoof.Presentation.Architecture
             DoorRenderer = doorObj.AddComponent<SpriteRenderer>();
             DoorRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
             DoorRenderer.sortingOrder = -5;
+            if (_sharedMaterial != null) DoorRenderer.sharedMaterial = _sharedMaterial;
         }
 
         private void AddWindow(string fixtureKey, float width, bool isWestSide, Vector3 scale)
@@ -117,6 +123,7 @@ namespace OneRoof.Presentation.Architecture
             WindowRenderer = windowObj.AddComponent<SpriteRenderer>();
             WindowRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
             WindowRenderer.sortingOrder = -6;
+            if (_sharedMaterial != null) WindowRenderer.sharedMaterial = _sharedMaterial;
         }
     }
 }

@@ -176,5 +176,44 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(root, Is.Not.Null);
             Assert.That(root.GetComponent<VisualEffectsPresenter>(), Is.Not.Null);
         }
+
+        [Test]
+        public void EnsureRoomViews_AssignsMaterialToBackdropAndFurnishingRenderers()
+        {
+            var session = new TowerSimulationSession();
+            _presenter.EnsureRoomViews(session.TopologyProjection());
+
+            var backdrops = _holder.GetComponentsInChildren<OneRoof.Presentation.Architecture.RoomBackdropPresenter>();
+            Assert.That(backdrops.Length, Is.GreaterThan(0));
+            foreach (var backdrop in backdrops)
+            {
+                if (backdrop.BackdropRenderer != null)
+                {
+                    Assert.That(backdrop.BackdropRenderer.sharedMaterial, Is.EqualTo(_material));
+                }
+                if (backdrop.DoorRenderer != null)
+                {
+                    Assert.That(backdrop.DoorRenderer.sharedMaterial, Is.EqualTo(_material));
+                }
+                if (backdrop.WindowRenderer != null)
+                {
+                    Assert.That(backdrop.WindowRenderer.sharedMaterial, Is.EqualTo(_material));
+                }
+            }
+
+            var furnishings = _holder.GetComponentsInChildren<OneRoof.Presentation.Furnishings.RoomFurnishingPresenter>();
+            Assert.That(furnishings.Length, Is.GreaterThan(0));
+            foreach (var furnishing in furnishings)
+            {
+                foreach (var prop in furnishing.PlacedProps)
+                {
+                    var sr = prop.GetComponent<SpriteRenderer>();
+                    if (sr != null)
+                    {
+                        Assert.That(sr.sharedMaterial, Is.EqualTo(_material));
+                    }
+                }
+            }
+        }
     }
 }

@@ -110,5 +110,21 @@ namespace OneRoof.Presentation.Tests.EditMode
             _pool.Prewarm(50);
             Assert.That(_pool.TotalInstantiatedCount, Is.EqualTo(40));
         }
+
+        [Test]
+        public void Pool_Acquire_AssignsMaterialToSkeletalHierarchyRenderers()
+        {
+            var view = _pool.Acquire(1);
+            Assert.That(view, Is.Not.Null);
+            Assert.That(view.SkeletalHierarchy, Is.Not.Null);
+
+            foreach (var slot in view.SkeletalHierarchy.WardrobeSlots.Values)
+            {
+                if (slot != null && slot.gameObject.activeSelf)
+                {
+                    Assert.That(slot.sharedMaterial, Is.Not.Null, $"Slot {slot.name} should have sharedMaterial assigned.");
+                }
+            }
+        }
     }
 }

@@ -81,10 +81,10 @@ namespace OneRoof.Presentation.Tower
 
         private void CacheRenderers()
         {
-            if (_block == null) _block = new MaterialPropertyBlock();
             _renderers = GetComponentsInChildren<Renderer>(true);
             if (_mode != Mode.Constructing && _mode != Mode.Demolishing) return;
-            if (_effectShader == null) _effectShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
+            if (_effectShader == null) _effectShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
             if (_effectShader == null) return;
             if (_fadeTexture == null) _fadeTexture = CreateFadeTexture();
             foreach (var renderer in _renderers)
@@ -201,7 +201,8 @@ namespace OneRoof.Presentation.Tower
                 else DestroyImmediate(collider);
             }
             _auraRenderer = _auraObject.GetComponent<MeshRenderer>();
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
                 ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
@@ -209,7 +210,7 @@ namespace OneRoof.Presentation.Tower
             if (shader != null)
             {
                 _auraMaterial = new Material(shader) { renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent };
-                if (shader.name == "AllIn1SpriteShader/AllIn1SpriteShader")
+                if (shader.name.StartsWith("AllIn1SpriteShader/AllIn1SpriteShader", StringComparison.Ordinal))
                 {
                     _auraMaterial.EnableKeyword("GLOW_ON");
                     _auraMaterial.SetColor("_GlowColor", new Color(1f, 0.33f, 0.12f));

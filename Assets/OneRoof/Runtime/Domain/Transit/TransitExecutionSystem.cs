@@ -301,14 +301,13 @@ namespace OneRoof.Domain.Transit
             Tick tick,
             BuildingTopologyState topology,
             ElevatorBank elevatorBank,
-            PopulationState population,
-            float lobbyCapacityMultiplier = 1f)
+            PopulationState population)
         {
             if (topology == null) throw new ArgumentNullException(nameof(topology));
             if (elevatorBank == null) throw new ArgumentNullException(nameof(elevatorBank));
 
             // 1. Advance elevator bank state machine
-            elevatorBank.Advance(tick, lobbyCapacityMultiplier);
+            elevatorBank.Advance(tick);
 
             // 2. Process all active resident trip legs
             for (var i = _activeTrips.Count - 1; i >= 0; i--)

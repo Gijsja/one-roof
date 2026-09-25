@@ -257,7 +257,8 @@ namespace OneRoof.Presentation.Tower
 
         private static Material CreateBoxMaterial(Color outlineColor, Color glowColor, Texture2D texture, out bool isAllIn1)
         {
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
                 ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
@@ -294,7 +295,8 @@ namespace OneRoof.Presentation.Tower
 
         private static Material CreateSpriteMaterial(Color outlineColor, Color glowColor, out bool isAllIn1)
         {
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
                 ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")

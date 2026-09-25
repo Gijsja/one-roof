@@ -49,7 +49,8 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void Construction_UsesShaderFadeForChildrenCreatedAfterBegin_ThenRestoresMaterial()
         {
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
+            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
             Assert.That(shader, Is.Not.Null, "The installed All In 1 shader must be available to city presentation.");
             var root = new GameObject("Construction");
             var source = new Material(Shader.Find("Sprites/Default"));

@@ -70,7 +70,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             var nightColor = block.GetColor("_BaseColor");
             Assert.That(nightColor.r, Is.GreaterThan(dayColor.r));
             Assert.That(_presenter.Windows[0].sharedMaterial.shader.name,
-                Is.EqualTo("AllIn1SpriteShader/AllIn1SpriteShader"));
+                Does.StartWith("AllIn1SpriteShader/AllIn1SpriteShader"));
             Assert.That(_presenter.Windows[0].sharedMaterial.IsKeywordEnabled("GLOW_ON"), Is.True);
             Assert.That(block.GetFloat("_Glow"), Is.GreaterThan(0.5f));
 

@@ -132,6 +132,210 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.Root, Is.Null);
             Assert.That(_presenter.RenderedFloorCount, Is.EqualTo(-1));
             Assert.That(_holder.transform.childCount, Is.EqualTo(0));
+            Assert.That(_presenter.LeftWindowFrames.Count, Is.EqualTo(0));
+            Assert.That(_presenter.LeftWindowGlasses.Count, Is.EqualTo(0));
+            Assert.That(_presenter.RightWindowFrames.Count, Is.EqualTo(0));
+            Assert.That(_presenter.RightWindowGlasses.Count, Is.EqualTo(0));
+            Assert.That(_presenter.VolumetricCones.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EnsureExteriorViews_ExteriorWindows_RenderWithCorrectDepthAndNaming()
+        {
+            _presenter.EnsureExteriorViews(null);
+
+            // Left Facade Window hierarchy (floor 0 through 4)
+            for (var f = 0; f < 5; f++)
+            {
+                var frame = _presenter.Root.Find($"Left Facade/Left Window Frame {f}");
+                var sill = _presenter.Root.Find($"Left Facade/Left Window Sill {f}");
+                var glass = _presenter.Root.Find($"Left Facade/Left Window Glass {f}");
+                var wall = _presenter.Root.Find($"Left Facade/Left Wall {f}");
+                var cladding = _presenter.Root.Find($"Left Facade/Left Cladding {f}");
+
+                Assert.That(frame, Is.Not.Null, $"Left Window Frame {f} must exist");
+                Assert.That(sill, Is.Not.Null, $"Left Window Sill {f} must exist");
+                Assert.That(glass, Is.Not.Null, $"Left Window Glass {f} must exist");
+                Assert.That(wall, Is.Not.Null, $"Preserved Left Wall {f} must exist");
+                Assert.That(cladding, Is.Not.Null, $"Preserved Left Cladding {f} must exist");
+
+                // Z-Depth validation
+                Assert.That(glass.localPosition.z, Is.EqualTo(0.00f).Within(0.001f), "Glass must be recessed at Z = 0.00m");
+                Assert.That(frame.localPosition.z, Is.EqualTo(-0.05f).Within(0.001f), "Frame header must be at Z = -0.05m");
+                Assert.That(sill.localPosition.z, Is.EqualTo(-0.05f).Within(0.001f), "Sill must be at Z = -0.05m");
+                Assert.That(cladding.localPosition.z, Is.EqualTo(-0.04f).Within(0.001f), "Cladding must be at Z = -0.04m");
+                Assert.That(wall.localPosition.z, Is.EqualTo(0.10f).Within(0.001f), "Wall core must be at Z = 0.10m");
+            }
+
+            // Right Facade Window hierarchy (floors 1 through 4)
+            for (var f = 1; f < 5; f++)
+            {
+                var frame = _presenter.Root.Find($"Right Facade/Right Window Frame {f}");
+                var sill = _presenter.Root.Find($"Right Facade/Right Window Sill {f}");
+                var glass = _presenter.Root.Find($"Right Facade/Right Window Glass {f}");
+                var wall = _presenter.Root.Find($"Right Facade/Right Wall {f}");
+
+                Assert.That(frame, Is.Not.Null, $"Right Window Frame {f} must exist");
+                Assert.That(sill, Is.Not.Null, $"Right Window Sill {f} must exist");
+                Assert.That(glass, Is.Not.Null, $"Right Window Glass {f} must exist");
+                Assert.That(wall, Is.Not.Null, $"Preserved Right Wall {f} must exist");
+
+                Assert.That(glass.localPosition.z, Is.EqualTo(0.00f).Within(0.001f));
+                Assert.That(frame.localPosition.z, Is.EqualTo(-0.05f).Within(0.001f));
+                Assert.That(sill.localPosition.z, Is.EqualTo(-0.05f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void EnsureExteriorViews_VolumetricLightCones_GeneratedUnderExteriorVolumetricLighting()
+        {
+            _presenter.EnsureExteriorViews(null);
+
+            var volRoot = _presenter.Root.Find("Exterior Volumetric Lighting");
+            Assert.That(volRoot, Is.Not.Null, "Exterior Volumetric Lighting root must exist under Root");
+
+            // Left light cones (0..4) and Right light cones (1..4)
+            Assert.That(_presenter.Root.Find("Exterior Volumetric Lighting/Left Light Cone 0"), Is.Not.Null);
+            Assert.That(_presenter.Root.Find("Exterior Volumetric Lighting/Right Light Cone 1"), Is.Not.Null);
+
+            for (var f = 0; f < 5; f++)
+            {
+                var cone = _presenter.Root.Find($"Exterior Volumetric Lighting/Left Light Cone {f}");
+                Assert.That(cone, Is.Not.Null);
+                Assert.That(cone.localPosition.z, Is.EqualTo(-0.20f).Within(0.001f), "Cone must be positioned at Z = -0.20m");
+
+                var filter = cone.GetComponent<MeshFilter>();
+                Assert.That(filter, Is.Not.Null);
+                var mesh = filter.sharedMesh;
+                Assert.That(mesh, Is.Not.Null);
+                Assert.That(mesh.vertexCount, Is.EqualTo(4));
+
+                // Vertex colors: inner vertices at window must have alpha 1.0, terminating in open air must have alpha 0.0
+                var colors = mesh.colors;
+                Assert.That(colors[0].a, Is.EqualTo(1.0f).Within(0.001f), "Inner top vertex alpha must be 1.0");
+                Assert.That(colors[3].a, Is.EqualTo(1.0f).Within(0.001f), "Inner bottom vertex alpha must be 1.0");
+                Assert.That(colors[1].a, Is.EqualTo(0.0f).Within(0.001f), "Terminating top vertex alpha must be 0.0");
+                Assert.That(colors[2].a, Is.EqualTo(0.0f).Within(0.001f), "Terminating bottom vertex alpha must be 0.0");
+
+                var renderer = cone.GetComponent<MeshRenderer>();
+                Assert.That(renderer, Is.Not.Null);
+                var mat = renderer.sharedMaterial;
+                Assert.That(mat, Is.Not.Null);
+                if (mat.HasProperty("_ZWrite"))
+                {
+                    Assert.That(mat.GetInt("_ZWrite"), Is.EqualTo(0), "Transparent volumetric material must have ZWrite = 0");
+                }
+            }
+        }
+
+        [Test]
+        public void UpdateLighting_DayAndNightTransition_UpdatesWindowGlassAndConeEmissiveGlow()
+        {
+            _presenter.EnsureExteriorViews(null);
+
+            // 1. Daytime (12:00 PM)
+            var dayPhase = new OneRoof.Domain.Time.DayPhase(1, 12, 0, false);
+            _presenter.UpdateLighting(dayPhase);
+
+            var block = new MaterialPropertyBlock();
+
+            // All windows and cones should show daytime colors
+            var leftGlass0 = _presenter.Root.Find("Left Facade/Left Window Glass 0").GetComponent<MeshRenderer>();
+            leftGlass0.GetPropertyBlock(block);
+            var glassDayColor = block.GetColor("_BaseColor");
+            Assert.That(glassDayColor.r, Is.EqualTo(BuildingExteriorPresenter.WindowDayColor.r).Within(0.01f));
+            Assert.That(glassDayColor.g, Is.EqualTo(BuildingExteriorPresenter.WindowDayColor.g).Within(0.01f));
+            Assert.That(glassDayColor.b, Is.EqualTo(BuildingExteriorPresenter.WindowDayColor.b).Within(0.01f));
+
+            var leftCone0 = _presenter.Root.Find("Exterior Volumetric Lighting/Left Light Cone 0").GetComponent<MeshRenderer>();
+            leftCone0.GetPropertyBlock(block);
+            var coneDayColor = block.GetColor("_BaseColor");
+            Assert.That(coneDayColor.a, Is.EqualTo(BuildingExteriorPresenter.ConeDayColor.a).Within(0.01f));
+
+            // 2. Nighttime (00:00 AM)
+            var nightPhase = new OneRoof.Domain.Time.DayPhase(1, 0, 0, true);
+            _presenter.UpdateLighting(nightPhase);
+
+            // Floor 0 on Left: (0 * 7 + 3) % 5 = 3 != 0 -> occupied (lit)
+            leftGlass0.GetPropertyBlock(block);
+            var glassNightLit = block.GetColor("_BaseColor");
+            Assert.That(glassNightLit.r, Is.EqualTo(BuildingExteriorPresenter.WindowNightLitColor.r).Within(0.01f));
+            Assert.That(glassNightLit.g, Is.EqualTo(BuildingExteriorPresenter.WindowNightLitColor.g).Within(0.01f));
+            Assert.That(glassNightLit.b, Is.EqualTo(BuildingExteriorPresenter.WindowNightLitColor.b).Within(0.01f));
+
+            leftCone0.GetPropertyBlock(block);
+            var coneNightLit = block.GetColor("_BaseColor");
+            Assert.That(coneNightLit.r, Is.EqualTo(BuildingExteriorPresenter.ConeNightLitColor.r).Within(0.01f));
+            Assert.That(coneNightLit.a, Is.EqualTo(BuildingExteriorPresenter.ConeNightLitColor.a).Within(0.01f));
+
+            // Floor 1 on Left: (1 * 7 + 3) % 5 = 0 == 0 -> dark (unoccupied)
+            var leftGlass1 = _presenter.Root.Find("Left Facade/Left Window Glass 1").GetComponent<MeshRenderer>();
+            leftGlass1.GetPropertyBlock(block);
+            var glassNightDark = block.GetColor("_BaseColor");
+            Assert.That(glassNightDark.r, Is.EqualTo(BuildingExteriorPresenter.WindowNightDarkColor.r).Within(0.01f));
+
+            var leftCone1 = _presenter.Root.Find("Exterior Volumetric Lighting/Left Light Cone 1").GetComponent<MeshRenderer>();
+            leftCone1.GetPropertyBlock(block);
+            var coneNightDark = block.GetColor("_BaseColor");
+            Assert.That(coneNightDark.a, Is.EqualTo(0.0f).Within(0.001f), "Dark floor cone must have 0 alpha at night");
+        }
+
+        [Test]
+        public void EnsureExteriorViews_ExteriorElements_DoNotPenetrateInteriorCutaway()
+        {
+            _presenter.EnsureExteriorViews(null);
+
+            const float worldLeft = -9.4f;  // -2.4 + (-14 * 0.5)
+            const float worldRight = 6.1f;  // -2.4 + (16 + 1) * 0.5
+
+            // Left Facade elements must have X <= worldLeft
+            foreach (var frame in _presenter.LeftWindowFrames)
+            {
+                Assert.That(frame.transform.localPosition.x, Is.LessThanOrEqualTo(worldLeft));
+            }
+            foreach (var sill in _presenter.LeftWindowSills)
+            {
+                Assert.That(sill.transform.localPosition.x, Is.LessThanOrEqualTo(worldLeft));
+            }
+            foreach (var glass in _presenter.LeftWindowGlasses)
+            {
+                Assert.That(glass.transform.localPosition.x, Is.LessThanOrEqualTo(worldLeft));
+            }
+
+            // Right Facade elements must have X >= worldRight
+            foreach (var frame in _presenter.RightWindowFrames)
+            {
+                Assert.That(frame.transform.localPosition.x, Is.GreaterThanOrEqualTo(worldRight));
+            }
+            foreach (var sill in _presenter.RightWindowSills)
+            {
+                Assert.That(sill.transform.localPosition.x, Is.GreaterThanOrEqualTo(worldRight));
+            }
+            foreach (var glass in _presenter.RightWindowGlasses)
+            {
+                Assert.That(glass.transform.localPosition.x, Is.GreaterThanOrEqualTo(worldRight));
+            }
+
+            // Volumetric Cones vertices must not cross into (worldLeft, worldRight)
+            for (var f = 0; f < 5; f++)
+            {
+                var cone = _presenter.Root.Find($"Exterior Volumetric Lighting/Left Light Cone {f}");
+                var mesh = cone.GetComponent<MeshFilter>().sharedMesh;
+                foreach (var v in mesh.vertices)
+                {
+                    Assert.That(v.x, Is.LessThanOrEqualTo(worldLeft), $"Left cone vertex {v.x} must be outside worldLeft");
+                }
+            }
+
+            for (var f = 1; f < 5; f++)
+            {
+                var cone = _presenter.Root.Find($"Exterior Volumetric Lighting/Right Light Cone {f}");
+                var mesh = cone.GetComponent<MeshFilter>().sharedMesh;
+                foreach (var v in mesh.vertices)
+                {
+                    Assert.That(v.x, Is.GreaterThanOrEqualTo(worldRight), $"Right cone vertex {v.x} must be outside worldRight");
+                }
+            }
         }
     }
 }

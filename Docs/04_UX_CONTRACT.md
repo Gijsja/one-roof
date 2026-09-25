@@ -31,7 +31,7 @@ The inspector is a cause chain, not a flat stat dump: it names the symptom, expo
 | `overlay:foot_traffic` | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
 | `overlay:population` | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
 | `overlay:satisfaction` | Soft regional glow + pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, rent burden |
-| `overlay:noise` | Room acoustic contours plus text labels | `NoiseOverlayProjector` | Current activity in nearby rooms; relative estimate, not measured decibels |
+| `overlay:noise` | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into apartments |
 | `overlay:business_health` | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, commercial rent burden |
 | `overlay:faction_tension` | Regional tension contours + glyphs | `FactionState` | Policy grievances, strain, protest/strike risk |
 | `overlay:utilities` | Network pipe/cable flow & pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |

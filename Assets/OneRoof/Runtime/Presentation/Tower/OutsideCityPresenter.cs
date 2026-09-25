@@ -58,7 +58,8 @@ namespace OneRoof.Presentation.Tower
             if (material == null) throw new ArgumentNullException(nameof(material));
             _camera = camera;
             _material = material;
-            var windowShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
+            var windowShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
             if (windowShader != null && _windowMaterial == null)
             {
                 _windowMaterial = new Material(windowShader) { name = "Outside City Window Glow" };
@@ -163,8 +164,16 @@ namespace OneRoof.Presentation.Tower
             if (bucket == _lastLightBucket) return;
             _lastLightBucket = bucket;
             var hour = phase.Hour + phase.Minute / 60f;
-            var night = hour < 6f ? Mathf.Clamp01((7f - hour) / 2f) :
-                hour >= 18f ? Mathf.Clamp01((hour - 18f) / 2f) : 0f;
+            // Smooth night factor: 1.0 at night, 0.0 by day. Dawn 5.5h→6.5h, dusk 19.5h→20.5h.
+            float night;
+            if (hour < 5.5f || hour >= 20.5f)
+                night = 1f;
+            else if (hour < 6.5f)
+                night = 6.5f - hour;
+            else if (hour < 19.5f)
+                night = 0f;
+            else
+                night = hour - 19.5f;
             var dayFacades = new[]
             {
                 new Color(0.24f, 0.37f, 0.48f), new Color(0.18f, 0.30f, 0.39f), new Color(0.13f, 0.23f, 0.31f)
