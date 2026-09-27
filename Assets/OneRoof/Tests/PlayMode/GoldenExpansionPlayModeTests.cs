@@ -18,6 +18,7 @@ namespace OneRoof.Tests.PlayMode
             try
             {
                 var controller = holder.AddComponent<TowerPlayableController>();
+                controller.SetPaused(true);
                 yield return null;
 
                 var nextFloor = controller.SimulationSession.FloorCount;
@@ -56,59 +57,72 @@ namespace OneRoof.Tests.PlayMode
         public IEnumerator GoldenExpansionPlayMode_FullLifecycle_ExpandsTowerAndIntervenes()
         {
             var holder = new GameObject("Test_PlayMode_Tower");
-            var controller = holder.AddComponent<TowerPlayableController>();
-
-            Assert.That(controller.SimulationSession, Is.Not.Null);
-            Assert.That(controller.SimulationSession.FloorCount, Is.EqualTo(5));
-            Assert.That(controller.SimulationSession.ResidentCount, Is.EqualTo(50));
-
-            // Run 5 ticks
-            for (var i = 0; i < 5; i++)
+            try
             {
-                controller.SimulationSession.AdvanceOneTick();
-                yield return null;
+                var controller = holder.AddComponent<TowerPlayableController>();
+                controller.SetPaused(true);
+                Assert.That(controller.IsPaused, Is.True);
+
+                Assert.That(controller.SimulationSession, Is.Not.Null);
+                Assert.That(controller.SimulationSession.FloorCount, Is.EqualTo(5));
+                Assert.That(controller.SimulationSession.ResidentCount, Is.EqualTo(50));
+                var startingTick = controller.SimulationSession.CurrentTick;
+
+                // Run 5 test-controlled ticks
+                for (var i = 0; i < 5; i++)
+                {
+                    controller.SimulationSession.AdvanceOneTick();
+                    yield return null;
+                }
+                Assert.That(controller.SimulationSession.CurrentTick, Is.EqualTo(startingTick + 5));
+
+                // Interactive expansion: Build floor 5 slab
+                var slabCmd = new BuildFloorSlabCommand(5, -14, 16);
+                var slabResult = controller.SimulationSession.ExecuteCommand(slabCmd);
+                Assert.That(slabResult.Accepted, Is.True);
+                Assert.That(controller.SimulationSession.FloorCount, Is.EqualTo(6));
+
+                // Build apartment on floor 5
+                var aptCmd = new BuildRoomCommand(5, -10, -5, new ContentId("residential:studio"), capacity: 5);
+                var aptResult = controller.SimulationSession.ExecuteCommand(aptCmd);
+                Assert.That(aptResult.Accepted, Is.True);
+
+                // Extend shaft to floor 5
+                var shaftCmd = new AddElevatorShaftCommand(0, 1, 0, 5);
+                var shaftResult = controller.SimulationSession.ExecuteCommand(shaftCmd);
+                Assert.That(shaftResult.Accepted, Is.True);
+
+                // Advance 40 test-controlled ticks to allow leasing to move in residents
+                for (var i = 0; i < 40; i++)
+                {
+                    controller.SimulationSession.AdvanceOneTick();
+                    yield return null;
+                }
+                Assert.That(controller.SimulationSession.CurrentTick, Is.EqualTo(startingTick + 45));
+
+                Assert.That(controller.SimulationSession.ResidentCount, Is.GreaterThan(50));
+
+                // Player intervention: Add elevator capacity
+                var initialCars = controller.SimulationSession.ElevatorCarCount;
+                controller.OnConfirmElevatorPlacement();
+                Assert.That(controller.SimulationSession.ElevatorCarCount, Is.EqualTo(initialCars + 1));
+
+                // Advance through commute
+                for (var i = 0; i < 30; i++)
+                {
+                    controller.SimulationSession.AdvanceOneTick();
+                    yield return null;
+                }
+                Assert.That(controller.SimulationSession.CurrentTick, Is.EqualTo(startingTick + 75));
+
+                Assert.That(controller.SimulationSession.DeliveredPassengerCount, Is.GreaterThan(0));
             }
-
-            // Interactive expansion: Build floor 5 slab
-            var slabCmd = new BuildFloorSlabCommand(5, -14, 16);
-            var slabResult = controller.SimulationSession.ExecuteCommand(slabCmd);
-            Assert.That(slabResult.Accepted, Is.True);
-            Assert.That(controller.SimulationSession.FloorCount, Is.EqualTo(6));
-
-            // Build apartment on floor 5
-            var aptCmd = new BuildRoomCommand(5, -10, -5, new ContentId("residential:studio"), capacity: 5);
-            var aptResult = controller.SimulationSession.ExecuteCommand(aptCmd);
-            Assert.That(aptResult.Accepted, Is.True);
-
-            // Extend shaft to floor 5
-            var shaftCmd = new AddElevatorShaftCommand(0, 1, 0, 5);
-            var shaftResult = controller.SimulationSession.ExecuteCommand(shaftCmd);
-            Assert.That(shaftResult.Accepted, Is.True);
-
-            // Advance 40 ticks to allow leasing to move in residents
-            for (var i = 0; i < 40; i++)
+            finally
             {
-                controller.SimulationSession.AdvanceOneTick();
-                yield return null;
+                Object.Destroy(holder);
+                var camera = GameObject.Find("Tower Camera");
+                if (camera != null) Object.Destroy(camera);
             }
-
-            Assert.That(controller.SimulationSession.ResidentCount, Is.GreaterThan(50));
-
-            // Player intervention: Add elevator capacity
-            var initialCars = controller.SimulationSession.ElevatorCarCount;
-            controller.OnConfirmElevatorPlacement();
-            Assert.That(controller.SimulationSession.ElevatorCarCount, Is.EqualTo(initialCars + 1));
-
-            // Advance through commute
-            for (var i = 0; i < 30; i++)
-            {
-                controller.SimulationSession.AdvanceOneTick();
-                yield return null;
-            }
-
-            Assert.That(controller.SimulationSession.DeliveredPassengerCount, Is.GreaterThan(0));
-
-            Object.DestroyImmediate(holder);
         }
     }
 }

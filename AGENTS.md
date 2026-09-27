@@ -32,6 +32,7 @@ Treat numbered docs as canonical. `Docs/review/` is only a temporary merge inbox
 
 - Target **Unity 6000.3 LTS**; the installed project version is `6000.3.24f1` (`ProjectSettings/ProjectVersion.txt`).
 - This project uses a **headless Unity workflow**. Prefer one-shot `-batchmode -nographics -quit` runs and the `unity` CLI (`unity test`, `unity pipeline`, `unity command`) for validation; `com.unity.pipeline` is installed.
+- A running Pipeline Server may be available through the `mcp__unity__*` tools even when `unity status` or `unity command` reports no instance. In that case, query `mcp__unity__editor_status` and `mcp__unity__console_status` before concluding the Editor is unavailable. On 2026-09-27, the Editor served `Tower_GroundStart` through Pipeline MCP while CLI discovery returned `STATUS_NO_INSTANCES`. Do not treat a listening port alone as an authenticated connection.
 - Validate from an isolated worktree when no connected editor serves it, and never hijack another session's connected editor for heavy runs. See `Docs/10_DEVELOPMENT_WORKFLOW.md` for the required compile and test commands.
 - Use the Package Manager API for package changes. Prefer Unity tooling over hand-editing serialized Unity assets.
 - Keep generated Unity folders (`.plastic/`, `Library/`, `Temp/`) and secrets out of version control; commit paired `.meta` files with all new assets.
