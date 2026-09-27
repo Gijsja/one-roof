@@ -45,6 +45,12 @@ namespace OneRoof.Domain.Persistence
         public UndergroundCellSaveData[] undergroundCells;
         public UndergroundCellSaveData[] undergroundFloorCells;
         public bool undergroundGridV2;
+        public bool undergroundGridV3;
+        public UndergroundCellSaveData[] undergroundCorridorCells;
+        public UndergroundCellSaveData[] undergroundShaftCells;
+        public UndergroundCellSaveData undergroundCoreCell;
+        public UndergroundRoomSaveData[] undergroundRooms;
+        public UndergroundOperationsSaveData undergroundOperations;
 
         public HouseholdSaveData[] households;
         public PersonSaveData[] persons;
@@ -210,6 +216,17 @@ namespace OneRoof.Domain.Persistence
     {
         public int x;
         public int depth;
+    }
+
+    [Serializable]
+    public sealed class UndergroundRoomSaveData
+    {
+        public int id;
+        public int type;
+        public int x;
+        public int depth;
+        public int width;
+        public int height;
     }
 
     [Serializable]

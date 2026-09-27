@@ -17,7 +17,7 @@ namespace OneRoof.Domain.Infrastructure
         private readonly Dictionary<EntityId, float> _conditionByRoom = new Dictionary<EntityId, float>();
         private long _syncedRoomsVersion = long.MinValue;
 
-        public void Advance(BuildingTopologyState topology, PopulationState population)
+        public void Advance(BuildingTopologyState topology, PopulationState population, float undergroundRepairBoost = 0f)
         {
             if (topology == null) return;
             SyncEquipmentIfTopologyChanged(topology);
@@ -27,7 +27,7 @@ namespace OneRoof.Domain.Infrastructure
                 if (!IsUtilityEquipment(room)) continue;
                 var condition = _conditionByRoom[room.Id];
                 if (condition <= FailureThreshold && technicians > 0)
-                    condition = Math.Min(1f, condition + technicians * RepairPerTechnicianPerTick);
+                    condition = Math.Min(1f, condition + technicians * RepairPerTechnicianPerTick + Math.Max(0f, undergroundRepairBoost));
                 else
                     condition = Math.Max(0f, condition - WearPerTick);
                 _conditionByRoom[room.Id] = condition;

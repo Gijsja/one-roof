@@ -41,6 +41,9 @@ namespace OneRoof.Presentation.Tower
         private bool _digGestureActive;
         private int _lastDigCellX = int.MinValue;
         private int _lastDigDepth = int.MinValue;
+        private bool _roomDragActive;
+        private int _roomDragStartX;
+        private int _roomDragStartDepth;
 
         private float UndergroundLeftWorldX
         {
@@ -188,7 +191,7 @@ namespace OneRoof.Presentation.Tower
 
                 if (IsUndergroundTool(currentToolId))
                 {
-                    HandleUndergroundDigPointer(screenPos, currentToolId, toolChangedThisFrame);
+                    HandleUndergroundPointer(screenPos, currentToolId, toolChangedThisFrame);
                     return;
                 }
 
@@ -432,10 +435,11 @@ namespace OneRoof.Presentation.Tower
             return false;
         }
 
-        private void HandleUndergroundDigPointer(Vector3 screenPos, string toolId, bool toolChangedThisFrame)
+        private void HandleUndergroundPointer(Vector3 screenPos, string toolId, bool toolChangedThisFrame)
         {
             if (!TryGetUndergroundCellFromScreen(screenPos, Camera, out var cellX, out var depth))
             {
+                if (_roomDragActive && !IsPrimaryPointerHeld()) _roomDragActive = false;
                 _lastHintScreenPos = screenPos;
                 LastPlacementHint = "✖ Point to the earth beneath the building.";
                 LastPlacementValid = false;
@@ -443,23 +447,44 @@ namespace OneRoof.Presentation.Tower
                 return;
             }
 
+            var roomTool = toolId.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase);
+            if (roomTool && !toolChangedThisFrame && IsPrimaryPointerDown())
+            {
+                _roomDragActive = true;
+                _roomDragStartX = cellX;
+                _roomDragStartDepth = depth;
+            }
             var size = UndergroundBrushSize(toolId);
             var isDigTool = IsUndergroundDigTool(toolId);
-            ICommand command = isDigTool
-                ? (ICommand)new DigUndergroundCommand(cellX, depth, size)
-                : new BuildUndergroundFloorCommand(cellX, depth, size);
+            var zoneX = _roomDragActive ? Mathf.Min(_roomDragStartX, cellX) : cellX;
+            var zoneDepth = _roomDragActive ? Mathf.Min(_roomDragStartDepth, depth) : depth;
+            var zoneWidth = _roomDragActive ? Mathf.Abs(cellX - _roomDragStartX) + 1 : 3;
+            var zoneHeight = _roomDragActive ? Mathf.Abs(depth - _roomDragStartDepth) + 1 : 2;
+            if (!TryMakeUndergroundCommand(toolId, zoneX, zoneDepth, out var command, out var width, out var height))
+            {
+                GhostPresenter.HideGhost();
+                LastPlacementHint = "✖ Unknown underground tool.";
+                return;
+            }
+            if (roomTool && _roomDragActive)
+            {
+                width = zoneWidth;
+                height = zoneHeight;
+                if (command is ZoneUndergroundRoomCommand zone)
+                    command = new ZoneUndergroundRoomCommand(zone.Type, zoneX, zoneDepth, width, height);
+            }
             var result = _simulationSession.CanExecute(command);
             LastPlacementValid = result.Accepted;
             LastPlacementHint = result.Accepted
-                ? (isDigTool ? $"✔ Dig {size}×{size} earth cells" : $"✔ Build {size}×{size} lair floor")
+                ? $"✔ {UndergroundToolLabel(toolId)} · {width}×{height} m · connected"
                 : $"✖ {result.Rejections[0].Message}";
             _lastHintScreenPos = screenPos;
 
-            var worldX = UndergroundLeftWorldX + (cellX + size * 0.5f) * UndergroundCellSize;
+            var worldX = UndergroundLeftWorldX + (zoneX + width * 0.5f) * UndergroundCellSize;
             var groundY = _floorOriginY - 0.74f;
-            var worldY = groundY - (depth + size * 0.5f) * UndergroundCellSize;
+            var worldY = groundY - (zoneDepth + height * 0.5f) * UndergroundCellSize;
             GhostPresenter.ShowGhost(new Vector3(worldX, worldY, 0f),
-                new Vector2(size * UndergroundCellSize * 0.94f, size * UndergroundCellSize * 0.94f), result.Accepted,
+                new Vector2(width * UndergroundCellSize * 0.98f, height * UndergroundCellSize * 0.98f), result.Accepted,
                 result.Accepted
                     ? (isDigTool ? new Color(1f, 0.62f, 0.24f, 0.42f) : new Color(0.36f, 0.75f, 0.68f, 0.62f))
                     : (Color?)null, renderZ: 0.24f);
@@ -467,6 +492,22 @@ namespace OneRoof.Presentation.Tower
             if (toolChangedThisFrame)
             {
                 ResetDigGesture();
+                return;
+            }
+
+            if (roomTool)
+            {
+                if (_roomDragActive && !IsPrimaryPointerHeld())
+                {
+                    if (result.Accepted) ExecuteUndergroundTool(command);
+                    _roomDragActive = false;
+                }
+                return;
+            }
+
+            if (!IsUndergroundBrushTool(toolId))
+            {
+                if (IsPrimaryPointerDown() && result.Accepted) ExecuteUndergroundTool(command);
                 return;
             }
 
@@ -487,7 +528,7 @@ namespace OneRoof.Presentation.Tower
                 _lastDigDepth = depth;
                 if (startX == int.MinValue)
                 {
-                    if (result.Accepted) ExecuteUndergroundBrush(toolId, cellX, depth, size);
+                    if (result.Accepted) ExecuteUndergroundTool(command);
                 }
                 else
                 {
@@ -497,17 +538,20 @@ namespace OneRoof.Presentation.Tower
                         var t = step / (float)steps;
                         var pathX = Mathf.RoundToInt(Mathf.Lerp(startX, cellX, t));
                         var pathDepth = Mathf.RoundToInt(Mathf.Lerp(startDepth, depth, t));
-                        ExecuteUndergroundBrush(toolId, pathX, pathDepth, size);
+                        ExecuteUndergroundBrush(toolId, pathX, pathDepth);
                     }
                 }
             }
         }
 
-        private void ExecuteUndergroundBrush(string toolId, int cellX, int depth, int size)
+        private void ExecuteUndergroundBrush(string toolId, int cellX, int depth)
         {
-            ICommand command = IsUndergroundDigTool(toolId)
-                ? (ICommand)new DigUndergroundCommand(cellX, depth, size)
-                : new BuildUndergroundFloorCommand(cellX, depth, size);
+            if (!TryMakeUndergroundCommand(toolId, cellX, depth, out var command, out _, out _)) return;
+            ExecuteUndergroundTool(command);
+        }
+
+        private void ExecuteUndergroundTool(ICommand command)
+        {
             if (!_simulationSession.CanExecute(command).Accepted) return;
             var executed = _simulationSession.ExecuteCommand(command);
             PlacementExecuted?.Invoke(executed);
@@ -519,6 +563,7 @@ namespace OneRoof.Presentation.Tower
             _digGestureActive = false;
             _lastDigCellX = int.MinValue;
             _lastDigDepth = int.MinValue;
+            _roomDragActive = false;
         }
 
         public bool TryGetUndergroundCellFromScreen(Vector3 screenPos, Camera cam, out int cellX, out int depth)
@@ -541,16 +586,64 @@ namespace OneRoof.Presentation.Tower
         private static bool IsUndergroundDigTool(string toolId) =>
             toolId != null && toolId.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase);
 
+        private static bool IsUndergroundBrushTool(string toolId) =>
+            IsUndergroundDigTool(toolId) ||
+            (toolId != null && (toolId.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase) ||
+                toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)));
+
         private static bool IsUndergroundTool(string toolId) =>
             IsUndergroundDigTool(toolId) ||
-            (toolId != null && toolId.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase));
+            (toolId != null && (toolId.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase) ||
+                toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase) ||
+                toolId.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase) ||
+                toolId.Equals("underground:core", StringComparison.OrdinalIgnoreCase)));
 
         private static int UndergroundBrushSize(string toolId)
         {
             if (!IsUndergroundTool(toolId)) return 1;
-            var prefix = IsUndergroundDigTool(toolId) ? "underground:dig_" : "underground:floor_";
+            var prefix = IsUndergroundDigTool(toolId) ? "underground:dig_" :
+                toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)
+                    ? "underground:corridor_" : "underground:floor_";
             var suffix = toolId.Substring(prefix.Length);
             return int.TryParse(suffix, out var size) && size >= 1 && size <= UndergroundDigState.MaxBrushSize ? size : 1;
+        }
+
+        private static string UndergroundToolLabel(string toolId)
+        {
+            if (IsUndergroundDigTool(toolId)) return "Excavate";
+            if (toolId.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase)) return "Lay floor";
+            if (toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)) return "Link corridor";
+            if (toolId.Equals("underground:core", StringComparison.OrdinalIgnoreCase)) return "Extend access core";
+            return "Zone " + toolId.Substring("underground:room_".Length);
+        }
+
+        private static bool TryMakeUndergroundCommand(string toolId, int x, int depth,
+            out ICommand command, out int width, out int height)
+        {
+            command = null;
+            width = height = 1;
+            if (!IsUndergroundTool(toolId)) return false;
+            if (toolId.Equals("underground:core", StringComparison.OrdinalIgnoreCase))
+                command = new BuildUndergroundCoreCommand(x, depth);
+            else if (toolId.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!Enum.TryParse(toolId.Substring("underground:room_".Length), true, out UndergroundRoomType type) ||
+                    !UndergroundRoomCatalog.IsDefined(type)) return false;
+                width = 3;
+                height = 2;
+                command = new ZoneUndergroundRoomCommand(type, x, depth, width, height);
+            }
+            else
+            {
+                width = UndergroundBrushSize(toolId);
+                height = toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase) ? 1 : width;
+                command = IsUndergroundDigTool(toolId)
+                    ? (ICommand)new DigUndergroundCommand(x, depth, width)
+                    : toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)
+                        ? (ICommand)new BuildUndergroundCorridorCommand(x, depth, width)
+                        : new BuildUndergroundFloorCommand(x, depth, width);
+            }
+            return true;
         }
 
         public static int GetToolWidthInCells(string toolId)
@@ -818,10 +911,7 @@ namespace OneRoof.Presentation.Tower
 
             if (IsUndergroundTool(toolId))
             {
-                command = IsUndergroundDigTool(toolId)
-                    ? (ICommand)new DigUndergroundCommand(cellX, floor, UndergroundBrushSize(toolId))
-                    : new BuildUndergroundFloorCommand(cellX, floor, UndergroundBrushSize(toolId));
-                return true;
+                return TryMakeUndergroundCommand(toolId, cellX, floor, out command, out _, out _);
             }
 
             if (toolId.Equals("transit:elevator_shaft", StringComparison.OrdinalIgnoreCase))

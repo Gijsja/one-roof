@@ -18,10 +18,14 @@ namespace OneRoof.Domain.Population
         public float ServiceEfficiencyMultiplier { get; private set; } = 1f;
         public float CrisisResponseMultiplier { get; private set; } = 1f;
 
-        public void Advance(PopulationState population, BuildingTopologyState topology, Tick currentTick)
+        public void Advance(PopulationState population, BuildingTopologyState topology, Tick currentTick, int undergroundTrainingSlots = 0)
         {
             if (population == null || topology == null) return;
-            Capacity = SpecialistTrainingCapacity.FromTopology(topology);
+            var towerCapacity = SpecialistTrainingCapacity.FromTopology(topology);
+            var extra = Math.Max(0, undergroundTrainingSlots);
+            Capacity = new SpecialistTrainingCapacity(towerCapacity.MaintenanceSlots + extra,
+                towerCapacity.SecuritySlots + extra, towerCapacity.ServiceSlots + extra,
+                towerCapacity.KnowledgeSlots + extra);
             TrainForRole(population, SpecialistRole.Service, Capacity.ServiceSlots);
             TrainForRole(population, SpecialistRole.Maintenance, Capacity.MaintenanceSlots);
             TrainForRole(population, SpecialistRole.Security, Capacity.SecuritySlots);

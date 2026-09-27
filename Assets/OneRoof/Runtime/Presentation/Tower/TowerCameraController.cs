@@ -1,3 +1,4 @@
+using OneRoof.Domain.Topology;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tower
@@ -106,7 +107,9 @@ namespace OneRoof.Presentation.Tower
             // At multi-floor scale leave a readable slice of city beyond the lobby.
             var defaultPos = new Vector3(groundStart ? -4.6f : 0.2f, centerY, -10f);
             ctrl.SetOverviewDefaults(defaultPos, defaultOrtho);
-            ctrl.SetBounds(-16f, 16f, TowerStructurePresenter.FloorY(0) - 2f, TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
+            ctrl.SetBounds(-20f, 20f,
+                TowerStructurePresenter.FloorY(0) - 0.74f - UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize - 2f,
+                TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
 
             if (isNew || resetView)
             {
@@ -122,6 +125,19 @@ namespace OneRoof.Presentation.Tower
             if (_camera == null) return;
             _camera.transform.position = _defaultPosition;
             _camera.orthographicSize = Mathf.Clamp(_defaultOrthoSize, _minOrthographicSize, _maxOrthographicSize);
+        }
+
+        /// <summary>Frame the complete earth board and its lobby connection.</summary>
+        public void FocusUnderground()
+        {
+            if (_camera == null) return;
+            var depth = UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize;
+            var groundY = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var center = _defaultPosition;
+            center.x = -1.4f;
+            center.y = Mathf.Clamp(groundY - depth * 0.5f + 0.4f, _boundsY.x, _boundsY.y);
+            _camera.transform.position = center;
+            _camera.orthographicSize = Mathf.Clamp((depth + 2f) * 0.5f, _minOrthographicSize, _maxOrthographicSize);
         }
 
         public void PanBy(Vector2 deltaWorld)
@@ -249,12 +265,20 @@ namespace OneRoof.Presentation.Tower
         {
 #if ENABLE_INPUT_SYSTEM
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (keyboard != null && (keyboard.fKey.wasPressedThisFrame || keyboard.homeKey.wasPressedThisFrame))
+            if (keyboard != null && keyboard.uKey.wasPressedThisFrame)
+            {
+                FocusUnderground();
+            }
+            else if (keyboard != null && (keyboard.fKey.wasPressedThisFrame || keyboard.homeKey.wasPressedThisFrame))
             {
                 FocusOverview();
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Home))
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                FocusUnderground();
+            }
+            else if (Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Home))
             {
                 FocusOverview();
             }

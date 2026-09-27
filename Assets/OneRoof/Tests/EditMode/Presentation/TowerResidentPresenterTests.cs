@@ -123,6 +123,69 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void NewlyPooledStreetArrival_StartsAtProjectedStreetPosition()
+        {
+            var poolObject = new GameObject("Test_Street_Pool");
+            try
+            {
+                var pool = poolObject.AddComponent<NpcViewPool>();
+                _presenter.ViewPool = pool;
+                _presenter.EnsureResidentViews(1);
+                var arrival = new TowerProjection(1L, 0, 0, 0f,
+                    new List<TransitResidentProjection>
+                    {
+                        new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 20f)
+                    }, new List<ElevatorProjection>());
+
+                _presenter.UpdateResidentPositions(arrival, null, 0f);
+
+                Assert.That(pool.TryGetView(100, out var view), Is.True);
+                Assert.That(view.transform.position.x, Is.EqualTo(7.85f).Within(0.001f));
+                Assert.That(view.transform.position.y,
+                    Is.EqualTo(TowerStructurePresenter.FloorY(0) - 0.58f).Within(0.001f));
+                Assert.That(view.SkeletalHierarchy.FacingDirection, Is.EqualTo(-1f),
+                    "An arriving resident should face from the street toward the lobby on its first visible frame.");
+            }
+            finally
+            {
+                _presenter.ViewPool = null;
+                Object.DestroyImmediate(poolObject);
+            }
+        }
+
+        [Test]
+        public void UndergroundCrew_ReleasesAbovegroundPooledViewUntilShiftEnds()
+        {
+            var poolObject = new GameObject("Test_Underground_Crew_Pool");
+            try
+            {
+                var pool = poolObject.AddComponent<NpcViewPool>();
+                _presenter.ViewPool = pool;
+                _presenter.EnsureResidentViews(1);
+                var projection = new TowerProjection(1L, 0, 0, 0f,
+                    new List<TransitResidentProjection>
+                    {
+                        new TransitResidentProjection(100, 0, TransitResidentStatus.Walking, 0, 5f)
+                    }, new List<ElevatorProjection>());
+
+                _presenter.UpdateResidentPositions(projection, null, 0f);
+                Assert.That(pool.TryGetView(100, out _), Is.True);
+
+                _presenter.UpdateResidentPositions(projection, null, 0f,
+                    undergroundCrewResidentIds: new[] { 100 });
+                Assert.That(pool.TryGetView(100, out _), Is.False);
+
+                _presenter.UpdateResidentPositions(projection, null, 0f);
+                Assert.That(pool.TryGetView(100, out _), Is.True);
+            }
+            finally
+            {
+                _presenter.ViewPool = null;
+                Object.DestroyImmediate(poolObject);
+            }
+        }
+
+        [Test]
         public void Clear_DestroysAllObjectsAndResetsCount()
         {
             _presenter.EnsureResidentViews(15);
@@ -151,7 +214,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void Initialize_ExistingResidentUsesCanonicalFullBodySprite()
+        public void Initialize_ExistingResidentUsesCanonicalSkeletalBody()
         {
             var resident = new GameObject("Resident View 1");
             resident.transform.SetParent(_holder.transform, false);
@@ -161,8 +224,9 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             _presenter.Initialize(_holder.transform);
 
-            Assert.That(skeletal.MainRenderer.enabled, Is.True);
+            Assert.That(skeletal.MainRenderer.enabled, Is.False);
             Assert.That(skeletal.MainRenderer.sprite, Is.Not.Null);
+            Assert.That(skeletal.LimbRenderers[OneRoof.Content.NpcRigDefinition.BoneLegUpperL].enabled, Is.True);
         }
 
         [Test]

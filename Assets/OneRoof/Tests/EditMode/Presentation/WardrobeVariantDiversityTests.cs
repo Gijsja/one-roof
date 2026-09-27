@@ -49,7 +49,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(upperA.color, Is.EqualTo(Color.white));
 
                 Assert.That(a.transform.localScale.x, Is.InRange(0.9f, 1.1f));
-                Assert.That(a.MainRenderer.enabled, Is.True);
+                Assert.That(a.MainRenderer.enabled, Is.False);
                 Assert.That(a.MainRenderer.sprite, Is.Not.EqualTo(b.MainRenderer.sprite));
 
                 // Re-initialize is idempotent (absolute scale, no compounding).

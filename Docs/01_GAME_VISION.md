@@ -27,6 +27,17 @@ The tonal reference points are *This War of Mine* (the human cost of scarce reso
 5. Respond through building, capacity, policy, leasing, or zone-level priorities.
 6. Watch the population adapt.
 
+## Secret undercity expansion
+
+The Steward may develop a covert operation beneath the tower. Excavation creates connected
+basement levels; corridors and an access core make rooms reachable. Residents take underground
+shifts autonomously. The operation balances tower protection, outside contract income, research,
+supplies, staffing, and exposure. Investigators arrive from the visible street and can interrupt
+reachable rooms; the Steward responds through access, cover, and security policies rather than
+directing an individual. Discovery raises recoverable Scrutiny and can harm services and wellbeing.
+This expansion supersedes the earlier deferral of detailed external investigation, while preserving
+the no-direct-resident-control rule and noncombat tone.
+
 ## Product pillars
 
 1. **Height is geography.** Elevators are streets and transfer lobbies are intersections.

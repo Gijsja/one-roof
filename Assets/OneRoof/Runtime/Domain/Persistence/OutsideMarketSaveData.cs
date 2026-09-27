@@ -14,5 +14,6 @@ namespace OneRoof.Domain.Persistence
         public long creditFunding;
         public long creditRepayment;
         public long creditReceivableBalance;
+        public long towerContractOutflow;
     }
 }

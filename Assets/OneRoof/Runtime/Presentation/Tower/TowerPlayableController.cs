@@ -55,6 +55,7 @@ namespace OneRoof.Presentation.Tower
         private TowerAtmospherePresenter _atmosphere;
         private OutsideCityPresenter _outside;
         private PixelRainPresenter _pixelRain;
+        private UndergroundOperationsView _undergroundOperationsView;
 
         private readonly TowerStructurePresenter _structure = new TowerStructurePresenter();
         private readonly FloorDeckPresenter _floorDecks = new FloorDeckPresenter();
@@ -65,6 +66,7 @@ namespace OneRoof.Presentation.Tower
 
         private Material _worldMat; private MaterialPropertyBlock _colorBlock;
         private float _tickAcc, _tickInterval = 0.35f; private bool _isPaused;
+        private long _lastUndergroundCrewVersion = -1;
 
         public TowerSimulationSession SimulationSession => _sim; public TowerSimulationSession TransitSession => _sim;
         public ModeShellSession ModeSession => _mode; public TowerDataOverlays DataOverlays => _dataOverlays;
@@ -198,6 +200,7 @@ namespace OneRoof.Presentation.Tower
             _placementCard = Ensure<PlacementPreviewCardView>(); _ghostPresenter = Ensure<PlacementGhostPresenter>();
             _gridPlacement = Ensure<GridPlacementController>(); _gridPlacement.ModeSession = _mode;
             _gridPlacement.SimulationSession = _sim; _gridPlacement.GhostPresenter = _ghostPresenter;
+            (_undergroundOperationsView = Ensure<UndergroundOperationsView>()).Bind(_sim, _mode, _gridPlacement);
             (_hudView = Ensure<TowerDashboardHudView>()).Controller = this;
             Ensure<ManagementOnboardingView>().Lesson = _onboarding;
             _inspectOutline = Ensure<InspectOutlinePresenter>(); (_inspectSelection = Ensure<InspectSelectionController>()).ModeSession = _mode;
@@ -248,6 +251,7 @@ namespace OneRoof.Presentation.Tower
             var minFloor = _sim?.ElevatorMinFloor ?? 0;
             var maxFloor = _sim?.ElevatorMaxFloor ?? (fl - 1);
             _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
+            _lastUndergroundCrewVersion = -1;
             if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _pixelRain?.SyncTopology(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
@@ -401,7 +405,18 @@ namespace OneRoof.Presentation.Tower
             _pixelRain?.SetWeather(_currentWeather);
         }
 
-        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _room.UpdateHousingConditions(_sim.HousingProjection()); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); UpdateActiveWeather(); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime); }
+        private void RenderVisualSnapshot() { var projection = _sim.Projection();
+            if (_lastUndergroundCrewVersion != _sim.Version)
+            {
+                _exterior.SyncUndergroundCrew(_sim.UndergroundOperationsProjection());
+                _lastUndergroundCrewVersion = _sim.Version;
+            }
+            _elevator.UpdateElevatorPositions(projection);
+            _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator,
+                _exterior.VisibleUndergroundCrewResidentIds);
+            _room.UpdateHousingConditions(_sim.HousingProjection()); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); UpdateActiveWeather(); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime);
+            _exterior.AnimateUndergroundCrew(Time.time);
+        }
         private static Material CreateWorldMaterial()
         {
             var authored = Resources.Load<Material>("Materials/OneRoofWorldMaterial");

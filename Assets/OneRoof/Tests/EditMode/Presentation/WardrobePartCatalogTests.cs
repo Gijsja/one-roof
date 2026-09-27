@@ -88,7 +88,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void Parts_HierarchyUsesOneCompleteBodyAndDisablesMismatchedPhotoParts()
+        public void Parts_HierarchyShowsArticulatedBodyAndDisablesMismatchedPhotoParts()
         {
             var go = new GameObject("PartResident");
             try
@@ -98,9 +98,9 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 var faceSlot = skeletal.WardrobeSlots[NpcLayerKind.Face];
                 Assert.That(faceSlot.enabled, Is.False);
-                Assert.That(skeletal.MainRenderer.enabled, Is.True);
+                Assert.That(skeletal.MainRenderer.enabled, Is.False);
                 Assert.That(skeletal.MainRenderer.sprite, Is.Not.Null);
-                foreach (var limb in skeletal.LimbRenderers.Values) Assert.That(limb.enabled, Is.False);
+                foreach (var limb in skeletal.LimbRenderers.Values) Assert.That(limb.enabled, Is.True);
 
                 var accessorySlot = skeletal.WardrobeSlots[NpcLayerKind.Accessory];
                 Assert.That(accessorySlot.enabled, Is.False);

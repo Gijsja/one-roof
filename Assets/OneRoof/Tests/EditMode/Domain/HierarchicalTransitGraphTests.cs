@@ -28,6 +28,25 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void OutsideNodeStartsBeyondTheLobbyEntrance()
+        {
+            var topology = FiveFloorTopologyFixture.Create();
+            var graph = HierarchicalTransitGraph.FromBuildingTopology(topology);
+            var lobby = topology.GetRoomsByContentType(FiveFloorTopologyFixture.LobbyContentId)[0];
+            var entrance = graph.GetPortalNodeForRoom(lobby.Id);
+
+            Assert.That(graph.OutsideNode.Location.X, Is.GreaterThanOrEqualTo(lobby.Bounds.MaxX + 6));
+            Assert.That(entrance.Location.X, Is.EqualTo(lobby.Bounds.MaxX),
+                "The first indoor stop must be the lobby's street-facing edge.");
+            var route = new TransitRoutePlanner(graph).FindRoute(graph.OutsideNode.Id, entrance.Id);
+            Assert.That(route.Legs.Count, Is.EqualTo(1));
+            Assert.That(route.Legs[0].Cost, Is.EqualTo(6));
+            var leaving = new TransitRoutePlanner(graph).FindRoute(entrance.Id, graph.OutsideNode.Id);
+            Assert.That(leaving.Legs.Count, Is.EqualTo(1));
+            Assert.That(leaving.Legs[0].Cost, Is.EqualTo(6));
+        }
+
+        [Test]
         public void SameFloorRouteUsesWalkOnly()
         {
             var graph = TwoFloorTransitFixture.CreateGraph();
@@ -66,15 +85,15 @@ namespace OneRoof.Domain.Tests.EditMode
             var graph = HierarchicalTransitGraph.FromBuildingTopology(topology);
             var planner = new TransitRoutePlanner(graph);
 
-            // Commute from Lobby door (2, 0) to 4th floor Far-East residential door (8, 4)
-            var route = planner.FindRoute(new CellCoordinate(2, 0), new CellCoordinate(8, 4));
+            // Commute from the east lobby entrance (14, 0) to floor 4's far-east apartment.
+            var route = planner.FindRoute(new CellCoordinate(14, 0), new CellCoordinate(8, 4));
 
             Assert.That(route, Is.Not.Null);
             Assert.That(route.RequiresVerticalTransit, Is.True);
             Assert.That(route.Legs.Count, Is.EqualTo(3));
 
-            // Walk to elevator: 2 cells
-            Assert.That(route.Legs[0].Cost, Is.EqualTo(2));
+            // Walk through the lobby to the elevator: 14 cells.
+            Assert.That(route.Legs[0].Cost, Is.EqualTo(14));
             Assert.That(route.Legs[0].Mode, Is.EqualTo(TransitMode.Walk));
 
             // Vertical ride: 4 floors * 10 = 40
@@ -85,7 +104,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(route.Legs[2].Cost, Is.EqualTo(8));
             Assert.That(route.Legs[2].Mode, Is.EqualTo(TransitMode.Walk));
 
-            Assert.That(route.TotalCost, Is.EqualTo(50));
+            Assert.That(route.TotalCost, Is.EqualTo(62));
         }
 
         [Test]
@@ -95,12 +114,12 @@ namespace OneRoof.Domain.Tests.EditMode
             var graph = HierarchicalTransitGraph.FromBuildingTopology(topology);
             var planner = new TransitRoutePlanner(graph);
 
-            // Diner door at (-1, 0) to Lobby door at (2, 0)
-            var route = planner.FindRoute(new CellCoordinate(-1, 0), new CellCoordinate(2, 0));
+            // Diner door at (-1, 0) to the east lobby entrance at (14, 0).
+            var route = planner.FindRoute(new CellCoordinate(-1, 0), new CellCoordinate(14, 0));
 
             Assert.That(route, Is.Not.Null);
             Assert.That(route.RequiresVerticalTransit, Is.False);
-            Assert.That(route.TotalCost, Is.EqualTo(3));
+            Assert.That(route.TotalCost, Is.EqualTo(15));
         }
 
         [Test]

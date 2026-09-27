@@ -16,6 +16,7 @@ using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
 using OneRoof.Domain.Trips;
+using OneRoof.Domain.Underground;
 
 namespace OneRoof.Domain
 {
@@ -70,6 +71,7 @@ namespace OneRoof.Domain
             Decisions = new DecisionRecordState();
             HousingLifecycle = new HouseholdLeaseLifecycleState();
             HousingLifecycleSystem = new HouseholdHousingLifecycleSystem();
+            Operations = new UndergroundOperationsState();
         }
 
         public SimulationClock Clock { get; }
@@ -77,6 +79,7 @@ namespace OneRoof.Domain
         public BuildingTopologyState Topology { get; }
 
         public UndergroundDigState Underground { get; private set; } = new UndergroundDigState();
+        public UndergroundOperationsState Operations { get; private set; }
 
         public PopulationState Population { get; }
 
@@ -148,7 +151,7 @@ namespace OneRoof.Domain
         public float AverageElevatorWaitTicks => ElevatorBank.AverageWaitTicks;
 
         /// <summary>Immutable electrical state derived from the authoritative topology at the time of request.</summary>
-        public ElectricalGridSnapshot ElectricalGridSnapshot() => ElectricalGrid.Evaluate(Topology);
+        public ElectricalGridSnapshot ElectricalGridSnapshot() => ElectricalGrid.Evaluate(Topology, Operations.BackupPowerCapacity);
 
         /// <summary>Immutable water pressure and gravity-waste collection state derived from the authoritative topology.</summary>
         public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() => WaterWasteNetwork.Evaluate(Topology);
@@ -164,13 +167,15 @@ namespace OneRoof.Domain
 
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
-            Specialists.Advance(Population, Topology, currentTick);
-            UtilityOperations.Advance(Topology, Population);
-            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
+            Specialists.Advance(Population, Topology, currentTick, (int)Math.Ceiling(Operations.TrainingBoost * 10f));
+            UtilityOperations.Advance(Topology, Population, Operations.RepairBoost);
+            Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier + Operations.CareBoost, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
                 applyDailyArrearsStrain: currentTick.Value % _settlementPeriod == 0,
                 dayFraction: 1f / _settlementPeriod,
-                quietHoursEnabled: Economy.Policy.QuietHoursEnabled && DayPhase.IsNight);
-            Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
+                quietHoursEnabled: Economy.Policy.QuietHoursEnabled && DayPhase.IsNight,
+                commonsMoraleBoost: Operations.CommonsMoraleBoost);
+            Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier + Operations.ShelterCapacity * .001f);
+            Operations.AdvanceTick(Underground, Economy, Scrutiny, currentTick.Value);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)
@@ -200,6 +205,7 @@ namespace OneRoof.Domain
                 Businesses.ProcessBusinessCycle(Topology, Population, Economy,
                     CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier,
                     Economy.Policy, payrollAlreadyProcessed: true);
+                Operations.AdvanceDaily(Underground, Population, Economy, OutsideMarket, Scrutiny, currentTick.Value);
                 var utilityCellCount = CountUtilityCells();
                 var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
                 Economy.ChargeDailyExpense(upkeep, subsidy: false);
@@ -411,6 +417,38 @@ namespace OneRoof.Domain
                     return CommandResult.Success();
                 }
 
+                case BuildUndergroundCoreCommand coreCmd:
+                {
+                    if (!Underground.CanBuildCore(coreCmd.X, coreCmd.Depth))
+                        return CommandResult.Fail("Access core requires a continuous floored column at the lobby center.", "underground:core_requires_floor");
+                    var cost = 100L * (coreCmd.Depth + 1 - Underground.ServiceShaftCells.Count);
+                    return Economy.CanAfford(cost) ? CommandResult.Success() : CommandResult.Fail("Insufficient funds for access core.", "economy:insufficient_funds");
+                }
+
+                case BuildUndergroundCorridorCommand corridorCmd:
+                {
+                    if (!Underground.CanBuildCorridor(corridorCmd.X, corridorCmd.Depth, corridorCmd.Width))
+                        return CommandResult.Fail("Corridor requires floored cells joined to the access network.", "underground:corridor_requires_access");
+                    var newCells = 0;
+                    for (var dx = 0; dx < corridorCmd.Width; dx++) if (!Underground.IsCorridor(corridorCmd.X + dx, corridorCmd.Depth)) newCells++;
+                    return Economy.CanAfford(30L * newCells) ? CommandResult.Success() : CommandResult.Fail("Insufficient funds for corridor.", "economy:insufficient_funds");
+                }
+
+                case ZoneUndergroundRoomCommand zoneCmd:
+                {
+                    if (!Underground.CanZoneRoom(zoneCmd.Type, zoneCmd.X, zoneCmd.Depth, zoneCmd.Width, zoneCmd.Height))
+                        return CommandResult.Fail("Room requires a clear floored footprint and corridor entrance.", "underground:room_requires_access");
+                    var cost = UndergroundRoomCatalog.Get(zoneCmd.Type).BaseCost + 10L * zoneCmd.Width * zoneCmd.Height;
+                    return Economy.CanAfford(cost) ? CommandResult.Success() : CommandResult.Fail("Insufficient funds for underground room.", "economy:insufficient_funds");
+                }
+
+                case SetUndergroundPolicyCommand policyCmd:
+                    return policyCmd.CoverPriority >= 0 && policyCmd.CoverPriority <= 2 &&
+                           policyCmd.StaffingPriority >= 0 && policyCmd.StaffingPriority <= 2 &&
+                           policyCmd.SecurityPosture >= 0 && policyCmd.SecurityPosture <= 2
+                        ? CommandResult.Success()
+                        : CommandResult.Fail("Underground policy priorities must be between 0 and 2.", "underground:invalid_policy");
+
                 case BuildRoomCommand roomCmd:
                 {
                     if (roomCmd.MinX > roomCmd.MaxX) return InvalidBoundsRejection();
@@ -582,6 +620,40 @@ namespace OneRoof.Domain
                     if (!Underground.BuildFloor(floorCmd.X, floorCmd.Depth, floorCmd.Size)) return CommandResult.Success();
                     var evt = new DomainEvent(new EntityId(_nextEntityId++), new ContentId("event:lair_floor_built"), Clock.CurrentTick);
                     return CommandResult.Accept(new[] { evt });
+                }
+                case BuildUndergroundCoreCommand coreCmd:
+                {
+                    var result = CanExecute(coreCmd);
+                    if (!result.Accepted) return result;
+                    var cost = 100L * (coreCmd.Depth + 1 - Underground.ServiceShaftCells.Count);
+                    Economy.TryDeduct(cost);
+                    Underground.BuildCore(coreCmd.X, coreCmd.Depth);
+                    return CommandResult.Success();
+                }
+                case BuildUndergroundCorridorCommand corridorCmd:
+                {
+                    var result = CanExecute(corridorCmd);
+                    if (!result.Accepted) return result;
+                    var newCells = 0;
+                    for (var dx = 0; dx < corridorCmd.Width; dx++) if (!Underground.IsCorridor(corridorCmd.X + dx, corridorCmd.Depth)) newCells++;
+                    Economy.TryDeduct(30L * newCells);
+                    Underground.BuildCorridor(corridorCmd.X, corridorCmd.Depth, corridorCmd.Width);
+                    return CommandResult.Success();
+                }
+                case ZoneUndergroundRoomCommand zoneCmd:
+                {
+                    var result = CanExecute(zoneCmd);
+                    if (!result.Accepted) return result;
+                    Economy.TryDeduct(UndergroundRoomCatalog.Get(zoneCmd.Type).BaseCost + 10L * zoneCmd.Width * zoneCmd.Height);
+                    Underground.ZoneRoom(_nextEntityId++, zoneCmd.Type, zoneCmd.X, zoneCmd.Depth, zoneCmd.Width, zoneCmd.Height);
+                    return CommandResult.Success();
+                }
+                case SetUndergroundPolicyCommand policyCmd:
+                {
+                    var result = CanExecute(policyCmd);
+                    if (!result.Accepted) return result;
+                    Operations.SetPolicy(policyCmd.CoverPriority, policyCmd.StaffingPriority, policyCmd.SecurityPosture);
+                    return CommandResult.Success();
                 }
                 case BuildRoomCommand roomCmd:
                     return BuildRoom(roomCmd);
@@ -988,7 +1060,7 @@ namespace OneRoof.Domain
 
             var slab = new CellBounds(0, -14, 17);
             var shaftPortal = new Portal(new EntityId(11), PortalType.ElevatorShaftDoor, new CellCoordinate(0, 0), new EntityId(13));
-            var lobbyPortal = new Portal(new EntityId(12), PortalType.Door, new CellCoordinate(2, 0), new EntityId(14));
+            var lobbyPortal = new Portal(new EntityId(12), PortalType.Door, new CellCoordinate(14, 0), new EntityId(14));
             var shaftRoom = new Room(new EntityId(13), FiveFloorTopologyFixture.ElevatorShaftContentId, new CellBounds(0, 0, 1), new[] { shaftPortal.Id }, 10);
             var lobbyRoom = new Room(new EntityId(14), FiveFloorTopologyFixture.LobbyContentId, new CellBounds(0, 2, 14), new[] { lobbyPortal.Id }, 50);
             topologyState.RestoreFromData(
@@ -1027,6 +1099,13 @@ namespace OneRoof.Domain
             data.undergroundCells = Underground.ToSaveData();
             data.undergroundFloorCells = Underground.FloorsToSaveData();
             data.undergroundGridV2 = true;
+            data.undergroundGridV3 = true;
+            data.undergroundCorridorCells = Underground.CorridorsToSaveData();
+            data.undergroundShaftCells = Underground.ShaftToSaveData();
+            data.undergroundCoreCell = Underground.AccessCore.HasValue
+                ? new UndergroundCellSaveData { x = Underground.AccessCore.Value.X, depth = Underground.AccessCore.Value.Depth } : null;
+            data.undergroundRooms = Underground.RoomsToSaveData();
+            data.undergroundOperations = Operations.ToSaveData();
             data.SetTopologySaveData(Topology.ToSaveData());
             data.SetPopulationSaveData(Population.ToSaveData());
             data.SetOutsideMarketSaveData(OutsideMarket.ToSaveData());
@@ -1060,7 +1139,9 @@ namespace OneRoof.Domain
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
             topology.TryGetFloorSlab(0, out var groundSlab);
             sim.Underground = UndergroundDigState.FromSaveData(data.undergroundCells, data.undergroundFloorCells,
-                !data.undergroundGridV2, groundSlab);
+                !data.undergroundGridV2, groundSlab, !data.undergroundGridV3,
+                data.undergroundCorridorCells, data.undergroundShaftCells, data.undergroundCoreCell, data.undergroundRooms);
+            sim.Operations = UndergroundOperationsState.FromSaveData(data.undergroundOperations);
             sim.Businesses = BusinessState.FromSaveData(data.businesses);
             sim.UtilityOperations = UtilityOperationsState.FromSaveData(data.utilityOperations);
             sim.OutsideMarket = OutsideMarketState.FromSaveData(data.GetOutsideMarketSaveData());

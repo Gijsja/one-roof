@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using OneRoof.Domain.Topology;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
 
@@ -111,6 +112,28 @@ namespace OneRoof.Presentation.Tests.EditMode
             {
                 Object.DestroyImmediate(go);
             }
+        }
+
+        [Test]
+        public void CameraController_FocusUnderground_FramesExpandedEarthAndOverviewRestores()
+        {
+            var go = new GameObject("UndergroundCam");
+            try
+            {
+                var cam = go.AddComponent<Camera>();
+                cam.orthographic = true;
+                var ctrl = go.AddComponent<TowerCameraController>();
+                ctrl.Camera = cam;
+                ctrl.SetOverviewDefaults(new Vector3(0.2f, 2f, -10f), 6.8f);
+                ctrl.SetBounds(-20f, 20f, -20f, 15f);
+                ctrl.FocusUnderground();
+                Assert.That(go.transform.position.y, Is.LessThan(TowerStructurePresenter.FloorY(0) - 0.74f));
+                Assert.That(cam.orthographicSize * 2f,
+                    Is.GreaterThanOrEqualTo(UndergroundDigState.MaxDepthCells));
+                ctrl.FocusOverview();
+                Assert.That(go.transform.position.y, Is.EqualTo(2f).Within(0.001f));
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]

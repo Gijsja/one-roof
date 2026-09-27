@@ -19,11 +19,21 @@ namespace OneRoof.Application.Tower
             var floors = new List<UndergroundCell>(state.FlooredCells);
             FlooredCells = new ReadOnlyCollection<UndergroundCell>(floors);
             _flooredLookup = new HashSet<UndergroundCell>(floors);
+            Corridors = new ReadOnlyCollection<UndergroundCell>(new List<UndergroundCell>(state.Corridors));
+            ServiceShaftCells = new ReadOnlyCollection<UndergroundCell>(new List<UndergroundCell>(state.ServiceShaftCells));
+            AccessCore = state.AccessCore;
+            var roomSnapshots = new List<UndergroundRoom>(state.Rooms.Count);
+            foreach (var room in state.Rooms) roomSnapshots.Add(room.Snapshot());
+            Rooms = new ReadOnlyCollection<UndergroundRoom>(roomSnapshots);
         }
 
         public int Revision { get; }
         public IReadOnlyList<UndergroundCell> ExcavatedCells { get; }
         public IReadOnlyList<UndergroundCell> FlooredCells { get; }
+        public IReadOnlyList<UndergroundCell> Corridors { get; }
+        public IReadOnlyList<UndergroundCell> ServiceShaftCells { get; }
+        public UndergroundCell? AccessCore { get; }
+        public IReadOnlyList<UndergroundRoom> Rooms { get; }
         public bool IsExcavated(int x, int depth)
         {
             return _lookup.Contains(new UndergroundCell(x, depth));

@@ -22,7 +22,9 @@ SchemaVersion integer save/content version
 | Faction | ID, members/support, goals, grievances, influence by region, relations |
 | Trip | person, origin and destination location endpoints (tower room or Outside), purpose, departure tick, route state, wait time |
 | Event | ID, type, phase, affected entities/regions, causes, player responses |
-| Underground cell | 1 m square grid coordinate on an independent 16×6 board beneath the building; excavated cells persist in the root save payload |
+| Underground cell | 1 m square grid coordinate on an independent 32×12 board; excavated and floored cells persist |
+| Underground room | Stable ID, type, rectangular bounds, corridor access, capacity, required staff, upkeep, operating state |
+| Underground operation | Supplies, intel, research, exposure, policy priorities, resident assignments, investigator route and disruption |
 
 ## Wellbeing and explanation projections
 
@@ -72,4 +74,5 @@ SchemaVersion integer save/content version
 - Household cash, outside-market credit, and residential rent arrears are distinct. Essential purchases can use bounded outside credit; only unpaid rent advances rent-specific arrears. Sustained negative rolling budget plus a non-positive financial position can independently trigger recoverable housing risk.
 - Completed Food trips to `Outside` charge once by stable trip ID and restore Hunger only when the purchase is accepted. Failed essential purchases grant no free meal and must use a bounded retry interval. Internal diner visits remain in the tower business ledger.
 - Household housing condition is an immutable projection of rent arrears and sustained budget/underprovision exposure. Seven-day notices and bounded departure history are persisted in the domain lifecycle state; a move-out releases the home only after all members reach typed `Outside`.
-- Underground excavation stores cells changed from earth to open space, plus separate lair-floor cells built only over excavated cells. Its 16×6 board is independent of tower floor slabs. Each square cell is 1 m across; dig and floor brushes support 1×1, 2×2, or 3×3 cells. Older prototype coordinates migrate into this board; saves with no excavation data load as untouched earth.
+- Underground excavation stores open earth, floors, corridors, shaft, access core, and room zones on a 32×12 board independent of tower slabs. Each cell is 1 m; dig and floor brushes retain 1×1, 2×2, and 3×3 footprints. Older 16×6 coordinates migrate into the centered area. Missing operation state loads with empty resources, no investigator, and default policies.
+- Underground staffing selects eligible resident IDs deterministically; no player command assigns a person. Supply purchases, resident wages, upkeep, and outside contracts are explicit treasury/outside/household transfers. Disruption and exposure survive save/load.

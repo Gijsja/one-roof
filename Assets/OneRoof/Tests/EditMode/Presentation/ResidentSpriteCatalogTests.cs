@@ -113,7 +113,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(skeletal.Head, Is.Not.Null);
                 Assert.That(skeletal.Bones.Count, Is.EqualTo(17));
                 Assert.That(skeletal.WardrobeSlots.Count, Is.EqualTo(8));
-                Assert.That(skeletal.LimbRenderers.Count, Is.EqualTo(10));
+                Assert.That(skeletal.LimbRenderers.Count, Is.EqualTo(14));
                 Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneArmUpperL].transform.parent,
                     Is.SameAs(skeletal.Bones[NpcRigDefinition.BoneArmUpperL]));
                 Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegUpperR].transform.parent,
@@ -219,7 +219,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void FullBodyAtlasSprite_WalkAndSitChangeTheRenderedPose()
+        public void SkeletalParts_WalkAndSitChangeTheRenderedPose()
         {
             var go = new GameObject("RenderedAtlasAnimation");
             try
@@ -227,8 +227,9 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
                 skeletal.Initialize(0);
                 var rendererTransform = skeletal.MainRenderer.transform;
-                Assert.That(skeletal.MainRenderer.enabled, Is.True);
-                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegUpperL].enabled, Is.False);
+                Assert.That(skeletal.MainRenderer.enabled, Is.False);
+                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegUpperL].enabled, Is.True);
+                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegLowerL].enabled, Is.True);
 
                 skeletal.SetAnimationClip(NpcAnimationClip.Walk);
                 skeletal.ApplyProceduralAnimation(0f);
@@ -236,9 +237,9 @@ namespace OneRoof.Presentation.Tests.EditMode
                 skeletal.ApplyProceduralAnimation(Mathf.PI / 16f);
                 var walkAtStridePose = rendererTransform.localScale.y;
                 Assert.That(Mathf.Abs(rendererTransform.localRotation.eulerAngles.z), Is.GreaterThan(1f),
-                    "Walk must visibly sway the complete sprite, not just its hidden limb bones.");
+                    "Walk must visibly sway the articulated body.");
                 Assert.That(walkAtPassingPose, Is.Not.EqualTo(walkAtStridePose).Within(.0001f),
-                    "Walk must visibly bounce the rendered full-body sprite.");
+                    "Walk must visibly bounce the articulated body.");
 
                 skeletal.SetAnimationClip(NpcAnimationClip.Idle);
                 skeletal.ApplyProceduralAnimation(1f);
@@ -246,9 +247,9 @@ namespace OneRoof.Presentation.Tests.EditMode
                 skeletal.SetAnimationClip(NpcAnimationClip.Sit);
                 skeletal.ApplyProceduralAnimation(1f);
                 Assert.That(rendererTransform.localScale.y, Is.LessThan(idleHeight * .95f),
-                    "Sit must visibly squash the complete sprite.");
+                    "Sit must visibly squash the articulated body.");
                 Assert.That(Mathf.Abs(rendererTransform.localRotation.eulerAngles.z), Is.GreaterThan(3f),
-                    "Sit must visibly lean the complete sprite.");
+                    "Sit must visibly lean the articulated body.");
             }
             finally
             {

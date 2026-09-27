@@ -174,7 +174,9 @@ namespace OneRoof.Domain.Transit
                         if (node.RoomId.HasValue && node.RoomId.Value.Equals(room.Id) &&
                             (entrance == null || node.Location.X > entrance.Location.X)) entrance = node;
                     if (entrance == null) continue;
-                    var outsideX = Math.Max(room.Bounds.MaxX + 4, entrance.Location.X + 2);
+                    // Leave room for the facade's framed street doorway. The
+                    // former +4 node mapped inside its glass on GroundStart.
+                    var outsideX = Math.Max(room.Bounds.MaxX + 6, entrance.Location.X + 2);
                     var outside = new TransitNode(FindOutsideNodeId(room.Id, nodes), TransitNodeType.Outside,
                         new CellCoordinate(outsideX, 0));
                     nodes.Add(outside);

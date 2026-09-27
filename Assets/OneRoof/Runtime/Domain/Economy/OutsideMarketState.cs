@@ -13,7 +13,7 @@ namespace OneRoof.Domain.Economy
     {
         public OutsideMarketState(long cashBalance = 0, long externalContractRevenue = 0,
             long wageOutflow = 0, long purchaseRevenue = 0, long creditFunding = 0,
-            long creditRepayment = 0, long creditReceivableBalance = 0)
+            long creditRepayment = 0, long creditReceivableBalance = 0, long towerContractOutflow = 0)
         {
             CashBalance = cashBalance;
             ExternalContractRevenue = Math.Max(0, externalContractRevenue);
@@ -22,6 +22,7 @@ namespace OneRoof.Domain.Economy
             CreditFunding = Math.Max(0, creditFunding);
             CreditRepayment = Math.Max(0, creditRepayment);
             CreditReceivableBalance = Math.Max(0, creditReceivableBalance);
+            TowerContractOutflow = Math.Max(0, towerContractOutflow);
         }
 
         /// <summary>Retained outside-market cash after recorded transactions.</summary>
@@ -33,6 +34,7 @@ namespace OneRoof.Domain.Economy
         public long CreditRepayment { get; private set; }
         /// <summary>Outstanding outside-service credit owed to the market counterparty.</summary>
         public long CreditReceivableBalance { get; private set; }
+        public long TowerContractOutflow { get; private set; }
 
         /// <summary>
         /// Posts a contract-funded outside wage. Contract revenue is explicit so the transfer has
@@ -47,6 +49,26 @@ namespace OneRoof.Domain.Economy
             household.RecordOutsideWage(amount);
             WageOutflow = SaturatingAdd(WageOutflow, amount);
             CashBalance = SaturatingAdd(CashBalance, -amount);
+        }
+
+        /// <summary>Records a tower purchase from an outside supplier after the treasury paid it.</summary>
+        public void RecordTowerPurchase(long amount)
+        {
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            CashBalance = SaturatingAdd(CashBalance, amount);
+            PurchaseRevenue = SaturatingAdd(PurchaseRevenue, amount);
+        }
+
+        /// <summary>An external contract funds a payment to the tower operation.</summary>
+        public void RecordTowerContractPayment(TowerEconomyState tower, long amount)
+        {
+            if (tower == null) throw new ArgumentNullException(nameof(tower));
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            ExternalContractRevenue = SaturatingAdd(ExternalContractRevenue, amount);
+            CashBalance = SaturatingAdd(CashBalance, amount);
+            TowerContractOutflow = SaturatingAdd(TowerContractOutflow, amount);
+            CashBalance = SaturatingAdd(CashBalance, -amount);
+            tower.AddRevenue(amount);
         }
 
         /// <summary>
@@ -84,14 +106,15 @@ namespace OneRoof.Domain.Economy
 
         public OutsideMarketSaveData ToSaveData() => new OutsideMarketSaveData
         {
-            version = 1,
+            version = 2,
             cashBalance = CashBalance,
             externalContractRevenue = ExternalContractRevenue,
             wageOutflow = WageOutflow,
             purchaseRevenue = PurchaseRevenue,
             creditFunding = CreditFunding,
             creditRepayment = CreditRepayment,
-            creditReceivableBalance = CreditReceivableBalance
+            creditReceivableBalance = CreditReceivableBalance,
+            towerContractOutflow = TowerContractOutflow
         };
 
         public static OutsideMarketState FromSaveData(OutsideMarketSaveData data)
@@ -107,7 +130,7 @@ namespace OneRoof.Domain.Economy
                 : SaturatingAdd(data.cashBalance, data.creditFunding == long.MinValue ? long.MaxValue : -data.creditFunding);
             return new OutsideMarketState(cashBalance, data.externalContractRevenue,
                 data.wageOutflow, data.purchaseRevenue, data.creditFunding, data.creditRepayment,
-                creditReceivable);
+                creditReceivable, data.version >= 2 ? data.towerContractOutflow : 0);
         }
 
         private static long SaturatingAdd(long left, long right)

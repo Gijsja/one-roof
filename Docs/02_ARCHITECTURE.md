@@ -70,12 +70,15 @@ simulation or save state.
 ### Underground excavation
 
 Excavation is a separate deterministic domain state beneath the building; it does not create
-negative tower floors or alter resident transit topology. Its fixed 16×6 board is independent
-of tower floor slabs. `DigUndergroundCommand` marks a square brush (1×1, 2×2, or 3×3) on a 1 m
-grid. The presentation maps clicks and drag paths in the earth cutaway to those cells. A separate
-floor-building command can only lay lair floor over excavated cells; it does not invoke tower-room
-or slab validation. Immutable `UndergroundDigProjection` snapshots drive visible earth, cavities,
-and lair floor. Both excavation and floor cells are part of the root save payload.
+negative tower floors. Its 32×12, 1 m board is independent of tower floor slabs. Dig and floor
+brushes retain their 1×1, 2×2, and 3×3 footprints. An access core joins the lobby to a vertical
+service shaft; corridors connect rectangular room zones to that route. Domain commands validate
+the full footprint, cost, overlap, and reachability through `CanExecute`. Room definitions hold
+capacity, staffing, and upkeep. `UndergroundOperationsState` owns supplies, intel, staffing,
+exposure, policy priorities, and saveable investigator visits. It transfers money through the
+existing treasury and outside-market ledgers and exposes bounded tower-service modifiers.
+Immutable projections drive excavation, rooms, workers, and investigator presentation. Old 16×6
+cells migrate to the center of the expanded board.
 
 ## Presentation & UI
 

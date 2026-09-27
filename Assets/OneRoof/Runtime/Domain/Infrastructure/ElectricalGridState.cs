@@ -23,13 +23,13 @@ namespace OneRoof.Domain.Infrastructure
 
         public float RiserLossPerFloor { get; }
 
-        public ElectricalGridSnapshot Evaluate(BuildingTopologyState topology)
+        public ElectricalGridSnapshot Evaluate(BuildingTopologyState topology, int connectedBackupCapacity = 0)
         {
             if (topology == null) return ElectricalGridSnapshot.Empty;
 
             var floors = new List<ElectricalFloorProjection>(topology.FloorCount);
             var totalDemand = CalculateTotalDemand(topology);
-            var substationCapacity = CalculateSubstationCapacity(topology);
+            var substationCapacity = CalculateSubstationCapacity(topology) + Math.Max(0, connectedBackupCapacity);
             var suppliedDemand = Math.Min(totalDemand, substationCapacity);
             var supplyFactor = totalDemand <= 0f ? 1f : suppliedDemand / totalDemand;
 

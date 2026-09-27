@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using OneRoof.Application.Tower;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Underground;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
 
@@ -113,6 +115,62 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(soil.localScale.x, Is.EqualTo(oldWidth).Within(0.001f),
                 "The underground earth board stays independent when the tower slab expands.");
             Assert.That(entrance.localPosition.x, Is.EqualTo(oldEntranceX + 3f).Within(0.001f));
+        }
+
+        [Test]
+        public void UndergroundBoardAndConnectedRoomsRenderFromProjection()
+        {
+            var cells = new[]
+            {
+                new UndergroundCellSaveData { x = 16, depth = 0 },
+                new UndergroundCellSaveData { x = 17, depth = 0 },
+                new UndergroundCellSaveData { x = 18, depth = 0 },
+                new UndergroundCellSaveData { x = 19, depth = 0 }
+            };
+            var state = UndergroundDigState.FromSaveData(cells, cells, corridors: new[] { cells[1] },
+                shaft: new[] { cells[0] }, core: cells[0],
+                rooms: new[] { new UndergroundRoomSaveData { id = 11, type = (int)UndergroundRoomType.Workshop,
+                    x = 18, depth = 0, width = 2, height = 1 } });
+            _presenter.EnsureExteriorViews(null, new UndergroundDigProjection(state));
+
+            var root = _presenter.Root;
+            Assert.That(root.Find("Ground Dressing/Foundation Soil").localScale.y,
+                Is.EqualTo(UndergroundDigState.MaxDepthCells));
+            Assert.That(root.Find("Ground Dressing/Earth Grid 31_11"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Underground Access Core"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Underground Shaft 16_0/Left Rail"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Underground Corridor 17_0/Walkway"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Underground Room 11/Room Label"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Underground Room 11/Connection Status"), Is.Not.Null);
+        }
+
+        [Test]
+        public void UndergroundCrewViewsFollowStableAssignedResidentIds()
+        {
+            var cells = new[]
+            {
+                new UndergroundCellSaveData { x = 16, depth = 0 },
+                new UndergroundCellSaveData { x = 17, depth = 0 },
+                new UndergroundCellSaveData { x = 18, depth = 0 },
+                new UndergroundCellSaveData { x = 19, depth = 0 }
+            };
+            var layout = UndergroundDigState.FromSaveData(cells, cells, corridors: new[] { cells[1] },
+                shaft: new[] { cells[0] }, core: cells[0],
+                rooms: new[] { new UndergroundRoomSaveData { id = 11, type = (int)UndergroundRoomType.Workshop,
+                    x = 18, depth = 0, width = 2, height = 1 } });
+            _presenter.EnsureExteriorViews(null, new UndergroundDigProjection(layout));
+            var staffed = UndergroundOperationsState.FromSaveData(new UndergroundOperationsSaveData
+            {
+                assignedResidentIds = new[] { 12, 8 }, assignedRoomIds = new[] { 11, 11 }
+            });
+            _presenter.SyncUndergroundCrew(new UndergroundOperationsProjection(staffed, layout, 0));
+            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 8"), Is.Not.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 12"), Is.Not.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Staff Status")
+                .GetComponent<TextMesh>().text, Does.Contain("2/2 STAFF"));
+
+            _presenter.SyncUndergroundCrew(new UndergroundOperationsProjection(new UndergroundOperationsState(), layout, 0));
+            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 8"), Is.Null);
         }
 
         [Test]

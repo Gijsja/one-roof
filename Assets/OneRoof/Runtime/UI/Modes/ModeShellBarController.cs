@@ -206,7 +206,7 @@ namespace OneRoof.UI.Modes
 
             GUILayout.Space(2);
             GUILayout.Label("UNDERGROUND EARTH", StewardTheme.Label(10, StewardTheme.Mint, true));
-            GUILayout.Label("1 m earth tiles · dig, then lay lair floor · no tower slab needed", StewardTheme.Label(10, StewardTheme.Muted));
+            GUILayout.Label("Dig → floor → link corridors → zone rooms. Press U to frame the undercity.", StewardTheme.Label(10, StewardTheme.Muted));
             GUILayout.BeginHorizontal();
             DrawToolButton("Dig 1×1", "underground:dig_1", projection.SelectedBuildTool == "underground:dig_1");
             DrawToolButton("Dig 2×2", "underground:dig_2", projection.SelectedBuildTool == "underground:dig_2");
@@ -218,6 +218,19 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Floor 2×2", "underground:floor_2", projection.SelectedBuildTool == "underground:floor_2");
             DrawToolButton("Floor 3×3", "underground:floor_3", projection.SelectedBuildTool == "underground:floor_3");
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            DrawToolButton("Access Core", "underground:core", projection.SelectedBuildTool == "underground:core");
+            DrawToolButton("Corridor 1 m", "underground:corridor_1", projection.SelectedBuildTool == "underground:corridor_1");
+            DrawToolButton("Corridor 3 m", "underground:corridor_3", projection.SelectedBuildTool == "underground:corridor_3");
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(2);
+            GUILayout.Label("UNDERCITY ROOMS · 3×2 m", StewardTheme.Label(10, StewardTheme.Mint, true));
+            DrawUndergroundRoomRow("Access Hub", "Supply Depot", "Generator", "Workshop", projection);
+            DrawUndergroundRoomRow("Operations Center", "Research Lab", "Cover Office", "Security Post", projection);
+            DrawUndergroundRoomRow("Staff Commons", "Infirmary", "Vault", "Training Room", projection);
+            DrawUndergroundRoomRow("Communications", "Emergency Shelter", null, null, projection);
 
             GUILayout.Space(2);
             GUILayout.Label("SERVICES", StewardTheme.Label(10, StewardTheme.Mint, true));
@@ -268,6 +281,23 @@ namespace OneRoof.UI.Modes
 
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void DrawUndergroundRoomRow(string first, string second, string third, string fourth, ModeShellProjection projection)
+        {
+            GUILayout.BeginHorizontal();
+            DrawUndergroundRoomButton(first, projection);
+            DrawUndergroundRoomButton(second, projection);
+            DrawUndergroundRoomButton(third, projection);
+            DrawUndergroundRoomButton(fourth, projection);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawUndergroundRoomButton(string label, ModeShellProjection projection)
+        {
+            if (string.IsNullOrEmpty(label)) return;
+            var id = "underground:room_" + label.Replace(" ", string.Empty);
+            DrawToolButton(label, id, projection.SelectedBuildTool == id);
         }
 
         private void DrawDataPalette(ModeShellProjection projection)
@@ -357,9 +387,10 @@ namespace OneRoof.UI.Modes
             {
                 if (!string.IsNullOrEmpty(projection.SelectedBuildTool))
                 {
-                    var isUnderground = projection.SelectedBuildTool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase) ||
-                        projection.SelectedBuildTool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase);
-                    var instruction = isUnderground
+                    var isUndergroundBrush = projection.SelectedBuildTool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase) ||
+                        projection.SelectedBuildTool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase) ||
+                        projection.SelectedBuildTool.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase);
+                    var instruction = isUndergroundBrush
                         ? "Click or drag to dig/build · Right-click to cancel"
                         : "Click to place · Right-click to cancel";
                     statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  {instruction}";

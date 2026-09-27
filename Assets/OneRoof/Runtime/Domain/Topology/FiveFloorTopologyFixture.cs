@@ -20,7 +20,7 @@ namespace OneRoof.Domain.Topology
                 var floorLevel = 0;
                 var pElevator = new Portal(new EntityId(nextEntityId++), PortalType.ElevatorShaftDoor, new CellCoordinate(0, floorLevel), new EntityId(nextEntityId + 2));
                 var pDiner = new Portal(new EntityId(nextEntityId++), PortalType.Door, new CellCoordinate(-1, floorLevel), new EntityId(nextEntityId + 2));
-                var pLobby = new Portal(new EntityId(nextEntityId++), PortalType.Door, new CellCoordinate(2, floorLevel), new EntityId(nextEntityId + 2));
+                var pLobby = new Portal(new EntityId(nextEntityId++), PortalType.Door, new CellCoordinate(14, floorLevel), new EntityId(nextEntityId + 2));
 
                 var rElevator = new Room(new EntityId(nextEntityId++), ElevatorShaftContentId, new CellBounds(floorLevel, 0, 1), new[] { pElevator.Id }, 10);
                 var rDiner = new Room(new EntityId(nextEntityId++), CommercialContentId, new CellBounds(floorLevel, -10, -1), new[] { pDiner.Id }, 20);

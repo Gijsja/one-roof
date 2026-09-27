@@ -144,7 +144,9 @@ namespace OneRoof.Presentation.Population
             if (MainRenderer != null && sprite != null)
             {
                 MainRenderer.sprite = sprite;
-                MainRenderer.enabled = true;
+                // Keep the complete sprite as metadata for selection and fallback,
+                // but draw the articulated parts so the joint animation is visible.
+                MainRenderer.enabled = false;
                 var worldWidth = ContentRecord != null ? ContentRecord.WorldWidth : NpcRigDefinition.NominalWorldWidth;
                 var worldHeight = ContentRecord != null ? ContentRecord.WorldHeight : NpcRigDefinition.NominalWorldHeight;
                 _avatarWidthScale = sprite.bounds.size.x > 0f ? worldWidth / sprite.bounds.size.x : 1f;
@@ -457,14 +459,13 @@ namespace OneRoof.Presentation.Population
                 if (!_wardrobeSlots.TryGetValue(layer, out var renderer) || renderer == null) continue;
                 var layerId = wardrobe.GetLayerId(layer);
                 renderer.name = $"Wardrobe_{layer}_{layerId}";
-                // Proposed paperdoll slices are not authored to this rig's
-                // proportions. Mixing them with animated anatomy made a collage.
-                // Keep the skeletal body as the single canonical visual until a
-                // complete rig-matched wardrobe set is ready.
+                // The photo cutouts are not authored to these joint proportions.
+                // Palette-tinted anatomy supplies the visible rig until matching
+                // wardrobe slices exist.
                 renderer.enabled = false;
             }
             foreach (var limb in _limbRenderers.Values)
-                if (limb != null) limb.enabled = false;
+                if (limb != null) limb.enabled = true;
         }
 
         public void ApplyVariantDiversity(NpcWardrobeVariant variant)
@@ -481,6 +482,8 @@ namespace OneRoof.Presentation.Population
             SetLimbColor("head", skin);
             SetLimbColor(NpcRigDefinition.BoneHandL, skin);
             SetLimbColor(NpcRigDefinition.BoneHandR, skin);
+            SetLimbColor(NpcRigDefinition.BoneArmLowerL, skin);
+            SetLimbColor(NpcRigDefinition.BoneArmLowerR, skin);
             if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.UpperClothing), out var upper))
             {
                 upper = LayerFallbackColor(NpcLayerKind.UpperClothing);
@@ -495,6 +498,8 @@ namespace OneRoof.Presentation.Population
             {
                 SetLimbColor(NpcRigDefinition.BoneLegUpperL, lower);
                 SetLimbColor(NpcRigDefinition.BoneLegUpperR, lower);
+                SetLimbColor(NpcRigDefinition.BoneLegLowerL, lower);
+                SetLimbColor(NpcRigDefinition.BoneLegLowerR, lower);
             }
             else
             {
@@ -504,6 +509,8 @@ namespace OneRoof.Presentation.Population
                 }
                 SetLimbColor(NpcRigDefinition.BoneLegUpperL, bareSkin);
                 SetLimbColor(NpcRigDefinition.BoneLegUpperR, bareSkin);
+                SetLimbColor(NpcRigDefinition.BoneLegLowerL, bareSkin);
+                SetLimbColor(NpcRigDefinition.BoneLegLowerR, bareSkin);
             }
             if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.Footwear), out var footwear))
             {
@@ -598,9 +605,8 @@ namespace OneRoof.Presentation.Population
                 var phase = t * 8f;
                 var stride = Mathf.Sin(phase);
                 var lift = Mathf.Abs(Mathf.Cos(phase));
-                // The full-body atlas sprite is a single renderer, so the former
-                // bone-only gait would otherwise look frozen. Add a restrained
-                // whole-character sway and bounce while retaining the authored silhouette.
+                // A restrained whole-body sway and bounce reinforces the
+                // joint motion without overpowering the small silhouette.
                 SetWholeBodyPose(1f, 1f + lift * 0.018f, stride * 2.2f);
                 Spine.localRotation = Quaternion.Euler(0f, 0f, stride * 3.5f);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -stride * 1.5f);
@@ -653,8 +659,8 @@ namespace OneRoof.Presentation.Population
             }
             else if (CurrentAnimation == NpcAnimationClip.Sit)
             {
-                // A compact squash and forward lean makes the whole-body sprite
-                // read as seated; detached skeletal limb poses remain hidden.
+                // A compact squash and forward lean makes the articulated
+                // pose read as seated at gameplay scale.
                 SetWholeBodyPose(1.025f, 0.90f, -4.5f);
                 // Seated fold: thighs forward to horizontal, shins drop to vertical,
                 // feet flatten (78 - 72 - 6 = 0), hands rest forward onto the lap.
@@ -801,8 +807,12 @@ namespace OneRoof.Presentation.Population
             EnsureLimbRenderer("head", Head, GetOrCreateSprite(ref _headSprite, 10, 10), new Vector3(0f, .025f, .01f), new Vector3(.14f, .14f, 1f), 14, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperL, _bones[NpcRigDefinition.BoneArmUpperL], GetOrCreateSprite(ref _limbSprite, 4, 12), new Vector3(-.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneArmUpperR, _bones[NpcRigDefinition.BoneArmUpperR], _limbSprite, new Vector3(.018f, -.055f, .03f), new Vector3(.052f, .12f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneArmLowerL, _bones[NpcRigDefinition.BoneArmLowerL], _limbSprite, new Vector3(0f, -.055f, .03f), new Vector3(.042f, .11f, 1f), 12, new Color(.96f, .76f, .61f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneArmLowerR, _bones[NpcRigDefinition.BoneArmLowerR], _limbSprite, new Vector3(0f, -.055f, .03f), new Vector3(.042f, .11f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperL, _bones[NpcRigDefinition.BoneLegUpperL], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
             EnsureLimbRenderer(NpcRigDefinition.BoneLegUpperR, _bones[NpcRigDefinition.BoneLegUpperR], _limbSprite, new Vector3(0f, -.075f, .03f), new Vector3(.065f, .17f, 1f), 12, new Color(.34f, .39f, .47f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneLegLowerL, _bones[NpcRigDefinition.BoneLegLowerL], _limbSprite, new Vector3(0f, -.065f, .03f), new Vector3(.052f, .13f, 1f), 12, new Color(.34f, .39f, .47f));
+            EnsureLimbRenderer(NpcRigDefinition.BoneLegLowerR, _bones[NpcRigDefinition.BoneLegLowerR], _limbSprite, new Vector3(0f, -.065f, .03f), new Vector3(.052f, .13f, 1f), 12, new Color(.34f, .39f, .47f));
             EnsureLimbRenderer(NpcRigDefinition.BoneHandL, _bones[NpcRigDefinition.BoneHandL], GetOrCreateSprite(ref _handSprite, 5, 5), new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneHandR, _bones[NpcRigDefinition.BoneHandR], _handSprite, new Vector3(0f, -.018f, .03f), new Vector3(.045f, .045f, 1f), 12, new Color(.96f, .76f, .61f));
             EnsureLimbRenderer(NpcRigDefinition.BoneFootL, _bones[NpcRigDefinition.BoneFootL], GetOrCreateSprite(ref _footSprite, 8, 3), new Vector3(-.012f, -.015f, .03f), new Vector3(.08f, .034f, 1f), 12, new Color(.16f, .19f, .24f));

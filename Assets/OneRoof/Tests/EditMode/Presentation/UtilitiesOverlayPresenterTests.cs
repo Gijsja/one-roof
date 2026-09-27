@@ -21,5 +21,15 @@ namespace OneRoof.Presentation.Tests.EditMode
             }
             finally { Object.DestroyImmediate(holder); }
         }
+
+        [Test]
+        public void FloorSummary_ShowsOnlySelectedNetworkAndFullLabelRemainsAvailable()
+        {
+            var floor = new UtilitiesFloorProjection(2, 0.75f, "Overload", 0.5f, "Low pressure", "Blocked", 1);
+            var summary = UtilitiesOverlayPresenter.FormatFloorSummary(floor, UtilitiesNetworkLayerPresenter.NetworkKind.Power);
+            Assert.That(summary, Does.Contain("Power 75%"));
+            Assert.That(summary, Does.Not.Contain("Low pressure"));
+            Assert.That(floor.AccessibilityLabel, Does.Contain("Low pressure"));
+        }
     }
 }

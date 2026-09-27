@@ -92,6 +92,9 @@ namespace OneRoof.Application.Tower
             return _cachedUndergroundProjection;
         }
 
+        public UndergroundOperationsProjection UndergroundOperationsProjection() =>
+            new UndergroundOperationsProjection(_simulation.Operations, _simulation.Underground, _simulation.CurrentTick);
+
         public int ActiveTripCount => _simulation.ActiveTripCount;
 
         public int ElevatorCarCount => _simulation.ElevatorBank.Cars.Count;

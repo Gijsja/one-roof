@@ -48,10 +48,18 @@ The cutaway earth beneath the building is presented on a visible 1 m square grid
 The 1×1, 2×2, and 3×3 dig brushes cover 1 m, 2 m, and 3 m square footprints;
 the selected footprint previews directly under the pointer before excavation.
 
-Build mode offers 1×1, 2×2, and 3×3 dig and lair-floor brushes on an independent 16×6 earth
+Build mode offers 1×1, 2×2, and 3×3 dig and lair-floor brushes on an independent 32×12 earth
 board. Click or drag through valid earth to excavate, then lay floor only over excavated cells.
 The preview shows the full square, and neither action requires or expands a tower floor slab.
 Invalid brushes show the blocking reason.
+
+Four 3 m basement bands keep the side-view legible. A dedicated underground camera action frames
+the board. Corridors and a vertical service shaft join the lobby access core; dragging a room zone
+shows its whole footprint, cost, door, staffing and connection state before confirmation. Earth is
+subdued and stratified, cavities recessed, and floors continuous rather than isolated bright tiles.
+Investigator and room status overlays use non-colour symbols and compact detail panels. Selecting
+a room explains under-staffing, supply shortages, disconnection, exposure, disruption, and its
+tower effect; management policies provide systems-level responses and measured feedback.
 
 ## Accessibility baseline
 

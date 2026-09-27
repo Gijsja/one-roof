@@ -197,11 +197,11 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateResidentPositions(TowerProjection snapshot, TowerTopologyProjection topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null)
+        public void UpdateResidentPositions(TowerProjection snapshot, TowerTopologyProjection topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null, IReadOnlyCollection<int> undergroundCrewResidentIds = null)
         {
             if (snapshot == null) return;
 
-            if (_viewPool != null) UpdatePooledViews(snapshot);
+            if (_viewPool != null) UpdatePooledViews(snapshot, undergroundCrewResidentIds);
 
             var floorCount = Math.Max(TowerStructurePresenter.InitialFloorCount, topology != null ? topology.FloorCount : TowerStructurePresenter.InitialFloorCount);
             var queuedCountsPerFloor = new int[floorCount];
@@ -223,6 +223,12 @@ namespace OneRoof.Presentation.Tower
                     if (i >= _residentViews.Count) break;
                     residentTransform = _residentViews[i].transform;
                     skeletal = i < _residentSkeletons.Count ? _residentSkeletons[i] : null;
+                }
+
+                if (ContainsResidentId(undergroundCrewResidentIds, resident.ResidentId))
+                {
+                    if (_viewPool == null) residentTransform.gameObject.SetActive(false);
+                    continue;
                 }
 
                 // Outside is a real simulation location. Keep its view absent until
@@ -447,7 +453,7 @@ namespace OneRoof.Presentation.Tower
             _walkFacing.Clear();
         }
 
-        private void UpdatePooledViews(TowerProjection snapshot)
+        private void UpdatePooledViews(TowerProjection snapshot, IReadOnlyCollection<int> undergroundCrewResidentIds)
         {
             _visibleResidentIds.Clear();
             if (_camera == null) _camera = Camera.main;
@@ -455,7 +461,8 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < snapshot.Residents.Count && _visibleResidentIds.Count < limit; i++)
             {
                 var resident = snapshot.Residents[i];
-                if (resident.Status == TransitResidentStatus.Outside) continue;
+                if (resident.Status == TransitResidentStatus.Outside ||
+                    ContainsResidentId(undergroundCrewResidentIds, resident.ResidentId)) continue;
                 var floor = Mathf.Max(0, resident.Floor);
                 var y = TowerStructurePresenter.FloorY(floor) - 0.2f;
                 var x = -2.4f + resident.CellX * 0.5f + 0.25f;
@@ -483,13 +490,21 @@ namespace OneRoof.Presentation.Tower
             {
                 var resident = snapshot.Residents[i];
                 if (!_visibleResidentIds.Contains(resident.ResidentId)) continue;
+                var newlyBound = false;
                 if (!_viewPool.TryGetView(resident.ResidentId, out var view))
                 {
+                    newlyBound = true;
                     view = _viewPool.Acquire(resident.ResidentId);
                     var projection = new NpcProjection(resident.ResidentId, resident.ResidentId, Math.Max(0, resident.Floor), resident.RoomId ?? 0,
                         ToNpcActivity(resident.Activity), resident.Status == TransitResidentStatus.Riding || resident.Status == TransitResidentStatus.Queued,
                         resident.DestinationFloor, resident.RoomId, resident.WaitTicks, resident.CellX);
-                    view.Bind(projection, Vector3.zero);
+                    // A newly acquired view has no prior visual position to
+                    // interpolate from. Spawn at its projected street/corridor
+                    // coordinate, then smooth later simulation ticks.
+                    var spawnFloor = Mathf.Max(0, resident.Floor);
+                    var spawnPosition = new Vector3(-2.4f + resident.CellX * 0.5f + 0.25f,
+                        TowerStructurePresenter.FloorY(spawnFloor) - 0.58f, -0.2f);
+                    view.Bind(projection, spawnPosition);
                 }
                 var skeleton = view.SkeletalHierarchy;
                 if (skeleton == null || skeleton.MainRenderer == null) continue;
@@ -497,8 +512,22 @@ namespace OneRoof.Presentation.Tower
                 _residentSkeletons.Add(skeleton);
                 _residentObjects.Add(view.gameObject);
                 _residentProjectionIndices.Add(i);
-                EnsureWalkMemory(i, -2.4f + resident.CellX * 0.5f + 0.25f);
+                var initialWalkX = -2.4f + resident.CellX * 0.5f + 0.25f;
+                EnsureWalkMemory(i, initialWalkX);
+                if (newlyBound)
+                {
+                    _lastWalkX[i] = initialWalkX;
+                    _walkFacing[i] = resident.Status == TransitResidentStatus.Walking && resident.CellX >= 18f ? -1f : 1f;
+                }
             }
+        }
+
+        private static bool ContainsResidentId(IReadOnlyCollection<int> residentIds, int residentId)
+        {
+            if (residentIds == null) return false;
+            foreach (var id in residentIds)
+                if (id == residentId) return true;
+            return false;
         }
 
         private static NpcActivityKind ToNpcActivity(ActivityKind activity)

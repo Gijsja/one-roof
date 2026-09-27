@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
+using OneRoof.Content;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
+using OneRoof.Presentation.Population;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -62,6 +64,13 @@ namespace OneRoof.Presentation.Tower
         private readonly List<WindowLightingEntry> _windowLightingEntries = new List<WindowLightingEntry>();
         private readonly Dictionary<UndergroundCell, GameObject> _excavationViews = new Dictionary<UndergroundCell, GameObject>();
         private readonly Dictionary<UndergroundCell, GameObject> _lairFloorViews = new Dictionary<UndergroundCell, GameObject>();
+        private readonly Dictionary<UndergroundCell, GameObject> _corridorViews = new Dictionary<UndergroundCell, GameObject>();
+        private readonly Dictionary<UndergroundCell, GameObject> _shaftViews = new Dictionary<UndergroundCell, GameObject>();
+        private readonly Dictionary<int, GameObject> _undergroundRoomViews = new Dictionary<int, GameObject>();
+        private readonly Dictionary<int, NpcSkeletalHierarchy> _undergroundCrewViews = new Dictionary<int, NpcSkeletalHierarchy>();
+        public IReadOnlyCollection<int> VisibleUndergroundCrewResidentIds => _undergroundCrewViews.Keys;
+        private GameObject _accessCoreView;
+        private int _renderedUndergroundRevision = -1;
 
         private int _renderedFloorCount = -1;
         private CellBounds _renderedGroundSlab;
@@ -165,7 +174,12 @@ namespace OneRoof.Presentation.Tower
                 _renderedGroundSlab.Equals(groundSlab) && _renderedTopSlab.Equals(topSlab);
             if (geometryUnchanged)
             {
-                SyncExcavationViews(underground);
+                if (underground == null || underground.Revision != _renderedUndergroundRevision)
+                {
+                    SyncExcavationViews(underground);
+                    SyncUndergroundStructures(underground);
+                    _renderedUndergroundRevision = underground?.Revision ?? -1;
+                }
                 return;
             }
 
@@ -177,6 +191,8 @@ namespace OneRoof.Presentation.Tower
             BuildFacades(topology, floorCount);
             BuildGroundDressing(groundSlab);
             SyncExcavationViews(underground);
+            SyncUndergroundStructures(underground);
+            _renderedUndergroundRevision = underground?.Revision ?? -1;
             EnsureExteriorWindows(topology, floorCount);
             BuildRoofline(topology, floorCount, topSlab);
             BuildSetbackTerraces(topology, floorCount);
@@ -344,7 +360,7 @@ namespace OneRoof.Presentation.Tower
             var center = (left + right) * 0.5f;
             var earthWidth = UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize;
             var earthLeft = center - earthWidth * 0.5f;
-            const float earthDepth = 6f;
+            var earthDepth = UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize;
 
             // Keep cell art in front of the soil backing so the earth grid
             // remains visible and excavation can reveal a real change.
@@ -360,22 +376,23 @@ namespace OneRoof.Presentation.Tower
             {
                 var x = earthLeft + (column + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var y = baseline - (depth + 0.5f) * GridPlacementController.UndergroundCellSize;
-                var earthColor = (column + depth) % 2 == 0
-                    ? new Color(0.52f, 0.34f, 0.21f)
-                    : new Color(0.43f, 0.27f, 0.16f);
+                // Bands mark the four basement levels without making each cell
+                // look like a separate floating brick.
+                var band = depth / 3;
+                var shade = ((column * 7 + depth * 3) % 5) * 0.012f;
+                var earthColor = new Color(0.48f - band * 0.045f + shade,
+                    0.30f - band * 0.028f + shade * 0.5f,
+                    0.18f - band * 0.012f);
                 UpdateOrCreateQuad(_groundRoot, $"Earth Grid {column}_{depth}", earthColor,
-                    new Vector3(x, y, EarthTileZ), new Vector2(0.92f, 0.92f));
+                    new Vector3(x, y, EarthTileZ), new Vector2(1.002f, 1.002f));
             }
-            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 1", new Color(0.34f, 0.22f, 0.13f),
-                new Vector3(center, baseline - 0.94f, EarthDetailZ), new Vector2(earthWidth, 0.055f));
-            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 2", new Color(0.19f, 0.12f, 0.08f),
-                new Vector3(center, baseline - 1.92f, EarthDetailZ), new Vector2(earthWidth, 0.045f));
-            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 3", new Color(0.31f, 0.20f, 0.12f),
-                new Vector3(center, baseline - 2.74f, EarthDetailZ), new Vector2(earthWidth, 0.055f));
-            for (var i = 0; i < 8; i++)
+            for (var level = 1; level < 4; level++)
+                UpdateOrCreateQuad(_groundRoot, $"Earth Stratum {level}", new Color(0.22f, 0.15f, 0.11f),
+                    new Vector3(center, baseline - level * 3f, EarthDetailZ), new Vector2(earthWidth, 0.065f));
+            for (var i = 0; i < 16; i++)
             {
-                var depositX = earthLeft + earthWidth * ((i + 1f) / 9f);
-                var depositY = baseline - 0.55f - (i % 3) * 0.82f;
+                var depositX = earthLeft + earthWidth * ((i + 1f) / 17f);
+                var depositY = baseline - 0.55f - (i % UndergroundDigState.MaxDepthCells) * 0.82f;
                 var depositWidth = 0.18f + (i % 3) * 0.09f;
                 var depositColor = i % 2 == 0
                     ? new Color(0.29f, 0.19f, 0.12f)
@@ -473,26 +490,229 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < underground.ExcavatedCells.Count; i++)
             {
                 var cell = underground.ExcavatedCells[i];
-                if (_excavationViews.ContainsKey(cell)) continue;
                 var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var view = UpdateOrCreateQuad(_groundRoot, $"Excavated Cell {cell.X}_{cell.Depth}",
-                    new Color(0.025f, 0.035f, 0.045f), new Vector3(x, y, ExcavationZ), new Vector2(0.90f, 0.90f));
+                    new Color(0.035f, 0.052f, 0.061f), new Vector3(x, y, ExcavationZ), new Vector2(1.005f, 1.005f));
                 _excavationViews[cell] = view;
             }
 
             for (var i = 0; i < underground.FlooredCells.Count; i++)
             {
                 var cell = underground.FlooredCells[i];
-                if (_lairFloorViews.ContainsKey(cell)) continue;
                 var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var floor = UpdateOrCreateQuad(_groundRoot, $"Lair Floor {cell.X}_{cell.Depth}",
-                    new Color(0.19f, 0.35f, 0.40f), new Vector3(x, y, LairFloorZ), new Vector2(0.90f, 0.90f));
-                UpdateOrCreateQuad(floor.transform, "Edge Light", new Color(0.48f, 0.79f, 0.70f),
-                    new Vector3(0f, 0.40f, -0.02f), new Vector2(0.72f, 0.035f));
+                    new Color(0.11f, 0.19f, 0.22f), new Vector3(x, y, LairFloorZ), new Vector2(1.005f, 1.005f));
+                UpdateOrCreateQuad(floor.transform, "Floor Slab", new Color(0.25f, 0.40f, 0.42f),
+                    new Vector3(0f, -0.43f, -0.02f), new Vector2(1.005f, 0.16f));
+                UpdateOrCreateQuad(floor.transform, "Floor Edge Light", new Color(0.48f, 0.79f, 0.70f),
+                    new Vector3(0f, -0.34f, -0.03f), new Vector2(1.005f, 0.025f));
                 _lairFloorViews[cell] = floor;
             }
+        }
+
+        private void SyncUndergroundStructures(UndergroundDigProjection underground)
+        {
+            var corridors = new HashSet<UndergroundCell>();
+            var shaft = new HashSet<UndergroundCell>();
+            var rooms = new HashSet<int>();
+            if (underground != null)
+            {
+                for (var i = 0; i < underground.Corridors.Count; i++) corridors.Add(underground.Corridors[i]);
+                for (var i = 0; i < underground.ServiceShaftCells.Count; i++) shaft.Add(underground.ServiceShaftCells[i]);
+                for (var i = 0; i < underground.Rooms.Count; i++) rooms.Add(underground.Rooms[i].Id);
+            }
+            RetireMissingCellViews(_corridorViews, corridors);
+            RetireMissingCellViews(_shaftViews, shaft);
+            var retiredRooms = new List<int>();
+            foreach (var pair in _undergroundRoomViews)
+                if (!rooms.Contains(pair.Key)) { DestroyGenerated(pair.Value); retiredRooms.Add(pair.Key); }
+            for (var i = 0; i < retiredRooms.Count; i++) _undergroundRoomViews.Remove(retiredRooms[i]);
+            if (underground == null) { DestroyGenerated(_accessCoreView); _accessCoreView = null; return; }
+
+            var baseline = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var groundCenter = -2.4f + (_renderedGroundSlab.MinX + _renderedGroundSlab.MaxX + 1) * 0.25f;
+            if (_renderedGroundSlab.Width <= 0) groundCenter = -1.4f;
+            var earthLeft = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize * 0.5f;
+
+            foreach (var cell in corridors)
+            {
+                var x = earthLeft + cell.X + 0.5f;
+                var y = baseline - cell.Depth - 0.5f;
+                var view = UpdateOrCreateQuad(_groundRoot, $"Underground Corridor {cell.X}_{cell.Depth}",
+                    new Color(0.17f, 0.29f, 0.32f), new Vector3(x, y, 0.30f), new Vector2(1.005f, 1.005f));
+                UpdateOrCreateQuad(view.transform, "Walkway", new Color(0.37f, 0.55f, 0.52f),
+                    new Vector3(0f, -0.38f, -0.015f), new Vector2(1.005f, 0.12f));
+                UpdateOrCreateQuad(view.transform, "Wayfinding", new Color(0.65f, 0.79f, 0.58f),
+                    new Vector3(0f, -0.25f, -0.02f), new Vector2(0.30f, 0.025f));
+                _corridorViews[cell] = view;
+            }
+
+            foreach (var cell in shaft)
+            {
+                var x = earthLeft + cell.X + 0.5f;
+                var y = baseline - cell.Depth - 0.5f;
+                var view = UpdateOrCreateQuad(_groundRoot, $"Underground Shaft {cell.X}_{cell.Depth}",
+                    new Color(0.08f, 0.16f, 0.20f), new Vector3(x, y, 0.26f), new Vector2(1.005f, 1.005f));
+                UpdateOrCreateQuad(view.transform, "Left Rail", new Color(0.50f, 0.67f, 0.65f),
+                    new Vector3(-0.27f, 0f, -0.02f), new Vector2(0.05f, 1.005f));
+                UpdateOrCreateQuad(view.transform, "Right Rail", new Color(0.50f, 0.67f, 0.65f),
+                    new Vector3(0.27f, 0f, -0.02f), new Vector2(0.05f, 1.005f));
+                for (var rung = 0; rung < 3; rung++)
+                    UpdateOrCreateQuad(view.transform, $"Rung {rung}", new Color(0.42f, 0.60f, 0.58f),
+                        new Vector3(0f, -0.30f + rung * 0.30f, -0.025f), new Vector2(0.56f, 0.045f));
+                _shaftViews[cell] = view;
+            }
+
+            if (underground.AccessCore.HasValue)
+            {
+                var cell = underground.AccessCore.Value;
+                _accessCoreView = UpdateOrCreateQuad(_groundRoot, "Underground Access Core",
+                    new Color(0.85f, 0.65f, 0.30f),
+                    new Vector3(earthLeft + cell.X + 0.5f, baseline - cell.Depth - 0.5f, 0.23f),
+                    new Vector2(0.78f, 0.09f));
+            }
+            else { DestroyGenerated(_accessCoreView); _accessCoreView = null; }
+
+            for (var i = 0; i < underground.Rooms.Count; i++)
+            {
+                var room = underground.Rooms[i];
+                var x = earthLeft + room.X + room.Width * 0.5f;
+                var y = baseline - room.Depth - room.Height * 0.5f;
+                var root = _groundRoot.Find($"Underground Room {room.Id}");
+                if (root == null)
+                {
+                    root = new GameObject($"Underground Room {room.Id}").transform;
+                    root.SetParent(_groundRoot, false);
+                }
+                root.localPosition = new Vector3(x, y, 0f);
+                var color = UndergroundRoomColor(room.Type);
+                UpdateOrCreateQuad(root, "Room Backdrop", color, new Vector3(0f, 0f, 0.29f),
+                    new Vector2(room.Width - 0.04f, room.Height - 0.04f));
+                UpdateOrCreateQuad(root, "Room Header", new Color(0.08f, 0.15f, 0.19f),
+                    new Vector3(0f, room.Height * 0.5f - 0.16f, 0.25f), new Vector2(room.Width - 0.04f, 0.26f));
+                UpdateOrCreateQuad(root, "Room Floor", new Color(0.42f, 0.53f, 0.52f),
+                    new Vector3(0f, -room.Height * 0.5f + 0.08f, 0.24f), new Vector2(room.Width - 0.02f, 0.16f));
+                UpdateOrCreateQuad(root, "Connection Status", room.IsReachable
+                        ? new Color(0.40f, 0.86f, 0.56f) : new Color(1f, 0.42f, 0.34f),
+                    new Vector3(room.Width * 0.5f - 0.18f, room.Height * 0.5f - 0.16f, 0.21f),
+                    new Vector2(0.12f, 0.12f));
+                var labelTransform = root.Find("Room Label");
+                if (labelTransform == null)
+                {
+                    labelTransform = new GameObject("Room Label").transform;
+                    labelTransform.SetParent(root, false);
+                }
+                labelTransform.localPosition = new Vector3(-room.Width * 0.5f + 0.15f,
+                    room.Height * 0.5f - 0.08f, 0.20f);
+                var label = labelTransform.GetComponent<TextMesh>();
+                if (label == null) label = labelTransform.gameObject.AddComponent<TextMesh>();
+                if (label != null)
+                {
+                    label.text = room.Type.ToString().ToUpperInvariant();
+                    label.anchor = TextAnchor.UpperLeft;
+                    label.characterSize = 0.04f;
+                    label.fontSize = 64;
+                    label.color = new Color(0.90f, 0.96f, 0.89f);
+                }
+                _undergroundRoomViews[room.Id] = root.gameObject;
+            }
+        }
+
+        private static Color UndergroundRoomColor(UndergroundRoomType type)
+        {
+            var index = (int)type;
+            return new Color(0.16f + (index % 3) * 0.05f,
+                0.25f + (index % 4) * 0.025f,
+                0.31f + (index % 5) * 0.018f);
+        }
+
+        /// <summary>Bind a bounded visible crew to stable assigned resident IDs.</summary>
+        public void SyncUndergroundCrew(UndergroundOperationsProjection operations)
+        {
+            if (_groundRoot == null) return;
+            const int maxVisibleCrew = 24;
+            var visibleIds = new HashSet<int>();
+            var visibleCount = 0;
+            if (operations != null)
+            {
+                for (var i = 0; i < operations.Rooms.Count; i++)
+                {
+                    var room = operations.Rooms[i];
+                    if (!_undergroundRoomViews.TryGetValue(room.Id, out var roomView) || roomView == null) continue;
+                    var root = roomView.transform;
+                    var statusTransform = root.Find("Staff Status");
+                    if (statusTransform == null)
+                    {
+                        statusTransform = new GameObject("Staff Status").transform;
+                        statusTransform.SetParent(root, false);
+                    }
+                    statusTransform.localPosition = new Vector3(-room.Width * 0.5f + 0.15f,
+                        room.Height * 0.5f - 0.37f, 0.19f);
+                    var status = statusTransform.GetComponent<TextMesh>();
+                    if (status == null) status = statusTransform.gameObject.AddComponent<TextMesh>();
+                    status.text = room.IsDisrupted ? $"DISRUPTED · {room.Staff}/{room.RequiredStaff} STAFF"
+                        : $"{room.Staff}/{room.RequiredStaff} STAFF";
+                    status.anchor = TextAnchor.UpperLeft;
+                    status.characterSize = 0.04f;
+                    status.fontSize = 64;
+                    status.color = room.IsDisrupted ? new Color(1f, 0.52f, 0.42f)
+                        : room.Staff >= room.RequiredStaff && room.IsReachable
+                            ? new Color(0.60f, 0.93f, 0.67f) : new Color(0.96f, 0.77f, 0.47f);
+
+                    var shownHere = Mathf.Min(room.AssignedResidentIds.Count, 4, maxVisibleCrew - visibleCount);
+                    for (var crew = 0; crew < shownHere; crew++)
+                    {
+                        var residentId = room.AssignedResidentIds[crew];
+                        if (!visibleIds.Add(residentId)) continue;
+                        if (!_undergroundCrewViews.TryGetValue(residentId, out var skeletal) || skeletal == null)
+                        {
+                            var go = new GameObject($"Underground Crew {residentId}");
+                            skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                            skeletal.Initialize(residentId);
+                            skeletal.SetCaption(null);
+                            _undergroundCrewViews[residentId] = skeletal;
+                        }
+                        skeletal.transform.SetParent(root, false);
+                        var spacing = Mathf.Min(0.72f, (room.Width - 0.6f) / Mathf.Max(1, shownHere));
+                        skeletal.transform.localPosition = new Vector3((crew - (shownHere - 1) * 0.5f) * spacing,
+                            -room.Height * 0.5f + 0.21f, 0.12f);
+                        skeletal.SetFacing(residentId % 2 == 0 ? 1f : -1f);
+                        skeletal.SetAnimationClip(room.IsDisrupted ? NpcAnimationClip.QueueWait : NpcAnimationClip.Idle);
+                        visibleCount++;
+                    }
+                }
+            }
+            var retired = new List<int>();
+            foreach (var pair in _undergroundCrewViews)
+                if (!visibleIds.Contains(pair.Key))
+                {
+                    if (pair.Value != null) DestroyGenerated(pair.Value.gameObject);
+                    retired.Add(pair.Key);
+                }
+            for (var i = 0; i < retired.Count; i++) _undergroundCrewViews.Remove(retired[i]);
+        }
+
+        public void AnimateUndergroundCrew(float time)
+        {
+            foreach (var crew in _undergroundCrewViews.Values)
+                if (crew != null) crew.ApplyProceduralAnimation(time);
+        }
+
+        private static void RetireMissingCellViews(Dictionary<UndergroundCell, GameObject> views, HashSet<UndergroundCell> active)
+        {
+            var retired = new List<UndergroundCell>();
+            foreach (var pair in views)
+                if (!active.Contains(pair.Key)) { DestroyGenerated(pair.Value); retired.Add(pair.Key); }
+            for (var i = 0; i < retired.Count; i++) views.Remove(retired[i]);
+        }
+
+        private static void DestroyGenerated(GameObject view)
+        {
+            if (view == null) return;
+            if (UnityEngine.Application.isPlaying) Object.Destroy(view);
+            else Object.DestroyImmediate(view);
         }
 
         private void EnsureExteriorWindows(TowerTopologyProjection topology, int floorCount)
@@ -841,6 +1061,13 @@ namespace OneRoof.Presentation.Tower
             _volumetricLightRoot = null;
             _groundRoot = null;
             _excavationViews.Clear();
+            _lairFloorViews.Clear();
+            _corridorViews.Clear();
+            _shaftViews.Clear();
+            _undergroundRoomViews.Clear();
+            _undergroundCrewViews.Clear();
+            _accessCoreView = null;
+            _renderedUndergroundRevision = -1;
 
             _leftWallSlices.Clear();
             _rightWallSlices.Clear();

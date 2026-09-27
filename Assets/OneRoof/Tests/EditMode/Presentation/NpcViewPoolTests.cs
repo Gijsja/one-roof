@@ -50,10 +50,10 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var rig = resident.AddComponent<NpcSkeletalHierarchy>();
                 rig.Initialize(0);
 
-                Assert.That(rig.MainRenderer.enabled, Is.True);
+                Assert.That(rig.MainRenderer.enabled, Is.False);
                 Assert.That(rig.MainRenderer.sprite, Is.Not.Null);
                 foreach (var limb in rig.LimbRenderers.Values)
-                    Assert.That(limb.enabled, Is.False, "A resident uses one complete body sprite to prevent collage layering.");
+                    Assert.That(limb.enabled, Is.True, "The visible anatomy must follow its animated bones.");
                 foreach (var slot in rig.WardrobeSlots.Values)
                     Assert.That(slot.enabled, Is.False, "Wardrobe slices must not be mixed with the rig anatomy.");
             }
