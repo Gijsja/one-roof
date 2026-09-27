@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Economy;
+using OneRoof.Application.Decisions;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Transit;
 using OneRoof.Domain;
@@ -26,6 +27,9 @@ namespace OneRoof.Application.Tower
         private TowerProjection _cachedTransitProjection;
         private ElevatorBankCongestionProjection _cachedCongestionProjection;
         private TowerTopologyProjection _cachedTopologyProjection;
+        private IReadOnlyList<HouseholdHousingLifecycleProjection> _cachedHousingProjection;
+        private UndergroundDigProjection _cachedUndergroundProjection;
+        private int _cachedUndergroundRevision = -1;
         private long _topologyVersion;
         private long _cachedTopologyVersion = -1;
         private long _cachedTick = -1;
@@ -35,6 +39,7 @@ namespace OneRoof.Application.Tower
         private long _version;
         private long _cachedVersion = -1;
         private long _cachedCongestionVersion = -1;
+        private long _cachedHousingVersion = -1;
 
         public TowerSimulationSession() : this(TowerSimulation.CreateStandardFiveFloor())
         {
@@ -78,6 +83,15 @@ namespace OneRoof.Application.Tower
             return _cachedTopologyProjection;
         }
 
+        public UndergroundDigProjection UndergroundProjection()
+        {
+            if (_cachedUndergroundProjection != null && _cachedUndergroundRevision == _simulation.Underground.Revision)
+                return _cachedUndergroundProjection;
+            _cachedUndergroundProjection = new UndergroundDigProjection(_simulation.Underground);
+            _cachedUndergroundRevision = _simulation.Underground.Revision;
+            return _cachedUndergroundProjection;
+        }
+
         public int ActiveTripCount => _simulation.ActiveTripCount;
 
         public int ElevatorCarCount => _simulation.ElevatorBank.Cars.Count;
@@ -97,6 +111,9 @@ namespace OneRoof.Application.Tower
             _simulation.Economy.LastDailyConstructionSalvage);
 
         public long LastSettlementTick => _simulation.Economy.LastSettlementTick;
+
+        /// <summary>Immutable decision history for Manage and inspector views.</summary>
+        public DecisionRecordProjection DecisionHistory() => DecisionProjectionService.Capture(_simulation);
 
         internal ElevatorBankSnapshot ElevatorSnapshot() => _simulation.ElevatorBank.Snapshot();
 
@@ -146,6 +163,36 @@ namespace OneRoof.Application.Tower
         internal IReadOnlyList<PersonRecord> Persons => _simulation.Population.Persons;
 
         internal HouseholdRecord GetHousehold(EntityId id) => _simulation.Population.GetHousehold(id);
+
+        internal HouseholdRecord FindHouseholdByHomeRoom(EntityId roomId)
+        {
+            foreach (var household in _simulation.Population.Households)
+                if (household.HomeRoomId.Equals(roomId)) return household;
+            return null;
+        }
+
+        internal HouseholdHousingLifecycleProjection? HouseholdHousing(EntityId householdId)
+        {
+            if (!_simulation.Population.TryGetHousehold(householdId, out var household)) return null;
+            return _simulation.HousingLifecycleSystem.Evaluate(household, _simulation.HousingLifecycle,
+                _simulation.CurrentSimulationDay);
+        }
+
+        public IReadOnlyList<HouseholdHousingLifecycleProjection> HousingProjection()
+        {
+            if (_cachedHousingProjection != null && _cachedHousingVersion == _version)
+                return _cachedHousingProjection;
+            var result = new List<HouseholdHousingLifecycleProjection>(_simulation.Population.Households.Count);
+            for (var i = 0; i < _simulation.Population.Households.Count; i++)
+            {
+                var household = _simulation.Population.Households[i];
+                result.Add(_simulation.HousingLifecycleSystem.Evaluate(household, _simulation.HousingLifecycle,
+                    _simulation.CurrentSimulationDay));
+            }
+            _cachedHousingProjection = result;
+            _cachedHousingVersion = _version;
+            return _cachedHousingProjection;
+        }
 
         internal long DailyResidentialRent(EntityId householdId) =>
             _simulation.Economy.CalculateResidentialRentDue(_simulation.Population.GetHousehold(householdId));
@@ -461,6 +508,8 @@ namespace OneRoof.Application.Tower
 
         private void InvalidateProjectionCaches()
         {
+            _cachedUndergroundProjection = null;
+            _cachedUndergroundRevision = -1;
             _cachedTransitProjection = null;
             _cachedCongestionProjection = null;
             _cachedTick = -1;

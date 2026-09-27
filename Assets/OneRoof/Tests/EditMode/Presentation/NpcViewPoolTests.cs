@@ -42,6 +42,28 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void SkeletalResident_UsesOneAnatomyStyleWithoutWardrobeOverlayBlocks()
+        {
+            var resident = new GameObject("NpcRig_VisualContract");
+            try
+            {
+                var rig = resident.AddComponent<NpcSkeletalHierarchy>();
+                rig.Initialize(0);
+
+                Assert.That(rig.MainRenderer.enabled, Is.True);
+                Assert.That(rig.MainRenderer.sprite, Is.Not.Null);
+                foreach (var limb in rig.LimbRenderers.Values)
+                    Assert.That(limb.enabled, Is.False, "A resident uses one complete body sprite to prevent collage layering.");
+                foreach (var slot in rig.WardrobeSlots.Values)
+                    Assert.That(slot.enabled, Is.False, "Wardrobe slices must not be mixed with the rig anatomy.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(resident);
+            }
+        }
+
+        [Test]
         public void Pool_AcquireBeyondMaxCapacity_ThrowsInvalidOperationException()
         {
             for (var i = 1; i <= 40; i++)

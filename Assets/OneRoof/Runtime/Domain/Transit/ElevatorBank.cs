@@ -283,8 +283,10 @@ namespace OneRoof.Domain.Transit
             RebalanceDispatches();
         }
 
-        public void Advance(Tick tick)
+        public void Advance(Tick tick, float lobbyCapacityMultiplier = 1f)
         {
+            if (lobbyCapacityMultiplier <= 0f || lobbyCapacityMultiplier > 1f)
+                throw new ArgumentOutOfRangeException(nameof(lobbyCapacityMultiplier));
             // 1. Advance wait timers for all waiting passengers
             foreach (var queue in _floorQueues.Values)
             {
@@ -319,7 +321,11 @@ namespace OneRoof.Domain.Transit
                     // B. Board waiting passengers up to remaining capacity
                     if (_floorQueues.TryGetValue(car.CurrentFloor, out var queue))
                     {
-                        while (car.CanBoard && queue.Count > 0)
+                        // A lobby protest narrows boarding space on floor zero; car capacity elsewhere is unchanged.
+                        var boardingLimit = car.CurrentFloor == 0
+                            ? Math.Max(1, (int)Math.Floor(car.Capacity * lobbyCapacityMultiplier))
+                            : car.Capacity;
+                        while (car.CanBoard && car.Passengers.Count < boardingLimit && queue.Count > 0)
                         {
                             var nextPassenger = queue.Dequeue();
                             car.Board(nextPassenger);

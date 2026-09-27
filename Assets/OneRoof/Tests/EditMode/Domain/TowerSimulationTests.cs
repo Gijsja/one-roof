@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
@@ -89,6 +91,286 @@ namespace OneRoof.Domain.Tests.EditMode
 
             Assert.That(trip.State, Is.EqualTo(TripState.Completed));
             Assert.That(transit.ActiveTripCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void OutsideFoodTrip_RecordsOneTransactionAndStartsMealEpisode()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var population = FiftyResidentFixture.Create();
+            var person = population.Persons[0];
+            person.UpdateLocation(WorldLocation.Outside);
+            person.UpdateNeed(NeedKind.Hunger, 0.2f);
+            var transit = new TransitExecutionSystem();
+            var trip = new TripRecord(new EntityId(901), person.Id, WorldLocation.Outside,
+                WorldLocation.Outside, TripPurpose.Food, new Tick(10), null);
+            var completedTransactions = 0;
+
+            Action<TripRecord, PersonRecord> recordPurchase = (completedTrip, resident) =>
+            {
+                Assert.That(completedTrip, Is.SameAs(trip));
+                Assert.That(resident, Is.SameAs(person));
+                completedTransactions++;
+            };
+
+            transit.SubmitTrip(trip, topology, new Tick(10), population, recordPurchase);
+            transit.SubmitTrip(trip, topology, new Tick(11), population, recordPurchase);
+
+            Assert.That(trip.State, Is.EqualTo(TripState.Completed));
+            Assert.That(trip.OutsideServiceTransactionRecorded, Is.True);
+            Assert.That(completedTransactions, Is.EqualTo(1));
+            Assert.That(person.CurrentActivity, Is.EqualTo(ActivityKind.Eating));
+
+            new ResidentNeedsSystem().AdvancePerson(person);
+            Assert.That(person.GetNeedSatisfaction(NeedKind.Hunger), Is.GreaterThan(0.2f));
+        }
+
+        [Test]
+        public void DailySettlement_PaysOutsideWorkerThroughOutsideMarket()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var fixturePopulation = FiftyResidentFixture.Create();
+            var template = fixturePopulation.Persons[0];
+            var householdId = new EntityId(7001);
+            var personId = new EntityId(7002);
+            var household = new HouseholdRecord(householdId, new[] { personId }, template.HomeRoomId,
+                budget: 0.5f, satisfaction: 1f, cashBalance: 50);
+            var outsideWorker = new PersonRecord(personId, householdId, template.HomeRoomId, default,
+                template.Schedule, template.Needs, template.Traits, worksOutside: true);
+            var population = new PopulationState(new[] { outsideWorker }, new[] { household });
+            var elevatorBank = new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7003), 0, 10) });
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(0)), topology, population,
+                elevatorBank, new TowerEconomyState(initialTreasury: 0), settlementPeriod: 1);
+
+            simulation.AdvanceOneTick();
+
+            Assert.That(household.DailyOutsideWages, Is.EqualTo(TowerSimulation.OutsideDailyWage));
+            Assert.That(simulation.OutsideMarket.WageOutflow, Is.EqualTo(TowerSimulation.OutsideDailyWage));
+            Assert.That(household.CashBalance, Is.EqualTo(56)); // +18 outside pay, -12 residential rent.
+        }
+
+        [Test]
+        public void OutsideFoodNeedThroughSimulation_BillsOnceAndRestoresHunger()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var template = FiftyResidentFixture.Create().Persons[0];
+            var householdId = new EntityId(7101);
+            var personId = new EntityId(7102);
+            var household = new HouseholdRecord(householdId, new[] { personId }, template.HomeRoomId,
+                budget: 0.5f, satisfaction: 1f, cashBalance: 50);
+            var needs = new[]
+            {
+                new NeedState(NeedKind.Hunger, 0.2f),
+                new NeedState(NeedKind.Energy, 1f),
+                new NeedState(NeedKind.Hygiene, 1f),
+                new NeedState(NeedKind.Social, 1f),
+                new NeedState(NeedKind.Purpose, 1f)
+            };
+            var person = new PersonRecord(personId, householdId, template.HomeRoomId, default,
+                template.Schedule, needs, template.Traits, worksOutside: true);
+            person.UpdateLocation(WorldLocation.Outside);
+            var population = new PopulationState(new[] { person }, new[] { household });
+            var elevatorBank = new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7103), 0, 10) });
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(100)), topology, population,
+                elevatorBank, new TowerEconomyState(initialTreasury: 0));
+
+            for (var i = 0; i < 12; i++) simulation.AdvanceOneTick();
+
+            Assert.That(simulation.OutsideMarket.PurchaseRevenue, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+            Assert.That(household.DailyOutsideEssentialSpend, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+            Assert.That(household.CashBalance, Is.EqualTo(50 - TowerSimulation.OutsideDailyMealPrice));
+            Assert.That(person.GetNeedSatisfaction(NeedKind.Hunger), Is.GreaterThan(0.2f));
+        }
+
+        [Test]
+        public void DailyBudgetWindow_IncludesOutsideMealOnceAfterBoundaryAndAcrossSaveLoad()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var template = FiftyResidentFixture.Create().Persons[0];
+            var householdId = new EntityId(7201);
+            var personId = new EntityId(7202);
+            var household = new HouseholdRecord(householdId, new[] { personId }, template.HomeRoomId,
+                budget: 0.5f, satisfaction: 1f, cashBalance: 50);
+            var needs = new[]
+            {
+                new NeedState(NeedKind.Hunger, 0.2f),
+                new NeedState(NeedKind.Energy, 1f),
+                new NeedState(NeedKind.Hygiene, 1f),
+                new NeedState(NeedKind.Social, 1f),
+                new NeedState(NeedKind.Purpose, 1f)
+            };
+            var person = new PersonRecord(personId, householdId, template.HomeRoomId, default,
+                template.Schedule, needs, template.Traits, worksOutside: true);
+            person.UpdateLocation(WorldLocation.Outside);
+
+            // Reserve every apartment so the normal leasing-demand loop cannot add unrelated
+            // households while this small deterministic integration fixture runs.
+            var households = new System.Collections.Generic.List<HouseholdRecord> { household };
+            var nextPlaceholderId = 7300;
+            foreach (var room in topology.Rooms.Values)
+            {
+                if (!room.ContentType.Value.StartsWith("residential:", StringComparison.Ordinal) ||
+                    room.Id.Equals(template.HomeRoomId)) continue;
+                households.Add(new HouseholdRecord(new EntityId(nextPlaceholderId++),
+                    Array.Empty<EntityId>(), room.Id, budget: 0.5f, satisfaction: 1f, cashBalance: 0));
+            }
+
+            var population = new PopulationState(new[] { person }, households);
+            var elevatorBank = new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7203), 0, 10) });
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(1439)), topology, population,
+                elevatorBank, new TowerEconomyState(initialTreasury: 0));
+
+            // Tick 1440 opens the first funded budget window, then the outside meal completes
+            // inside that same interval.
+            simulation.AdvanceOneTick();
+            for (var i = 0; i < 30 && simulation.OutsideMarket.PurchaseRevenue == 0; i++)
+                simulation.AdvanceOneTick();
+            Assert.That(simulation.OutsideMarket.PurchaseRevenue, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+
+            // The partially accumulated interval must survive a save before its closing tick.
+            simulation = TowerSimulation.RestoreFromSaveData(simulation.ExportSaveData());
+            household = simulation.Population.GetHousehold(householdId);
+            while (simulation.CurrentTick < 2879) simulation.AdvanceOneTick();
+
+            var intervalIncome = household.DailyIncome;
+            var intervalRent = household.DailyRentDue;
+            var intervalSpend = household.DailyServiceSpend + household.DailyOutsideEssentialSpend +
+                                household.DailyOutsideQualitySpend + household.DailyCareSpend;
+            Assert.That(intervalIncome, Is.EqualTo(TowerSimulation.OutsideDailyWage));
+            Assert.That(intervalRent, Is.EqualTo(12));
+            Assert.That(household.DailyOutsideEssentialSpend, Is.EqualTo(simulation.OutsideMarket.PurchaseRevenue));
+
+            simulation.AdvanceOneTick(); // Tick 2880 closes the window before resetting counters.
+
+            Assert.That(household.DailyBudgetNetFlow, Is.EqualTo(intervalIncome - intervalRent - intervalSpend));
+            Assert.That(household.Rolling30DayNetFlow, Is.EqualTo(household.DailyBudgetNetFlow));
+            Assert.That(household.DailyIncome, Is.EqualTo(TowerSimulation.OutsideDailyWage),
+                "The new interval starts with its own payroll after the previous interval was recorded.");
+        }
+
+        [Test]
+        public void AdvanceOneTick_PersistentNegativeBudgetAffectsHousingLifecycle()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var home = topology.Rooms.Values.First(room => room.ContentType.Value.StartsWith("residential:", StringComparison.Ordinal));
+            var personId = new EntityId(7402);
+            var householdId = new EntityId(7401);
+            var negativeBudgetHistory = Enumerable.Repeat(-2L, HouseholdRecord.DailyBudgetHistoryCapacity).ToArray();
+            var household = new HouseholdRecord(householdId, new[] { personId }, home.Id,
+                budget: 0f, satisfaction: 1f, cashBalance: 0, outsideCreditBalance: 10,
+                recentDailyBudgetNetFlows: negativeBudgetHistory);
+            var template = FiftyResidentFixture.Create().Persons[0];
+            var person = new PersonRecord(personId, householdId, home.Id, default,
+                template.Schedule, template.Needs, template.Traits, worksOutside: true);
+            var households = new System.Collections.Generic.List<HouseholdRecord> { household };
+            var nextPlaceholderId = 7500;
+            foreach (var room in topology.Rooms.Values)
+            {
+                if (!room.ContentType.Value.StartsWith("residential:", StringComparison.Ordinal) || room.Id.Equals(home.Id)) continue;
+                households.Add(new HouseholdRecord(new EntityId(nextPlaceholderId++),
+                    Array.Empty<EntityId>(), room.Id, budget: 0.5f, satisfaction: 1f, cashBalance: 0));
+            }
+
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(0)), topology,
+                new PopulationState(new[] { person }, households),
+                new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7403), 0, 10) }),
+                new TowerEconomyState(initialTreasury: 0), settlementPeriod: 1);
+
+            simulation.AdvanceOneTick();
+
+            var housing = simulation.HousingLifecycleSystem.Evaluate(household,
+                simulation.HousingLifecycle, simulation.CurrentSimulationDay);
+            Assert.That(household.Rolling7DayNetFlow, Is.LessThan(0));
+            Assert.That(housing.RoomCondition, Is.EqualTo(HousingConditionStage.Degraded));
+            Assert.That(housing.HasNotice, Is.True);
+        }
+
+        [Test]
+        public void OutsideWorker_CommutesEatsMidShiftResumesWorkAndReturnsHome()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var template = FiftyResidentFixture.Create().Persons[0];
+            var householdId = new EntityId(7201);
+            var personId = new EntityId(7202);
+            var household = new HouseholdRecord(householdId, new[] { personId }, template.HomeRoomId,
+                budget: 0.5f, satisfaction: 1f, cashBalance: 100);
+            var schedule = DailySchedule.FromBlocks(new[]
+            {
+                new ScheduleBlock(DailySchedule.LabelSleep, new Tick(0), new Tick(10)),
+                new ScheduleBlock(DailySchedule.LabelWork, new Tick(10), new Tick(600)),
+                new ScheduleBlock(DailySchedule.LabelEat, new Tick(600), new Tick(620)),
+                new ScheduleBlock(DailySchedule.LabelLeisure, new Tick(620), new Tick(DailySchedule.TicksPerDay))
+            });
+            var person = new PersonRecord(personId, householdId, template.HomeRoomId, default,
+                schedule, template.Needs, template.Traits, worksOutside: true);
+            var population = new PopulationState(new[] { person }, new[] { household });
+            var elevatorBank = new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7203), 0, 10) });
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(0)), topology, population,
+                elevatorBank, new TowerEconomyState(initialTreasury: 0), settlementPeriod: 1000);
+
+            for (var i = 0; i < 60 && !(person.CurrentLocation.IsOutside && person.CurrentActivity == ActivityKind.Working); i++)
+                simulation.AdvanceOneTick();
+            Assert.That(person.CurrentLocation.IsOutside, Is.True, "work schedule should complete an outside commute");
+            Assert.That(person.CurrentActivity, Is.EqualTo(ActivityKind.Working));
+
+            person.UpdateNeed(NeedKind.Hunger, 0.2f);
+            simulation.AdvanceOneTick();
+            Assert.That(person.CurrentActivity, Is.EqualTo(ActivityKind.Eating));
+            Assert.That(simulation.OutsideMarket.PurchaseRevenue, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+            Assert.That(household.DailyOutsideEssentialSpend, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+
+            for (var i = 0; i < 40 && person.CurrentActivity != ActivityKind.Working; i++)
+                simulation.AdvanceOneTick();
+            Assert.That(person.CurrentActivity, Is.EqualTo(ActivityKind.Working), "meal should release back to the active outside shift");
+            Assert.That(person.CurrentLocation.IsOutside, Is.True);
+            Assert.That(simulation.OutsideMarket.PurchaseRevenue, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice),
+                "the same meal episode must not bill twice");
+
+            for (var i = 0; i < 600 && !person.CurrentLocation.Equals(WorldLocation.InRoom(person.HomeRoomId)); i++)
+                simulation.AdvanceOneTick();
+            Assert.That(person.CurrentLocation, Is.EqualTo(WorldLocation.InRoom(person.HomeRoomId)),
+                "the outside worker should leave the city when the work block ends");
+        }
+
+        [Test]
+        public void ExhaustedOutsideFoodCredit_RecordsShortfallAndThrottlesRetries()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var template = FiftyResidentFixture.Create().Persons[0];
+            var householdId = new EntityId(7301);
+            var personId = new EntityId(7302);
+            var household = new HouseholdRecord(householdId, new[] { personId }, template.HomeRoomId,
+                budget: 0f, satisfaction: 1f, cashBalance: 0);
+            var market = new OutsideMarketState();
+            for (var i = 0; i < 45; i++)
+                Assert.That(market.TryPurchase(household, 8, 45L * 8,
+                    OutsideServiceCategory.EssentialFood).Accepted, Is.True);
+            var needs = new[]
+            {
+                new NeedState(NeedKind.Hunger, 0.2f),
+                new NeedState(NeedKind.Energy, 1f),
+                new NeedState(NeedKind.Hygiene, 1f),
+                new NeedState(NeedKind.Social, 1f),
+                new NeedState(NeedKind.Purpose, 1f)
+            };
+            var person = new PersonRecord(personId, householdId, template.HomeRoomId, default,
+                template.Schedule, needs, template.Traits, worksOutside: true);
+            person.UpdateLocation(WorldLocation.Outside);
+            var population = new PopulationState(new[] { person }, new[] { household });
+            var elevatorBank = new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(7303), 0, 10) });
+            var simulation = new TowerSimulation(new SimulationClock(new Tick(0)), topology, population,
+                elevatorBank, new TowerEconomyState(initialTreasury: 0), settlementPeriod: 1000, outsideMarket: market);
+
+            simulation.AdvanceOneTick();
+            Assert.That(household.DailyEssentialShortfall, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice));
+            Assert.That(person.OutsideFoodRetryAfterTick, Is.EqualTo(TowerSimulation.OutsideFoodRetryCooldownTicks + 1));
+            for (var i = 0; i < TowerSimulation.OutsideFoodRetryCooldownTicks - 1; i++) simulation.AdvanceOneTick();
+            Assert.That(household.DailyEssentialShortfall, Is.EqualTo(TowerSimulation.OutsideDailyMealPrice),
+                "rejected food must not be retried on every tick");
+
+            simulation.AdvanceOneTick();
+            Assert.That(household.DailyEssentialShortfall, Is.EqualTo(2 * TowerSimulation.OutsideDailyMealPrice),
+                "a later bounded retry should still expose persistent food insecurity");
         }
 
         [Test]

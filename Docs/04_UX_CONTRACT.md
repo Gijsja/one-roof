@@ -31,7 +31,7 @@ The inspector is a cause chain, not a flat stat dump: it names the symptom, expo
 | `overlay:foot_traffic` | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
 | `overlay:population` | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
 | `overlay:satisfaction` | Soft regional glow + pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, rent burden |
-| `overlay:noise` | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into apartments |
+| `overlay:noise` | Room acoustic contours plus text labels | `NoiseOverlayProjector` | Current activity in nearby rooms; relative estimate, not measured decibels |
 | `overlay:business_health` | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, commercial rent burden |
 | `overlay:faction_tension` | Regional tension contours + glyphs | `FactionState` | Policy grievances, strain, protest/strike risk |
 | `overlay:utilities` | Network pipe/cable flow & pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
@@ -41,6 +41,17 @@ Do not render every overlay as a heatmap. Use heatmaps for intensity, animated p
 ## Placement preview
 
 A preview must show cost, invalid conditions, footprint, utility connections, and the most important predicted consequences (`PlacementGhostPresenter` / `PlacementPreviewCardView`). Predictions are estimates and must be labeled when confidence is low. Placement queries domain validity via `TowerSimulation.CanExecute(ICommand)`.
+
+## Underground excavation
+
+The cutaway earth beneath the building is presented on a visible 1 m square grid.
+The 1×1, 2×2, and 3×3 dig brushes cover 1 m, 2 m, and 3 m square footprints;
+the selected footprint previews directly under the pointer before excavation.
+
+Build mode offers 1×1, 2×2, and 3×3 dig and lair-floor brushes on an independent 16×6 earth
+board. Click or drag through valid earth to excavate, then lay floor only over excavated cells.
+The preview shows the full square, and neither action requires or expands a tower floor slab.
+Invalid brushes show the blocking reason.
 
 ## Accessibility baseline
 

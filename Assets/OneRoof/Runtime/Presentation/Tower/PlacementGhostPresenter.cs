@@ -87,12 +87,12 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void ShowGhost(Vector3 worldPosition, Vector2 size, bool isValid, Color? customColor = null)
+        public void ShowGhost(Vector3 worldPosition, Vector2 size, bool isValid, Color? customColor = null, float renderZ = -0.5f)
         {
             EnsureGhostObject();
             IsValid = isValid;
 
-            _ghostObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, -0.5f);
+            _ghostObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, renderZ);
             _ghostObject.transform.localScale = new Vector3(Math.Max(0.1f, size.x), Math.Max(0.1f, size.y), 1f);
 
             Color baseColor;
@@ -239,9 +239,9 @@ namespace OneRoof.Presentation.Tower
 
         private static Material CreateGhostMaterial(out bool isAllIn1Shader)
         {
-            var shader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
+            var shader = Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
                 ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader")
-                ?? Shader.Find("OneRoof/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
                 ?? Shader.Find("Sprites/Default");

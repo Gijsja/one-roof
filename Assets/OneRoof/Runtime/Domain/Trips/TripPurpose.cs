@@ -20,5 +20,8 @@ namespace OneRoof.Domain.Trips
 
         /// <summary>Returning to home apartment or bathroom to freshen up when hygiene is low.</summary>
         Hygiene,
+
+        /// <summary>Leaving the tower permanently for the outside city.</summary>
+        MoveOut,
     }
 }

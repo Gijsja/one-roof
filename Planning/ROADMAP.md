@@ -11,8 +11,10 @@ One Roof is a vertical-city simulation where the player acts as the building man
 - **Physical Utilities & Infrastructure (Milestone 8):** Physical electrical grid, plumbing & waste networks, infrastructure degradation, technician repairs, and utilities overlay. *(STATUS: COMPLETE)*
 - **Outside World Boundary (Milestone 10.4):** First-class `WorldLocation` endpoint (`Room` / `Outside`), lobby-only street edge routing, layered parallax city skyline, day/night lighting, and demand move-in arrivals. *(STATUS: COMPLETE)*
 - **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and overlay selection under `StewardTheme`. *(STATUS: COMPLETE; spatial overlay rendering remains OR-1006)*
-- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: ACTIVE; acceptance proofs remain open)*
-- **Social Fabric & Beta Exit (Milestones 9–10):** Inter-resident relationship graph, 4 factions, policy decrees, noise/tension overlays, blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY; dependent stabilization and economy acceptance remain open)*
+- **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: COMPLETE)*
+- **Social Fabric (Milestone 9):** Bounded relationship graph, 4 factions, policy decrees, noise/tension overlays, civil actions, decision record, and playable management onboarding. *(STATUS: COMPLETE; spatial visual QA continues in OR-1006)*
+- **Social Fabric Deepening (Milestone 9.5):** Meaningful resident ties, issue-specific social influence, and locally grounded faction organizing. *(STATUS: READY; staged follow-up to M9)*
+- **Beta Exit (Milestone 10):** Blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY)*
 
 ### Creative direction and player promise
 
@@ -46,8 +48,9 @@ graph TD
     M7 --> M8["M8: Physical Utilities (DONE)"]
     M8 --> M104["M10.4: Outside World Boundary (DONE)"]
     M104 --> ECON["ECON: Closed-Loop Unit Economics (ACTIVE)"]
-    ECON --> M9["M9: Social Fabric, Factions & Decrees (READY)"]
-    M9 --> M10["M10: 30-Floor Scale, Crises & City Status (READY)"]
+    ECON --> M9["M9: Social Fabric, Factions & Decrees (DONE)"]
+    M9 --> M95["M9.5: Social Fabric Deepening (READY)"]
+    M95 --> M10["M10: 30-Floor Scale, Crises & City Status (READY)"]
     style M104 fill:#065f46,color:#fff,stroke:#065f46
     style ECON fill:#1e3a8a,color:#fff,stroke:#3b82f6
     style M9 fill:#374151,color:#fff,stroke:#6b7280
@@ -390,8 +393,8 @@ graph TD
 
 ---
 
-### M9 — Social Fabric, Factions & Policy Decrees *(READY — no implementation yet)*
-**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. The manager should understand who bears a cost and who benefits before signing a decree. Next up: OR-901 after the economy proof.
+### M9 — Social Fabric, Factions & Policy Decrees *(COMPLETE)*
+**Goal:** Simulate emergent social dynamics where residents form relationships, organize into factions, and respond to player policies. The manager can compare who bears a cost and who benefits before signing a decree. The [M9 execution brief](M9_FACTIONS_AND_MANAGEMENT_EXECUTION.md) records slice boundaries and acceptance evidence. Isolated Unity validation: 547/547 EditMode and 8/8 PlayMode passed. Reference-hardware profiling and final spatial visual QA remain Beta exit checks.
 
 - **`OR-901` (Relationship Graph & 4 Faction Archetypes):**
   - Affinity formation: Residents build friendships through shared workplaces, neighboring apartments, and elevator encounters.
@@ -401,7 +404,7 @@ graph TD
     3. **Merchant Guild:** Retail and restaurant owners focused on customer foot traffic and low commercial tax.
     4. **Civic & Eco Council:** Environmentalists demanding low waste, noise control, and green public spaces.
 - **`OR-902` (Manage Mode: Steward Policy & Decree Panel):**
-  - Player enacts policies: Rent caps, transit subsidies, quiet hours, express elevator lanes, commercial tax adjustments.
+  - Player enacts the four existing `PolicyDecreeState` settings: rent caps, transit subsidies, quiet hours, and commercial tax adjustments. Express elevator lanes require a separately specified transit command and are outside OR-902.
   - Faction approval reacts to policies and living standards; policies also affect Satisfaction, Strain, and Scrutiny.
 - **`OR-903` (Faction Tension & Noise Overlays / Civil Actions):**
   - **Overlay 5: Noise Overlay** displaying acoustic bleed from elevators, workshops, and diners into residential units.
@@ -416,6 +419,33 @@ graph TD
   - Introduce rent and utilities as the tower expands. Let experienced players skip instructions; retain contextual help and keyboard access.
 
 **Exit Criteria:** 4 factions form and track member allegiance; the decree panel shows direct and delayed tradeoffs; policies alter faction relations; protests/strikes occur upon severe tension; Noise and Faction Tension overlays render their promised visual channels; a decision can be traced to a changed resident or business outcome; the first management lesson is completable without hidden knowledge.
+
+---
+
+### M9.5 — Relationships & Factions Deepening *(READY · staged follow-up)*
+**Goal:** Make the existing social fabric more credible and consequential: ties form through meaningful contact, trusted ties can carry named grievances, and sustained local organization explains when faction action becomes possible. Full design and constraints: [Relationships and Factions Deepening Design](RELATIONSHIPS_AND_FACTIONS_DEEPENING_DESIGN.md).
+
+- **`OR-906A` (Credible Relationship Ties):** Separate encounters from meaningful shared support and repeated conflict; remove faction identity as a direct source of personal animosity; add gentle return toward neutral; remove low-ID bias from crowded contact sampling. Project counterpart, affinity band/trend, last meaningful contact, and cause to resident inspection.
+- **`OR-906B` (Issue-Specific Social Influence):** Let strong recent ties share only named grievances using prior-settlement state. Bound the network contribution so direct conditions remain dominant; show direct exposure and tie-mediated support distinctly.
+- **`OR-906C` (Local Faction Organizing):** Project grievance pressure separately from local organizing capacity. Gate existing civil action readiness on sustained pressure and connected local membership. Derive any faction coalitions from shared/conflicting modeled issues; do not hard-code enemies. Defer Steward trust unless response history supports an honest deterministic measure.
+
+<details>
+<summary><strong>🤖 Agent Instructions — OR-906A/B/C</strong></summary>
+
+**Task IDs:** `OR-906A`, `OR-906B`, `OR-906C`
+
+**Starting instruction:** Read [the complete deepening design](RELATIONSHIPS_AND_FACTIONS_DEEPENING_DESIGN.md), then inspect `Planning/BACKLOG.md`, the relevant M9 brief, `Docs/01_GAME_VISION.md`, `Docs/02_ARCHITECTURE.md`, `Docs/03_DATA_CONTRACTS.md`, `Docs/04_UX_CONTRACT.md`, `Docs/06_TEST_STRATEGY.md`, `Docs/07_DECISION_LOG.md`, and all active handoffs before editing. Preserve unrelated shared-tree work. Implement one phase at a time in A → B → C order; stop at phase boundaries and record evidence before starting the next phase.
+
+1. Keep authoritative social state in the pure C# Domain. Preserve stable IDs, deterministic daily evaluation, bounded storage, immutable application projections, and the 300-resident `<4 ms` tick budget. No per-frame social work, all-pairs scans, direct resident orders, or second/plugin-owned social state.
+2. For A, contact alone refreshes context but does not change affinity. Only repeated, attributable shared support or conflict changes affinity; faction difference alone never does. Contact candidate selection must be deterministic, stable across save/load, bounded, and not systematically favor low IDs. Verify the existing cap and expiry behavior.
+3. For B, use stable grievance IDs and prior-day support/conditions so influence cannot cascade in one settlement. Network influence must have a small documented cap relative to direct condition scores and must never copy another resident's objective facts. Show the provenance in inspectors and faction projections.
+4. For C, distinguish unresolved grievance pressure from connected local capacity. Apply the new readiness gate to existing civil actions without replaying onset effects, duplicating actions, or allowing Scrutiny alone to create an action. Recovery must track measured improvement in the named cause.
+5. Version and migrate social save data for any new authoritative fields, using neutral defaults for older saves. Validate IDs, clamps, edge caps, stable ordering, and derived-index rebuilds. Keep existing stable faction IDs and save compatibility.
+6. Add the phase's deterministic domain, migration, projection/UI, and seeded acceptance coverage. Calibrate on the fixed 50-resident fixture and profile the 300-resident case. Report exact validation commands, exits, totals, baselines, and any remaining performance/visual QA. Do not claim beta budgets without reference-hardware evidence.
+
+**Phase gates:** A proves meaningful tie behavior and fair bounded sampling before B begins. B proves issue-specific, capped influence and relief before C changes action eligibility. C proves warning → action → recovery across save/load and a locally concentrated fixture. Record measured tuning constants and any state-ownership/cadence change in `Docs/07_DECISION_LOG.md`.
+
+</details>
 
 ---
 
@@ -467,14 +497,12 @@ graph TD
 | 2 | **Foot Traffic** | DONE | Directional vector paths | `HierarchicalTransitGraph` | Corridor choke-points, stairwell demand |
 | 3 | **Population** | DONE | Density gradient & demographic glyphs | `PopulationState` | Overcrowding, demographic segregation |
 | 4 | **Satisfaction** | DONE | Soft regional glow plus value/pattern glyphs | `SatisfactionService` | Commute friction, need deprivation, high rent |
-| 5 | **Noise** | READY (OR-903) | Acoustic wave contours | `AcousticPropagationService` | Workshop/diner noise bleeding into bedrooms |
+| 5 | **Noise** | DONE (OR-903) | Room acoustic contours plus text | `NoiseOverlayProjector` | Room activity near occupied rooms |
 | 6 | **Business Health** | DONE | Solvency badges (green / amber / red) | `BusinessAccountingSystem` | Foot traffic failure, excessive commercial rent |
-| 7 | **Faction Tension** | READY (OR-903) | Regional tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
+| 7 | **Faction Tension** | DONE (OR-903) | Floor tension contours plus glyphs | `FactionState` | Policy grievances, strain, scrutiny, strike and protest risk |
 | 8 | **Utilities** | DONE | Network pipe/cable flow pressure | `UtilityNetworkGraph` | Overloaded transformers, low water pressure |
 
-> Note: current overlay presenters are IMGUI text/debug views, not yet the
-> contracted visual channels above. Replacing them with heatmaps, flow vectors,
-> contours, and coverage rendering is open UX work; see `Docs/04_UX_CONTRACT.md`.
+> Note: noise and faction overlays now draw world-aligned contours with text and glyphs. Other overlay presenters still need the spatial visual and accessibility review tracked by OR-1006; see `Docs/04_UX_CONTRACT.md`.
 
 ---
 

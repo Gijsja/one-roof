@@ -169,7 +169,7 @@ namespace OneRoof.Presentation.Tower
             {
                 var index = _elevatorViews.Count;
                 CalculateCarLayout(index, targetCount, out var x, out var carWidth);
-                var view = CreateQuadRenderer($"Elevator Car {index}", new Color(0.25f, 0.92f, 0.65f), new Vector3(x, TowerStructurePresenter.FloorY(0), 0f), new Vector2(carWidth, 0.5f));
+                var view = CreateQuadRenderer($"Elevator Car {index}", new Color(0.13f, 0.31f, 0.29f), new Vector3(x, TowerStructurePresenter.FloorY(0), -0.12f), new Vector2(carWidth, 1.06f));
                 _elevatorViews.Add(view);
             }
 
@@ -183,28 +183,45 @@ namespace OneRoof.Presentation.Tower
                     // presenter's material immediately so the initial frame matches
                     // dynamically-created cars.
                     _elevatorViews[i].sharedMaterial = _worldMaterial;
-                    _elevatorViews[i].transform.position = new Vector3(carX, TowerStructurePresenter.FloorY(0), 0f);
-                    _elevatorViews[i].transform.localScale = new Vector3(carWidth, 0.5f, 1f);
-                    SetRendererColor(_elevatorViews[i], new Color(0.18f, 0.65f, 0.5f));
+                    _elevatorViews[i].transform.position = new Vector3(carX, TowerStructurePresenter.FloorY(0), -0.12f);
+                    _elevatorViews[i].transform.localScale = new Vector3(carWidth, 1.06f, 1f);
+                    SetRendererColor(_elevatorViews[i], new Color(0.13f, 0.31f, 0.29f));
                     LayoutCarDressing(_elevatorViews[i], carWidth);
                 }
             }
         }
 
         /// <summary>
-        /// Gives the flat cabin quad a readable cabin silhouette: a dark door
-        /// seam and a roof cap as children that track the layout width, so cars
-        /// read as elevator cabins instead of floating green squares.
+        /// Cabin details are normalized to the car's scale and stay legible even
+        /// when two or three cars share the shaft.
         /// </summary>
         private void LayoutCarDressing(MeshRenderer cabin, float carWidth)
         {
             if (cabin == null) return;
-            var door = EnsureCarChild(cabin, "CarDoor", new Color(0.09f, 0.12f, 0.15f));
-            door.transform.localPosition = new Vector3(0f, 0f, -0.02f);
-            door.transform.localScale = new Vector3(0.045f / Mathf.Max(0.05f, carWidth), 0.84f, 1f);
-            var roof = EnsureCarChild(cabin, "CarRoof", new Color(0.55f, 0.60f, 0.68f));
-            roof.transform.localPosition = new Vector3(0f, 0.57f, -0.01f);
-            roof.transform.localScale = new Vector3((carWidth + 0.10f) / Mathf.Max(0.05f, carWidth), 0.14f, 1f);
+            var leftDoor = EnsureCarChild(cabin, "Car Door Left", new Color(0.12f, 0.23f, 0.26f));
+            leftDoor.transform.localPosition = new Vector3(-0.225f, -0.035f, -0.035f);
+            leftDoor.transform.localScale = new Vector3(0.43f, 0.78f, 1f);
+            var rightDoor = EnsureCarChild(cabin, "Car Door Right", new Color(0.10f, 0.20f, 0.23f));
+            rightDoor.transform.localPosition = new Vector3(0.225f, -0.035f, -0.035f);
+            rightDoor.transform.localScale = new Vector3(0.43f, 0.78f, 1f);
+            var seam = EnsureCarChild(cabin, "CarDoor", new Color(0.07f, 0.16f, 0.18f));
+            seam.transform.localPosition = new Vector3(0f, -0.035f, -0.05f);
+            seam.transform.localScale = new Vector3(0.035f, 0.80f, 1f);
+            var roof = EnsureCarChild(cabin, "CarRoof", new Color(0.61f, 0.72f, 0.70f));
+            roof.transform.localPosition = new Vector3(0f, 0.48f, -0.04f);
+            roof.transform.localScale = new Vector3(1.12f, 0.11f, 1f);
+            var sill = EnsureCarChild(cabin, "Car Sill", new Color(0.56f, 0.72f, 0.64f));
+            sill.transform.localPosition = new Vector3(0f, -0.47f, -0.04f);
+            sill.transform.localScale = new Vector3(1.10f, 0.08f, 1f);
+            var indicator = EnsureCarChild(cabin, "Car Status Light", new Color(0.92f, 0.80f, 0.38f));
+            indicator.transform.localPosition = new Vector3(0f, 0.48f, -0.065f);
+            indicator.transform.localScale = new Vector3(0.22f, 0.045f, 1f);
+            var leftJamb = EnsureCarChild(cabin, "Car Left Jamb", new Color(0.40f, 0.62f, 0.55f));
+            leftJamb.transform.localPosition = new Vector3(-0.49f, -0.02f, -0.06f);
+            leftJamb.transform.localScale = new Vector3(0.045f, 0.86f, 1f);
+            var rightJamb = EnsureCarChild(cabin, "Car Right Jamb", new Color(0.40f, 0.62f, 0.55f));
+            rightJamb.transform.localPosition = new Vector3(0.49f, -0.02f, -0.06f);
+            rightJamb.transform.localScale = new Vector3(0.045f, 0.86f, 1f);
         }
 
         private MeshRenderer EnsureCarChild(MeshRenderer cabin, string childName, Color color)
@@ -250,13 +267,13 @@ namespace OneRoof.Presentation.Tower
                 CalculateCarLayout(i, snapshot.Elevators.Count, out var targetX, out var carWidth);
 
                 var carTransform = _elevatorViews[i].transform;
-                carTransform.localScale = new Vector3(carWidth, 0.5f, 1f);
-                carTransform.position = Vector3.Lerp(carTransform.position, new Vector3(targetX, targetY, 0f), 0.25f);
+                carTransform.localScale = new Vector3(carWidth, 1.06f, 1f);
+                carTransform.position = Vector3.Lerp(carTransform.position, new Vector3(targetX, targetY, -0.12f), 0.25f);
                 LayoutCarDressing(_elevatorViews[i], carWidth);
 
                 var carColor = elevator.PassengerCount > 0
-                    ? new Color(0.3f, 0.95f, 0.7f)
-                    : new Color(0.18f, 0.65f, 0.5f);
+                    ? new Color(0.20f, 0.44f, 0.39f)
+                    : new Color(0.13f, 0.31f, 0.29f);
                 SetRendererColor(_elevatorViews[i], carColor);
 
                 // A nearly-full car is a visible crowding symptom; the pulse is deliberately

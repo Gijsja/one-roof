@@ -190,8 +190,8 @@ namespace OneRoof.UI.Modes
         {
             var paletteRect = BuildPaletteRect(Screen.height);
             GUILayout.BeginArea(paletteRect, StewardTheme.Panel);
-            GUILayout.Label("BUILD THE TOWER", StewardTheme.Label(15, StewardTheme.Text, true));
-            GUILayout.Label("Choose a system, then place it in the cutaway.", StewardTheme.Label(11, StewardTheme.Muted));
+            GUILayout.Label("BUILD & EXCAVATE", StewardTheme.Label(15, StewardTheme.Text, true));
+            GUILayout.Label("Shape the tower and carve a lair beneath it.", StewardTheme.Label(11, StewardTheme.Muted));
             _paletteScroll = GUILayout.BeginScrollView(_paletteScroll, false, true,
                 GUILayout.Height(paletteRect.height - 70f));
             GUILayout.Label("SPACE & USE", StewardTheme.Label(10, StewardTheme.Mint, true));
@@ -202,6 +202,21 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Office\n$2.8k (8c)", "commercial:office", projection.SelectedBuildTool == "commercial:office");
             DrawToolButton("Diner\n$3.5k (10c)", "commercial:diner", projection.SelectedBuildTool == "commercial:diner");
             DrawToolButton("New Floor\n$3.1k (31c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(2);
+            GUILayout.Label("UNDERGROUND EARTH", StewardTheme.Label(10, StewardTheme.Mint, true));
+            GUILayout.Label("1 m earth tiles · dig, then lay lair floor · no tower slab needed", StewardTheme.Label(10, StewardTheme.Muted));
+            GUILayout.BeginHorizontal();
+            DrawToolButton("Dig 1×1", "underground:dig_1", projection.SelectedBuildTool == "underground:dig_1");
+            DrawToolButton("Dig 2×2", "underground:dig_2", projection.SelectedBuildTool == "underground:dig_2");
+            DrawToolButton("Dig 3×3", "underground:dig_3", projection.SelectedBuildTool == "underground:dig_3");
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            DrawToolButton("Floor 1×1", "underground:floor_1", projection.SelectedBuildTool == "underground:floor_1");
+            DrawToolButton("Floor 2×2", "underground:floor_2", projection.SelectedBuildTool == "underground:floor_2");
+            DrawToolButton("Floor 3×3", "underground:floor_3", projection.SelectedBuildTool == "underground:floor_3");
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
@@ -342,7 +357,12 @@ namespace OneRoof.UI.Modes
             {
                 if (!string.IsNullOrEmpty(projection.SelectedBuildTool))
                 {
-                    statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  Click to place · Right-click to cancel";
+                    var isUnderground = projection.SelectedBuildTool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase) ||
+                        projection.SelectedBuildTool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase);
+                    var instruction = isUnderground
+                        ? "Click or drag to dig/build · Right-click to cancel"
+                        : "Click to place · Right-click to cancel";
+                    statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  {instruction}";
                 }
                 else
                 {

@@ -96,12 +96,10 @@ namespace OneRoof.Presentation.Tower
                 renderer.SetPropertyBlock(_dayNightBlock);
             }
 
-            EnsureNightTint(floorCount);
-            if (_nightTint != null)
-            {
-                _nightTint.SetActive(night > 0.001f);
-                if (_nightTintMaterial != null) _nightTintMaterial.color = new Color(0.05f, 0.08f, 0.22f, NightTintAlpha);
-            }
+            // Night is expressed by the window and exterior light colors. The
+            // former full-building NightTint quad covered every foreground
+            // detail and exposed a rectangular edge as the tower grew.
+            RemoveNightTint();
         }
 
         public void Clear()
@@ -127,10 +125,7 @@ namespace OneRoof.Presentation.Tower
             _syncedRoomCount = -1;
             LastFootstepResidentId = -1;
             NightTintAlpha = 0f;
-            DestroyUnityObject(_nightTint);
-            _nightTint = null;
-            DestroyUnityObject(_nightTintMaterial);
-            _nightTintMaterial = null;
+            RemoveNightTint();
             _lastDayNightKey = -1;
             _tintFloorCount = -1;
         }
@@ -216,42 +211,23 @@ namespace OneRoof.Presentation.Tower
             return hour - 19.5f;
         }
 
-        private void EnsureNightTint(int floorCount)
+        private void RemoveNightTint()
         {
-            var floors = Mathf.Max(1, floorCount);
-            var bottom = TowerStructurePresenter.FloorY(0) - 1.4f;
-            var top = TowerStructurePresenter.FloorY(floors - 1) + 1.4f;
-            var center = new Vector3(-0.5f, (bottom + top) * 0.5f, -1.5f);
-            var size = new Vector3(14f, top - bottom, 1f);
+            // Also retire an old runtime quad when entering Play Mode without
+            // a scene/domain reload.
             if (_nightTint == null)
             {
-                var shader = Shader.Find("OneRoof/Unlit") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
-                if (shader == null) return;
-                _nightTint = new GameObject("NightTint");
-                _nightTint.transform.SetParent(transform, false);
-                // Quad faces +Z; the camera looks along +Z from negative Z, so turn it to face the camera.
-                _nightTint.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-                var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                quad.transform.SetParent(_nightTint.transform, false);
-                quad.transform.localPosition = Vector3.zero;
-                quad.transform.localRotation = Quaternion.identity;
-                var collider = quad.GetComponent<Collider>();
-                if (collider != null) DestroyUnityObject(collider);
-                var renderer = quad.GetComponent<MeshRenderer>();
-                _nightTintMaterial = new Material(shader);
-                _nightTintMaterial.color = new Color(0.05f, 0.08f, 0.22f, 0f);
-                _nightTintMaterial.SetOverrideTag("RenderType", "Transparent");
-                if (_nightTintMaterial.HasProperty("_Surface")) _nightTintMaterial.SetFloat("_Surface", 1f);
-                if (_nightTintMaterial.HasProperty("_Blend")) _nightTintMaterial.SetFloat("_Blend", 0f);
-                _nightTintMaterial.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-                _nightTintMaterial.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-                _nightTintMaterial.SetInt("_ZWrite", 0);
-                _nightTintMaterial.renderQueue = (int)RenderQueue.Transparent;
-                renderer.sharedMaterial = _nightTintMaterial;
+                var old = transform.Find("NightTint");
+                if (old != null) _nightTint = old.gameObject;
             }
-
-            _nightTint.transform.position = center;
-            _nightTint.transform.localScale = size;
+            if (_nightTint != null)
+            {
+                _nightTint.SetActive(false);
+                DestroyUnityObject(_nightTint);
+                _nightTint = null;
+            }
+            DestroyUnityObject(_nightTintMaterial);
+            _nightTintMaterial = null;
         }
 
         private void CreateWindowVolume(Room room)

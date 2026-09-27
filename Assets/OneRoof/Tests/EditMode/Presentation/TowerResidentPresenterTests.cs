@@ -151,7 +151,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void Initialize_ExistingResidentDisablesLegacyCompositeSprite()
+        public void Initialize_ExistingResidentUsesCanonicalFullBodySprite()
         {
             var resident = new GameObject("Resident View 1");
             resident.transform.SetParent(_holder.transform, false);
@@ -161,7 +161,8 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             _presenter.Initialize(_holder.transform);
 
-            Assert.That(skeletal.MainRenderer.enabled, Is.False);
+            Assert.That(skeletal.MainRenderer.enabled, Is.True);
+            Assert.That(skeletal.MainRenderer.sprite, Is.Not.Null);
         }
 
         [Test]
@@ -260,15 +261,17 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var skeletal = go.AddComponent<OneRoof.Presentation.Population.NpcSkeletalHierarchy>();
                 skeletal.Initialize(0); // firefighter stature 1.03
                 var stature = skeletal.BodyStature;
+                var widthScale = skeletal.ContentRecord.WorldWidth / skeletal.MainRenderer.sprite.bounds.size.x;
+                var heightScale = skeletal.ContentRecord.WorldHeight / skeletal.MainRenderer.sprite.bounds.size.y;
                 Assert.That(stature, Is.InRange(0.9f, 1.1f));
 
                 skeletal.SetFacing(-1f);
                 Assert.That(skeletal.FacingDirection, Is.EqualTo(-1f));
-                Assert.That(go.transform.localScale.x, Is.EqualTo(-stature).Within(0.0001f));
-                Assert.That(go.transform.localScale.y, Is.EqualTo(stature).Within(0.0001f));
+                Assert.That(go.transform.localScale.x, Is.EqualTo(-stature * widthScale).Within(0.0001f));
+                Assert.That(go.transform.localScale.y, Is.EqualTo(stature * heightScale).Within(0.0001f));
 
                 skeletal.SetFacing(1f);
-                Assert.That(go.transform.localScale.x, Is.EqualTo(stature).Within(0.0001f));
+                Assert.That(go.transform.localScale.x, Is.EqualTo(stature * widthScale).Within(0.0001f));
             }
             finally
             {
@@ -289,11 +292,14 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.EnsureResidentViews(1);
             var skeletal = _presenter.ResidentSkeletons[0];
             var stature = skeletal.BodyStature;
+            var widthScale = skeletal.ContentRecord.WorldWidth / skeletal.MainRenderer.sprite.bounds.size.x;
+            var heightScale = skeletal.ContentRecord.WorldHeight / skeletal.MainRenderer.sprite.bounds.size.y;
             _presenter.UpdateResidentPositions(snapshot, session.TopologyProjection(), 0f);
 
             var scale = _presenter.ResidentViews[0].transform.localScale;
-            Assert.That(scale.x, Is.EqualTo(stature).Within(0.0001f), "Queue heading reset must keep stature.");
-            Assert.That(scale.y, Is.EqualTo(stature).Within(0.0001f));
+            Assert.That(scale.x, Is.EqualTo(stature * widthScale).Within(0.0001f), "Queue heading reset must keep stature and authored width.");
+            Assert.That(scale.y, Is.EqualTo(stature * heightScale).Within(0.02f),
+                "A queued resident may have the current idle-breath pose applied to the sprite root.");
         }
 
         [Test]
@@ -328,8 +334,11 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.UpdateResidentPositions(back, session.TopologyProjection(), 0.3f);
             Assert.That(_presenter.ResidentSkeletons[0].FacingDirection, Is.EqualTo(-1f));
             var scale = _presenter.ResidentViews[0].transform.localScale;
-            Assert.That(Mathf.Abs(scale.x), Is.EqualTo(_presenter.ResidentSkeletons[0].BodyStature).Within(0.0001f),
-                "Travel facing must preserve stature magnitude.");
+            var walkingSkeleton = _presenter.ResidentSkeletons[0];
+            var expectedWidthScale = walkingSkeleton.BodyStature *
+                walkingSkeleton.ContentRecord.WorldWidth / walkingSkeleton.MainRenderer.sprite.bounds.size.x;
+            Assert.That(Mathf.Abs(scale.x), Is.EqualTo(expectedWidthScale).Within(0.0001f),
+                "Travel facing must preserve stature and authored avatar width.");
         }
 
         [Test]

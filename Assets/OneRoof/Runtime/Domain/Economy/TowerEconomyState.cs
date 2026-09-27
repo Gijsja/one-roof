@@ -192,9 +192,10 @@ namespace OneRoof.Domain.Economy
             return floorSpan * stairWidth * CostPerStairCell;
         }
 
-        public long ProcessRentCycle(BuildingTopologyState topology, PopulationState population)
+        public long ProcessRentCycle(BuildingTopologyState topology, PopulationState population, float collectionMultiplier = 1f)
         {
             if (topology == null || population == null) return 0;
+            if (collectionMultiplier < 0f || collectionMultiplier > 1f) throw new ArgumentOutOfRangeException(nameof(collectionMultiplier));
 
             long totalRent = 0;
             _settlementHouseholds.Clear();
@@ -207,9 +208,15 @@ namespace OneRoof.Domain.Economy
             for (var i = 0; i < _settlementHouseholds.Count; i++)
             {
                 var household = _settlementHouseholds[i];
+                // The full contractual amount becomes rent liability. Collection policy controls
+                // the requested payment; cash limits actual collection without making other debt
+                // (such as outside-market credit) look like rent default.
                 var rentDue = CalculateResidentialRentDue(household);
-                household.AdjustCashBalance(-rentDue);
-                totalRent += rentDue;
+                household.RecordRentDue(rentDue);
+                // Collection applies to the outstanding housing liability (new and past due),
+                // so income recovery can clear arrears instead of leaving them permanently stuck.
+                var requestedPayment = (long)Math.Floor(household.RentArrearsBalance * (double)collectionMultiplier);
+                totalRent += household.RecordRentPayment(requestedPayment);
             }
 
             AddRevenue(totalRent);

@@ -146,10 +146,7 @@ namespace OneRoof.Presentation.Tower
                 }
                 consecutiveMisses = 0;
 
-                // Scene-authored residents can carry the pre-rig composite sprite
-                // from an earlier presentation pass. Reapply the canonical skeletal
-                // setup so that composite is disabled and only current wardrobe/layer
-                // sprites remain visible.
+                // Rebuild the canonical single-sprite resident presentation on adopted views.
                 skeletal.Initialize(index - 1);
                 _residentViews.Add(skeletal.MainRenderer);
                 _residentSkeletons.Add(skeletal);

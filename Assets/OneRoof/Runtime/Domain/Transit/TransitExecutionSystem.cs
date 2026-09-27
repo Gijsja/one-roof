@@ -145,6 +145,7 @@ namespace OneRoof.Domain.Transit
                     originLocationKind = (int)exec.Trip.Origin.Kind,
                     destinationLocationKind = (int)exec.Trip.Destination.Kind,
                     purpose = (int)exec.Trip.Purpose,
+                    outsideServiceTransactionRecorded = exec.Trip.OutsideServiceTransactionRecorded,
                     departureTick = exec.Trip.DepartureTick.Value,
                     state = (int)exec.Trip.State,
                     waitTicks = exec.Trip.WaitTicks,
@@ -194,6 +195,7 @@ namespace OneRoof.Domain.Transit
                 }
 
                 trip.AddWaitTicks(t.waitTicks);
+                trip.RestoreOutsideServiceTransactionRecorded(t.outsideServiceTransactionRecorded);
 
                 RestoreTripExecution(
                     trip,
@@ -206,7 +208,8 @@ namespace OneRoof.Domain.Transit
             }
         }
 
-        public void SubmitTrip(TripRecord trip, BuildingTopologyState topology, Tick currentTick, PopulationState population)
+        public void SubmitTrip(TripRecord trip, BuildingTopologyState topology, Tick currentTick, PopulationState population,
+            Action<TripRecord, PersonRecord> onTripCompleted = null)
         {
             if (trip == null) throw new ArgumentNullException(nameof(trip));
             if (topology == null) throw new ArgumentNullException(nameof(topology));
@@ -236,6 +239,8 @@ namespace OneRoof.Domain.Transit
                     person.UpdateActivity(PurposeToActivity(trip.Purpose));
                     ReconcileArrivalActivity(person, currentTick);
                 }
+
+                RecordOutsideArrivalCallback(trip, person, onTripCompleted);
 
                 return;
             }
@@ -270,6 +275,8 @@ namespace OneRoof.Domain.Transit
                     ReconcileArrivalActivity(person, currentTick);
                 }
 
+                RecordOutsideArrivalCallback(trip, person, onTripCompleted);
+
                 return;
             }
 
@@ -301,13 +308,15 @@ namespace OneRoof.Domain.Transit
             Tick tick,
             BuildingTopologyState topology,
             ElevatorBank elevatorBank,
-            PopulationState population)
+            PopulationState population,
+            float lobbyCapacityMultiplier = 1f,
+            Action<TripRecord, PersonRecord> onTripCompleted = null)
         {
             if (topology == null) throw new ArgumentNullException(nameof(topology));
             if (elevatorBank == null) throw new ArgumentNullException(nameof(elevatorBank));
 
             // 1. Advance elevator bank state machine
-            elevatorBank.Advance(tick);
+            elevatorBank.Advance(tick, lobbyCapacityMultiplier);
 
             // 2. Process all active resident trip legs
             for (var i = _activeTrips.Count - 1; i >= 0; i--)
@@ -334,7 +343,7 @@ namespace OneRoof.Domain.Transit
 
                 if (execution.CurrentLegIndex >= execution.Route.Legs.Count)
                 {
-                    CompleteTrip(i, execution, tick, person);
+                    CompleteTrip(i, execution, tick, person, onTripCompleted);
                     continue;
                 }
 
@@ -359,7 +368,7 @@ namespace OneRoof.Domain.Transit
 
                     if (execution.LegRemainingTicks <= 0)
                     {
-                        AdvanceLeg(i, execution, tick, person);
+                        AdvanceLeg(i, execution, tick, person, onTripCompleted);
                     }
                 }
                 else if (leg.Mode == TransitMode.Elevator)
@@ -400,7 +409,7 @@ namespace OneRoof.Domain.Transit
                             trip.AddWaitTicks((int)delivered.WaitTicks);
                             execution.IsQueuedInElevator = false;
                             execution.IsRidingElevator = false;
-                            AdvanceLeg(i, execution, tick, person);
+                            AdvanceLeg(i, execution, tick, person, onTripCompleted);
                         }
                     }
                     else if (execution.IsRidingElevator)
@@ -413,7 +422,7 @@ namespace OneRoof.Domain.Transit
                         {
                             trip.AddWaitTicks((int)delivered.WaitTicks);
                             execution.IsRidingElevator = false;
-                            AdvanceLeg(i, execution, tick, person);
+                            AdvanceLeg(i, execution, tick, person, onTripCompleted);
                         }
                     }
                 }
@@ -426,12 +435,13 @@ namespace OneRoof.Domain.Transit
                 trip.Cancel();
         }
 
-        private void AdvanceLeg(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person)
+        private void AdvanceLeg(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person,
+            Action<TripRecord, PersonRecord> onTripCompleted)
         {
             execution.CurrentLegIndex++;
             if (execution.CurrentLegIndex >= execution.Route.Legs.Count)
             {
-                CompleteTrip(listIndex, execution, tick, person);
+                CompleteTrip(listIndex, execution, tick, person, onTripCompleted);
             }
             else
             {
@@ -481,7 +491,8 @@ namespace OneRoof.Domain.Transit
             _activeTripsByPerson.Remove(execution.Trip.PersonId);
         }
 
-        private void CompleteTrip(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person)
+        private void CompleteTrip(int listIndex, ActiveTripExecution execution, Tick tick, PersonRecord person,
+            Action<TripRecord, PersonRecord> onTripCompleted)
         {
             var trip = execution.Trip;
             if (trip.State == TripState.InProgress)
@@ -497,8 +508,25 @@ namespace OneRoof.Domain.Transit
                 ResidentPurposeSystem.AdvancePerson(person, tick);
             }
 
+            RecordOutsideArrivalCallback(trip, person, onTripCompleted);
+
             _activeTrips.RemoveAt(listIndex);
             _activeTripsByPerson.Remove(trip.PersonId);
+        }
+
+        private static void RecordOutsideArrivalCallback(TripRecord trip, PersonRecord person,
+            Action<TripRecord, PersonRecord> onTripCompleted)
+        {
+            if (trip == null || onTripCompleted == null || trip.State != TripState.Completed ||
+                !trip.Destination.IsOutside ||
+                (trip.Purpose != TripPurpose.Food && trip.Purpose != TripPurpose.MoveOut))
+                return;
+
+            if (!trip.OutsideServiceTransactionRecorded)
+            {
+                onTripCompleted(trip, person);
+                trip.TryMarkOutsideServiceTransactionRecorded();
+            }
         }
 
         /// <summary>
@@ -588,6 +616,7 @@ namespace OneRoof.Domain.Transit
                 TripPurpose.Home => ActivityKind.Sleeping,
                 TripPurpose.Leisure => ActivityKind.Leisure,
                 TripPurpose.Hygiene => ActivityKind.Idle,
+                TripPurpose.MoveOut => ActivityKind.Idle,
                 _ => ActivityKind.Idle
             };
         }

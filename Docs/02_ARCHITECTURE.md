@@ -67,6 +67,16 @@ only the layer roots on horizontal camera pans, shifts its anchor with ground-sl
 and derives window and sky colours from the existing day/night clock. City geometry is not
 simulation or save state.
 
+### Underground excavation
+
+Excavation is a separate deterministic domain state beneath the building; it does not create
+negative tower floors or alter resident transit topology. Its fixed 16×6 board is independent
+of tower floor slabs. `DigUndergroundCommand` marks a square brush (1×1, 2×2, or 3×3) on a 1 m
+grid. The presentation maps clicks and drag paths in the earth cutaway to those cells. A separate
+floor-building command can only lay lair floor over excavated cells; it does not invoke tower-room
+or slab validation. Immutable `UndergroundDigProjection` snapshots drive visible earth, cavities,
+and lair floor. Both excavation and floor cells are part of the root save payload.
+
 ## Presentation & UI
 
 - Pool visible Spine NPC views (`TowerResidentPresenter`) and active effects; 40–60 view cap.

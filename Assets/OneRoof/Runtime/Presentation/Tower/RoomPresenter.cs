@@ -4,6 +4,7 @@ using OneRoof.Application.Tower;
 using OneRoof.Presentation.Architecture;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Population;
 using OneRoof.Presentation.Furnishings;
 using UnityEngine;
 using EntityId = OneRoof.Domain.Identity.EntityId;
@@ -24,6 +25,7 @@ namespace OneRoof.Presentation.Tower
         private readonly List<GameObject> _roomObjects = new List<GameObject>();
         private readonly Dictionary<EntityId, GameObject> _roomRoots = new Dictionary<EntityId, GameObject>();
         private readonly Dictionary<EntityId, RoomFurnishingPresenter> _furnishings = new Dictionary<EntityId, RoomFurnishingPresenter>();
+        private readonly Dictionary<EntityId, RoomBackdropPresenter> _backdrops = new Dictionary<EntityId, RoomBackdropPresenter>();
         private readonly HashSet<EntityId> _authoredRoomIds = new HashSet<EntityId>();
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
@@ -94,6 +96,7 @@ namespace OneRoof.Presentation.Tower
             _renderedRoomIds.Clear();
             _roomObjects.Clear();
             _roomRoots.Clear();
+            _backdrops.Clear();
             _authoredRoomIds.Clear();
         }
 
@@ -183,6 +186,8 @@ namespace OneRoof.Presentation.Tower
                     _authoredRoomIds.Add(room.Id);
                     var authoredFurnishings = authoredRoot.GetComponent<RoomFurnishingPresenter>();
                     if (authoredFurnishings != null) _furnishings[room.Id] = authoredFurnishings;
+                    var authoredBackdrop = authoredRoot.GetComponent<RoomBackdropPresenter>();
+                    if (authoredBackdrop != null) _backdrops[room.Id] = authoredBackdrop;
                     continue;
                 }
 
@@ -215,6 +220,7 @@ namespace OneRoof.Presentation.Tower
                 {
                     var backdropPresenter = roomRoot.AddComponent<RoomBackdropPresenter>();
                     backdropPresenter.Setup(contentTypeStr, width, 1.42f, worldLeft, worldRight, y, isWestSide, _worldMaterial);
+                    _backdrops[room.Id] = backdropPresenter;
 
                     var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
                     furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide, _worldMaterial);
@@ -313,6 +319,7 @@ namespace OneRoof.Presentation.Tower
             _roomObjects.Clear();
             _roomRoots.Clear();
             _furnishings.Clear();
+            _backdrops.Clear();
             _renderedRoomIds.Clear();
             _authoredRoomIds.Clear();
         }
@@ -342,6 +349,19 @@ namespace OneRoof.Presentation.Tower
             }
             worldPosition = default;
             return false;
+        }
+
+        public void UpdateHousingConditions(IReadOnlyList<HouseholdHousingLifecycleProjection> housing)
+        {
+            foreach (var backdrop in _backdrops.Values)
+                if (backdrop != null) backdrop.SetHousingCondition(HousingConditionStage.Maintained);
+            if (housing == null) return;
+            for (var i = 0; i < housing.Count; i++)
+            {
+                var projection = housing[i];
+                if (_backdrops.TryGetValue(projection.HomeRoomId, out var backdrop) && backdrop != null)
+                    backdrop.SetHousingCondition(projection.RoomCondition);
+            }
         }
 
         private void CreateExitSign(EntityId roomId, float centerX, float y, Transform parent)

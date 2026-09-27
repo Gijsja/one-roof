@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.CivilAction;
+using OneRoof.Domain.Decisions;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Events;
 using OneRoof.Domain.Infrastructure;
@@ -9,6 +11,7 @@ using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Randomness;
 using OneRoof.Domain.Scrutiny;
+using OneRoof.Domain.Social;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
@@ -26,6 +29,8 @@ namespace OneRoof.Domain
         private int _nextElevatorCarId = 500;
         private int _nextEntityId = 3000;
         private readonly long _settlementPeriod;
+        private readonly List<PersonRecord> _outsideWorkers = new List<PersonRecord>();
+        private readonly List<HouseholdRecord> _settlementHouseholds = new List<HouseholdRecord>();
 
         public TowerSimulation(
             SimulationClock clock,
@@ -35,7 +40,8 @@ namespace OneRoof.Domain
             TowerEconomyState economy = null,
             IRandomStream randomStream = null,
             ScrutinyState scrutiny = null,
-            long settlementPeriod = DailySchedule.TicksPerDay)
+            long settlementPeriod = DailySchedule.TicksPerDay,
+            OutsideMarketState outsideMarket = null)
         {
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
             Topology = topology ?? throw new ArgumentNullException(nameof(topology));
@@ -44,6 +50,7 @@ namespace OneRoof.Domain
             if (settlementPeriod <= 0) throw new ArgumentOutOfRangeException(nameof(settlementPeriod));
             _settlementPeriod = settlementPeriod;
             Economy = economy ?? new TowerEconomyState();
+            OutsideMarket = outsideMarket ?? new OutsideMarketState();
             RandomStream = randomStream ?? new DeterministicRandomStream(1337);
 
             Planner = new TransitRoutePlanner(Topology.TransitGraph);
@@ -58,17 +65,26 @@ namespace OneRoof.Domain
             UtilityOperations = new UtilityOperationsState();
             Wellbeing = new ResidentWellbeingSystem();
             Scrutiny = scrutiny ?? new ScrutinyState();
+            Factions = new FactionState();
+            CivilActions = new CivilActionState();
+            Decisions = new DecisionRecordState();
+            HousingLifecycle = new HouseholdLeaseLifecycleState();
+            HousingLifecycleSystem = new HouseholdHousingLifecycleSystem();
         }
 
         public SimulationClock Clock { get; }
 
         public BuildingTopologyState Topology { get; }
 
+        public UndergroundDigState Underground { get; private set; } = new UndergroundDigState();
+
         public PopulationState Population { get; }
 
         public ElevatorBank ElevatorBank { get; }
 
         public TowerEconomyState Economy { get; }
+
+        public OutsideMarketState OutsideMarket { get; private set; }
 
         public LeasingDemandSystem Leasing { get; }
 
@@ -88,8 +104,37 @@ namespace OneRoof.Domain
         public UtilityOperationsState UtilityOperations { get; private set; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
+        public FactionState Factions { get; private set; }
+        public CivilActionState CivilActions { get; private set; }
+        public DecisionRecordState Decisions { get; private set; }
+        public HouseholdLeaseLifecycleState HousingLifecycle { get; private set; }
+        public HouseholdHousingLifecycleSystem HousingLifecycleSystem { get; }
+
+        private List<CivilActionSignal> BuildCivilActionSignals()
+        {
+            var signals = new List<CivilActionSignal>(Factions.Factions.Count);
+            foreach (var faction in Factions.Factions)
+            {
+                var people = new List<int>();
+                var floors = new SortedSet<int>();
+                foreach (var support in Factions.Supports)
+                {
+                    if (support.FactionId != faction.Id || !support.IsMember) continue;
+                    people.Add(support.ResidentId.Value);
+                    floors.Add(support.HomeFloor);
+                }
+                people.Sort();
+                var floorArray = new int[floors.Count];
+                floors.CopyTo(floorArray);
+                signals.Add(new CivilActionSignal(faction.Id, faction.Pressure, faction.MemberCount,
+                    faction.TopGrievance, people.ToArray(), floorArray));
+            }
+            return signals;
+        }
 
         public long CurrentTick => Clock.CurrentTick.Value;
+
+        public long CurrentSimulationDay => CurrentTick / _settlementPeriod;
 
         /// <summary>Pure calendar view over the tick clock for the day/night presentation clock.</summary>
         public DayPhase DayPhase => DayClock.FromTick(CurrentTick);
@@ -123,7 +168,8 @@ namespace OneRoof.Domain
             UtilityOperations.Advance(Topology, Population);
             Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
                 applyDailyArrearsStrain: currentTick.Value % _settlementPeriod == 0,
-                dayFraction: 1f / _settlementPeriod);
+                dayFraction: 1f / _settlementPeriod,
+                quietHoursEnabled: Economy.Policy.QuietHoursEnabled && DayPhase.IsNight);
             Scrutiny.Advance(Topology, Population, Specialists.CrisisResponseMultiplier);
 
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
@@ -141,28 +187,149 @@ namespace OneRoof.Domain
             // 2. Daily cash settlement (default one in-game day; injectable for focused domain fixtures).
             if (currentTick.Value % _settlementPeriod == 0)
             {
+                // Close the interval that ended at this boundary before its counters are reset.
+                // It includes income/rent from the previous settlement plus purchases and
+                // essential shortfalls recorded by trips during the interval. The first
+                // boundary closes the empty initial interval, then opens the first full day.
+                for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].CompleteDailyBudgetSettlement();
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].BeginDailySettlement();
                 Businesses.ProcessPayroll(Population);
-                Economy.ProcessRentCycle(Topology, Population);
-                Businesses.ProcessBusinessCycle(Topology, Population, Economy, CalculateResidentialOccupancyFactor(), Economy.Policy, payrollAlreadyProcessed: true);
+                ProcessOutsidePayroll();
+                RecordDailyCreditRepayments();
+                Economy.ProcessRentCycle(Topology, Population, CivilActions.ResidentialRentCollectionMultiplier);
+                Businesses.ProcessBusinessCycle(Topology, Population, Economy,
+                    CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier,
+                    Economy.Policy, payrollAlreadyProcessed: true);
                 var utilityCellCount = CountUtilityCells();
                 var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
                 Economy.ChargeDailyExpense(upkeep, subsidy: false);
                 Economy.ChargeDailyExpense(Economy.Policy.DailyTransitSubsidy, subsidy: true);
-                for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].UpdateArrearsDays();
+                for (var i = 0; i < Population.Households.Count; i++)
+                {
+                    Population.Households[i].UpdateArrearsDays();
+                }
+                var simulationDay = currentTick.Value / _settlementPeriod;
+                var housing = HousingLifecycleSystem.AdvanceDaily(HousingLifecycle, Population, simulationDay);
+                StartEligibleMoveOuts(housing, currentTick);
                 Economy.CompleteDailySettlement(currentTick.Value);
+                Factions.Evaluate(Population, Topology, Businesses, Economy.Policy, currentTick.Value);
+                CivilActions.Evaluate(currentTick.Value, BuildCivilActionSignals(), Scrutiny.Value);
+                Decisions.ObserveSettlement(this);
+                Decisions.RecordCivilPhases(this);
             }
 
             // 3. Generate scheduled routine trips when schedule blocks transition
-            var trips = TripGenerator.GenerateTripsForTick(previousTick, currentTick, Population);
+            var simulationDayNow = currentTick.Value / _settlementPeriod;
+            var trips = TripGenerator.GenerateTripsForTick(previousTick, currentTick, Population,
+                person => !HousingLifecycle.IsMoveOutEligible(person.HouseholdId, simulationDayNow));
             for (var i = 0; i < trips.Count; i++)
             {
-                Transit.SubmitTrip(trips[i], Topology, currentTick, Population);
+                Transit.SubmitTrip(trips[i], Topology, currentTick, Population, HandleOutsideTripCompleted);
             }
 
             // 4. Advance transit execution (walking legs, elevator queues, riding cars)
-            Transit.Advance(currentTick, Topology, ElevatorBank, Population);
+            Transit.Advance(currentTick, Topology, ElevatorBank, Population, CivilActions.LobbyCapacityMultiplier,
+                HandleOutsideTripCompleted);
+            CompleteDepartedHouseholds(simulationDayNow);
         }
+
+        private void ProcessOutsidePayroll()
+        {
+            _outsideWorkers.Clear();
+            for (var i = 0; i < Population.Persons.Count; i++)
+            {
+                var person = Population.Persons[i];
+                if (person.WorkplaceLocation.IsOutside) _outsideWorkers.Add(person);
+            }
+            _outsideWorkers.Sort((left, right) => left.Id.CompareTo(right.Id));
+            for (var i = 0; i < _outsideWorkers.Count; i++)
+            {
+                var person = _outsideWorkers[i];
+                if (HousingLifecycle.IsMoveOutEligible(person.HouseholdId,
+                    Clock.CurrentTick.Value / _settlementPeriod)) continue;
+                if (Population.TryGetHousehold(person.HouseholdId, out var household))
+                    OutsideMarket.RecordWagePayment(household, OutsideDailyWage);
+            }
+        }
+
+        private void RecordDailyCreditRepayments()
+        {
+            _settlementHouseholds.Clear();
+            for (var i = 0; i < Population.Households.Count; i++) _settlementHouseholds.Add(Population.Households[i]);
+            _settlementHouseholds.Sort((left, right) => left.Id.CompareTo(right.Id));
+            for (var i = 0; i < _settlementHouseholds.Count; i++)
+            {
+                var household = _settlementHouseholds[i];
+                OutsideMarket.RecordCreditRepayment(household, household.DailyCreditRepayment);
+            }
+        }
+
+        private void HandleOutsideTripCompleted(TripRecord trip, PersonRecord person)
+        {
+            if (trip == null || person == null || !trip.Destination.IsOutside) return;
+            if (trip.Purpose == TripPurpose.MoveOut)
+            {
+                CompleteDepartedHouseholds(Clock.CurrentTick.Value / _settlementPeriod);
+                return;
+            }
+            if (trip.Purpose != TripPurpose.Food) return;
+            if (!Population.TryGetHousehold(person.HouseholdId, out var household)) return;
+            var creditLimit = household.MemberIds.Count * OutsideDailyMealPrice * 45L;
+            var purchase = OutsideMarket.TryPurchase(household, OutsideDailyMealPrice, creditLimit, OutsideServiceCategory.EssentialFood);
+            if (!purchase.Accepted)
+            {
+                household.RecordEssentialShortfall(OutsideDailyMealPrice);
+                person.BlockOutsideFoodUntil(Clock.CurrentTick.Value + OutsideFoodRetryCooldownTicks);
+                var activeLabel = person.Schedule.ActiveLabelAt(Clock.CurrentTick);
+                person.UpdateActivity(person.WorkplaceLocation.IsOutside &&
+                    activeLabel == DailySchedule.LabelWork ? ActivityKind.Working : ActivityKind.Idle);
+            }
+        }
+
+        private void StartEligibleMoveOuts(IReadOnlyList<HouseholdHousingLifecycleProjection> housing, Tick tick)
+        {
+            if (housing == null) return;
+            for (var i = 0; i < housing.Count; i++)
+            {
+                if (!housing[i].IsMoveOutEligible || !Population.TryGetHousehold(housing[i].HouseholdId, out var household)) continue;
+                for (var memberIndex = 0; memberIndex < household.MemberIds.Count; memberIndex++)
+                {
+                    if (!Population.TryGetPerson(household.MemberIds[memberIndex], out var person) ||
+                        person.CurrentLocation.IsOutside || Transit.IsPersonTravelling(person.Id)) continue;
+                    var trip = TripGenerator.CreateMoveOutTrip(person, tick);
+                    if (trip != null) Transit.SubmitTrip(trip, Topology, tick, Population, HandleOutsideTripCompleted);
+                }
+            }
+        }
+
+        private void CompleteDepartedHouseholds(long simulationDay)
+        {
+            for (var householdIndex = Population.Households.Count - 1; householdIndex >= 0; householdIndex--)
+            {
+                var household = Population.Households[householdIndex];
+                if (!HousingLifecycle.IsMoveOutEligible(household.Id, simulationDay)) continue;
+                var allOutside = household.MemberIds.Count > 0;
+                for (var memberIndex = 0; memberIndex < household.MemberIds.Count; memberIndex++)
+                {
+                    if (!Population.TryGetPerson(household.MemberIds[memberIndex], out var person) ||
+                        !person.CurrentLocation.IsOutside || Transit.IsPersonTravelling(person.Id))
+                    {
+                        allOutside = false;
+                        break;
+                    }
+                }
+                if (!allOutside) continue;
+
+                HousingLifecycle.RecordDeparture(household.Id, simulationDay, household.CashBalance,
+                    household.RentArrearsBalance, household.OutsideCreditBalance);
+                if (Population.RemoveHouseholdAndMembers(household.Id, out _))
+                    HousingLifecycle.RemoveHousehold(household.Id);
+            }
+        }
+
+        public const long OutsideDailyWage = 18;
+        public const long OutsideDailyMealPrice = 8;
+        public const long OutsideFoodRetryCooldownTicks = 30;
 
         public void SyncTransitServices()
         {
@@ -228,6 +395,20 @@ namespace OneRoof.Domain
                     if (!Economy.CanAfford(cost))
                         return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for ground slab expansion ({cost} required, Treasury: {Economy.CashBalance}).") });
                     return Topology.CanExecute(groundExpansionCmd);
+                }
+
+                case DigUndergroundCommand digCmd:
+                {
+                    if (!Underground.CanExcavate(digCmd.X, digCmd.Depth, digCmd.Size))
+                        return CommandResult.Fail("The square dig brush must fit inside the underground earth grid.", "underground:outside_bounds");
+                    return CommandResult.Success();
+                }
+
+                case BuildUndergroundFloorCommand floorCmd:
+                {
+                    if (!Underground.CanBuildFloor(floorCmd.X, floorCmd.Depth, floorCmd.Size))
+                        return CommandResult.Fail("Lair floor can only be built in an excavated, unfloored square.", "underground:floor_requires_open_earth");
+                    return CommandResult.Success();
                 }
 
                 case BuildRoomCommand roomCmd:
@@ -386,6 +567,22 @@ namespace OneRoof.Domain
                     return BuildFloorSlab(slabCmd);
                 case ExpandGroundSlabCommand groundExpansionCmd:
                     return ExpandGroundSlab(groundExpansionCmd);
+                case DigUndergroundCommand digCmd:
+                {
+                    var canDig = CanExecute(digCmd);
+                    if (!canDig.Accepted) return canDig;
+                    if (!Underground.Excavate(digCmd.X, digCmd.Depth, digCmd.Size)) return CommandResult.Success();
+                    var evt = new DomainEvent(new EntityId(_nextEntityId++), new ContentId("event:earth_excavated"), Clock.CurrentTick);
+                    return CommandResult.Accept(new[] { evt });
+                }
+                case BuildUndergroundFloorCommand floorCmd:
+                {
+                    var canBuild = CanExecute(floorCmd);
+                    if (!canBuild.Accepted) return canBuild;
+                    if (!Underground.BuildFloor(floorCmd.X, floorCmd.Depth, floorCmd.Size)) return CommandResult.Success();
+                    var evt = new DomainEvent(new EntityId(_nextEntityId++), new ContentId("event:lair_floor_built"), Clock.CurrentTick);
+                    return CommandResult.Accept(new[] { evt });
+                }
                 case BuildRoomCommand roomCmd:
                     return BuildRoom(roomCmd);
                 case AddElevatorShaftCommand shaftCmd:
@@ -416,6 +613,7 @@ namespace OneRoof.Domain
             var nextPolicy = command.Policy;
             if (Economy.Policy == nextPolicy) return CommandResult.Success();
 
+            var oldPolicy = Economy.Policy;
             Economy.SetPolicy(nextPolicy);
             if (nextPolicy.IsAggressive)
             {
@@ -423,6 +621,7 @@ namespace OneRoof.Domain
                                (nextPolicy.CommercialTaxRate == PolicyDecreeState.HighCommercialTaxRate ? .08f : 0f);
                 Scrutiny.RecordAggressivePolicy(severity);
             }
+            Decisions.RecordDecree(this, oldPolicy, nextPolicy);
 
             var changeEvent = new DomainEvent(
                 new EntityId(_nextEntityId++),
@@ -825,13 +1024,21 @@ namespace OneRoof.Domain
             };
 
             data.SetEconomySaveData(Economy.ToSaveData());
+            data.undergroundCells = Underground.ToSaveData();
+            data.undergroundFloorCells = Underground.FloorsToSaveData();
+            data.undergroundGridV2 = true;
             data.SetTopologySaveData(Topology.ToSaveData());
             data.SetPopulationSaveData(Population.ToSaveData());
+            data.SetOutsideMarketSaveData(OutsideMarket.ToSaveData());
+            data.SetHouseholdLeaseLifecycleSaveData(HousingLifecycle.ToSaveData());
             data.elevatorBank = ElevatorBank.ToSaveData();
             data.activeTrips = Transit.ToSaveData();
             data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
             data.businesses = Businesses.ToSaveData();
             data.utilityOperations = UtilityOperations.ToSaveData();
+            data.factions = Factions.ToSaveData();
+            data.civilActions = CivilActions.ToSaveData();
+            data.decisions = Decisions.ToSaveData();
 
             return data;
         }
@@ -851,8 +1058,16 @@ namespace OneRoof.Domain
             var scrutiny = data.scrutiny == null ? new ScrutinyState() : new ScrutinyState(data.scrutiny.value, data.scrutiny.previousValue, data.scrutiny.recentExpansionPressure, data.scrutiny.recentPolicyPressure);
 
             var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
+            topology.TryGetFloorSlab(0, out var groundSlab);
+            sim.Underground = UndergroundDigState.FromSaveData(data.undergroundCells, data.undergroundFloorCells,
+                !data.undergroundGridV2, groundSlab);
             sim.Businesses = BusinessState.FromSaveData(data.businesses);
             sim.UtilityOperations = UtilityOperationsState.FromSaveData(data.utilityOperations);
+            sim.OutsideMarket = OutsideMarketState.FromSaveData(data.GetOutsideMarketSaveData());
+            sim.HousingLifecycle = HouseholdLeaseLifecycleState.FromSaveData(data.GetHouseholdLeaseLifecycleSaveData());
+            sim.Factions = FactionState.FromSaveData(data.factions, population);
+            sim.CivilActions = CivilActionState.FromSaveData(data.civilActions);
+            sim.Decisions = DecisionRecordState.FromSaveData(data.decisions);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 

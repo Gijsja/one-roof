@@ -69,10 +69,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.Windows[0].GetPropertyBlock(block);
             var nightColor = block.GetColor("_BaseColor");
             Assert.That(nightColor.r, Is.GreaterThan(dayColor.r));
-            Assert.That(_presenter.Windows[0].sharedMaterial.shader.name,
-                Does.StartWith("AllIn1SpriteShader/AllIn1SpriteShader"));
-            Assert.That(_presenter.Windows[0].sharedMaterial.IsKeywordEnabled("GLOW_ON"), Is.True);
-            Assert.That(block.GetFloat("_Glow"), Is.GreaterThan(0.5f));
+            Assert.That(_presenter.Windows[0].sharedMaterial, Is.SameAs(_material));
 
             var before = _presenter.Layers[0].localPosition.x;
             _presenter.SyncGround(new CellBounds(0, -14, 21), 5);
@@ -102,6 +99,23 @@ namespace OneRoof.Presentation.Tests.EditMode
             farFacade.GetComponent<MeshRenderer>().GetPropertyBlock(block);
             Assert.That(block.GetColor("_BaseColor").r, Is.LessThan(0.5f),
                 "Generated facades must never start as white rectangles.");
+        }
+
+        [Test]
+        public void CityGeometryBeginsBeyondLobbyEdge()
+        {
+            var ground = new CellBounds(0, -14, 17);
+            _presenter.SyncGround(ground, 1);
+            var edge = -2.4f + (ground.MaxX + 1) * 0.5f;
+            foreach (var layer in _presenter.Layers)
+            {
+                var building = layer.Find("Building 1");
+                Assert.That(building.position.x - building.localScale.x * 0.5f,
+                    Is.GreaterThan(edge), layer.name);
+            }
+            var apron = _presenter.Layers[2].Find("Street apron");
+            Assert.That(apron.position.x - apron.localScale.x * 0.5f,
+                Is.GreaterThanOrEqualTo(edge));
         }
     }
 }

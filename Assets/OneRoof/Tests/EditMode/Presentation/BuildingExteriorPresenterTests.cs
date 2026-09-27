@@ -91,6 +91,48 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void GroundDressingAndEntranceFollowExpandedSlab()
+        {
+            var slabs = new Dictionary<int, CellBounds> { { 0, new CellBounds(0, -14, 17) } };
+            _presenter.EnsureExteriorViews(new TowerTopologyProjection(slabs));
+            var root = _presenter.Root;
+            var soil = root.Find("Ground Dressing/Foundation Soil");
+            var green = root.Find("Ground Dressing/Ground Green Edge");
+            var entrance = root.Find("Right Facade/Entrance Glass");
+            Assert.That(soil, Is.Not.Null);
+            Assert.That(green, Is.Not.Null);
+            Assert.That(entrance, Is.Not.Null);
+            var bay = root.Find("Ground Dressing/West Bay Mullion 1");
+            Assert.That(bay, Is.Not.Null);
+            Assert.That(bay.localPosition.z, Is.GreaterThan(0.7f).And.LessThan(1f));
+            var oldWidth = soil.localScale.x;
+            var oldEntranceX = entrance.localPosition.x;
+
+            slabs[0] = new CellBounds(0, -20, 23);
+            _presenter.EnsureExteriorViews(new TowerTopologyProjection(slabs));
+            Assert.That(soil.localScale.x, Is.EqualTo(oldWidth).Within(0.001f),
+                "The underground earth board stays independent when the tower slab expands.");
+            Assert.That(entrance.localPosition.x, Is.EqualTo(oldEntranceX + 3f).Within(0.001f));
+        }
+
+        [Test]
+        public void GroundExpansionKeepsUpperDownspoutOnUpperFacade()
+        {
+            var slabs = new Dictionary<int, CellBounds>
+            {
+                { 0, new CellBounds(0, -20, 22) },
+                { 1, new CellBounds(1, -14, 16) }
+            };
+            _presenter.EnsureExteriorViews(new TowerTopologyProjection(slabs));
+            var upperWall = _presenter.Root.Find("Left Facade/Left Wall 1");
+            var downspout = _presenter.Root.Find("Left Facade/Left Downspout");
+            Assert.That(downspout.localPosition.x, Is.EqualTo(
+                upperWall.localPosition.x - BuildingExteriorPresenter.WallThickness * 0.5f - 0.02f).Within(0.001f));
+            Assert.That(downspout.localPosition.y - downspout.localScale.y * 0.5f,
+                Is.GreaterThan(TowerStructurePresenter.FloorY(0)));
+        }
+
+        [Test]
         public void EnsureExteriorViews_SteppedTerrace_CreatesTerraceWhenGroundSlabIsWider()
         {
             var slabs = new Dictionary<int, CellBounds>

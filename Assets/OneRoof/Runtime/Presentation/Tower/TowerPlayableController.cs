@@ -5,6 +5,7 @@ using OneRoof.Application.Overlays;
 using OneRoof.Application.Prediction;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.Weather;
 using EntityId = OneRoof.Domain.Identity.EntityId;
 using OneRoof.Presentation.Overlays;
 using OneRoof.Presentation.Population;
@@ -78,6 +79,15 @@ namespace OneRoof.Presentation.Tower
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
         public TowerAtmospherePresenter AtmospherePresenter => _atmosphere;
         public PixelRainPresenter RainPresenter => _pixelRain;
+        private readonly MonthlyWeatherCycle _weatherCycle = new MonthlyWeatherCycle();
+        private int _weatherOverride = -1; // -1: Auto, 0: Clear, 1: Drizzle, 2: Rain, 3: Storm
+        private WeatherSample _currentWeather = new WeatherSample(WeatherCondition.Clear, 0f, 0f, "Clear Skies");
+
+        public MonthlyWeatherCycle WeatherCycle => _weatherCycle;
+        public WeatherSample CurrentWeather => _currentWeather;
+        public int WeatherOverride => _weatherOverride;
+        public bool IsAutoWeather => _weatherOverride < 0;
+        public string WeatherModeDescription => _weatherOverride < 0 ? $"{_currentWeather.Description} (Auto)" : $"{_currentWeather.Description} (Manual)";
         public TowerStartMode StartMode => _startMode;
         public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
@@ -157,7 +167,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); _outside?.Clear(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
+        private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); _outside?.Clear(); _exterior.Dispose(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
         private void Update()
         {
@@ -237,7 +247,7 @@ namespace OneRoof.Presentation.Tower
             var topo = _sim?.TopologyProjection(); var fl = topo != null ? topo.FloorCount : InitialFloorCount;
             var minFloor = _sim?.ElevatorMinFloor ?? 0;
             var maxFloor = _sim?.ElevatorMaxFloor ?? (fl - 1);
-            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo); _room.EnsureRoomViews(topo);
+            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
             if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _pixelRain?.SyncTopology(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
@@ -248,9 +258,9 @@ namespace OneRoof.Presentation.Tower
         {
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null) { if (kb.spaceKey.wasPressedThisFrame) _isPaused = !_isPaused; else if (kb.rKey.wasPressedThisFrame) ResetCommuteSimulation(); else if (kb.tKey.wasPressedThisFrame && _isPaused) _sim.AdvanceOneTick(); }
+            if (kb != null) { if (kb.spaceKey.wasPressedThisFrame) _isPaused = !_isPaused; else if (kb.rKey.wasPressedThisFrame) ResetCommuteSimulation(); else if (kb.wKey.wasPressedThisFrame) CycleWeatherOverride(); else if (kb.tKey.wasPressedThisFrame && _isPaused) _sim.AdvanceOneTick(); }
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.Space)) _isPaused = !_isPaused; else if (Input.GetKeyDown(KeyCode.R)) ResetCommuteSimulation(); else if (Input.GetKeyDown(KeyCode.T) && _isPaused) _sim.AdvanceOneTick();
+            if (Input.GetKeyDown(KeyCode.Space)) _isPaused = !_isPaused; else if (Input.GetKeyDown(KeyCode.R)) ResetCommuteSimulation(); else if (Input.GetKeyDown(KeyCode.W)) CycleWeatherOverride(); else if (Input.GetKeyDown(KeyCode.T) && _isPaused) _sim.AdvanceOneTick();
 #endif
         }
 
@@ -348,7 +358,50 @@ namespace OneRoof.Presentation.Tower
         private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection()); }
         private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
         private void ClearWorldGeometry() { _structure.Clear(); _floorDecks?.Clear(); _exterior.Clear(); _pixelRain?.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
-        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime); }
+        public void CycleWeatherOverride()
+        {
+            _weatherOverride++;
+            if (_weatherOverride > 3) _weatherOverride = -1;
+            UpdateActiveWeather();
+        }
+
+        public void SetWeatherOverride(int conditionIndex)
+        {
+            _weatherOverride = conditionIndex >= -1 && conditionIndex <= 3 ? conditionIndex : -1;
+            UpdateActiveWeather();
+        }
+
+        public void UpdateActiveWeather()
+        {
+            if (_weatherOverride >= 0)
+            {
+                var cond = (WeatherCondition)_weatherOverride;
+                var intensity = cond switch
+                {
+                    WeatherCondition.Clear => 0f,
+                    WeatherCondition.Drizzle => 0.25f,
+                    WeatherCondition.Rain => 0.65f,
+                    WeatherCondition.Storm => 1.0f,
+                    _ => 0f
+                };
+                var wind = cond switch
+                {
+                    WeatherCondition.Storm => -2.2f,
+                    WeatherCondition.Rain => -0.9f,
+                    WeatherCondition.Drizzle => -0.3f,
+                    _ => 0f
+                };
+                _currentWeather = new WeatherSample(cond, intensity, wind, WeatherSample.DefaultDescription(cond));
+            }
+            else if (_sim != null)
+            {
+                _currentWeather = _weatherCycle.Sample(_sim.CurrentTick);
+            }
+
+            _pixelRain?.SetWeather(_currentWeather);
+        }
+
+        private void RenderVisualSnapshot() { var projection = _sim.Projection(); _elevator.UpdateElevatorPositions(projection); _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator); _room.UpdateHousingConditions(_sim.HousingProjection()); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); UpdateActiveWeather(); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime); }
         private static Material CreateWorldMaterial()
         {
             var authored = Resources.Load<Material>("Materials/OneRoofWorldMaterial");

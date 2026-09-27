@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using OneRoof.Application.Tower;
 using OneRoof.Application.Transit;
 using OneRoof.Application.Overlays;
+using OneRoof.Application.Social;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
 
@@ -28,7 +29,7 @@ namespace OneRoof.Application.Inspectors
             var householdId = new EntityId(person.HouseholdId);
             var household = _session.GetHousehold(householdId);
             var dailyRent = _session.DailyResidentialRent(householdId);
-            var dailyNet = household.DailyIncome - dailyRent - household.DailyServiceSpend;
+            var dailyNet = household.DailyBudgetNetFlow;
             var details = new List<string>
             {
                 $"Activity: {person.Activity}",
@@ -41,13 +42,26 @@ namespace OneRoof.Application.Inspectors
                     ? (person.IsTraining ? $"Training: {person.TrainingRole} ({person.TrainingProgress:P0})" : "Specialist role: none yet")
                     : $"Specialist role: {person.Role}",
                 $"Household cash: ${household.CashBalance:N0}",
+                $"Net cash after outside credit: ${household.NetCashPosition:N0}",
+                $"Position after rent arrears: ${household.NetFinancialPosition:N0}",
                 $"Daily income: ${household.DailyIncome:N0}",
-                $"Daily rent due: ${dailyRent:N0}",
-                $"Food and service spend: ${household.DailyServiceSpend:N0}",
-                $"Daily cash change: ${dailyNet:+#,0;-#,0;0}",
-                $"Rent arrears: {household.ArrearsDays} day(s)"
+                $"Daily rent due / paid: ${household.DailyRentDue:N0} / ${household.DailyRentPaid:N0}",
+                $"Tower food and service spend: ${household.DailyServiceSpend:N0}",
+                $"Outside essentials / quality / care: ${household.DailyOutsideEssentialSpend:N0} / ${household.DailyOutsideQualitySpend:N0} / ${household.DailyCareSpend:N0}",
+                $"Outside credit outstanding: ${household.OutsideCreditBalance:N0}; repaid today: ${household.DailyCreditRepayment:N0}",
+                $"Budget flow: ${dailyNet:+#,0;-#,0;0}; trailing 7/30 days: ${household.Rolling7DayNetFlow:+#,0;-#,0;0} / ${household.Rolling30DayNetFlow:+#,0;-#,0;0}",
+                $"Unmet essentials today: ${household.DailyEssentialShortfall:N0}; accumulated exposure: ${household.UnderprovisionExposure:N0}",
+                $"Rent arrears: ${household.RentArrearsBalance:N0} for {household.RentArrearsDays} day(s)"
             };
-            if (household.ArrearsDays > 30) details.Add("Prolonged rent arrears are causing household stress.");
+            if (household.RentArrearsDays > 30) details.Add("Prolonged rent arrears are causing household stress.");
+            var housing = _session.HouseholdHousing(household.Id);
+            if (housing.HasValue)
+            {
+                details.Add($"Home room condition: {housing.Value.RoomCondition}");
+                details.Add($"Lease phase: {housing.Value.LeasePhase}");
+                if (housing.Value.HasNotice)
+                    details.Add($"Move-out notice started on day {housing.Value.NoticeStartedDay}; eligible: {(housing.Value.IsMoveOutEligible ? "yes" : "no")}");
+            }
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
             details.Add($"Satisfaction: {person.Satisfaction:P0}");
@@ -56,6 +70,10 @@ namespace OneRoof.Application.Inspectors
             details.Add($"Rent burden: {person.RentBurden:P0}");
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
             foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
+            var social = FactionProjectionService.Capture(_session.Simulation);
+            foreach (var support in social.ResidentSupports)
+                if (support.ResidentId == residentId)
+                    details.Add($"Faction {support.FactionId}: {support.Support:P0} support{(support.IsMember ? " (member)" : "")}; driver: {support.Driver}.");
 
             var symptom = !resident.HasValue
                 ? "Resident location is not currently available."
@@ -81,10 +99,64 @@ namespace OneRoof.Application.Inspectors
                 $"Portals: {room.PortalIds.Count}",
                 $"Interaction points: {room.InteractionPoints.Count}"
             };
+            var tenant = _session.FindHouseholdByHomeRoom(room.Id);
+            var housing = tenant == null ? (HouseholdHousingLifecycleProjection?)null : _session.HouseholdHousing(tenant.Id);
+            if (housing.HasValue)
+            {
+                details.Add($"Housing condition: {housing.Value.RoomCondition}");
+                details.Add($"Lease phase: {housing.Value.LeasePhase}; rent arrears: {housing.Value.RentArrearsDays} day(s)");
+            }
             var symptom = occupants > room.Capacity
                 ? "Room occupancy exceeds its authored capacity."
-                : $"Room is operating at {occupants} of {room.Capacity} capacity.";
+                : housing.HasValue && housing.Value.RoomCondition != HousingConditionStage.Maintained
+                    ? $"Room is under deferred upkeep while the tenant has {housing.Value.RentArrearsDays} day(s) of rent arrears."
+                    : $"Room is operating at {occupants} of {room.Capacity} capacity.";
             return new InspectorDetailProjection($"Room #{roomId}", symptom, details, "Use Build mode to change capacity or add supporting rooms.");
+        }
+
+        public InspectorDetailProjection InspectFactionFloor(int floor)
+        {
+            var overlay = new TowerDataOverlays(_session).FactionTension;
+            foreach (var region in overlay.Floors)
+            {
+                if (region.Floor != floor) continue;
+                var details = new List<string>
+                {
+                    $"Support signals: {region.SupporterCount}",
+                    $"Average support pressure: {region.AveragePressure:P0} ({region.Tier})",
+                    $"Leading faction: {region.LeadingFactionName}",
+                    $"Top grievance: {region.TopGrievance}",
+                    $"Trend: {region.Trend}"
+                };
+                return new InspectorDetailProjection($"Floor {floor} Faction Tension",
+                    region.SupporterCount == 0 ? "No faction support is recorded on this floor." : region.AccessibilityLabel,
+                    details,
+                    "Review affected households, transit, services, and the decree panel; then compare the next daily settlement.");
+            }
+            return null;
+        }
+
+        public InspectorDetailProjection InspectBusiness(int businessId)
+        {
+            foreach (var business in _session.Simulation.Businesses.Businesses)
+            {
+                if (business.Id.Value != businessId) continue;
+                var details = new List<string>
+                {
+                    $"Room: #{business.RoomId.Value}; type: {business.ContentType}",
+                    $"Staff: {business.EmployeeIds.Count}",
+                    $"Cash: ${business.CashBalance:N0}",
+                    $"Last revenue: ${business.LastCustomerRevenue + business.LastContractRevenue:N0}",
+                    $"Last wages: ${business.LastWages:N0}; rent: ${business.LastRentPaid:N0}; tax: ${business.LastTaxPaid:N0}",
+                    $"Arrears: {business.ArrearsDays} day(s); wage arrears: {(business.WageArrears ? "yes" : "no")}",
+                    $"Insolvent: {(business.IsInsolvent ? "yes" : "no")}; re-lease eligible: {(business.IsVacantForReLease ? "yes" : "no")}."
+                };
+                return new InspectorDetailProjection($"Business #{businessId}",
+                    business.IsInsolvent ? "This business cannot cover its obligations." : "This business is operating.",
+                    details, "Review foot traffic, commercial rent, tax, staffing capacity, and service access through tower-level controls.");
+            }
+            return new InspectorDetailProjection($"Business #{businessId}", "This business has closed or moved out.",
+                new[] { "Its dated decision record remains available as historical evidence." }, "Review current business demand and leasing in Manage mode.");
         }
 
         public InspectorDetailProjection InspectElevatorBank()

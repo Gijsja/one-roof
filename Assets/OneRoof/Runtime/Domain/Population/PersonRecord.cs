@@ -18,6 +18,7 @@ namespace OneRoof.Domain.Population
         private ResidentPurposeKind _currentPurpose;
         private long _purposeStartedAtTick;
         private long _purposeEndsAtTick;
+        private long _outsideFoodRetryAfterTick;
 
         public PersonRecord(
             EntityId id,
@@ -89,6 +90,8 @@ namespace OneRoof.Domain.Population
         public ResidentPurposeKind CurrentPurpose => _currentPurpose;
         public long PurposeStartedAtTick => _purposeStartedAtTick;
         public long PurposeEndsAtTick => _purposeEndsAtTick;
+        public long OutsideFoodRetryAfterTick => _outsideFoodRetryAfterTick;
+        public bool IsOutsideFoodRetryBlocked(Tick tick) => tick.Value < _outsideFoodRetryAfterTick;
         public bool HasCommittedPurposeAt(Tick tick) =>
             _currentPurpose != ResidentPurposeKind.None && tick.Value < _purposeEndsAtTick;
 
@@ -130,6 +133,17 @@ namespace OneRoof.Domain.Population
             _currentPurpose = purpose;
             _purposeStartedAtTick = startedAtTick;
             _purposeEndsAtTick = endsAtTick;
+        }
+
+        public void BlockOutsideFoodUntil(long tick)
+        {
+            if (tick < 0) throw new ArgumentOutOfRangeException(nameof(tick));
+            _outsideFoodRetryAfterTick = Math.Max(_outsideFoodRetryAfterTick, tick);
+        }
+
+        public void RestoreOutsideFoodRetryAfter(long tick)
+        {
+            _outsideFoodRetryAfterTick = Math.Max(0, tick);
         }
 
         /// <summary>Updates the resident's current room location. Called upon trip arrival.</summary>

@@ -49,6 +49,55 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void Catalog_UsesSixAuthoredBodiesAtTheCandidateWorldScale()
+        {
+            var seen = new System.Collections.Generic.HashSet<string>();
+            for (var i = 0; i < NpcContentRegistry.Count; i++)
+            {
+                var record = NpcContentRegistry.GetByIndex(i);
+                var sprite = ResidentSpriteCatalog.GetResidentSprite(i);
+                Assert.That(sprite.name, Is.EqualTo(record.ContentId));
+                Assert.That(sprite.texture.width, Is.EqualTo(1536));
+                Assert.That(sprite.texture.height, Is.EqualTo(512));
+                Assert.That(sprite.rect.width, Is.EqualTo(256f));
+                Assert.That(sprite.rect.height, Is.EqualTo(512f));
+                Assert.That(sprite.pixelsPerUnit, Is.EqualTo(512f / record.WorldHeight).Within(.001f));
+                Assert.That(sprite.bounds.size.y, Is.EqualTo(record.WorldHeight).Within(.001f));
+                seen.Add(sprite.name);
+            }
+            Assert.That(seen.Count, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void Catalog_MapsResidentIndicesDeterministicallyAcrossThePopulation()
+        {
+            for (var i = 0; i < NpcContentRegistry.Count; i++)
+            {
+                var first = ResidentSpriteCatalog.GetResidentSprite(i);
+                var repeat = ResidentSpriteCatalog.GetResidentSprite(i + NpcContentRegistry.Count);
+                Assert.That(repeat.name, Is.EqualTo(first.name), $"resident slot {i} should retain its archetype mapping");
+            }
+        }
+
+        [Test]
+        public void Hierarchy_ScalesAuthoredCanvasToTheDeclaredWorldBounds()
+        {
+            var go = new GameObject("ResidentBounds");
+            try
+            {
+                var hierarchy = go.AddComponent<NpcSkeletalHierarchy>();
+                hierarchy.Initialize(0);
+                var rendered = hierarchy.MainRenderer.bounds.size;
+                Assert.That(rendered.x, Is.EqualTo(hierarchy.ContentRecord.WorldWidth * hierarchy.BodyStature).Within(.001f));
+                Assert.That(rendered.y, Is.EqualTo(hierarchy.ContentRecord.WorldHeight * hierarchy.BodyStature).Within(.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
         public void SkeletalHierarchy_BuildsBonesAndSlotRenderers()
         {
             var go = new GameObject("TestResident");
@@ -162,6 +211,44 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 // Elbows keep a soft bend with extra fold as the arm swings back.
                 Assert.That(ZOf(skeletal, NpcRigDefinition.BoneArmLowerL), Is.GreaterThan(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void FullBodyAtlasSprite_WalkAndSitChangeTheRenderedPose()
+        {
+            var go = new GameObject("RenderedAtlasAnimation");
+            try
+            {
+                var skeletal = go.AddComponent<NpcSkeletalHierarchy>();
+                skeletal.Initialize(0);
+                var rendererTransform = skeletal.MainRenderer.transform;
+                Assert.That(skeletal.MainRenderer.enabled, Is.True);
+                Assert.That(skeletal.LimbRenderers[NpcRigDefinition.BoneLegUpperL].enabled, Is.False);
+
+                skeletal.SetAnimationClip(NpcAnimationClip.Walk);
+                skeletal.ApplyProceduralAnimation(0f);
+                var walkAtPassingPose = rendererTransform.localScale.y;
+                skeletal.ApplyProceduralAnimation(Mathf.PI / 16f);
+                var walkAtStridePose = rendererTransform.localScale.y;
+                Assert.That(Mathf.Abs(rendererTransform.localRotation.eulerAngles.z), Is.GreaterThan(1f),
+                    "Walk must visibly sway the complete sprite, not just its hidden limb bones.");
+                Assert.That(walkAtPassingPose, Is.Not.EqualTo(walkAtStridePose).Within(.0001f),
+                    "Walk must visibly bounce the rendered full-body sprite.");
+
+                skeletal.SetAnimationClip(NpcAnimationClip.Idle);
+                skeletal.ApplyProceduralAnimation(1f);
+                var idleHeight = rendererTransform.localScale.y;
+                skeletal.SetAnimationClip(NpcAnimationClip.Sit);
+                skeletal.ApplyProceduralAnimation(1f);
+                Assert.That(rendererTransform.localScale.y, Is.LessThan(idleHeight * .95f),
+                    "Sit must visibly squash the complete sprite.");
+                Assert.That(Mathf.Abs(rendererTransform.localRotation.eulerAngles.z), Is.GreaterThan(3f),
+                    "Sit must visibly lean the complete sprite.");
             }
             finally
             {

@@ -18,7 +18,7 @@ Baseline issues identified before the ECON implementation (the remaining accepta
 5. **Flat commercial rent.** `200/room/cycle` regardless of size, archetype, or solvency.
 6. **No sinks beyond construction.** No upkeep, no policy costs.
 
-The household, business, policy, and treasury-flow implementation described below is complete. The 30-day conservation fixture and settlement ordering were validated in the ECON closeout. Faction affinity and actual move-out decisions belong to OR-901 and later resident lifecycle work.
+The household, business, policy, treasury-flow, and resident hardship lifecycle slices described below are implemented. ECON-005 connects outside transactions to wellbeing, housing risk, and resident move-out; faction affinity consumes the resulting wellbeing projections through OR-901.
 
 ## 2. Principles
 
@@ -70,8 +70,7 @@ Inspector shows tier (destitute/struggling/stable/affluent), never the raw float
    subsidies ( §8 ). Record `TreasuryFlowProjection{rent, tax, upkeep, subsidy, construction,
    constructionSalvage}`.
 5. **Delinquency.** Household cash `< 0` → `arrearsDays++`, else decay to 0.
-   `arrearsDays > 30` → grievance + once-daily strain driver + inspector stress explanation. Base strain and recovery are scaled by the fraction of a settlement day advanced each tick. Tenant-Union
-   affinity and actual move-out decisions are later OR-901/resident-lifecycle work. Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
+  `arrearsDays > 30` → grievance + once-daily strain driver + inspector stress explanation. Base strain and recovery are scaled by the fraction of a settlement day advanced each tick. Resident wellbeing projections feed faction pressure; rent arrears and sustained insolvent negative budgets can enter recoverable move-out notice. Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
    paying rent, are flagged for re-lease after 7 days, and appear on Overlay 6.
 
 `TowerSimulation.AdvanceOneTick` executes payroll, residential rent, the remaining business
@@ -156,3 +155,25 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
 - **ECON-004:** treasury and tenant projections, inspector details, income-and-reserve rent burden, Data-mode flow display, and golden ledger acceptance are complete. Prolonged arrears produce a lease-risk grievance, once-daily added strain, and an inspector stress explanation. Actual move-out and Tenant Union affinity depend on the later resident lifecycle and OR-901 faction work.
 
 See `Planning/BACKLOG.md` and the archived ECON handoff for validation evidence.
+
+## 12. Outside transactions and residential lease risk
+
+ECON-005 adds one-time outside food purchases, daily wages for Outside-assigned workers,
+and explicit household service credit separate from rent arrears. The model reuses household
+cash and adds one aggregate outside-market counterparty. Residents can interrupt an outside
+work shift for an essential meal, resume work after eating, and return home when the outside
+work episode ends. Rejected purchases record unmet-need exposure and a save-persistent retry
+delay. Daily budget windows close before counters reset so completed trips and shortfalls are
+included exactly once in rolling net flow.
+
+Persistent negative flow wears the room; insolvency or sustained exposure degrades it. These
+pressures reduce wellbeing and feed satisfaction/grievance inputs used by factions. Recoverable
+notice and typed move-out trips connect household finances to housing lifecycle. See the
+[ECON-005 handoff](../Handoffs/Archive/HANDOFF_2026-09-26_outside-economy-integration.md)
+and [`Planning/OUTSIDE_ECONOMY_DESIGN.md`](../Planning/OUTSIDE_ECONOMY_DESIGN.md).
+
+The 2026-09-26 completion audit corrected outside-credit cash conservation, added
+persisted 7/30-day household pressure and unmet-essential exposure, and connected hardship
+to wellbeing, residential room wear, and recoverable lease notice when an insolvent household
+has sustained negative flow. It passed EditMode 663/663 and PlayMode
+8/8; see the archived audit handoff.

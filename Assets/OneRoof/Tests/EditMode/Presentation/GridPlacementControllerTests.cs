@@ -354,7 +354,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             // Bottom UI region (Mode bar, context overlay, build palette)
             // guiY is Screen.height - screenPos.y, so a screenPos near y=30 has guiY = Screen.height - 30 (in bottom UI)
             var bottomScreenPos = new Vector3(100f, 30f, 0f);
-            Assert.That(GridPlacementController.IsPointerOverUI(bottomScreenPos), Is.True);
+            Assert.That(GridPlacementController.IsPointerOverUI(bottomScreenPos, screenHeight: 480, screenWidth: 640), Is.True);
 
             // World area must not assume a large viewport: the headless runner is
             // 640x480, where the fixed 650px palette rect covers the screen center.
@@ -363,7 +363,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             // column and left of the inspector/preview cards, and top-origin
             // y (H-375) falls outside the HUD strip and the card y-ranges.
             var worldScreenPos = new Vector3(300f, 375f, 0f);
-            Assert.That(GridPlacementController.IsPointerOverUI(worldScreenPos), Is.False);
+            Assert.That(GridPlacementController.IsPointerOverUI(worldScreenPos, screenHeight: 480, screenWidth: 640), Is.False);
         }
 
         [Test]

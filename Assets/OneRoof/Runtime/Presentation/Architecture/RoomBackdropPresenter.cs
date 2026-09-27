@@ -18,6 +18,19 @@ namespace OneRoof.Presentation.Architecture
         public float Height { get; private set; }
 
         private Material _sharedMaterial;
+        private Color _baseBackdropColor = Color.white;
+
+        public void SetHousingCondition(OneRoof.Domain.Population.HousingConditionStage condition)
+        {
+            if (BackdropRenderer == null) return;
+            var tint = condition switch
+            {
+                OneRoof.Domain.Population.HousingConditionStage.Worn => new Color(1f, .91f, .78f),
+                OneRoof.Domain.Population.HousingConditionStage.Degraded => new Color(.78f, .72f, .67f),
+                _ => Color.white
+            };
+            BackdropRenderer.color = _baseBackdropColor * tint;
+        }
 
         public void Setup(string roomTheme, float width, float height, float worldLeft, float worldRight, float centerY, bool isWestSide, Material sharedMaterial = null)
         {
@@ -32,6 +45,7 @@ namespace OneRoof.Presentation.Architecture
             backdropObj.transform.localPosition = new Vector3(0f, 0f, 0.7f);
 
             BackdropRenderer = backdropObj.AddComponent<SpriteRenderer>();
+            _baseBackdropColor = BackdropRenderer.color;
             BackdropRenderer.sprite = ArchitecturalFixtureCatalog.GetRoomBackdrop(roomTheme);
             BackdropRenderer.drawMode = SpriteDrawMode.Sliced;
             BackdropRenderer.size = new Vector2(Mathf.Max(0.5f, width - 0.04f), height);

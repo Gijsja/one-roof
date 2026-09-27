@@ -22,6 +22,7 @@ SchemaVersion integer save/content version
 | Faction | ID, members/support, goals, grievances, influence by region, relations |
 | Trip | person, origin and destination location endpoints (tower room or Outside), purpose, departure tick, route state, wait time |
 | Event | ID, type, phase, affected entities/regions, causes, player responses |
+| Underground cell | 1 m square grid coordinate on an independent 16×6 board beneath the building; excavated cells persist in the root save payload |
 
 ## Wellbeing and explanation projections
 
@@ -64,6 +65,11 @@ SchemaVersion integer save/content version
 ## Economic contracts (Unit Economics)
 
 - Money is strictly integer `long` cash units in a closed loop (`Docs/12_ECONOMY.md`).
-- Treasury (`TowerEconomyState`), Households (`HouseholdRecord.CashBalance`), and Businesses (`BusinessRecord.CashBalance`) conserve cash.
+- Treasury (`TowerEconomyState`), Households (`HouseholdRecord.CashBalance`), Businesses (`BusinessRecord.CashBalance`), and the aggregate outside-market counterparty reconcile explicit cash flows. Documented sources/sinks (such as outside contracts and starting household cash) remain explicit.
 - Settlement executes daily at `tick % 1440 == 0`.
 - Normalized `0–1` budget tiers exist solely as derived inspector projections, never stored state.
+- `OutsideMarketState` is one aggregate counterparty for daily Outside-assigned wages and completed outside-service purchases. Contract-funded wages, service receipts, bounded credit issuance, and credit repayment are explicit integer flows and survive save/load.
+- Household cash, outside-market credit, and residential rent arrears are distinct. Essential purchases can use bounded outside credit; only unpaid rent advances rent-specific arrears. Sustained negative rolling budget plus a non-positive financial position can independently trigger recoverable housing risk.
+- Completed Food trips to `Outside` charge once by stable trip ID and restore Hunger only when the purchase is accepted. Failed essential purchases grant no free meal and must use a bounded retry interval. Internal diner visits remain in the tower business ledger.
+- Household housing condition is an immutable projection of rent arrears and sustained budget/underprovision exposure. Seven-day notices and bounded departure history are persisted in the domain lifecycle state; a move-out releases the home only after all members reach typed `Outside`.
+- Underground excavation stores cells changed from earth to open space, plus separate lair-floor cells built only over excavated cells. Its 16×6 board is independent of tower floor slabs. Each square cell is 1 m across; dig and floor brushes support 1×1, 2×2, or 3×3 cells. Older prototype coordinates migrate into this board; saves with no excavation data load as untouched earth.

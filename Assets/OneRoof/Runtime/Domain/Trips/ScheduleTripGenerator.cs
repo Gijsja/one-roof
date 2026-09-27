@@ -71,7 +71,8 @@ namespace OneRoof.Domain.Trips
         public IReadOnlyList<TripRecord> GenerateTripsForTick(
             Tick previousTick,
             Tick currentTick,
-            PopulationState population)
+            PopulationState population,
+            Func<PersonRecord, bool> canGenerateTrip = null)
         {
             if (population == null) throw new ArgumentNullException(nameof(population));
 
@@ -79,10 +80,11 @@ namespace OneRoof.Domain.Trips
 
             foreach (var person in population.Persons)
             {
+                if (canGenerateTrip != null && !canGenerateTrip(person)) continue;
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
                 if (person.CurrentPurpose == ResidentPurposeKind.None)
                     ResidentPurposeSystem.AdvancePerson(person, currentTick);
-                if (person.HasCommittedPurposeAt(currentTick)) continue;
+                if (person.HasCommittedPurposeAt(currentTick) && !CanInterruptOutsideWork(person, currentTick)) continue;
                 if (_failedRouteCooldowns.TryGetValue(person.Id, out var cooldownUntil) && currentTick.Value < cooldownUntil) continue;
 
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
@@ -92,6 +94,10 @@ namespace OneRoof.Domain.Trips
                 TripPurpose? purpose = blockChanged
                     ? (_arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: true) ?? LabelToPurpose(currentLabel))
                     : _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: false);
+
+                if (purpose == TripPurpose.Food && person.CurrentLocation.IsOutside &&
+                    person.IsOutsideFoodRetryBlocked(currentTick))
+                    purpose = null;
 
                 if (purpose == null)
                 {
@@ -105,6 +111,17 @@ namespace OneRoof.Domain.Trips
                 var origin = person.CurrentLocation;
                 if (origin.Equals(destination.Value))
                 {
+                    if (purpose == TripPurpose.Food && destination.Value.IsOutside)
+                    {
+                        var localOutsideMeal = BuildTrip(person.Id, origin, destination.Value, purpose.Value, currentTick);
+                        if (localOutsideMeal != null)
+                        {
+                            person.UpdateActivity(ActivityKind.Commuting);
+                            if (trips == null) trips = new List<TripRecord>();
+                            trips.Add(localOutsideMeal);
+                        }
+                        continue;
+                    }
                     _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
                     TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
@@ -132,6 +149,16 @@ namespace OneRoof.Domain.Trips
             }
 
             return trips == null ? (IReadOnlyList<TripRecord>)Array.Empty<TripRecord>() : trips;
+        }
+
+        private static bool CanInterruptOutsideWork(PersonRecord person, Tick tick)
+        {
+            if (person == null || person.CurrentPurpose != ResidentPurposeKind.WorkingOutside ||
+                !person.CurrentLocation.IsOutside) return false;
+            return tick.Value >= person.PurposeEndsAtTick || person.CurrentActivity == ActivityKind.Eating ||
+                   person.GetNeedSatisfaction(NeedKind.Hunger) < DynamicScheduleArbitrator.CriticalHungerThreshold ||
+                   person.GetNeedSatisfaction(NeedKind.Energy) < DynamicScheduleArbitrator.CriticalEnergyThreshold ||
+                   person.GetNeedSatisfaction(NeedKind.Hygiene) < DynamicScheduleArbitrator.CriticalHygieneThreshold;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -173,6 +200,14 @@ namespace OneRoof.Domain.Trips
             return BuildTrip(person.Id, WorldLocation.Outside, WorldLocation.InRoom(person.HomeRoomId), TripPurpose.Home, tick);
         }
 
+        /// <summary>Creates a one-way trip from the resident's current location to the outside city.</summary>
+        public TripRecord CreateMoveOutTrip(PersonRecord person, Tick tick)
+        {
+            if (person == null) throw new ArgumentNullException(nameof(person));
+            if (person.CurrentLocation.IsOutside) return null;
+            return BuildTrip(person.Id, person.CurrentLocation, WorldLocation.Outside, TripPurpose.MoveOut, tick);
+        }
+
         private static TripPurpose? LabelToPurpose(string label)
         {
             if (label == null) return null;
@@ -196,8 +231,12 @@ namespace OneRoof.Domain.Trips
 
                 case TripPurpose.Food:
                     // Distribute diners deterministically across all matching commercial rooms
-                    // so a second diner actually relieves 24/7 meal demand.
-                    return AsLocation(FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id));
+                    // so a second diner actually relieves 24/7 meal demand. Residents can
+                    // still seek food in the outside city when the tower has no diner; the
+                    // external service is deliberately abstracted to the street endpoint.
+                    if (person.WorkplaceLocation.IsOutside) return WorldLocation.Outside;
+                    var diner = FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id);
+                    return diner.HasValue ? WorldLocation.InRoom(diner.Value) : WorldLocation.Outside;
 
                 case TripPurpose.Leisure:
                     // Distribute across all lobbies the same way.

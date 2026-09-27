@@ -92,13 +92,16 @@ namespace OneRoof.Domain.Population
         {
             if (person == null) return null;
             if (person.CurrentActivity == ActivityKind.Commuting) return null;
-            if (person.HasCommittedPurposeAt(tick)) return null;
+            var isOutsideShift = person.CurrentPurpose == ResidentPurposeKind.WorkingOutside &&
+                                 person.CurrentLocation.IsOutside;
+            if (isOutsideShift && person.CurrentActivity == ActivityKind.Eating &&
+                person.GetNeedSatisfaction(NeedKind.Hunger) >= SatisfiedNeedThreshold)
+                person.UpdateActivity(ActivityKind.Working);
+            if (isOutsideShift && tick.Value >= person.PurposeEndsAtTick)
+                return TripPurpose.Home;
+            if (person.HasCommittedPurposeAt(tick) && !CanInterruptOutsideWork(person, tick)) return null;
 
             var activeLabel = person.Schedule.ActiveLabelAt(tick);
-            if (person.CurrentPurpose == ResidentPurposeKind.WorkingOutside &&
-                person.CurrentLocation.IsOutside && activeLabel != DailySchedule.LabelWork)
-                return TripPurpose.Home;
-
             var urgent = ArbitrateUrgentNeed(person);
             if (urgent.HasValue)
             {
@@ -148,7 +151,6 @@ namespace OneRoof.Domain.Population
                         }
                         return null;
                     }
-
                     if (hunger < SatisfiedNeedThreshold)
                     {
                         return TripPurpose.Food;
@@ -164,6 +166,16 @@ namespace OneRoof.Domain.Population
 
                     return null;
             }
+        }
+
+        private static bool CanInterruptOutsideWork(PersonRecord person, Tick tick)
+        {
+            if (person.CurrentPurpose != ResidentPurposeKind.WorkingOutside || !person.CurrentLocation.IsOutside)
+                return false;
+            return tick.Value >= person.PurposeEndsAtTick || person.CurrentActivity == ActivityKind.Eating ||
+                   person.GetNeedSatisfaction(NeedKind.Hunger) < CriticalHungerThreshold ||
+                   person.GetNeedSatisfaction(NeedKind.Energy) < CriticalEnergyThreshold ||
+                   person.GetNeedSatisfaction(NeedKind.Hygiene) < CriticalHygieneThreshold;
         }
 
         /// <summary>

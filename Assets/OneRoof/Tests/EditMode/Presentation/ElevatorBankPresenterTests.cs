@@ -48,6 +48,13 @@ namespace OneRoof.Presentation.Tests.EditMode
             var car = _presenter.ElevatorViews[0];
             Assert.That(car.transform.Find("CarDoor"), Is.Not.Null);
             Assert.That(car.transform.Find("CarRoof"), Is.Not.Null);
+            Assert.That(car.transform.Find("Car Door Left"), Is.Not.Null);
+            Assert.That(car.transform.Find("Car Door Right"), Is.Not.Null);
+            Assert.That(car.transform.Find("Car Status Light"), Is.Not.Null);
+            Assert.That(car.transform.Find("Car Left Jamb"), Is.Not.Null);
+            Assert.That(car.transform.Find("Car Right Jamb"), Is.Not.Null);
+            Assert.That(car.transform.localScale.y, Is.GreaterThan(1f));
+            Assert.That(car.transform.position.z, Is.LessThan(0f));
         }
 
         [Test]

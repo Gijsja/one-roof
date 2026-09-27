@@ -43,6 +43,7 @@ namespace OneRoof.Domain.Trips
             State = TripState.Planned;
             WaitTicks = 0;
             CompletionTick = null;
+            OutsideServiceTransactionRecorded = false;
         }
 
         // ── Identity ──────────────────────────────────────────────────────────
@@ -82,6 +83,9 @@ namespace OneRoof.Domain.Trips
 
         /// <summary>Total ticks spent waiting in elevator queues during this trip.</summary>
         public int WaitTicks { get; private set; }
+
+        /// <summary>Whether the completed outside food purchase has been handed to the economy ledger.</summary>
+        public bool OutsideServiceTransactionRecorded { get; private set; }
 
         // ── Mutation methods (called by simulation systems only) ──────────────
 
@@ -140,6 +144,20 @@ namespace OneRoof.Domain.Trips
             }
 
             WaitTicks += ticks;
+        }
+
+        /// <summary>Restores the idempotency marker for an already-recorded outside purchase.</summary>
+        public void RestoreOutsideServiceTransactionRecorded(bool recorded)
+        {
+            OutsideServiceTransactionRecorded = recorded;
+        }
+
+        /// <summary>Marks this trip's outside food transaction as recorded exactly once.</summary>
+        public bool TryMarkOutsideServiceTransactionRecorded()
+        {
+            if (OutsideServiceTransactionRecorded) return false;
+            OutsideServiceTransactionRecorded = true;
+            return true;
         }
 
         public override string ToString() =>

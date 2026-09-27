@@ -23,8 +23,16 @@ namespace OneRoof.Presentation.Tower
         public const float RoofDeckThickness = 0.28f;
         public const float ParapetHeight = 0.42f;
 
+        // The tower camera sits on negative Z and looks toward positive Z,
+        // so smaller Z values are closer to the camera.
+        private const float EarthTileZ = 0.44f;
+        private const float EarthDetailZ = 0.42f;
+        private const float ExcavationZ = 0.38f;
+        private const float LairFloorZ = 0.34f;
+
         private Transform _parent;
         private Material _worldMaterial;
+        private Material _coneMaterial;
         private MaterialPropertyBlock _colorBlock;
 
         private Transform _root;
@@ -34,6 +42,7 @@ namespace OneRoof.Presentation.Tower
         private Transform _fixturesRoot;
         private Transform _terracesRoot;
         private Transform _volumetricLightRoot;
+        private Transform _groundRoot;
 
         private readonly List<GameObject> _leftWallSlices = new List<GameObject>();
         private readonly List<GameObject> _rightWallSlices = new List<GameObject>();
@@ -51,6 +60,8 @@ namespace OneRoof.Presentation.Tower
         private readonly List<GameObject> _volumetricCones = new List<GameObject>();
         private readonly List<Mesh> _coneMeshes = new List<Mesh>();
         private readonly List<WindowLightingEntry> _windowLightingEntries = new List<WindowLightingEntry>();
+        private readonly Dictionary<UndergroundCell, GameObject> _excavationViews = new Dictionary<UndergroundCell, GameObject>();
+        private readonly Dictionary<UndergroundCell, GameObject> _lairFloorViews = new Dictionary<UndergroundCell, GameObject>();
 
         private int _renderedFloorCount = -1;
         private CellBounds _renderedGroundSlab;
@@ -114,22 +125,23 @@ namespace OneRoof.Presentation.Tower
             _worldMaterial = worldMaterial;
             _colorBlock = colorBlock ?? new MaterialPropertyBlock();
 
-            // Configure the shared world material for alpha-blended transparent rendering.
-            // This allows cone geometry (vertex alpha = 0 at tips) to fade out correctly
-            // while all structural quads (alpha = 1) appear fully opaque.
-            if (_worldMaterial != null)
+            // Keep structural geometry depth writing. Making the shared material
+            // transparent also changes rooms, floors and the outside city, so
+            // distant quads can sort over the lobby and hide small lights.
+            if (_worldMaterial != null && _coneMaterial == null)
             {
-                _worldMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                _worldMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                _worldMaterial.SetInt("_ZWrite", 0);
-                _worldMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                _worldMaterial.SetOverrideTag("RenderType", "Transparent");
+                _coneMaterial = new Material(_worldMaterial) { name = "Exterior Light Cones" };
+                _coneMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _coneMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _coneMaterial.SetInt("_ZWrite", 0);
+                _coneMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                _coneMaterial.SetOverrideTag("RenderType", "Transparent");
             }
 
             Clear();
         }
 
-        public void EnsureExteriorViews(TowerTopologyProjection topology)
+        public void EnsureExteriorViews(TowerTopologyProjection topology, UndergroundDigProjection underground = null)
         {
             if (_parent == null || _worldMaterial == null) return;
             var floorCount = topology != null ? topology.FloorCount : TowerStructurePresenter.InitialFloorCount;
@@ -139,18 +151,21 @@ namespace OneRoof.Presentation.Tower
             CellBounds topSlab = default;
             if (topology != null)
             {
-                topology.TryGetFloorSlab(0, out groundSlab);
-                topology.TryGetFloorSlab(floorCount - 1, out topSlab);
+                if (!topology.TryGetFloorSlab(0, out groundSlab)) groundSlab = new CellBounds(0, -14, 17);
+                if (!topology.TryGetFloorSlab(floorCount - 1, out topSlab))
+                    topSlab = new CellBounds(floorCount - 1, -14, 17);
             }
             else
             {
-                groundSlab = new CellBounds(0, -14, 16);
-                topSlab = new CellBounds(floorCount - 1, -14, 16);
+                groundSlab = new CellBounds(0, -14, 17);
+                topSlab = new CellBounds(floorCount - 1, -14, 17);
             }
 
-            if (_root != null && _renderedFloorCount == floorCount &&
-                _renderedGroundSlab.Equals(groundSlab) && _renderedTopSlab.Equals(topSlab))
+            var geometryUnchanged = _root != null && _renderedFloorCount == floorCount &&
+                _renderedGroundSlab.Equals(groundSlab) && _renderedTopSlab.Equals(topSlab);
+            if (geometryUnchanged)
             {
+                SyncExcavationViews(underground);
                 return;
             }
 
@@ -160,6 +175,8 @@ namespace OneRoof.Presentation.Tower
             _renderedTopSlab = topSlab;
 
             BuildFacades(topology, floorCount);
+            BuildGroundDressing(groundSlab);
+            SyncExcavationViews(underground);
             EnsureExteriorWindows(topology, floorCount);
             BuildRoofline(topology, floorCount, topSlab);
             BuildSetbackTerraces(topology, floorCount);
@@ -187,6 +204,7 @@ namespace OneRoof.Presentation.Tower
             _fixturesRoot = EnsureChildTransform(_rooflineRoot, "Rooftop Fixtures");
             _terracesRoot = EnsureChildTransform(_root, "Setback Terraces");
             _volumetricLightRoot = EnsureChildTransform(_root, "Exterior Volumetric Lighting");
+            _groundRoot = EnsureChildTransform(_root, "Ground Dressing");
         }
 
         private static Transform EnsureChildTransform(Transform parent, string name)
@@ -209,13 +227,20 @@ namespace OneRoof.Presentation.Tower
                 new Vector3(groundLeft - WallThickness * 0.5f - 0.04f, groundBaseline - 0.24f, 0.10f),
                 new Vector2(WallThickness + 0.08f, 0.48f));
 
-            // Downspout Left
+            // Anchor the upper downspout to the upper facade. The ground slab can
+            // expand independently, and must not pull a vertical line through the
+            // open setback beside the tower.
             var topFloorY = TowerStructurePresenter.FloorY(floorCount - 1) + 1.01f;
-            var downspoutHeight = topFloorY - groundBaseline + 0.48f;
-            var downspoutCenterY = (groundBaseline - 0.48f + topFloorY) * 0.5f;
-            UpdateOrCreateQuad(_leftFacadeRoot, "Left Downspout", DownspoutColor,
-                new Vector3(groundLeft - WallThickness - 0.02f, downspoutCenterY, -0.05f),
-                new Vector2(0.04f, downspoutHeight));
+            if (floorCount > 1)
+            {
+                var firstUpper = topology != null && topology.TryGetFloorSlab(1, out var upper)
+                    ? upper : new CellBounds(1, -14, 16);
+                var upperLeft = -2.4f + firstUpper.MinX * 0.5f;
+                var downspoutBottom = TowerStructurePresenter.FloorY(1) - 0.74f;
+                UpdateOrCreateQuad(_leftFacadeRoot, "Left Downspout", DownspoutColor,
+                    new Vector3(upperLeft - WallThickness - 0.02f, (downspoutBottom + topFloorY) * 0.5f, -0.05f),
+                    new Vector2(0.04f, topFloorY - downspoutBottom));
+            }
 
             // Per-Floor Left Wall Slices & Spandrels
             for (var f = 0; f < floorCount; f++)
@@ -254,6 +279,26 @@ namespace OneRoof.Presentation.Tower
                 new Vector3(groundRight + 0.65f, groundBaseline + 1.28f, 0.38f),
                 new Vector2(1.40f, 0.14f));
 
+            // A framed, lit street entrance stays outside the walkable lobby.
+            var entranceX = groundRight + 0.42f;
+            var floorY0 = TowerStructurePresenter.FloorY(0);
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Glass", new Color(0.16f, 0.32f, 0.39f),
+                new Vector3(entranceX, floorY0 - 0.12f, 0.17f), new Vector2(0.70f, 1.12f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Left Jamb", CorniceTrimColor,
+                new Vector3(entranceX - 0.39f, floorY0 - 0.08f, 0.04f), new Vector2(0.07f, 1.32f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Right Jamb", CorniceTrimColor,
+                new Vector3(entranceX + 0.39f, floorY0 - 0.08f, 0.04f), new Vector2(0.07f, 1.32f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Lintel", CorniceTrimColor,
+                new Vector3(entranceX, floorY0 + 0.61f, 0.02f), new Vector2(0.86f, 0.10f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Door Seam", new Color(0.54f, 0.72f, 0.70f),
+                new Vector3(entranceX, floorY0 - 0.13f, -0.02f), new Vector2(0.025f, 1.08f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Light", new Color(1f, 0.76f, 0.38f),
+                new Vector3(entranceX, floorY0 + 0.77f, -0.06f), new Vector2(0.24f, 0.055f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Sign Panel", new Color(0.10f, 0.25f, 0.27f),
+                new Vector3(entranceX, floorY0 + 0.87f, 0.08f), new Vector2(1.05f, 0.22f));
+            UpdateOrCreateQuad(_rightFacadeRoot, "Entrance Sign Mark", new Color(0.48f, 0.91f, 0.68f),
+                new Vector3(entranceX, floorY0 + 0.87f, -0.02f), new Vector2(0.42f, 0.045f));
+
             // Upper Floor Right Wall Slices
             for (var f = 1; f < floorCount; f++)
             {
@@ -287,6 +332,166 @@ namespace OneRoof.Presentation.Tower
                 UpdateOrCreateQuad(_rightFacadeRoot, "Right Downspout", DownspoutColor,
                     new Vector3(f1Right + WallThickness + 0.02f, downCenterR, -0.05f),
                     new Vector2(0.04f, downHeightR));
+            }
+        }
+
+        private void BuildGroundDressing(CellBounds ground)
+        {
+            var left = -2.4f + ground.MinX * 0.5f;
+            var right = -2.4f + (ground.MaxX + 1) * 0.5f;
+            var baseline = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var width = right - left;
+            var center = (left + right) * 0.5f;
+            var earthWidth = UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize;
+            var earthLeft = center - earthWidth * 0.5f;
+            const float earthDepth = 6f;
+
+            // Keep cell art in front of the soil backing so the earth grid
+            // remains visible and excavation can reveal a real change.
+
+            // The lair board has its own bounds and remains a centered field beneath
+            // the tower, independent of tower-floor slab placement and expansion.
+            UpdateOrCreateQuad(_groundRoot, "Foundation Soil", new Color(0.25f, 0.16f, 0.10f),
+                new Vector3(center, baseline - earthDepth * 0.5f, 0.48f), new Vector2(earthWidth, earthDepth));
+            // Room-scale underground squares make both the dig target and the resulting
+            // open space readable at the same scale as a small tower room.
+            for (var depth = 0; depth < UndergroundDigState.MaxDepthCells; depth++)
+            for (var column = 0; column < UndergroundDigState.GridWidthCells; column++)
+            {
+                var x = earthLeft + (column + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var y = baseline - (depth + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var earthColor = (column + depth) % 2 == 0
+                    ? new Color(0.52f, 0.34f, 0.21f)
+                    : new Color(0.43f, 0.27f, 0.16f);
+                UpdateOrCreateQuad(_groundRoot, $"Earth Grid {column}_{depth}", earthColor,
+                    new Vector3(x, y, EarthTileZ), new Vector2(0.92f, 0.92f));
+            }
+            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 1", new Color(0.34f, 0.22f, 0.13f),
+                new Vector3(center, baseline - 0.94f, EarthDetailZ), new Vector2(earthWidth, 0.055f));
+            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 2", new Color(0.19f, 0.12f, 0.08f),
+                new Vector3(center, baseline - 1.92f, EarthDetailZ), new Vector2(earthWidth, 0.045f));
+            UpdateOrCreateQuad(_groundRoot, "Earth Stratum 3", new Color(0.31f, 0.20f, 0.12f),
+                new Vector3(center, baseline - 2.74f, EarthDetailZ), new Vector2(earthWidth, 0.055f));
+            for (var i = 0; i < 8; i++)
+            {
+                var depositX = earthLeft + earthWidth * ((i + 1f) / 9f);
+                var depositY = baseline - 0.55f - (i % 3) * 0.82f;
+                var depositWidth = 0.18f + (i % 3) * 0.09f;
+                var depositColor = i % 2 == 0
+                    ? new Color(0.29f, 0.19f, 0.12f)
+                    : new Color(0.17f, 0.11f, 0.08f);
+                UpdateOrCreateQuad(_groundRoot, $"Earth Deposit {i}", depositColor,
+                    new Vector3(depositX, depositY, EarthDetailZ), new Vector2(depositWidth, 0.07f));
+            }
+            UpdateOrCreateQuad(_groundRoot, "Foundation Stone", new Color(0.18f, 0.27f, 0.23f),
+                new Vector3(center, baseline - 0.10f, 0.46f), new Vector2(width, 0.17f));
+            UpdateOrCreateQuad(_groundRoot, "Ground Green Edge", new Color(0.16f, 0.36f, 0.27f),
+                new Vector3(center, baseline + 0.012f, 0.02f), new Vector2(width, 0.035f));
+            for (var i = 0; i < 5; i++)
+            {
+                var x = left + 0.55f + i * Mathf.Max(0.25f, (width - 1.1f) / 4f);
+                UpdateOrCreateQuad(_groundRoot, $"Foundation Pier {i}", new Color(0.21f, 0.31f, 0.27f),
+                    new Vector3(x, baseline - 0.36f, 0.46f), new Vector2(0.12f, 0.55f));
+            }
+
+            // These quiet wall bays sit in front of the slab (z=1) but behind
+            // actual room backdrops (z=0.7), so new rooms naturally cover them.
+            const float shaftLeft = -2.4f;
+            var westSpan = shaftLeft - left;
+            if (westSpan > 2f)
+            {
+                var baySpacing = westSpan / 6f;
+                for (var i = 1; i <= 5; i++)
+                {
+                    var bayX = left + baySpacing * i;
+                    UpdateOrCreateQuad(_groundRoot, $"West Bay Mullion {i}", new Color(0.12f, 0.27f, 0.25f),
+                        new Vector3(bayX, TowerStructurePresenter.FloorY(0), 0.91f), new Vector2(0.035f, 1.16f));
+                    UpdateOrCreateQuad(_groundRoot, $"West Bay Marker {i}", new Color(0.40f, 0.52f, 0.39f),
+                        new Vector3(bayX - baySpacing * 0.5f, TowerStructurePresenter.FloorY(0) + 0.56f, 0.90f),
+                        new Vector2(0.10f, 0.035f));
+                }
+            }
+
+            var apronX = right + 1.05f;
+            UpdateOrCreateQuad(_groundRoot, "Entrance Paving", new Color(0.32f, 0.42f, 0.40f),
+                new Vector3(apronX, baseline - 0.03f, 0.13f), new Vector2(2.1f, 0.11f));
+            UpdateOrCreateQuad(_groundRoot, "Entrance Step Highlight", new Color(0.55f, 0.70f, 0.62f),
+                new Vector3(right + 0.43f, baseline + 0.04f, 0.01f), new Vector2(0.86f, 0.045f));
+            UpdateOrCreateQuad(_groundRoot, "Entrance Planter", new Color(0.21f, 0.37f, 0.30f),
+                new Vector3(right + 1.70f, baseline + 0.18f, 0.02f), new Vector2(0.42f, 0.28f));
+            UpdateOrCreateQuad(_groundRoot, "Entrance Greenery", new Color(0.39f, 0.68f, 0.40f),
+                new Vector3(right + 1.70f, baseline + 0.43f, -0.01f), new Vector2(0.30f, 0.32f));
+        }
+
+        private void SyncExcavationViews(UndergroundDigProjection underground)
+        {
+            var active = new HashSet<UndergroundCell>();
+            var floored = new HashSet<UndergroundCell>();
+            if (underground != null)
+            {
+                for (var i = 0; i < underground.ExcavatedCells.Count; i++)
+                    active.Add(underground.ExcavatedCells[i]);
+                for (var i = 0; i < underground.FlooredCells.Count; i++)
+                    floored.Add(underground.FlooredCells[i]);
+            }
+
+            var retired = new List<UndergroundCell>();
+            foreach (var pair in _excavationViews)
+            {
+                if (!active.Contains(pair.Key))
+                {
+                    if (pair.Value != null)
+                    {
+                        if (UnityEngine.Application.isPlaying) Object.Destroy(pair.Value);
+                        else Object.DestroyImmediate(pair.Value);
+                    }
+                    retired.Add(pair.Key);
+                }
+            }
+            for (var i = 0; i < retired.Count; i++) _excavationViews.Remove(retired[i]);
+
+            retired.Clear();
+            foreach (var pair in _lairFloorViews)
+            {
+                if (!floored.Contains(pair.Key))
+                {
+                    if (pair.Value != null)
+                    {
+                        if (UnityEngine.Application.isPlaying) Object.Destroy(pair.Value);
+                        else Object.DestroyImmediate(pair.Value);
+                    }
+                    retired.Add(pair.Key);
+                }
+            }
+            for (var i = 0; i < retired.Count; i++) _lairFloorViews.Remove(retired[i]);
+
+            if (underground == null) return;
+            var baseline = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var groundCenter = -2.4f + (_renderedGroundSlab.MinX + _renderedGroundSlab.MaxX + 1) * 0.25f;
+            if (_renderedGroundSlab.Width <= 0) groundCenter = -1.4f;
+            var earthLeft = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize * 0.5f;
+            for (var i = 0; i < underground.ExcavatedCells.Count; i++)
+            {
+                var cell = underground.ExcavatedCells[i];
+                if (_excavationViews.ContainsKey(cell)) continue;
+                var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var view = UpdateOrCreateQuad(_groundRoot, $"Excavated Cell {cell.X}_{cell.Depth}",
+                    new Color(0.025f, 0.035f, 0.045f), new Vector3(x, y, ExcavationZ), new Vector2(0.90f, 0.90f));
+                _excavationViews[cell] = view;
+            }
+
+            for (var i = 0; i < underground.FlooredCells.Count; i++)
+            {
+                var cell = underground.FlooredCells[i];
+                if (_lairFloorViews.ContainsKey(cell)) continue;
+                var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
+                var floor = UpdateOrCreateQuad(_groundRoot, $"Lair Floor {cell.X}_{cell.Depth}",
+                    new Color(0.19f, 0.35f, 0.40f), new Vector3(x, y, LairFloorZ), new Vector2(0.90f, 0.90f));
+                UpdateOrCreateQuad(floor.transform, "Edge Light", new Color(0.48f, 0.79f, 0.70f),
+                    new Vector3(0f, 0.40f, -0.02f), new Vector2(0.72f, 0.035f));
+                _lairFloorViews[cell] = floor;
             }
         }
 
@@ -634,6 +839,8 @@ namespace OneRoof.Presentation.Tower
             _fixturesRoot = null;
             _terracesRoot = null;
             _volumetricLightRoot = null;
+            _groundRoot = null;
+            _excavationViews.Clear();
 
             _leftWallSlices.Clear();
             _rightWallSlices.Clear();
@@ -650,6 +857,17 @@ namespace OneRoof.Presentation.Tower
             _terraceObjects.Clear();
             _roofObjects.Clear();
             _renderedFloorCount = -1;
+        }
+
+        public void Dispose()
+        {
+            Clear();
+            if (_coneMaterial != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_coneMaterial);
+                else Object.DestroyImmediate(_coneMaterial);
+                _coneMaterial = null;
+            }
         }
 
         private GameObject UpdateOrCreateQuad(Transform parent, string name, Color color, Vector3 pos, Vector2 size, Material mat = null)
@@ -727,9 +945,7 @@ namespace OneRoof.Presentation.Tower
             }
 
             go.transform.localPosition = new Vector3(0f, 0f, -0.20f);
-            // Cones share the world material; transparency is achieved through vertex color
-            // alpha gradient (tips = alpha 0) and the alpha blend mode on the shared material.
-            if (_worldMaterial != null) renderer.sharedMaterial = _worldMaterial;
+            if (_coneMaterial != null) renderer.sharedMaterial = _coneMaterial;
             SetColor(renderer, ConeDayColor);
 
             return go;
@@ -778,8 +994,9 @@ namespace OneRoof.Presentation.Tower
         private void SetColor(MeshRenderer renderer, Color color)
         {
             if (renderer == null) return;
-            if (_worldMaterial != null && renderer.sharedMaterial != _worldMaterial)
-                renderer.sharedMaterial = _worldMaterial;
+            var material = renderer.sharedMaterial == _coneMaterial ? _coneMaterial : _worldMaterial;
+            if (material != null && renderer.sharedMaterial != material)
+                renderer.sharedMaterial = material;
             if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(_colorBlock);
             _colorBlock.SetColor("_BaseColor", color);

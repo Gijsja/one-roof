@@ -128,6 +128,22 @@ namespace OneRoof.Domain.Population
         public bool TryGetHousehold(EntityId id, out HouseholdRecord household) =>
             _households.TryGetValue(id, out household);
 
+        /// <summary>Removes a household and its members from the active simulation after their completed move-out.</summary>
+        public bool RemoveHouseholdAndMembers(EntityId id, out HouseholdRecord household)
+        {
+            if (!_households.TryGetValue(id, out household)) return false;
+            _households.Remove(id);
+            _householdList.Remove(household);
+            for (var i = 0; i < household.MemberIds.Count; i++)
+            {
+                var memberId = household.MemberIds[i];
+                if (!_persons.TryGetValue(memberId, out var person)) continue;
+                _persons.Remove(memberId);
+                _personList.Remove(person);
+            }
+            return true;
+        }
+
         // ── Serialization ──────────────────────────────────────────────────────
 
         public PopulationSaveData ToSaveData()
@@ -148,7 +164,20 @@ namespace OneRoof.Domain.Population
                     cashBalance = h.CashBalance,
                     arrearsDays = h.ArrearsDays,
                     dailyIncome = h.DailyIncome,
-                    dailyServiceSpend = h.DailyServiceSpend
+                    dailyServiceSpend = h.DailyServiceSpend,
+                    rentArrearsBalance = h.RentArrearsBalance,
+                    rentArrearsDays = h.RentArrearsDays,
+                    outsideCreditBalance = h.OutsideCreditBalance,
+                    dailyOutsideEssentialSpend = h.DailyOutsideEssentialSpend,
+                    dailyOutsideQualitySpend = h.DailyOutsideQualitySpend,
+                    dailyCareSpend = h.DailyCareSpend,
+                    dailyRentDue = h.DailyRentDue,
+                    dailyRentPaid = h.DailyRentPaid,
+                    dailyOutsideWages = h.DailyOutsideWages,
+                    dailyCreditRepayment = h.DailyCreditRepayment,
+                    recentDailyBudgetNetFlows = h.CopyRecentDailyBudgetNetFlows(),
+                    dailyEssentialShortfall = h.DailyEssentialShortfall,
+                    underprovisionExposure = h.UnderprovisionExposure
                 });
             }
 
@@ -189,6 +218,7 @@ namespace OneRoof.Domain.Population
                     currentPurpose = (int)p.CurrentPurpose,
                     purposeStartedAtTick = p.PurposeStartedAtTick,
                     purposeEndsAtTick = p.PurposeEndsAtTick,
+                    outsideFoodRetryAfterTick = p.OutsideFoodRetryAfterTick,
                     scheduleLabels = scheduleLabels,
                     scheduleStartTicks = scheduleStarts,
                     scheduleEndTicks = scheduleEnds,
@@ -210,7 +240,7 @@ namespace OneRoof.Domain.Population
 
             return new PopulationSaveData
             {
-                householdLedgerVersion = 1,
+                householdLedgerVersion = 3,
                 households = householdList.ToArray(),
                 persons = personList.ToArray()
             };
@@ -234,7 +264,27 @@ namespace OneRoof.Domain.Population
                     var arrearsDays = data.householdLedgerVersion > 0 ? h.arrearsDays : 0;
                     var dailyIncome = data.householdLedgerVersion > 0 ? h.dailyIncome : 0;
                     var dailyServiceSpend = data.householdLedgerVersion > 0 ? h.dailyServiceSpend : 0;
-                    households.Add(new HouseholdRecord(new EntityId(h.id), mList, new EntityId(h.homeRoomId), h.budget, h.satisfaction, cashBalance, arrearsDays, dailyIncome, dailyServiceSpend));
+                    var rentArrearsBalance = data.householdLedgerVersion >= 2
+                        ? h.rentArrearsBalance
+                        : (data.householdLedgerVersion == 1
+                            ? (cashBalance == long.MinValue ? long.MaxValue : Math.Max(0L, -cashBalance))
+                            : 0L);
+                    var rentArrearsDays = data.householdLedgerVersion >= 2
+                        ? h.rentArrearsDays
+                        : (data.householdLedgerVersion == 1 ? arrearsDays : 0);
+                    households.Add(new HouseholdRecord(new EntityId(h.id), mList, new EntityId(h.homeRoomId), h.budget, h.satisfaction,
+                        cashBalance, arrearsDays, dailyIncome, dailyServiceSpend, rentArrearsBalance, rentArrearsDays,
+                        data.householdLedgerVersion >= 2 ? h.outsideCreditBalance : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyOutsideEssentialSpend : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyOutsideQualitySpend : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyCareSpend : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyRentDue : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyRentPaid : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyOutsideWages : 0,
+                        data.householdLedgerVersion >= 2 ? h.dailyCreditRepayment : 0,
+                        data.householdLedgerVersion >= 3 ? h.recentDailyBudgetNetFlows : null,
+                        data.householdLedgerVersion >= 3 ? h.dailyEssentialShortfall : 0,
+                        data.householdLedgerVersion >= 3 ? h.underprovisionExposure : 0));
                 }
             }
 
@@ -280,6 +330,7 @@ namespace OneRoof.Domain.Population
                     if (Enum.IsDefined(typeof(ResidentPurposeKind), p.currentPurpose))
                         person.RestorePurpose((ResidentPurposeKind)p.currentPurpose,
                             p.purposeStartedAtTick, p.purposeEndsAtTick);
+                    person.RestoreOutsideFoodRetryAfter(p.outsideFoodRetryAfterTick);
                     var role = Enum.IsDefined(typeof(SpecialistRole), p.specialistRole) ? (SpecialistRole)p.specialistRole : SpecialistRole.None;
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
                     person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);

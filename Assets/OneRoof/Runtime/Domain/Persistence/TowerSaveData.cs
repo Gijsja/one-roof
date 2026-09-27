@@ -1,4 +1,5 @@
 using System;
+using OneRoof.Domain.Population;
 
 namespace OneRoof.Domain.Persistence
 {
@@ -15,6 +16,8 @@ namespace OneRoof.Domain.Persistence
         public long totalRevenue;
         public long totalExpenses;
         public int householdLedgerVersion;
+        public OutsideMarketSaveData outsideMarket;
+        public HouseholdLeaseLifecycleSaveData householdLeaseLifecycle;
         public int policyVersion;
         public float rentCapMultiplier;
         public float commercialTaxRate;
@@ -39,6 +42,9 @@ namespace OneRoof.Domain.Persistence
         public FloorSlabSaveData[] floorSlabs;
         public RoomSaveData[] rooms;
         public PortalSaveData[] portals;
+        public UndergroundCellSaveData[] undergroundCells;
+        public UndergroundCellSaveData[] undergroundFloorCells;
+        public bool undergroundGridV2;
 
         public HouseholdSaveData[] households;
         public PersonSaveData[] persons;
@@ -48,6 +54,9 @@ namespace OneRoof.Domain.Persistence
         public ScrutinySaveData scrutiny;
         public BusinessSaveData[] businesses;
         public UtilityOperationsSaveData utilityOperations;
+        public FactionSaveData factions;
+        public CivilActionSaveData civilActions;
+        public DecisionRecordSaveData decisions;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData
         {
@@ -69,6 +78,20 @@ namespace OneRoof.Domain.Persistence
             households = households,
             persons = persons
         };
+
+        public OutsideMarketSaveData GetOutsideMarketSaveData() => outsideMarket;
+
+        public HouseholdLeaseLifecycleSaveData GetHouseholdLeaseLifecycleSaveData() => householdLeaseLifecycle;
+
+        public void SetOutsideMarketSaveData(OutsideMarketSaveData market)
+        {
+            outsideMarket = market;
+        }
+
+        public void SetHouseholdLeaseLifecycleSaveData(HouseholdLeaseLifecycleSaveData lifecycle)
+        {
+            householdLeaseLifecycle = lifecycle;
+        }
 
         public void SetPopulationSaveData(PopulationSaveData pop)
         {
@@ -183,6 +206,13 @@ namespace OneRoof.Domain.Persistence
     }
 
     [Serializable]
+    public sealed class UndergroundCellSaveData
+    {
+        public int x;
+        public int depth;
+    }
+
+    [Serializable]
     public sealed class RoomSaveData
     {
         public int id;
@@ -217,6 +247,19 @@ namespace OneRoof.Domain.Persistence
         public int arrearsDays;
         public long dailyIncome;
         public long dailyServiceSpend;
+        public long rentArrearsBalance;
+        public int rentArrearsDays;
+        public long outsideCreditBalance;
+        public long dailyOutsideEssentialSpend;
+        public long dailyOutsideQualitySpend;
+        public long dailyCareSpend;
+        public long dailyRentDue;
+        public long dailyRentPaid;
+        public long dailyOutsideWages;
+        public long dailyCreditRepayment;
+        public long[] recentDailyBudgetNetFlows;
+        public long dailyEssentialShortfall;
+        public long underprovisionExposure;
     }
 
     [Serializable]
@@ -233,6 +276,7 @@ namespace OneRoof.Domain.Persistence
         public int currentPurpose;
         public long purposeStartedAtTick;
         public long purposeEndsAtTick;
+        public long outsideFoodRetryAfterTick;
         public string[] scheduleLabels;
         public long[] scheduleStartTicks;
         public long[] scheduleEndTicks;
@@ -295,6 +339,7 @@ namespace OneRoof.Domain.Persistence
         public int originLocationKind;
         public int destinationLocationKind;
         public int purpose;
+        public bool outsideServiceTransactionRecorded;
         public long departureTick;
         public int state;
         public int waitTicks;

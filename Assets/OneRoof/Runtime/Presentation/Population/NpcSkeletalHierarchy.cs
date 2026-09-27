@@ -46,6 +46,10 @@ namespace OneRoof.Presentation.Population
         // straightens a flipped resident.
         private float _stature = 1f;
         private float _facing = 1f;
+        private float _avatarWidthScale = 1f;
+        private float _avatarHeightScale = 1f;
+        private float _poseWidthScale = 1f;
+        private float _poseHeightScale = 1f;
         /// <summary>Signed facing multiplier: +1 faces +x, -1 faces -x. Preserves stature.</summary>
         public float FacingDirection => _facing;
         /// <summary>Uniform stature scale from the wardrobe variant (0.9..1.1).</summary>
@@ -126,6 +130,9 @@ namespace OneRoof.Presentation.Population
             ApplySharedMaterial(defaultMaterial ?? GetOrCreateDefaultSharedMaterial());
             ResidentIndex = residentIndex;
             _facing = 1f;
+            _poseWidthScale = 1f;
+            _poseHeightScale = 1f;
+            Root.localRotation = Quaternion.identity;
             ContentRecord = ResidentSpriteCatalog.GetRecord(residentIndex);
             var variant = NpcWardrobeVariantCatalog.GetVariant(residentIndex);
             WardrobeVariantKey = variant != null ? variant.Key : null;
@@ -137,7 +144,12 @@ namespace OneRoof.Presentation.Population
             if (MainRenderer != null && sprite != null)
             {
                 MainRenderer.sprite = sprite;
-                MainRenderer.enabled = false;
+                MainRenderer.enabled = true;
+                var worldWidth = ContentRecord != null ? ContentRecord.WorldWidth : NpcRigDefinition.NominalWorldWidth;
+                var worldHeight = ContentRecord != null ? ContentRecord.WorldHeight : NpcRigDefinition.NominalWorldHeight;
+                _avatarWidthScale = sprite.bounds.size.x > 0f ? worldWidth / sprite.bounds.size.x : 1f;
+                _avatarHeightScale = sprite.bounds.size.y > 0f ? worldHeight / sprite.bounds.size.y : 1f;
+                UpdateBodyScale();
             }
 
             SetTransitStatus(TransitResidentStatus.Queued);
@@ -419,7 +431,19 @@ namespace OneRoof.Presentation.Population
 
         private void UpdateBodyScale()
         {
-            if (transform != null) transform.localScale = new Vector3(_facing * _stature, _stature, 1f);
+            if (transform != null)
+                transform.localScale = new Vector3(
+                    _facing * _stature * _avatarWidthScale * _poseWidthScale,
+                    _stature * _avatarHeightScale * _poseHeightScale,
+                    1f);
+        }
+
+        private void SetWholeBodyPose(float widthScale, float heightScale, float rotationDegrees)
+        {
+            _poseWidthScale = widthScale;
+            _poseHeightScale = heightScale;
+            UpdateBodyScale();
+            Root.localRotation = Quaternion.Euler(0f, 0f, rotationDegrees);
         }
 
         public void ApplyWardrobe(NpcWardrobeLoadout wardrobe)
@@ -428,40 +452,19 @@ namespace OneRoof.Presentation.Population
             if (wardrobe.RigId != NpcRigDefinition.RigId) throw new System.ArgumentException("Wardrobe is incompatible with the resident rig.", nameof(wardrobe));
             Wardrobe = wardrobe;
             EnsureHierarchy();
-            var variant = CurrentVariant();
-            var facePart = variant != null ? WardrobePartCatalog.GetPart(variant, NpcLayerKind.Face) : null;
             foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
             {
                 if (!_wardrobeSlots.TryGetValue(layer, out var renderer) || renderer == null) continue;
                 var layerId = wardrobe.GetLayerId(layer);
                 renderer.name = $"Wardrobe_{layer}_{layerId}";
-                var part = variant != null ? WardrobePartCatalog.GetPart(variant, layer) : null;
-                if (part != null)
-                {
-                    // Sliced transparent part from the modular sheets: true color, auto-fit.
-                    renderer.enabled = true;
-                    renderer.sprite = part;
-                    renderer.color = Color.white;
-                    WardrobePartCatalog.FitSlot(renderer.transform, part, layer);
-                }
-                else if (layer == NpcLayerKind.Hair && facePart != null)
-                {
-                    // Photo head already carries hair; hide the palette swatch.
-                    renderer.enabled = false;
-                }
-                else
-                {
-                    renderer.enabled = true;
-                    renderer.sprite = CreateWardrobeSwatch(layerId);
-                    renderer.color = ResolveWardrobeColor(layer, layerId);
-                    WardrobePartCatalog.FitSwatchSlot(renderer.transform, layer);
-                }
+                // Proposed paperdoll slices are not authored to this rig's
+                // proportions. Mixing them with animated anatomy made a collage.
+                // Keep the skeletal body as the single canonical visual until a
+                // complete rig-matched wardrobe set is ready.
+                renderer.enabled = false;
             }
-            // Photo parts fully cover the procedural boxes beneath them; hide those so no
-            // box edges peek around the art. Missing parts keep the procedural body.
-            SetLimbVisible("head", facePart == null);
-            var upperPart = variant != null ? WardrobePartCatalog.GetPart(variant, NpcLayerKind.UpperClothing) : null;
-            SetLimbVisible("torso", upperPart == null);
+            foreach (var limb in _limbRenderers.Values)
+                if (limb != null) limb.enabled = false;
         }
 
         public void ApplyVariantDiversity(NpcWardrobeVariant variant)
@@ -470,26 +473,7 @@ namespace OneRoof.Presentation.Population
             WardrobeVariantKey = variant.Key;
             EnsureHierarchy();
 
-            // Re-resolve wardrobe slot colors through the variant palette so the
-            // 12 profession columns from the modular sheets read at a glance.
-            // Layers carrying a sliced photo part keep true-white color.
-            if (Wardrobe != null)
-            {
-                foreach (var layer in NpcRigDefinition.LayerRenderingOrder)
-                {
-                    if (_wardrobeSlots.TryGetValue(layer, out var renderer) && renderer != null)
-                    {
-                        if (WardrobePartCatalog.GetPart(variant, layer) == null)
-                        {
-                            renderer.color = ResolveWardrobeColor(layer, Wardrobe.GetLayerId(layer));
-                        }
-                    }
-                }
-            }
-
-            // Tint the modular base anatomy: skin for head/hands, profession
-            // upper/lower/footwear for torso/legs/feet. Keeps rig proportions
-            // identical; only presentation colors vary.
+            // Tint the canonical rig anatomy from the resident's palette.
             if (!TryParseHex(variant.GetLayerColor(NpcLayerKind.Body), out var skin))
             {
                 skin = LayerFallbackColor(NpcLayerKind.Body);
@@ -534,18 +518,6 @@ namespace OneRoof.Presentation.Population
             var s = Mathf.Clamp(variant.BodyScale, 0.9f, 1.1f);
             _stature = s;
             UpdateBodyScale();
-        }
-
-        private Color ResolveWardrobeColor(NpcLayerKind layer, string layerId)
-        {
-            var variant = CurrentVariant();
-            if (variant != null && TryParseHex(variant.GetLayerColor(layer), out var palette))
-            {
-                return palette;
-            }
-            // A missing palette entry must degrade to a plausible garment,
-            // never the near-white parse-failure tint that read as floating boxes.
-            return LayerFallbackColor(layer);
         }
 
         /// <summary>Plausible per-layer garment defaults when no palette entry exists.</summary>
@@ -611,6 +583,8 @@ namespace OneRoof.Presentation.Population
             var t = globalTime + _timeOffset;
             ResetLimbPose();
             if (Hip != null) Hip.localPosition = _hipBasePos;
+            _poseWidthScale = 1f;
+            _poseHeightScale = 1f;
             if (CurrentAnimation != NpcAnimationClip.Sleep)
             {
                 Root.localRotation = Quaternion.identity;
@@ -624,6 +598,10 @@ namespace OneRoof.Presentation.Population
                 var phase = t * 8f;
                 var stride = Mathf.Sin(phase);
                 var lift = Mathf.Abs(Mathf.Cos(phase));
+                // The full-body atlas sprite is a single renderer, so the former
+                // bone-only gait would otherwise look frozen. Add a restrained
+                // whole-character sway and bounce while retaining the authored silhouette.
+                SetWholeBodyPose(1f, 1f + lift * 0.018f, stride * 2.2f);
                 Spine.localRotation = Quaternion.Euler(0f, 0f, stride * 3.5f);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -stride * 1.5f);
                 if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, lift * 0.008f, 0f);
@@ -658,7 +636,7 @@ namespace OneRoof.Presentation.Population
                 // counter-rotated so it stays a floor shadow. Limbs relax into
                 // a slight fetal fold so the body never reads as a stiff plank.
                 var dir = SleepDirection >= 0 ? 1f : -1f;
-                Root.localRotation = Quaternion.Euler(0f, 0f, -75f * dir);
+                SetWholeBodyPose(1f, 1f, -75f * dir);
                 Head.localRotation = Quaternion.Euler(0f, 0f, 8f * dir);
                 SetBoneRotation(NpcRigDefinition.BoneArmUpperL, 8f);
                 SetBoneRotation(NpcRigDefinition.BoneArmUpperR, 8f);
@@ -675,6 +653,9 @@ namespace OneRoof.Presentation.Population
             }
             else if (CurrentAnimation == NpcAnimationClip.Sit)
             {
+                // A compact squash and forward lean makes the whole-body sprite
+                // read as seated; detached skeletal limb poses remain hidden.
+                SetWholeBodyPose(1.025f, 0.90f, -4.5f);
                 // Seated fold: thighs forward to horizontal, shins drop to vertical,
                 // feet flatten (78 - 72 - 6 = 0), hands rest forward onto the lap.
                 Spine.localRotation = Quaternion.Euler(0f, 0f, -8f);
@@ -696,6 +677,7 @@ namespace OneRoof.Presentation.Population
                 // dip mid-shift while the chest counter-rolls above it.
                 var shiftPhase = t * 1.7f;
                 var shift = Mathf.Sin(shiftPhase) * 2.5f;
+                SetWholeBodyPose(1f, 1f - Mathf.Abs(Mathf.Cos(shiftPhase)) * 0.008f, shift);
                 Spine.localRotation = Quaternion.Euler(0f, 0f, shift);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -shift * .5f);
                 if (Hip != null)
@@ -712,6 +694,7 @@ namespace OneRoof.Presentation.Population
             else if (CurrentAnimation == NpcAnimationClip.Ride)
             {
                 // Braced stance: soft knees, hands half-raised as if on the car rail.
+                SetWholeBodyPose(1f, 1f + Mathf.Sin(t * 2.5f) * 0.004f, Mathf.Sin(t * 2.5f) * 0.7f);
                 Spine.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 2.5f) * .7f);
                 Head.localRotation = Quaternion.identity;
                 SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -6f);
@@ -727,6 +710,7 @@ namespace OneRoof.Presentation.Population
                 // faint shoulder drift so the silhouette never freezes.
                 var breathe = Mathf.Sin(t * 2.1f);
                 var breatheAngle = breathe * 1.2f;
+                SetWholeBodyPose(1f, 1f + breathe * 0.002f, breatheAngle * 0.5f);
                 Spine.localRotation = Quaternion.Euler(0f, 0f, breatheAngle);
                 Head.localRotation = Quaternion.Euler(0f, 0f, -breatheAngle * 0.7f);
                 if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, breathe * 0.0015f, 0f);
@@ -872,18 +856,23 @@ namespace OneRoof.Presentation.Population
                 wrapMode = TextureWrapMode.Clamp
             };
             var pixels = new Color[width * height];
-            for (var i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
+            var radiusX = Mathf.Min(0.45f, (height * 0.42f) / width);
+            var radiusY = Mathf.Min(0.45f, (width * 0.42f) / height);
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    var nx = Mathf.Abs((x + 0.5f - width * 0.5f) / (width * 0.5f));
+                    var ny = Mathf.Abs((y + 0.5f - height * 0.5f) / (height * 0.5f));
+                    var cornerX = Mathf.Max(0f, nx - (1f - radiusX)) / radiusX;
+                    var cornerY = Mathf.Max(0f, ny - (1f - radiusY)) / radiusY;
+                    var inside = cornerX * cornerX + cornerY * cornerY <= 1f;
+                    pixels[y * width + x] = inside ? Color.white : Color.clear;
+                }
+            }
             texture.SetPixels(pixels);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(.5f, 1f), height);
-        }
-
-        private static Sprite CreateWardrobeSwatch(string layerId)
-        {
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = $"WardrobeSwatch_{layerId}", filterMode = FilterMode.Point };
-            texture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
-            texture.Apply();
-            return Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f), 2f);
         }
 
         private static Sprite CreateDiscSprite()

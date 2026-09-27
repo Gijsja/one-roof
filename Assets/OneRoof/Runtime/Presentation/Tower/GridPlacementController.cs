@@ -23,6 +23,7 @@ namespace OneRoof.Presentation.Tower
         public const float DefaultFloorHeight = 1.75f;
         public const float DefaultCellOriginX = -2.4f;
         public const float DefaultCellWidth = 0.5f;
+        public const float UndergroundCellSize = 1f;
 
         public const int DefaultFloorSlabMinX = -14;
         public const int DefaultFloorSlabMaxX = 17;
@@ -37,6 +38,20 @@ namespace OneRoof.Presentation.Tower
         private TowerSimulationSession _simulationSession;
         private PlacementGhostPresenter _ghostPresenter;
         private Camera _camera;
+        private bool _digGestureActive;
+        private int _lastDigCellX = int.MinValue;
+        private int _lastDigDepth = int.MinValue;
+
+        private float UndergroundLeftWorldX
+        {
+            get
+            {
+                var groundCenter = _cellOriginX + (DefaultFloorSlabMinX + DefaultFloorSlabMaxX + 1) * _cellWidth * 0.5f;
+                if (_simulationSession != null && _simulationSession.TryGetFloorSlab(0, out var ground))
+                    groundCenter = _cellOriginX + (ground.MinX + ground.MaxX + 1) * _cellWidth * 0.5f;
+                return groundCenter - UndergroundDigState.GridWidthCells * UndergroundCellSize * 0.5f;
+            }
+        }
 
         public ModeShellSession ModeSession
         {
@@ -132,6 +147,7 @@ namespace OneRoof.Presentation.Tower
             var projection = _modeSession.Projection();
             if (!projection.IsBuildMode || string.IsNullOrEmpty(projection.SelectedBuildTool))
             {
+                ResetDigGesture();
                 _suppressedCellFloor = null;
                 _suppressedCellX = null;
                 _lastSeenToolId = string.Empty;
@@ -150,6 +166,7 @@ namespace OneRoof.Presentation.Tower
             // Right-click deselects the current build tool
             if (IsSecondaryPointerDown())
             {
+                ResetDigGesture();
                 _suppressedCellFloor = null;
                 _suppressedCellX = null;
                 _modeSession.CancelOrEscape();
@@ -160,10 +177,18 @@ namespace OneRoof.Presentation.Tower
             if (TryGetScreenPointerPosition(out var screenPos))
             {
                 // Disallow grid hover and clicks when pointer is interacting with UI
-                if (IsPointerOverUI(screenPos, includeBuildPalette: string.IsNullOrEmpty(projection.SelectedBuildTool)))
+                if (IsPointerOverUI(screenPos, includeBuildPalette: string.IsNullOrEmpty(projection.SelectedBuildTool),
+                    screenHeight: Screen.height, screenWidth: Screen.width))
                 {
+                    ResetDigGesture();
                     LastPlacementHint = null;
                     GhostPresenter.HideGhost();
+                    return;
+                }
+
+                if (IsUndergroundTool(currentToolId))
+                {
+                    HandleUndergroundDigPointer(screenPos, currentToolId, toolChangedThisFrame);
                     return;
                 }
 
@@ -261,7 +286,7 @@ namespace OneRoof.Presentation.Tower
             GUI.Label(new Rect(_lastHintScreenPos.x + 16, guiY + 14, 430, 24), LastPlacementHint, _hintStyle);
         }
 
-        public static bool IsPointerOverUI(Vector3 screenPos, bool includeBuildPalette = true)
+        public static bool IsPointerOverUI(Vector3 screenPos, bool includeBuildPalette = true, int screenHeight = -1, int screenWidth = -1)
         {
             if (UnityEngine.EventSystems.EventSystem.current != null &&
                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
@@ -269,32 +294,34 @@ namespace OneRoof.Presentation.Tower
                 return true;
             }
 
-            var guiY = Screen.height - screenPos.y;
+            if (screenHeight <= 0) screenHeight = Screen.height;
+            if (screenWidth <= 0) screenWidth = Screen.width;
+            var guiY = screenHeight - screenPos.y;
             var guiPoint = new Vector2(screenPos.x, guiY);
 
             // The chooser disappears after tool selection; the mode bar and
             // context strip do not. Shield only the visible palette but always
             // shield those controls, including on the click that reopens Build.
             const float margin = 8f;
-            if (ContainsWithMargin(ModeShellBarController.ModeBarRect(Screen.height), guiPoint, margin) ||
-                ContainsWithMargin(ModeShellBarController.ContextRect(Screen.height, isBuildMode: true), guiPoint, margin) ||
-                (includeBuildPalette && ContainsWithMargin(ModeShellBarController.BuildPaletteRect(Screen.height), guiPoint, margin)))
+            if (ContainsWithMargin(ModeShellBarController.ModeBarRect(screenHeight), guiPoint, margin) ||
+                ContainsWithMargin(ModeShellBarController.ContextRect(screenHeight, isBuildMode: true), guiPoint, margin) ||
+                (includeBuildPalette && ContainsWithMargin(ModeShellBarController.BuildPaletteRect(screenHeight), guiPoint, margin)))
                 return true;
 
             // Top-left HUD area
-            var hudWidth = Mathf.Min(420f, Screen.width * 0.35f);
-            var hudHeight = Mathf.Min(300f, Screen.height * 0.35f);
+            var hudWidth = Mathf.Min(420f, screenWidth * 0.35f);
+            var hudHeight = Mathf.Min(300f, screenHeight * 0.35f);
             if (guiPoint.x >= 15 && guiPoint.x <= hudWidth && guiPoint.y >= 15 && guiPoint.y <= hudHeight)
             {
                 return true;
             }
 
             // Right side cards (Placement preview or Congestion inspector)
-            var cardWidth = Mathf.Min(400f, Screen.width * 0.35f);
-            if (guiPoint.x >= Screen.width - cardWidth && guiPoint.x <= Screen.width - 15)
+            var cardWidth = Mathf.Min(400f, screenWidth * 0.35f);
+            if (guiPoint.x >= screenWidth - cardWidth && guiPoint.x <= screenWidth - 15)
             {
-                if (guiPoint.y >= 15 && guiPoint.y <= Mathf.Min(360f, Screen.height * 0.45f)) return true; // Inspector
-                if (guiPoint.y >= Screen.height - Mathf.Min(360f, Screen.height * 0.45f) && guiPoint.y <= Screen.height - 15) return true; // Preview
+                if (guiPoint.y >= 15 && guiPoint.y <= Mathf.Min(360f, screenHeight * 0.45f)) return true; // Inspector
+                if (guiPoint.y >= screenHeight - Mathf.Min(360f, screenHeight * 0.45f) && guiPoint.y <= screenHeight - 15) return true; // Preview
             }
 
             return false;
@@ -332,6 +359,18 @@ namespace OneRoof.Presentation.Tower
             return mouse != null && mouse.leftButton.wasPressedThisFrame;
 #elif ENABLE_LEGACY_INPUT_MANAGER
             return Input.GetMouseButtonDown(0);
+#else
+            return false;
+#endif
+        }
+
+        private static bool IsPrimaryPointerHeld()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            return mouse != null && mouse.leftButton.isPressed;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetMouseButton(0);
 #else
             return false;
 #endif
@@ -391,6 +430,127 @@ namespace OneRoof.Presentation.Tower
             floor = 0;
             cellX = 0;
             return false;
+        }
+
+        private void HandleUndergroundDigPointer(Vector3 screenPos, string toolId, bool toolChangedThisFrame)
+        {
+            if (!TryGetUndergroundCellFromScreen(screenPos, Camera, out var cellX, out var depth))
+            {
+                _lastHintScreenPos = screenPos;
+                LastPlacementHint = "✖ Point to the earth beneath the building.";
+                LastPlacementValid = false;
+                GhostPresenter.HideGhost();
+                return;
+            }
+
+            var size = UndergroundBrushSize(toolId);
+            var isDigTool = IsUndergroundDigTool(toolId);
+            ICommand command = isDigTool
+                ? (ICommand)new DigUndergroundCommand(cellX, depth, size)
+                : new BuildUndergroundFloorCommand(cellX, depth, size);
+            var result = _simulationSession.CanExecute(command);
+            LastPlacementValid = result.Accepted;
+            LastPlacementHint = result.Accepted
+                ? (isDigTool ? $"✔ Dig {size}×{size} earth cells" : $"✔ Build {size}×{size} lair floor")
+                : $"✖ {result.Rejections[0].Message}";
+            _lastHintScreenPos = screenPos;
+
+            var worldX = UndergroundLeftWorldX + (cellX + size * 0.5f) * UndergroundCellSize;
+            var groundY = _floorOriginY - 0.74f;
+            var worldY = groundY - (depth + size * 0.5f) * UndergroundCellSize;
+            GhostPresenter.ShowGhost(new Vector3(worldX, worldY, 0f),
+                new Vector2(size * UndergroundCellSize * 0.94f, size * UndergroundCellSize * 0.94f), result.Accepted,
+                result.Accepted
+                    ? (isDigTool ? new Color(1f, 0.62f, 0.24f, 0.42f) : new Color(0.36f, 0.75f, 0.68f, 0.62f))
+                    : (Color?)null, renderZ: 0.24f);
+
+            if (toolChangedThisFrame)
+            {
+                ResetDigGesture();
+                return;
+            }
+
+            if (IsPrimaryPointerDown()) _digGestureActive = true;
+            if (!IsPrimaryPointerHeld())
+            {
+                _digGestureActive = false;
+                _lastDigCellX = int.MinValue;
+                _lastDigDepth = int.MinValue;
+                return;
+            }
+
+            if (_digGestureActive && (cellX != _lastDigCellX || depth != _lastDigDepth))
+            {
+                var startX = _lastDigCellX;
+                var startDepth = _lastDigDepth;
+                _lastDigCellX = cellX;
+                _lastDigDepth = depth;
+                if (startX == int.MinValue)
+                {
+                    if (result.Accepted) ExecuteUndergroundBrush(toolId, cellX, depth, size);
+                }
+                else
+                {
+                    var steps = Mathf.Max(Mathf.Abs(cellX - startX), Mathf.Abs(depth - startDepth));
+                    for (var step = 1; step <= steps; step++)
+                    {
+                        var t = step / (float)steps;
+                        var pathX = Mathf.RoundToInt(Mathf.Lerp(startX, cellX, t));
+                        var pathDepth = Mathf.RoundToInt(Mathf.Lerp(startDepth, depth, t));
+                        ExecuteUndergroundBrush(toolId, pathX, pathDepth, size);
+                    }
+                }
+            }
+        }
+
+        private void ExecuteUndergroundBrush(string toolId, int cellX, int depth, int size)
+        {
+            ICommand command = IsUndergroundDigTool(toolId)
+                ? (ICommand)new DigUndergroundCommand(cellX, depth, size)
+                : new BuildUndergroundFloorCommand(cellX, depth, size);
+            if (!_simulationSession.CanExecute(command).Accepted) return;
+            var executed = _simulationSession.ExecuteCommand(command);
+            PlacementExecuted?.Invoke(executed);
+            if (executed.Accepted) GhostPresenter.HideGhost();
+        }
+
+        private void ResetDigGesture()
+        {
+            _digGestureActive = false;
+            _lastDigCellX = int.MinValue;
+            _lastDigDepth = int.MinValue;
+        }
+
+        public bool TryGetUndergroundCellFromScreen(Vector3 screenPos, Camera cam, out int cellX, out int depth)
+        {
+            cellX = 0;
+            depth = 0;
+            if (cam == null) cam = Camera;
+            if (cam == null) return false;
+            var ray = cam.ScreenPointToRay(screenPos);
+            var plane = new Plane(Vector3.forward, Vector3.zero);
+            if (!plane.Raycast(ray, out var enter)) return false;
+            var world = ray.GetPoint(enter);
+            var groundY = _floorOriginY - 0.74f;
+            cellX = Mathf.FloorToInt((world.x - UndergroundLeftWorldX) / UndergroundCellSize);
+            depth = Mathf.FloorToInt((groundY - world.y) / UndergroundCellSize);
+            return cellX >= 0 && cellX < UndergroundDigState.GridWidthCells &&
+                   depth >= 0 && depth < UndergroundDigState.MaxDepthCells;
+        }
+
+        private static bool IsUndergroundDigTool(string toolId) =>
+            toolId != null && toolId.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsUndergroundTool(string toolId) =>
+            IsUndergroundDigTool(toolId) ||
+            (toolId != null && toolId.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase));
+
+        private static int UndergroundBrushSize(string toolId)
+        {
+            if (!IsUndergroundTool(toolId)) return 1;
+            var prefix = IsUndergroundDigTool(toolId) ? "underground:dig_" : "underground:floor_";
+            var suffix = toolId.Substring(prefix.Length);
+            return int.TryParse(suffix, out var size) && size >= 1 && size <= UndergroundDigState.MaxBrushSize ? size : 1;
         }
 
         public static int GetToolWidthInCells(string toolId)
@@ -653,6 +813,14 @@ namespace OneRoof.Presentation.Tower
             {
                 TryGetToolPlacementBounds(toolId, 0, cellX, out var expandedBounds);
                 command = new ExpandGroundSlabCommand(expandedBounds.MinX, expandedBounds.MaxX);
+                return true;
+            }
+
+            if (IsUndergroundTool(toolId))
+            {
+                command = IsUndergroundDigTool(toolId)
+                    ? (ICommand)new DigUndergroundCommand(cellX, floor, UndergroundBrushSize(toolId))
+                    : new BuildUndergroundFloorCommand(cellX, floor, UndergroundBrushSize(toolId));
                 return true;
             }
 

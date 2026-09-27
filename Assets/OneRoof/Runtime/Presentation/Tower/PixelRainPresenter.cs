@@ -3,22 +3,15 @@ using System.Collections.Generic;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Weather;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityApplication = UnityEngine.Application;
 
 namespace OneRoof.Presentation.Tower
 {
-    /// <summary>
-    /// Weather state indicating atmospheric condition and precipitation intensity.
-    /// </summary>
-    public enum WeatherCondition
-    {
-        Clear = 0,
-        Drizzle = 1,
-        Rain = 2,
-        Storm = 3
-    }
+    using WeatherCondition = OneRoof.Domain.Weather.WeatherCondition;
+
 
     /// <summary>
     /// Exterior roof eave / gutter point where rainwater collects and drips into the outside space.
@@ -122,6 +115,7 @@ namespace OneRoof.Presentation.Tower
         private uint _rngState = 123456789;
 
         public WeatherCondition Condition => _condition;
+        public float TargetIntensity => _targetIntensity;
         public float RainIntensity => _rainIntensity;
         public float WindSpeed
         {
@@ -176,7 +170,9 @@ namespace OneRoof.Presentation.Tower
             RebuildRoofEaves();
         }
 
-        public void SetWeather(WeatherCondition condition, float intensity = -1f)
+        public void SetWeather(WeatherSample sample) => SetWeather(sample.Condition, sample.Intensity, sample.WindSpeed);
+
+        public void SetWeather(WeatherCondition condition, float intensity = -1f, float windSpeed = float.NaN)
         {
             _condition = condition;
             _targetIntensity = intensity >= 0f ? Mathf.Clamp01(intensity) : condition switch
@@ -188,13 +184,21 @@ namespace OneRoof.Presentation.Tower
                 _ => 0f
             };
 
-            if (_condition == WeatherCondition.Storm)
+            if (!float.IsNaN(windSpeed))
+            {
+                _windSpeed = windSpeed;
+            }
+            else if (_condition == WeatherCondition.Storm)
             {
                 _windSpeed = -2.2f;
             }
             else if (_condition == WeatherCondition.Drizzle)
             {
                 _windSpeed = -0.3f;
+            }
+            else if (_condition == WeatherCondition.Rain)
+            {
+                _windSpeed = -0.9f;
             }
         }
 

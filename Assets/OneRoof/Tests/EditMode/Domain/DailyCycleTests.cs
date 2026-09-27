@@ -196,6 +196,44 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void NoDiner_SendsHungryResidentsToOutsideFood()
+        {
+            var source = FiveFloorTopologyFixture.Create();
+            var floors = new List<FloorTopology>();
+            foreach (var floor in source.Floors)
+            {
+                var rooms = new List<Room>();
+                foreach (var room in floor.Rooms)
+                    if (room.ContentType != FiveFloorTopologyFixture.CommercialContentId) rooms.Add(room);
+                var roomIds = new HashSet<EntityId>();
+                foreach (var room in rooms) roomIds.Add(room.Id);
+                var portals = new List<Portal>();
+                foreach (var portal in floor.Portals)
+                    if (roomIds.Contains(portal.RoomId)) portals.Add(portal);
+                floors.Add(new FloorTopology(floor.FloorLevel, rooms, portals));
+            }
+
+            var noDinerTopology = new BuildingTopology(floors);
+            var graph = HierarchicalTransitGraph.FromBuildingTopology(noDinerTopology);
+            var generator = new ScheduleTripGenerator(noDinerTopology, graph, new TransitRoutePlanner(graph));
+            var population = FiftyResidentFixture.Create(source, new DeterministicRandomStream(23));
+            var person = population.Persons[0];
+            person.UpdateLocation(person.HomeRoomId);
+            person.UpdateActivity(ActivityKind.Idle);
+            person.UpdateNeed(NeedKind.Hunger, 0.2f);
+
+            var trips = generator.GenerateTripsForTick(new Tick(100), new Tick(101), population);
+
+            TripRecord foodTrip = null;
+            foreach (var trip in trips)
+                if (trip.PersonId.Equals(person.Id)) foodTrip = trip;
+
+            Assert.That(foodTrip, Is.Not.Null);
+            Assert.That(foodTrip.Purpose, Is.EqualTo(TripPurpose.Food));
+            Assert.That(foodTrip.Destination.IsOutside, Is.True);
+        }
+
+        [Test]
         public void TwoDayCycle_StaysStable()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor();

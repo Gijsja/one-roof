@@ -26,5 +26,20 @@ namespace OneRoof.Presentation.Tests.EditMode
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Test]
+        public void UpdateDayNight_DoesNotCreateGrowingScreenOverlay()
+        {
+            var go = new GameObject("Atmosphere");
+            try
+            {
+                var oldTint = new GameObject("NightTint");
+                oldTint.transform.SetParent(go.transform, false);
+                var atmosphere = go.AddComponent<TowerAtmospherePresenter>();
+                atmosphere.UpdateDayNight(new DayPhase(1, 0, 0, true), 9);
+                Assert.That(go.transform.Find("NightTint"), Is.Null);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 }

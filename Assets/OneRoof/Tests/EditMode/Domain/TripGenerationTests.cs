@@ -47,6 +47,28 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void MoveOutTripUsesOutsideRouteAndArrivesIdle()
+        {
+            var sim = OneRoof.Domain.TowerSimulation.CreateStandardFiveFloor();
+            var person = sim.Population.Persons[0];
+            var trip = sim.TripGenerator.CreateMoveOutTrip(person, new Tick(0));
+
+            Assert.That(trip, Is.Not.Null);
+            Assert.That(trip.Purpose, Is.EqualTo(TripPurpose.MoveOut));
+            Assert.That(trip.Origin, Is.EqualTo(WorldLocation.InRoom(person.HomeRoomId)));
+            Assert.That(trip.Destination, Is.EqualTo(WorldLocation.Outside));
+            Assert.That(trip.PlannedRoute, Is.Not.Null);
+
+            sim.Transit.SubmitTrip(trip, sim.Topology, new Tick(0), sim.Population);
+            for (var tick = 1; tick <= 300 && sim.Transit.IsPersonTravelling(person.Id); tick++)
+                sim.Transit.Advance(new Tick(tick), sim.Topology, sim.ElevatorBank, sim.Population);
+
+            Assert.That(sim.Transit.IsPersonTravelling(person.Id), Is.False);
+            Assert.That(person.CurrentLocation, Is.EqualTo(WorldLocation.Outside));
+            Assert.That(person.CurrentActivity, Is.EqualTo(ActivityKind.Idle));
+        }
+
+        [Test]
         public void ExternalWorkTripRoutesOutThroughLobby()
         {
             var sim = OneRoof.Domain.TowerSimulation.CreateStandardFiveFloor();

@@ -4,6 +4,7 @@ using OneRoof.Application.Tower;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Weather;
 using OneRoof.Presentation.Tower;
 using UnityEngine;
 using EntityId = OneRoof.Domain.Identity.EntityId;
@@ -175,6 +176,17 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.ActiveSplashCount, Is.EqualTo(0));
             Assert.That(_presenter.RoofEaveCount, Is.EqualTo(0));
             Assert.That(_presenter.RainMeshRenderer, Is.Null);
+        }
+
+        [Test]
+        public void SetWeather_FromWeatherSample_AppliesConditionAndIntensity()
+        {
+            var sample = new WeatherSample(WeatherCondition.Storm, 0.95f, -2.5f, "Severe Thunderstorm");
+            _presenter.SetWeather(sample);
+
+            Assert.That(_presenter.Condition, Is.EqualTo(WeatherCondition.Storm));
+            Assert.That(_presenter.TargetIntensity, Is.EqualTo(0.95f).Within(0.001f));
+            Assert.That(_presenter.WindSpeed, Is.EqualTo(-2.5f).Within(0.001f));
         }
     }
 }

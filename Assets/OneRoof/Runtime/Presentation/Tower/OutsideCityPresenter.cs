@@ -38,7 +38,6 @@ namespace OneRoof.Presentation.Tower
         private MaterialPropertyBlock _block;
         private Camera _camera;
         private Material _material;
-        private Material _windowMaterial;
         private Mesh _quad;
         private Transform _root;
         private int _groundMaxX = int.MinValue;
@@ -58,15 +57,6 @@ namespace OneRoof.Presentation.Tower
             if (material == null) throw new ArgumentNullException(nameof(material));
             _camera = camera;
             _material = material;
-            var windowShader = Shader.Find("AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch")
-                ?? Shader.Find("AllIn1SpriteShader/AllIn1SpriteShader");
-            if (windowShader != null && _windowMaterial == null)
-            {
-                _windowMaterial = new Material(windowShader) { name = "Outside City Window Glow" };
-                _windowMaterial.EnableKeyword("GLOW_ON");
-                _windowMaterial.SetColor("_GlowColor", new Color(1f, 0.48f, 0.16f));
-                _windowMaterial.SetFloat("_Glow", 0.65f);
-            }
         }
 
         public void SyncGround(CellBounds ground, int floorCount)
@@ -98,7 +88,9 @@ namespace OneRoof.Presentation.Tower
 
         private void BuildLayer(Transform layerRoot, int layer, float streetY)
         {
-            var x = -6f;
+            // Start beyond the lobby edge. The old negative offset placed the
+            // near skyline directly over the lobby and concealed its furnishings.
+            var x = 0.18f;
             for (var i = 0; i < Widths[layer].Length; i++)
             {
                 var width = Widths[layer][i];
@@ -131,7 +123,6 @@ namespace OneRoof.Presentation.Tower
                             var windowY = streetY + 0.58f + row * 0.82f;
                             var window = CreateQuad(layerRoot, $"Window {i}-{row}-{column}", windowX,
                                 windowY, 0.19f, 0.25f, Depth[layer] - 0.08f, new Color(1f, 0.70f, 0.34f));
-                            if (_windowMaterial != null) window.sharedMaterial = _windowMaterial;
                             _windows.Add(window);
                         }
                     }
@@ -142,7 +133,7 @@ namespace OneRoof.Presentation.Tower
             if (layer == 2)
             {
                 // The street plane meets the lobby edge; storefront strips and lamps lend scale.
-                CreateQuad(layerRoot, "Street apron", 11f, streetY - 0.20f, 36f, 0.18f, 3.8f,
+                CreateQuad(layerRoot, "Street apron", 18f, streetY - 0.20f, 36f, 0.18f, 3.8f,
                     new Color(0.18f, 0.25f, 0.30f));
                 for (var i = 0; i < 5; i++)
                 {
@@ -151,7 +142,6 @@ namespace OneRoof.Presentation.Tower
                         3.7f, new Color(0.28f, 0.37f, 0.43f));
                     var lamp = CreateQuad(layerRoot, $"Lamp light {i}", lampX, streetY + 1.03f,
                         0.30f, 0.12f, 3.65f, new Color(1f, 0.70f, 0.34f));
-                    if (_windowMaterial != null) lamp.sharedMaterial = _windowMaterial;
                     _windows.Add(lamp);
                 }
             }
@@ -183,15 +173,11 @@ namespace OneRoof.Presentation.Tower
                 var color = Color.Lerp(dayFacades[layer], NightFacadeColor(layer), night);
                 foreach (var facade in _facades[layer]) SetColor(facade, color);
             }
-            var windowColor = Color.Lerp(new Color(0.24f, 0.36f, 0.43f),
-                new Color(1f, 0.70f, 0.34f), night);
+            var windowColor = Color.Lerp(new Color(0.52f, 0.66f, 0.69f),
+                new Color(1f, 0.74f, 0.38f), night);
             foreach (var window in _windows)
             {
                 SetColor(window, windowColor);
-                if (_windowMaterial == null) continue;
-                window.GetPropertyBlock(_block);
-                _block.SetFloat("_Glow", Mathf.Lerp(0.08f, 0.65f, night));
-                window.SetPropertyBlock(_block);
             }
         }
 
@@ -208,8 +194,6 @@ namespace OneRoof.Presentation.Tower
         private void OnDestroy()
         {
             Clear();
-            DestroyOwned(_windowMaterial);
-            _windowMaterial = null;
         }
 
         public void Clear()

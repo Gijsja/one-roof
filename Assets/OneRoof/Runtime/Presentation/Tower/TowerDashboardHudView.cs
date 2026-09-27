@@ -41,7 +41,14 @@ namespace OneRoof.Presentation.Tower
             if (IsCollapsed) { GUILayout.EndArea(); return; }
 
             var phase = sim.DayPhase;
+            var weather = _controller.CurrentWeather;
+            var weatherColor = weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Storm ? StewardTheme.Amber :
+                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Rain ? StewardTheme.Mint : StewardTheme.Muted;
+            GUILayout.BeginHorizontal();
             GUILayout.Label($"THE STEWARD'S TOWER  /  DAY {phase.DayNumber}  /  {phase.ClockLabel}", StewardTheme.Label(10, StewardTheme.Muted, true));
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(weather.Description.ToUpperInvariant(), StewardTheme.Label(10, weatherColor, true));
+            GUILayout.EndHorizontal();
             GUILayout.Space(5);
             StewardTheme.Rule(364);
             GUILayout.Space(5);
@@ -87,7 +94,11 @@ namespace OneRoof.Presentation.Tower
                 if (GUILayout.Button("SHOW FLOW", StewardTheme.Button, GUILayout.Height(30))) _controller.ToggleDataOverlay();
                 GUILayout.EndHorizontal();
             }
+            GUILayout.BeginHorizontal();
             GUILayout.Label(_controller.IsPaused ? "● PAUSED  /  SPACE TO RESUME" : "● LIVE  /  SPACE TO PAUSE", StewardTheme.Label(10, _controller.IsPaused ? StewardTheme.Amber : StewardTheme.Mint, true));
+            GUILayout.FlexibleSpace();
+            GUILayout.Label($"WEATHER: {(_controller.IsAutoWeather ? "AUTO" : "MANUAL")} (W)", StewardTheme.Label(10, StewardTheme.Muted, true));
+            GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }
 

@@ -34,7 +34,9 @@ namespace OneRoof.Domain.Tests.EditMode
             worker.UpdateLocation(WorldLocation.Outside);
             worker.UpdateActivity(ActivityKind.Working);
             worker.CommitPurpose(ResidentPurposeKind.WorkingOutside, new Tick(100), 480);
-            worker.UpdateNeed(NeedKind.Hunger, 0f);
+            worker.UpdateNeed(NeedKind.Hunger, 1f);
+            worker.UpdateNeed(NeedKind.Energy, 1f);
+            worker.UpdateNeed(NeedKind.Hygiene, 1f);
             var population = new PopulationState(new[] { worker }, null);
             var generator = NewGenerator(topology);
 
@@ -52,6 +54,44 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(trips.Count, Is.EqualTo(1));
             Assert.That(trips[0].Purpose, Is.EqualTo(TripPurpose.Home));
             Assert.That(trips[0].Origin.IsOutside, Is.True);
+        }
+
+        [Test]
+        public void CriticalHungerInterruptsCommittedOutsideShiftForFood()
+        {
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99003), new EntityId(99004), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            worker.UpdateLocation(WorldLocation.Outside);
+            worker.UpdateActivity(ActivityKind.Working);
+            worker.CommitPurpose(ResidentPurposeKind.WorkingOutside, new Tick(100), 480);
+            worker.UpdateNeed(NeedKind.Hunger, 0.2f);
+            worker.UpdateNeed(NeedKind.Energy, 1f);
+            worker.UpdateNeed(NeedKind.Hygiene, 1f);
+            var generator = NewGenerator(topology);
+
+            var trips = generator.GenerateTripsForTick(new Tick(100), new Tick(101),
+                new PopulationState(new[] { worker }, null));
+
+            Assert.That(trips.Count, Is.EqualTo(1));
+            Assert.That(trips[0].Purpose, Is.EqualTo(TripPurpose.Food));
+            Assert.That(trips[0].Destination.IsOutside, Is.True);
+        }
+
+        [Test]
+        public void OutsideFoodRetryBlockSurvivesPopulationSaveLoad()
+        {
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99005), new EntityId(99006), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            worker.BlockOutsideFoodUntil(500);
+
+            var restored = PopulationState.FromSaveData(new PopulationState(new[] { worker }, null).ToSaveData()).Persons[0];
+
+            Assert.That(restored.OutsideFoodRetryAfterTick, Is.EqualTo(500));
+            Assert.That(restored.IsOutsideFoodRetryBlocked(new Tick(499)), Is.True);
+            Assert.That(restored.IsOutsideFoodRetryBlocked(new Tick(500)), Is.False);
         }
 
         [Test]

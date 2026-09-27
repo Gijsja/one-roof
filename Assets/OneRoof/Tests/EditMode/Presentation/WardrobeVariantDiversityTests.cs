@@ -44,13 +44,13 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 var upperA = a.WardrobeSlots[NpcLayerKind.UpperClothing];
                 var upperB = b.WardrobeSlots[NpcLayerKind.UpperClothing];
-                Assert.That(upperA.sprite, Is.Not.Null);
-                Assert.That(upperB.sprite, Is.Not.Null);
-                Assert.That(upperA.sprite.name, Is.Not.EqualTo(upperB.sprite.name));
+                Assert.That(upperA.enabled, Is.False);
+                Assert.That(upperB.enabled, Is.False);
                 Assert.That(upperA.color, Is.EqualTo(Color.white));
 
                 Assert.That(a.transform.localScale.x, Is.InRange(0.9f, 1.1f));
-                Assert.That(a.LimbRenderers["head"].color, Is.Not.EqualTo(Color.white));
+                Assert.That(a.MainRenderer.enabled, Is.True);
+                Assert.That(a.MainRenderer.sprite, Is.Not.EqualTo(b.MainRenderer.sprite));
 
                 // Re-initialize is idempotent (absolute scale, no compounding).
                 var scaleBefore = a.transform.localScale;

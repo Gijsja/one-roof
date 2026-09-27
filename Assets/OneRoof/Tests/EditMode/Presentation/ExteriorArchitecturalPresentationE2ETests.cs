@@ -705,10 +705,12 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void T1_F15_AtmosphericNightTint_CoversTowerWithCorrectDepthAndAlpha()
+        public void T1_F15_NightLightingHasNoFullBuildingTintQuad()
         {
             _atmospherePresenter.UpdateDayNight(DayClock.FromTick(0), 5); // Midnight
             Assert.That(_atmospherePresenter.NightTintAlpha, Is.GreaterThan(0.20f));
+            Assert.That(_atmospherePresenter.transform.Find("NightTint"), Is.Null,
+                "The old full-building tint quad must not cover foreground assets.");
 
             _atmospherePresenter.UpdateDayNight(DayClock.FromTick(12 * 60), 5); // Noon
             Assert.That(_atmospherePresenter.NightTintAlpha, Is.EqualTo(0f));
@@ -875,7 +877,10 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(renderers.Length, Is.GreaterThan(10));
             foreach (var r in renderers)
             {
-                Assert.That(r.sharedMaterial, Is.EqualTo(_worldMaterial));
+                if (r.name.Contains("Light Cone"))
+                    Assert.That(r.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0));
+                else
+                    Assert.That(r.sharedMaterial, Is.EqualTo(_worldMaterial));
             }
         }
 

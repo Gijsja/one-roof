@@ -5,10 +5,9 @@ namespace OneRoof.Content
 {
     /// <summary>
     /// Canonical registry of validated, immutable NPC resident content items for One Roof.
-    /// Composite placeholder sprites (resident_spritesheet / resident_0X_*) were removed;
-    /// the shared Spine 2D modular rig (torso/head/limbs + 8 wardrobe slots in
-    /// NpcSkeletalHierarchy) is the sole presentation path. ResourcePath is therefore
-    /// empty until layered wardrobe part sprites land; content IDs remain immutable.
+    /// Each record resolves to a complete sprite in the imported resident atlas. The
+    /// skeletal hierarchy remains responsible for resident identity, status and poses;
+    /// incomplete paperdoll cutouts are not layered over the full-body sprites.
     /// </summary>
     public static class NpcContentRegistry
     {
@@ -20,7 +19,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.service.v1",
                 proposedKey: "resident-01-barista",
                 displayName: "Service Resident (Barista / Diner Staff)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Service",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
@@ -39,7 +38,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.corporate.v1",
                 proposedKey: "resident-02-executive",
                 displayName: "Corporate Resident (Manager / Office Worker)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Corporate",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
@@ -59,7 +58,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.creative.v1",
                 proposedKey: "resident-03-creative",
                 displayName: "Creative Resident (Designer / Architect)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Creative",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
@@ -78,7 +77,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.senior.v1",
                 proposedKey: "resident-04-senior",
                 displayName: "Senior Resident (Retired Scholar / Community Elder)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Senior",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
@@ -97,7 +96,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.youth.v1",
                 proposedKey: "resident-05-student",
                 displayName: "Youth Resident (Student / Freelancer)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Youth",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
@@ -116,7 +115,7 @@ namespace OneRoof.Content
                 contentId: "npc.resident.trades.v1",
                 proposedKey: "resident-06-technician",
                 displayName: "Trades Resident (Maintenance Technician / Facility Engineer)",
-                resourcePath: "",
+                resourcePath: "Residents/resident-spritesheet-v1",
                 primaryRole: "Trades",
                 bodyType: "adult-standard",
                 worldWidth: 0.28f,
