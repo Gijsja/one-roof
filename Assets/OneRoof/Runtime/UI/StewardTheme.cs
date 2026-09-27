@@ -29,18 +29,26 @@ namespace OneRoof.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticCaches()
         {
-            _ink = null;
-            _surface = null;
-            _raised = null;
-            _active = null;
-            _warning = null;
-            _line = null;
+            DestroyTexture(_ink);
+            DestroyTexture(_surface);
+            DestroyTexture(_raised);
+            DestroyTexture(_active);
+            DestroyTexture(_warning);
+            DestroyTexture(_line);
+            _ink = _surface = _raised = _active = _warning = _line = null;
             _panel = null;
             _recess = null;
             _button = null;
             _activeButton = null;
             _warningButton = null;
             Labels.Clear();
+        }
+
+        private static void DestroyTexture(Texture2D texture)
+        {
+            if (texture == null) return;
+            if (UnityEngine.Application.isPlaying) Object.Destroy(texture);
+            else Object.DestroyImmediate(texture);
         }
 
         public static GUIStyle Label(int size = 12, Color? color = null, bool bold = false)
