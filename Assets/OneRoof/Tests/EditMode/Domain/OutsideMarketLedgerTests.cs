@@ -54,6 +54,55 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void OutsideMeals_LeaveTowerAllowanceAvailableButBothPurchasesDrawFromCash()
+        {
+            var household = new HouseholdRecord(new EntityId(1),
+                new[] { new EntityId(2), new EntityId(3), new EntityId(4) },
+                new EntityId(5), 0.5f, 1f, cashBalance: 50);
+            var market = new OutsideMarketState();
+
+            Assert.That(market.TryPurchase(household, 8, 0, OutsideServiceCategory.EssentialFood).Accepted, Is.True);
+            Assert.That(market.TryPurchase(household, 8, 0, OutsideServiceCategory.EssentialFood).Accepted, Is.True);
+            Assert.That(household.DailyOutsideEssentialSpend, Is.EqualTo(16));
+            Assert.That(household.AvailableServiceSpend, Is.EqualTo(15));
+
+            var towerPayment = household.SpendOnService(15);
+            household.CompleteDailyBudgetSettlement();
+
+            Assert.That(towerPayment, Is.EqualTo(15));
+            Assert.That(household.DailyServiceSpend, Is.EqualTo(15));
+            Assert.That(household.AvailableServiceSpend, Is.Zero);
+            Assert.That(household.CashBalance, Is.EqualTo(19));
+            Assert.That(market.CashBalance, Is.EqualTo(16));
+            Assert.That(household.DailyBudgetNetFlow, Is.EqualTo(-31));
+
+            var restored = PopulationState.FromSaveData(
+                new PopulationState(null, new[] { household }).ToSaveData()).GetHousehold(household.Id);
+            Assert.That(restored.CashBalance, Is.EqualTo(19));
+            Assert.That(restored.DailyOutsideEssentialSpend, Is.EqualTo(16));
+            Assert.That(restored.DailyServiceSpend, Is.EqualTo(15));
+            Assert.That(restored.AvailableServiceSpend, Is.Zero);
+            Assert.That(restored.DailyBudgetNetFlow, Is.EqualTo(-31));
+        }
+
+        [Test]
+        public void OutsideCredit_DoesNotFundTowerServicePurchases()
+        {
+            var household = Household(cash: 1);
+            var market = new OutsideMarketState();
+
+            var outsidePurchase = market.TryPurchase(household, 8, 7, OutsideServiceCategory.EssentialFood);
+
+            Assert.That(outsidePurchase.Accepted, Is.True);
+            Assert.That(household.OutsideCreditBalance, Is.EqualTo(7));
+            Assert.That(household.DailyOutsideEssentialSpend, Is.EqualTo(8));
+            Assert.That(household.AvailableServiceSpend, Is.Zero);
+            Assert.That(household.SpendOnService(5), Is.Zero);
+            Assert.That(household.DailyServiceSpend, Is.Zero);
+            Assert.That(market.CashBalance + market.CreditReceivableBalance, Is.EqualTo(8));
+        }
+
+        [Test]
         public void RecordDailyIncome_RepaysCreditFromNewIncomeAndMarketRecordsTransfer()
         {
             var household = Household(cash: 0);

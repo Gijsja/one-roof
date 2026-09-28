@@ -168,7 +168,7 @@ The existing economy models the tower's treasury, household cash, business accou
 and policy. ECON-005 should extend those ledgers; it should not create a competing economic
 simulation or an unrelated needs system. The current economy docs specify 200 move-in cash,
 residential rent of 12/person/day, tower diner tickets of 6, and tower wages of 30–45/day.
-Treat outside wages of 18/day and an essential outside meal of 8 as initial tuning values only. Set essential-basket and
+Outside wages are now 24/day so a single worker can cover 12/day rent and an 8-unit essential meal with a small surplus. Treat these and the essential outside meal as initial tuning values only. Set essential-basket and
 quality-service prices after running household archetypes through 30-, 180-, and 365-day
 scenarios. Defer age-based care prices until life-stage data exists.
 

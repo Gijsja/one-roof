@@ -261,7 +261,163 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void BusinessCycle_ReconcilesLeaseStaffAndRecordsWageArrearsWithoutOpeningCash()
+        public void LeasingDemand_DoesNotAssignWorkplaceRoomWithoutPayingBusiness()
+        {
+            var topology = new BuildingTopologyState();
+            var home = new Room(new EntityId(101), new ContentId("residential:apartment"),
+                new CellBounds(0, 0, 3), System.Array.Empty<EntityId>(), 4);
+            var unpaidWorkplace = new Room(new EntityId(102), new ContentId("workplace:office"),
+                new CellBounds(0, 5, 8), System.Array.Empty<EntityId>(), 4);
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 10) },
+                new[] { home, unpaidWorkplace }, System.Array.Empty<Portal>());
+            var population = new PopulationState(null, null);
+            var nextEntityId = 200;
+
+            var arrivals = new LeasingDemandSystem().EvaluateLeasingDemand(topology, population,
+                null, null, new Tick(0), ref nextEntityId);
+
+            Assert.That(arrivals, Has.Count.EqualTo(1));
+            Assert.That(arrivals[0].HomeRoomId, Is.EqualTo(home.Id));
+            Assert.That(arrivals[0].WorkplaceLocation.IsOutside, Is.True,
+                "A workplace room without a business ledger cannot pay a resident's wages.");
+        }
+
+        [Test]
+        public void LeasingDemand_OnlyMatchesFundedProductiveSlots_ThenUsesOutsideWork()
+        {
+            var topology = new BuildingTopologyState();
+            var rooms = new[]
+            {
+                new Room(new EntityId(101), new ContentId("residential:apartment"),
+                    new CellBounds(0, 0, 3), System.Array.Empty<EntityId>(), 4),
+                new Room(new EntityId(102), new ContentId("residential:apartment"),
+                    new CellBounds(0, 4, 7), System.Array.Empty<EntityId>(), 4),
+                new Room(new EntityId(103), new ContentId("commercial:diner"),
+                    new CellBounds(0, 8, 11), System.Array.Empty<EntityId>(), 4)
+            };
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 11) }, rooms,
+                System.Array.Empty<Portal>());
+            var population = new PopulationState(null, null);
+            var businesses = new BusinessState(new[]
+            {
+                new BusinessRecord(new EntityId(201), rooms[2].Id, rooms[2].ContentType,
+                    cashBalance: BusinessRecord.OpeningCapital)
+            });
+            var nextEntityId = 300;
+
+            var first = new LeasingDemandSystem().EvaluateLeasingDemand(topology, population,
+                null, null, new Tick(10), ref nextEntityId, businesses);
+
+            Assert.That(first, Has.Count.EqualTo(2));
+            Assert.That(first.All(person => person.WorkplaceRoomId.Equals(rooms[2].Id)), Is.True,
+                "A four-cell diner has two productive positions at full demand.");
+            Assert.That(first.All(person => !person.WorkplaceLocation.IsOutside), Is.True);
+
+            var extraHome = new Room(new EntityId(104), new ContentId("residential:apartment"),
+                new CellBounds(1, 0, 3), System.Array.Empty<EntityId>(), 4);
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 11), new CellBounds(1, 0, 3) },
+                new[] { rooms[0], rooms[1], rooms[2], extraHome }, System.Array.Empty<Portal>());
+
+            var overflow = new LeasingDemandSystem().EvaluateLeasingDemand(topology, population,
+                null, null, new Tick(20), ref nextEntityId, businesses);
+
+            Assert.That(overflow, Has.Count.EqualTo(1));
+            Assert.That(overflow[0].WorkplaceLocation.IsOutside, Is.True,
+                "An excess roster slot must not strand a household without wages.");
+            Assert.That(overflow[0].WorkplaceRoomId.IsValid, Is.False);
+        }
+
+        [Test]
+        public void LeasingDemand_DoesNotMatchTenantWithoutPayrollReserve()
+        {
+            var topology = new BuildingTopologyState();
+            var home = new Room(new EntityId(110), new ContentId("residential:apartment"),
+                new CellBounds(0, 0, 3), System.Array.Empty<EntityId>(), 4);
+            var office = new Room(new EntityId(111), new ContentId("commercial:office"),
+                new CellBounds(0, 4, 7), System.Array.Empty<EntityId>(), 4);
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 7) },
+                new[] { home, office }, System.Array.Empty<Portal>());
+            var population = new PopulationState(null, null);
+            var businesses = new BusinessState(new[]
+            {
+                new BusinessRecord(new EntityId(112), office.Id, office.ContentType,
+                    cashBalance: BusinessRecord.InsolvencyThreshold + 30)
+            });
+            var nextEntityId = 200;
+
+            var arrivals = new LeasingDemandSystem().EvaluateLeasingDemand(topology, population,
+                null, null, new Tick(10), ref nextEntityId, businesses);
+
+            Assert.That(arrivals, Has.Count.EqualTo(1));
+            Assert.That(arrivals[0].WorkplaceLocation.IsOutside, Is.True);
+        }
+
+        [Test]
+        public void LeasingDemand_ReLeasedBusinessHiresExistingOutsideWorkersWithoutVacantHomes()
+        {
+            var topology = new BuildingTopologyState();
+            var home = new Room(new EntityId(120), new ContentId("residential:apartment"),
+                new CellBounds(0, 0, 3), System.Array.Empty<EntityId>(), 4);
+            var office = new Room(new EntityId(121), new ContentId("commercial:office"),
+                new CellBounds(0, 4, 7), System.Array.Empty<EntityId>(), 2);
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 7) },
+                new[] { office, home }, System.Array.Empty<Portal>());
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var workers = new[]
+            {
+                new PersonRecord(new EntityId(203), new EntityId(204), home.Id, default,
+                    sample.Schedule, sample.Needs, sample.Traits, worksOutside: true),
+                new PersonRecord(new EntityId(201), new EntityId(204), home.Id, default,
+                    sample.Schedule, sample.Needs, sample.Traits, worksOutside: true),
+                new PersonRecord(new EntityId(202), new EntityId(204), home.Id, default,
+                    sample.Schedule, sample.Needs, sample.Traits, worksOutside: true)
+            };
+            var household = new HouseholdRecord(new EntityId(204), workers.Select(person => person.Id).ToArray(),
+                home.Id, .5f, .8f);
+            var population = new PopulationState(workers, new[] { household });
+            var businesses = new BusinessState(new[]
+            {
+                new BusinessRecord(new EntityId(205), office.Id, office.ContentType,
+                    cashBalance: BusinessRecord.OpeningCapital)
+            });
+            var leasing = new LeasingDemandSystem();
+
+            var matched = leasing.MatchExistingOutsideWorkers(topology, population, businesses);
+
+            Assert.That(matched, Is.EqualTo(2));
+            Assert.That(workers.Single(person => person.Id.Value == 201).WorkplaceRoomId, Is.EqualTo(office.Id));
+            Assert.That(workers.Single(person => person.Id.Value == 202).WorkplaceRoomId, Is.EqualTo(office.Id));
+            Assert.That(workers.Single(person => person.Id.Value == 203).WorkplaceLocation.IsOutside, Is.True);
+            Assert.That(leasing.MatchExistingOutsideWorkers(topology, population, businesses), Is.Zero,
+                "A stable full roster should not churn on the next reconciliation.");
+        }
+
+        [Test]
+        public void LeasingDemand_RehiringSkipsTenantWithoutPayrollReserve()
+        {
+            var topology = new BuildingTopologyState();
+            var office = new Room(new EntityId(131), new ContentId("commercial:office"),
+                new CellBounds(0, 0, 3), System.Array.Empty<EntityId>(), 2);
+            topology.RestoreFromData(new[] { new CellBounds(0, 0, 3) },
+                new[] { office }, System.Array.Empty<Portal>());
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(211), new EntityId(212), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            var population = new PopulationState(new[] { worker }, null);
+            var businesses = new BusinessState(new[]
+            {
+                new BusinessRecord(new EntityId(213), office.Id, office.ContentType,
+                    cashBalance: BusinessRecord.InsolvencyThreshold + 30)
+            });
+
+            var matched = new LeasingDemandSystem().MatchExistingOutsideWorkers(topology, population, businesses);
+
+            Assert.That(matched, Is.Zero);
+            Assert.That(worker.WorkplaceLocation.IsOutside, Is.True);
+        }
+
+        [Test]
+        public void BusinessCycle_ReconcilesLeaseStaffAndPaysWagesFromOpeningCapital()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor(settlementPeriod: 50);
 
@@ -269,11 +425,77 @@ namespace OneRoof.Domain.Tests.EditMode
 
             var diner = sim.Businesses.Businesses.FirstOrDefault(business => business.ContentType.Value == "commercial:diner");
             Assert.That(diner, Is.Not.Null);
-            Assert.That(diner.EmployeeIds.Count, Is.EqualTo(20), "Diner staffing must not exceed room capacity.");
+            Assert.That(diner.EmployeeIds.Count, Is.EqualTo(10),
+                "Only demand-supported diner positions should retain tower jobs.");
             Assert.That(diner.LastCustomerRevenue, Is.GreaterThan(0));
-            Assert.That(diner.LastWages, Is.Zero, "Payroll precedes customer receipts; a new tenant has no opening cash.");
-            Assert.That(diner.WageArrears, Is.True);
-            Assert.That(diner.CashBalance, Is.EqualTo(diner.LastCustomerRevenue - diner.LastRentPaid - diner.LastTaxPaid - diner.LastOperatingCost));
+            Assert.That(diner.LastWages, Is.GreaterThan(0),
+                "Opening investment should fund the staff who serve customers.");
+            Assert.That(diner.WageArrears, Is.False);
+            Assert.That(diner.CashBalance, Is.EqualTo(BusinessRecord.OpeningCapital - diner.LastWages + diner.LastCustomerRevenue
+                - diner.LastRentPaid - diner.LastTaxPaid - diner.LastOperatingCost));
+        }
+
+        [TestCase("commercial:office")]
+        [TestCase("commercial:diner")]
+        public void BusinessCycle_UnpaidEmployeeCannotGenerateRevenue(string contentType)
+        {
+            var person = new PersonRecord(new EntityId(301), new EntityId(302), new EntityId(303),
+                new EntityId(304), DailySchedule.Standard(new PersonTrait(PersonTraitKind.EarlyBird),
+                    new DeterministicRandomStream(301)), null, null);
+            var household = new HouseholdRecord(new EntityId(302), new[] { person.Id },
+                person.HomeRoomId, .5f, .8f, cashBalance: 100);
+            var population = new PopulationState(new[] { person }, new[] { household });
+            var room = new Room(person.WorkplaceRoomId, new ContentId(contentType),
+                new CellBounds(0, 0, 0), System.Array.Empty<EntityId>(), 1);
+            var business = new BusinessRecord(new EntityId(305), room.Id, room.ContentType,
+                cashBalance: -90);
+            business.ReconcileEmployees(population, room.Capacity);
+            var cashBefore = household.CashBalance;
+
+            business.ProcessCycle(population, room, null, 1f, PolicyDecreeState.Default,
+                new[] { household }, walkInSpendBudget: 5);
+
+            Assert.That(business.EmployeeIds, Has.Count.EqualTo(1));
+            Assert.That(business.WageArrears, Is.True);
+            Assert.That(business.LastWages, Is.Zero);
+            Assert.That(business.LastCustomerRevenue, Is.Zero);
+            Assert.That(business.LastContractRevenue, Is.Zero);
+            Assert.That(household.CashBalance, Is.EqualTo(cashBefore));
+            Assert.That(household.DailyServiceSpend, Is.Zero);
+        }
+
+        [Test]
+        public void Diner_WithPaidStaffAndHealthyDemand_EarnsPositiveDailyMargin()
+        {
+            var householdId = new EntityId(402);
+            var homeId = new EntityId(403);
+            var roomId = new EntityId(404);
+            var persons = Enumerable.Range(0, 26).Select(index => new PersonRecord(
+                new EntityId(500 + index), householdId, homeId, roomId,
+                DailySchedule.Standard(new PersonTrait(PersonTraitKind.EarlyBird),
+                    new DeterministicRandomStream((ulong)(500 + index))), null, null,
+                worksOutside: index >= 2)).ToArray();
+            var household = new HouseholdRecord(householdId, persons.Select(person => person.Id).ToArray(),
+                homeId, .5f, .8f, cashBalance: 1000);
+            var population = new PopulationState(persons, new[] { household });
+            var room = new Room(roomId, new ContentId("commercial:diner"), new CellBounds(0, 0, 1),
+                System.Array.Empty<EntityId>(), 4);
+            var business = new BusinessRecord(new EntityId(405), room.Id, room.ContentType,
+                cashBalance: BusinessRecord.OpeningCapital);
+            var treasury = new TowerEconomyState(initialTreasury: 0);
+            business.ReconcileEmployees(population, room.Capacity);
+
+            business.ProcessCycle(population, room, treasury, 1f, PolicyDecreeState.Default,
+                new[] { household }, walkInSpendBudget: 26 * 5);
+
+            Assert.That(business.EmployeeIds, Has.Count.EqualTo(2));
+            Assert.That(business.WageArrears, Is.False);
+            Assert.That(business.LastWages, Is.EqualTo(60));
+            Assert.That(business.LastCustomerRevenue, Is.GreaterThan(0));
+            Assert.That(business.LastCustomerRevenue - business.LastWages - business.LastRentPaid
+                - business.LastTaxPaid - business.LastOperatingCost, Is.GreaterThan(0),
+                "Paid staff and healthy household demand should sustain a small diner.");
+            Assert.That(household.CashBalance, Is.EqualTo(1000 + business.LastWages - business.LastCustomerRevenue));
         }
 
         [Test]

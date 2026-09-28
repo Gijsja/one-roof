@@ -26,7 +26,7 @@ The household, business, policy, treasury-flow, and resident hardship lifecycle 
   only as derived inspector projections, never as stored state.
 - **Closed loop with explicit sources/sinks.** Cash is conserved across
   `treasury + Σhouseholds + Σbusinesses` except: construction/upkeep/operating (sinks),
-  new-household starting cash and office contract revenue (sources), walk-in customer
+  new-household starting cash, new-business opening capital, and office contract revenue (sources), walk-in customer
   spend (internal household → business transfer).
 - **Systems-only control (ADR-049).** The Steward sets zone-level rent, tax, and subsidy
   policy; never orders an individual to pay, work, or vacate. Collection is automatic;
@@ -59,8 +59,11 @@ Inspector shows tier (destitute/struggling/stable/affluent), never the raw float
 
 ## 5. Daily settlement order (deterministic, room-ID then household-ID order)
 
-1. **Payroll.** Each solvent business pays `wageRate[role]/employee` to the employee's
-   household cash. Unpaid if business cash would breach `-100` → wage arrears flag.
+1. **Payroll.** Each solvent business pays `wageRate[role]/active employee` to the employee's
+   household cash. Walk-in activity is capped to staffed slots supported by occupancy demand.
+   Unpaid if business cash would breach `-100` → wage arrears flag and no sales or
+   contract output from that unfunded staff. New tenants receive 500 units of outside
+   opening capital, an explicit source that finances their first payroll.
 2. **Household spend.** Rent ( §6 ) → treasury. Food/service (`5/resident`, only if a
    diner or clinic served the tower that day, else needs decay per `ResidentNeedsSystem`)
    → split across open walk-in businesses proportional to staffed capacity (internal transfer).
@@ -70,8 +73,10 @@ Inspector shows tier (destitute/struggling/stable/affluent), never the raw float
    subsidies ( §8 ). Record `TreasuryFlowProjection{rent, tax, upkeep, subsidy, construction,
    constructionSalvage}`.
 5. **Delinquency.** Household cash `< 0` → `arrearsDays++`, else decay to 0.
-  `arrearsDays > 30` → grievance + once-daily strain driver + inspector stress explanation. Base strain and recovery are scaled by the fraction of a settlement day advanced each tick. Resident wellbeing projections feed faction pressure; rent arrears and sustained insolvent negative budgets can enter recoverable move-out notice. Business cash `< -100` → `IsInsolvent` (existing); insolvent rooms stop
-   paying rent, are flagged for re-lease after 7 days, and appear on Overlay 6.
+  `arrearsDays > 30` → grievance + once-daily strain driver + inspector stress explanation. Base strain and recovery are scaled by the fraction of a settlement day advanced each tick. Resident wellbeing projections feed faction pressure; rent arrears and sustained insolvent negative budgets can enter recoverable move-out notice. Business cash `< -100` → `IsInsolvent`; insolvent rooms stop
+   paying rent and appear on Overlay 6. After 7 insolvent days a tenant stops
+   operating costs. Replacement waits until current demand and policy can support
+   a nonnegative projected daily margin, so a sustained shock can leave a vacancy.
 
 `TowerSimulation.AdvanceOneTick` executes payroll, residential rent, the remaining business
 cycle, treasury expenses, and final arrears evaluation in that order. Walk-in spending is
@@ -79,13 +84,17 @@ limited to `$5/resident/day` and apportioned by staffed share across walk-in bus
 Within each business, eligible households contribute proportionally to remaining daily
 spending capacity, with stable ID ordering for integer remainders.
 Occupancy-derived demand is the aggregate service proxy; individual visits are not recorded.
+Outside essential purchases draw on household cash and credit but do not consume
+the separate daily tower walk-in allowance. Leasing offers only funded productive
+business positions; existing Outside workers may fill those positions even when
+all homes are occupied. Legacy excess tower rosters migrate to Outside assignments.
 
 ## 6. Rates (per day)
 
 | Flow | Rate | Rationale |
 | --- | --- | --- |
 | Residential rent | `12/resident × rentMultiplier` | Family of 3 ≈ 36/day vs dual income ≈ 60/day ( §7 wages) |
-| Commercial rent | `8/cell × rentMultiplier` (office/retail/diner); `5/cell` (clinic/workshop/security, subsidized service) | 8-cell office = 64/day; replaces flat 200/room/50-ticks |
+| Commercial rent | `8/cell × rentMultiplier` (office/retail); `5/cell` (diner/clinic/workshop/security, essential or subsidized service) | 8-cell office = 64/day; replaces flat 200/room/50-ticks |
 | Household food/service | `5/resident` (transfer to walk-ins) | Closes the walk-in loop; absence degrades needs instead |
 | Utility upkeep (treasury sink) | `1/utility-cell + 2/elevator-car` | Gives height a running cost; links OR-803 wear to cash |
 | New household starting cash | `200` | Documented source; bounds move-in demand stimulus |
@@ -95,20 +104,21 @@ Occupancy-derived demand is the aggregate service proxy; individual visits are n
 
 Two archetypes; both capped by staffed capacity so headcount alone cannot print revenue.
 
-- **Walk-in** (diner, retail, clinic): `customers = min(staff × serveRate, demandCap)`,
-  `revenue = customers × ticket`. `serveRate = 8/day`, `ticket`: diner 6, retail 8,
+- **Walk-in** (diner, retail, clinic): `customers = min(paid active staff × serveRate, demandCap)`,
+  `revenue = customers × ticket`. `serveRate = 8/day`, `ticket`: diner 10, retail 8,
   clinic 10. `demandCap = 4 × roomCapacity × occupancyFactor`, where
   `occupancyFactor = residents / totalResidentialCapacity` (O(1) tower-wide ratio;
   no per-trip scan, aggregation-safe at 300).
 - **Contract** (office, workshop, security): `revenue = staff × contractRate × occupancyFactor`,
-  `contractRate`: office 55, workshop 40, security 38. External city clients = documented source.
+  `contractRate`: office 55, workshop 60, security 65. External city clients = documented source.
 
-Wages per employee per day: Service 30, Maintenance 35, Security 35, Knowledge 45.
+Wages per active employee per day: Service 30, Maintenance 35, Security 35, Knowledge 45.
 Training (OR-605) therefore raises payroll cost *and* contract eligibility — a real tradeoff.
-Example: 4-employee office at full occupancy: revenue 220, wages ~150 (mixed roles),
-rent 64, operating 35 → net ≈ −29 without Knowledge staff; with 2 Knowledge (90) + 2 Service
-(60): wages 150 — same; margin turns positive on contract mix and occupancy. Tuning lives in
-ContentScriptableObjects, never in code constants beyond defaults.
+At full occupancy, an eight-worker office receives 440 before wages, rent, tax, and
+operating costs; lower occupancy can still make that lease unprofitable. A small diner
+with two paid service staff, 16 customers, and a two-cell room receives 160, pays 60 in
+wages, 10 in rent, and 35 in operating cost before tax. Occupancy and household purchasing
+power cap actual sales, so positive margin is conditional rather than guaranteed.
 
 ## 8. Policy levers (pre-wires OR-902 decree panel; domain value object `PolicyDecreeState`)
 
@@ -142,10 +152,14 @@ events, record `ScrutinyState.RecordAggressivePolicy` for extreme settings (1.3 
   including construction salvage. `PopulationSaveData` persists the household-ledger version
   and per-household cash, arrears, income, and service spend. `BusinessSaveData` persists
   revenue, payroll, rent, tax, operating cost, arrears, wage arrears, and insolvency state.
+  `BusinessLifecycleSaveData` persists cumulative replacement capital, retired debt,
+  retired positive cash, and re-lease count; missing fields in older saves default
+  to zero. These sources and sinks are explicit terms in cash conservation.
   Pre-ledger saves derive household cash from the legacy normalized budget; missing policy and
   treasury-flow fields default to the neutral policy and zero flows (ARCH-004 pattern; cf. ADR-060).
 - Integer-only settlement; entities processed in stable ID order; seeded streams untouched.
-- Budget: O(residents + rooms) once per 1440 ticks; negligible vs the 4 ms tick budget.
+- Employment matching and business reconciliation run every 10 ticks; the
+  City Status tick budget needs measurement in the full 300-resident fixture.
 
 ## 11. Sliced implementation status
 

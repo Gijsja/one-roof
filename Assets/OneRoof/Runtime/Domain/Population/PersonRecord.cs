@@ -71,9 +71,9 @@ namespace OneRoof.Domain.Population
 
         public EntityId HomeRoomId { get; }
 
-        public EntityId WorkplaceRoomId { get; }
+        public EntityId WorkplaceRoomId { get; private set; }
 
-        public WorldLocation WorkplaceLocation { get; }
+        public WorldLocation WorkplaceLocation { get; private set; }
 
         public WorldLocation CurrentLocation => _currentLocation;
 
@@ -105,6 +105,49 @@ namespace OneRoof.Domain.Population
         public SpecialistRoleState Specialization { get; }
 
         // ── Mutation methods (called by simulation systems only) ──────────────
+
+        /// <summary>
+        /// Moves an unfunded tower worker to the typed Outside labor market. A resident
+        /// already commuting keeps their destination until that trip resolves; callers
+        /// can retry at the next staffing reconciliation.
+        /// </summary>
+        public bool ReassignToOutsideWork()
+        {
+            if (WorkplaceLocation.IsOutside) return true;
+            if (_currentActivity == ActivityKind.Commuting) return false;
+
+            WorkplaceRoomId = default;
+            WorkplaceLocation = WorldLocation.Outside;
+            if (_currentActivity == ActivityKind.Working)
+                UpdateActivity(ActivityKind.Idle);
+            else if (_currentPurpose == ResidentPurposeKind.WorkingInside)
+            {
+                _currentPurpose = ResidentPurposeKind.None;
+                _purposeStartedAtTick = 0;
+                _purposeEndsAtTick = 0;
+            }
+            return true;
+        }
+
+        /// <summary>Accepts a funded tower job without changing the resident's physical location.</summary>
+        public bool ReassignToRoomWork(EntityId roomId)
+        {
+            roomId.EnsureValid();
+            if (!WorkplaceLocation.IsOutside) return WorkplaceRoomId.Equals(roomId);
+            if (_currentActivity == ActivityKind.Commuting) return false;
+
+            WorkplaceRoomId = roomId;
+            WorkplaceLocation = WorldLocation.InRoom(roomId);
+            if (_currentActivity == ActivityKind.Working)
+                UpdateActivity(ActivityKind.Idle);
+            else if (_currentPurpose == ResidentPurposeKind.WorkingOutside)
+            {
+                _currentPurpose = ResidentPurposeKind.None;
+                _purposeStartedAtTick = 0;
+                _purposeEndsAtTick = 0;
+            }
+            return true;
+        }
 
         /// <summary>Updates the resident's current activity. Called by the schedule resolution system.</summary>
         public void UpdateActivity(ActivityKind activity)

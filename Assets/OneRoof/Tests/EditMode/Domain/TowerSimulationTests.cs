@@ -27,6 +27,28 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void BusinessLifecycleTotals_SurviveTowerSaveRoundTrip()
+        {
+            var original = TowerSimulation.CreateStandardFiveFloor();
+            var save = original.ExportSaveData();
+            save.businessLifecycle = new OneRoof.Domain.Persistence.BusinessLifecycleSaveData
+            {
+                reLeaseOpeningCapitalSource = 1500,
+                reLeaseDebtWriteOffSource = 360,
+                reLeaseCashRetiredSink = 0,
+                reLeaseCount = 3
+            };
+
+            var restored = TowerSimulation.RestoreFromSaveData(save);
+            var again = TowerSimulation.RestoreFromSaveData(restored.ExportSaveData());
+
+            Assert.That(again.Businesses.TotalReLeaseCount, Is.EqualTo(3));
+            Assert.That(again.Businesses.TotalReLeaseOpeningCapitalSource, Is.EqualTo(1500));
+            Assert.That(again.Businesses.TotalReLeaseDebtWriteOffSource, Is.EqualTo(360));
+            Assert.That(again.Businesses.TotalReLeaseCashRetiredSink, Is.Zero);
+        }
+
+        [Test]
         public void AdvanceOneTick_AdvancesClock()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor();
@@ -146,7 +168,7 @@ namespace OneRoof.Domain.Tests.EditMode
 
             Assert.That(household.DailyOutsideWages, Is.EqualTo(TowerSimulation.OutsideDailyWage));
             Assert.That(simulation.OutsideMarket.WageOutflow, Is.EqualTo(TowerSimulation.OutsideDailyWage));
-            Assert.That(household.CashBalance, Is.EqualTo(56)); // +18 outside pay, -12 residential rent.
+            Assert.That(household.CashBalance, Is.EqualTo(62)); // +24 outside pay, -12 residential rent.
         }
 
         [Test]
@@ -257,7 +279,7 @@ namespace OneRoof.Domain.Tests.EditMode
             var householdId = new EntityId(7401);
             var negativeBudgetHistory = Enumerable.Repeat(-2L, HouseholdRecord.DailyBudgetHistoryCapacity).ToArray();
             var household = new HouseholdRecord(householdId, new[] { personId }, home.Id,
-                budget: 0f, satisfaction: 1f, cashBalance: 0, outsideCreditBalance: 10,
+                budget: 0f, satisfaction: 1f, cashBalance: 0, outsideCreditBalance: 50,
                 recentDailyBudgetNetFlows: negativeBudgetHistory);
             var template = FiftyResidentFixture.Create().Persons[0];
             var person = new PersonRecord(personId, householdId, home.Id, default,

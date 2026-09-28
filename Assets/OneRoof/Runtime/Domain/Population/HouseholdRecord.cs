@@ -157,9 +157,9 @@ namespace OneRoof.Domain.Population
         public long DailyOutsideWages { get; private set; }
         public long DailyCreditRepayment { get; private set; }
 
-        /// <summary>Cash this household can still spend on walk-in services today.</summary>
+        /// <summary>Cash this household can still spend on tower walk-in services today. Outside essentials have their own ledger and reduce available cash, not this allowance.</summary>
         public long AvailableServiceSpend => Math.Min(Math.Max(0L, CashBalance),
-            Math.Max(0L, MemberIds.Count * 5L - DailyServiceSpend - DailyOutsideEssentialSpend));
+            Math.Max(0L, MemberIds.Count * 5L - DailyServiceSpend));
 
         // ── Mutation methods ──────────────────────────────────────────────────
 

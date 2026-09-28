@@ -25,7 +25,9 @@ namespace OneRoof.Domain.Economy
             ElevatorBank elevatorBank,
             IRandomStream random,
             Tick tick,
-            ref int nextEntityId)
+            ref int nextEntityId,
+            BusinessState businesses = null,
+            float occupancyFactor = 1f)
         {
             if (topology == null) throw new ArgumentNullException(nameof(topology));
             if (population == null) throw new ArgumentNullException(nameof(population));
@@ -56,11 +58,19 @@ namespace OneRoof.Domain.Economy
                 {
                     vacantApartments.Add(room);
                 }
-                else if (content.StartsWith("commercial:") ||
-                         content.StartsWith("service:") ||
-                         content.StartsWith("workplace:"))
+                else if (businesses != null && (content.StartsWith("commercial:") ||
+                         content.StartsWith("service:")))
                 {
-                    potentialWorkplaces.Add(room);
+                    for (var businessIndex = 0; businessIndex < businesses.Businesses.Count; businessIndex++)
+                    {
+                        var tenant = businesses.Businesses[businessIndex];
+                        if (tenant.RoomId.Equals(room.Id) &&
+                            tenant.GetProductiveStaffCapacity(room, occupancyFactor) > 0)
+                        {
+                            potentialWorkplaces.Add(room);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -69,24 +79,16 @@ namespace OneRoof.Domain.Economy
                 return Array.Empty<PersonRecord>();
             }
 
-            if (potentialWorkplaces.Count > 1)
+            vacantApartments.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
+            potentialWorkplaces.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
+            var employeesPerWorkplace = new Dictionary<EntityId, int>();
+            foreach (var person in population.Persons)
             {
-                var employeesPerWorkplace = new Dictionary<EntityId, int>();
-                foreach (var p in population.Persons)
+                if (!person.WorkplaceLocation.IsOutside && person.WorkplaceRoomId.IsValid)
                 {
-                    if (p.WorkplaceRoomId.IsValid)
-                    {
-                        employeesPerWorkplace.TryGetValue(p.WorkplaceRoomId, out var count);
-                        employeesPerWorkplace[p.WorkplaceRoomId] = count + 1;
-                    }
+                    employeesPerWorkplace.TryGetValue(person.WorkplaceRoomId, out var count);
+                    employeesPerWorkplace[person.WorkplaceRoomId] = count + 1;
                 }
-
-                potentialWorkplaces.Sort((a, b) =>
-                {
-                    employeesPerWorkplace.TryGetValue(a.Id, out var countA);
-                    employeesPerWorkplace.TryGetValue(b.Id, out var countB);
-                    return countA.CompareTo(countB);
-                });
             }
 
             var newResidents = new List<PersonRecord>();
@@ -98,9 +100,13 @@ namespace OneRoof.Domain.Economy
                 var householdId = new EntityId(nextEntityId++);
                 var personId = new EntityId(nextEntityId++);
 
-                var workplaceId = potentialWorkplaces.Count > 0
-                    ? potentialWorkplaces[i % potentialWorkplaces.Count].Id
-                    : default;
+                var workplaceId = FindFundedWorkplace(potentialWorkplaces, businesses,
+                    employeesPerWorkplace, occupancyFactor);
+                if (workplaceId.IsValid)
+                {
+                    employeesPerWorkplace.TryGetValue(workplaceId, out var assigned);
+                    employeesPerWorkplace[workplaceId] = assigned + 1;
+                }
 
                 var rng = random ?? new DeterministicRandomStream((ulong)nextEntityId);
                 var traitKind = (i % 2 == 0) ? PersonTraitKind.EarlyBird : PersonTraitKind.Frugal;
@@ -120,7 +126,7 @@ namespace OneRoof.Domain.Economy
                     workplaceId,
                     schedule,
                     needs,
-                    new[] { trait }, worksOutside: potentialWorkplaces.Count == 0);
+                    new[] { trait }, worksOutside: !workplaceId.IsValid);
                 person.UpdateLocation(WorldLocation.Outside);
 
                 var household = new HouseholdRecord(
@@ -137,6 +143,95 @@ namespace OneRoof.Domain.Economy
             }
 
             return newResidents;
+        }
+
+        /// <summary>
+        /// Fills vacant, funded business positions from the existing Outside labor pool.
+        /// Room and resident IDs break ties so re-leasing produces the same matches
+        /// regardless of collection insertion order. Existing tower jobs are untouched.
+        /// </summary>
+        public int MatchExistingOutsideWorkers(
+            BuildingTopologyState topology,
+            PopulationState population,
+            BusinessState businesses,
+            float occupancyFactor = 1f,
+            Func<PersonRecord, bool> canReassign = null)
+        {
+            if (topology == null) throw new ArgumentNullException(nameof(topology));
+            if (population == null) throw new ArgumentNullException(nameof(population));
+            if (businesses == null) throw new ArgumentNullException(nameof(businesses));
+
+            var rooms = new List<Room>();
+            foreach (var room in topology.Rooms.Values)
+            {
+                var content = room.ContentType.Value ?? string.Empty;
+                if (content.StartsWith("commercial:", StringComparison.Ordinal) ||
+                    content.StartsWith("service:", StringComparison.Ordinal))
+                    rooms.Add(room);
+            }
+            rooms.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
+
+            var assignedByRoom = new Dictionary<EntityId, int>();
+            var candidates = new List<PersonRecord>();
+            foreach (var person in population.Persons)
+            {
+                if (person.WorkplaceLocation.IsOutside)
+                    candidates.Add(person);
+                else if (person.WorkplaceRoomId.IsValid)
+                {
+                    assignedByRoom.TryGetValue(person.WorkplaceRoomId, out var count);
+                    assignedByRoom[person.WorkplaceRoomId] = count + 1;
+                }
+            }
+            candidates.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
+
+            var matched = 0;
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                var person = candidates[i];
+                if (canReassign != null && !canReassign(person)) continue;
+                var roomId = FindFundedWorkplace(rooms, businesses, assignedByRoom, occupancyFactor);
+                if (!roomId.IsValid) break;
+                if (!person.ReassignToRoomWork(roomId)) continue;
+                assignedByRoom.TryGetValue(roomId, out var count);
+                assignedByRoom[roomId] = count + 1;
+                matched++;
+            }
+            return matched;
+        }
+
+        private static EntityId FindFundedWorkplace(
+            List<Room> rooms,
+            BusinessState businesses,
+            Dictionary<EntityId, int> assignedByRoom,
+            float occupancyFactor)
+        {
+            EntityId selected = default;
+            var fewestAssigned = int.MaxValue;
+            for (var i = 0; i < rooms.Count; i++)
+            {
+                var room = rooms[i];
+                BusinessRecord tenant = null;
+                for (var businessIndex = 0; businessIndex < businesses.Businesses.Count; businessIndex++)
+                    if (businesses.Businesses[businessIndex].RoomId.Equals(room.Id))
+                    {
+                        tenant = businesses.Businesses[businessIndex];
+                        break;
+                    }
+                if (tenant == null || tenant.IsVacantForReLease) continue;
+                assignedByRoom.TryGetValue(room.Id, out var assigned);
+                if (assigned >= tenant.GetProductiveStaffCapacity(room, occupancyFactor)) continue;
+
+                // Forty-five is the highest daily specialist wage. Reserve enough for
+                // every assigned worker, including this arrival, above the insolvency floor.
+                if (tenant.CashBalance - (long)(assigned + 1) * 45 < BusinessRecord.InsolvencyThreshold) continue;
+                if (assigned < fewestAssigned)
+                {
+                    fewestAssigned = assigned;
+                    selected = room.Id;
+                }
+            }
+            return selected;
         }
     }
 }

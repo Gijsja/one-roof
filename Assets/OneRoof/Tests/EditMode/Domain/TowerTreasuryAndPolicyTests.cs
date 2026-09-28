@@ -232,6 +232,11 @@ namespace OneRoof.Domain.Tests.EditMode
             {
                 var before = TotalCash(sim);
                 var householdsBefore = sim.Population.Households.Count;
+                var businessesBefore = sim.Businesses.Businesses.Count;
+                var outsideContractsBefore = sim.OutsideMarket.ExternalContractRevenue;
+                var reLeaseCapitalBefore = sim.Businesses.TotalReLeaseOpeningCapitalSource;
+                var debtWriteOffBefore = sim.Businesses.TotalReLeaseDebtWriteOffSource;
+                var retiredCashBefore = sim.Businesses.TotalReLeaseCashRetiredSink;
                 for (var tick = 0; tick < 50; tick++) sim.AdvanceOneTick();
 
                 long contractRevenue = 0;
@@ -242,7 +247,13 @@ namespace OneRoof.Domain.Tests.EditMode
                     operatingCosts += business.LastOperatingCost;
                 }
                 var moveInSource = (sim.Population.Households.Count - householdsBefore) * HouseholdRecord.DefaultStartingCash;
-                var expected = before + moveInSource + contractRevenue - operatingCosts
+                var tenantCapitalSource = (sim.Businesses.Businesses.Count - businessesBefore) * BusinessRecord.OpeningCapital;
+                var outsideContracts = sim.OutsideMarket.ExternalContractRevenue - outsideContractsBefore;
+                var reLeaseCapital = sim.Businesses.TotalReLeaseOpeningCapitalSource - reLeaseCapitalBefore;
+                var debtWriteOff = sim.Businesses.TotalReLeaseDebtWriteOffSource - debtWriteOffBefore;
+                var retiredCash = sim.Businesses.TotalReLeaseCashRetiredSink - retiredCashBefore;
+                var expected = before + moveInSource + tenantCapitalSource + outsideContracts +
+                    reLeaseCapital + debtWriteOff - retiredCash + contractRevenue - operatingCosts
                     - sim.Economy.LastDailyUpkeep - sim.Economy.LastDailySubsidy;
                 Assert.That(TotalCash(sim), Is.EqualTo(expected), $"Cash conservation failed on day {day}.");
                 Assert.That(sim.Economy.LastSettlementTick, Is.EqualTo(day * 50));
@@ -275,7 +286,7 @@ namespace OneRoof.Domain.Tests.EditMode
 
         private static long TotalCash(TowerSimulation sim)
         {
-            long total = sim.Economy.CashBalance;
+            long total = sim.Economy.CashBalance + sim.OutsideMarket.CashBalance;
             foreach (var household in sim.Population.Households) total += household.CashBalance;
             foreach (var business in sim.Businesses.Businesses) total += business.CashBalance;
             return total;

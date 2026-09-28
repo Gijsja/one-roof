@@ -180,13 +180,26 @@ namespace OneRoof.Domain
             // 1. Periodic autonomous leasing demand evaluation (every 10 ticks)
             if (currentTick.Value % 10 == 0)
             {
-                var arrivals = Leasing.EvaluateLeasingDemand(Topology, Population, ElevatorBank, RandomStream, currentTick, ref _nextEntityId);
+                var occupancyFactor = CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier;
+                var nextIdBeforeBusinessAdvance = _nextEntityId;
+                var hadBusinesses = Businesses.Businesses.Count > 0;
+                Businesses.Advance(Topology, Population, ref _nextEntityId, occupancyFactor, Economy.Policy);
+                if (ReassignUnproductiveLegacyWorkers())
+                    Businesses.Advance(Topology, Population, ref _nextEntityId, occupancyFactor, Economy.Policy);
+                // Existing Outside jobs are valid livelihoods. Recruit them only when a
+                // new or replacement tenant creates openings, not on every leasing pulse.
+                if (hadBusinesses && _nextEntityId > nextIdBeforeBusinessAdvance &&
+                    Leasing.MatchExistingOutsideWorkers(Topology, Population, Businesses,
+                        occupancyFactor, person => !Transit.IsPersonTravelling(person.Id)) > 0)
+                    Businesses.Advance(Topology, Population, ref _nextEntityId, occupancyFactor, Economy.Policy);
+                var arrivals = Leasing.EvaluateLeasingDemand(Topology, Population, ElevatorBank,
+                    RandomStream, currentTick, ref _nextEntityId, Businesses,
+                    occupancyFactor);
                 foreach (var person in arrivals)
                 {
                     var moveIn = TripGenerator.CreateMoveInTrip(person, currentTick);
                     if (moveIn != null) Transit.SubmitTrip(moveIn, Topology, currentTick, Population);
                 }
-                Businesses.Advance(Topology, Population, ref _nextEntityId);
             }
 
             // 2. Daily cash settlement (default one in-game day; injectable for focused domain fixtures).
@@ -198,7 +211,8 @@ namespace OneRoof.Domain
                 // boundary closes the empty initial interval, then opens the first full day.
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].CompleteDailyBudgetSettlement();
                 for (var i = 0; i < Population.Households.Count; i++) Population.Households[i].BeginDailySettlement();
-                Businesses.ProcessPayroll(Population);
+                Businesses.ProcessPayroll(Population, Topology,
+                    CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier);
                 ProcessOutsidePayroll();
                 RecordDailyCreditRepayments();
                 Economy.ProcessRentCycle(Topology, Population, CivilActions.ResidentialRentCollectionMultiplier);
@@ -256,6 +270,45 @@ namespace OneRoof.Domain
                 if (Population.TryGetHousehold(person.HouseholdId, out var household))
                     OutsideMarket.RecordWagePayment(household, OutsideDailyWage);
             }
+        }
+
+        /// <summary>
+        /// Migrates old saves whose room rosters exceed the number of jobs a room can use
+        /// at full demand. A temporary output shock or insolvent tenant does not erase a
+        /// valid job slot; those workers can return when demand or the tenant recovers.
+        /// </summary>
+        private bool ReassignUnproductiveLegacyWorkers()
+        {
+            var changed = false;
+            for (var personIndex = 0; personIndex < Population.Persons.Count; personIndex++)
+            {
+                var person = Population.Persons[personIndex];
+                if (person.WorkplaceLocation.IsOutside || Transit.IsPersonTravelling(person.Id)) continue;
+                BusinessRecord tenant = null;
+                Room room = null;
+                for (var businessIndex = 0; businessIndex < Businesses.Businesses.Count; businessIndex++)
+                {
+                    var candidate = Businesses.Businesses[businessIndex];
+                    if (!candidate.RoomId.Equals(person.WorkplaceRoomId)) continue;
+                    tenant = candidate;
+                    Topology.TryGetRoom(candidate.RoomId, out room);
+                    break;
+                }
+                if (tenant != null && tenant.IsInsolvent) continue;
+                var hasProductiveSlot = false;
+                if (tenant != null && room != null)
+                {
+                    var slots = tenant.GetProductiveStaffCapacity(room, 1f);
+                    for (var slot = 0; slot < slots && slot < tenant.EmployeeIds.Count; slot++)
+                        if (tenant.EmployeeIds[slot].Equals(person.Id))
+                        {
+                            hasProductiveSlot = true;
+                            break;
+                        }
+                }
+                if (!hasProductiveSlot && person.ReassignToOutsideWork()) changed = true;
+            }
+            return changed;
         }
 
         private void RecordDailyCreditRepayments()
@@ -333,7 +386,7 @@ namespace OneRoof.Domain
             }
         }
 
-        public const long OutsideDailyWage = 18;
+        public const long OutsideDailyWage = 24;
         public const long OutsideDailyMealPrice = 8;
         public const long OutsideFoodRetryCooldownTicks = 30;
 
@@ -1114,6 +1167,7 @@ namespace OneRoof.Domain
             data.activeTrips = Transit.ToSaveData();
             data.scrutiny = new ScrutinySaveData { value = Scrutiny.Value, previousValue = Scrutiny.PreviousValue, recentExpansionPressure = Scrutiny.RecentExpansionPressure, recentPolicyPressure = Scrutiny.RecentPolicyPressure };
             data.businesses = Businesses.ToSaveData();
+            data.businessLifecycle = Businesses.ToLifecycleSaveData();
             data.utilityOperations = UtilityOperations.ToSaveData();
             data.factions = Factions.ToSaveData();
             data.civilActions = CivilActions.ToSaveData();
@@ -1143,6 +1197,7 @@ namespace OneRoof.Domain
                 data.undergroundCorridorCells, data.undergroundShaftCells, data.undergroundCoreCell, data.undergroundRooms);
             sim.Operations = UndergroundOperationsState.FromSaveData(data.undergroundOperations);
             sim.Businesses = BusinessState.FromSaveData(data.businesses);
+            sim.Businesses.RestoreLifecycleTotals(data.businessLifecycle);
             sim.UtilityOperations = UtilityOperationsState.FromSaveData(data.utilityOperations);
             sim.OutsideMarket = OutsideMarketState.FromSaveData(data.GetOutsideMarketSaveData());
             sim.HousingLifecycle = HouseholdLeaseLifecycleState.FromSaveData(data.GetHouseholdLeaseLifecycleSaveData());

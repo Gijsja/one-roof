@@ -59,6 +59,7 @@ namespace OneRoof.Domain.Persistence
         public ActiveTripSaveData[] activeTrips;
         public ScrutinySaveData scrutiny;
         public BusinessSaveData[] businesses;
+        public BusinessLifecycleSaveData businessLifecycle;
         public UtilityOperationsSaveData utilityOperations;
         public FactionSaveData factions;
         public CivilActionSaveData civilActions;
@@ -188,6 +189,15 @@ namespace OneRoof.Domain.Persistence
         public int arrearsDays;
         public bool wageArrears;
         public bool isInsolvent;
+    }
+
+    [Serializable]
+    public sealed class BusinessLifecycleSaveData
+    {
+        public long reLeaseOpeningCapitalSource;
+        public long reLeaseDebtWriteOffSource;
+        public long reLeaseCashRetiredSink;
+        public long reLeaseCount;
     }
 
     [Serializable]

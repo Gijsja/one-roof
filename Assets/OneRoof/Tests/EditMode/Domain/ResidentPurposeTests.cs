@@ -95,6 +95,83 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void ReassignToOutsideWork_PreservesIdentityAndHomeAcrossSaveLoad()
+        {
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99007), new EntityId(99008), sample.HomeRoomId,
+                sample.WorkplaceRoomId, sample.Schedule, sample.Needs, sample.Traits);
+            worker.UpdateLocation(sample.WorkplaceRoomId);
+            worker.UpdateActivity(ActivityKind.Working);
+            worker.CommitPurpose(ResidentPurposeKind.WorkingInside, new Tick(100), 480);
+
+            Assert.That(worker.ReassignToOutsideWork(), Is.True);
+            Assert.That(worker.Id, Is.EqualTo(new EntityId(99007)));
+            Assert.That(worker.HouseholdId, Is.EqualTo(new EntityId(99008)));
+            Assert.That(worker.HomeRoomId, Is.EqualTo(sample.HomeRoomId));
+            Assert.That(worker.WorkplaceRoomId.IsValid, Is.False);
+            Assert.That(worker.WorkplaceLocation.IsOutside, Is.True);
+            Assert.That(worker.CurrentRoomId, Is.EqualTo(sample.WorkplaceRoomId),
+                "Reassignment changes employment, not the resident's physical location.");
+            Assert.That(worker.CurrentActivity, Is.EqualTo(ActivityKind.Idle));
+            Assert.That(worker.CurrentPurpose, Is.EqualTo(ResidentPurposeKind.None));
+
+            var restored = PopulationState.FromSaveData(new PopulationState(new[] { worker }, null).ToSaveData()).Persons[0];
+            Assert.That(restored.WorkplaceLocation.IsOutside, Is.True);
+            Assert.That(restored.WorkplaceRoomId.IsValid, Is.False);
+            Assert.That(restored.HomeRoomId, Is.EqualTo(sample.HomeRoomId));
+        }
+
+        [Test]
+        public void ReassignToOutsideWork_WaitsForActiveCommute()
+        {
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99009), new EntityId(99010), sample.HomeRoomId,
+                sample.WorkplaceRoomId, sample.Schedule, sample.Needs, sample.Traits);
+            worker.UpdateActivity(ActivityKind.Commuting);
+
+            Assert.That(worker.ReassignToOutsideWork(), Is.False);
+            Assert.That(worker.WorkplaceRoomId, Is.EqualTo(sample.WorkplaceRoomId));
+            Assert.That(worker.WorkplaceLocation.IsOutside, Is.False);
+        }
+
+        [Test]
+        public void ReassignToRoomWork_PreservesHomeAndPhysicalLocationAcrossSaveLoad()
+        {
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99012), new EntityId(99013), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            worker.UpdateLocation(WorldLocation.Outside);
+            worker.UpdateActivity(ActivityKind.Working);
+            worker.CommitPurpose(ResidentPurposeKind.WorkingOutside, new Tick(100), 480);
+
+            Assert.That(worker.ReassignToRoomWork(sample.WorkplaceRoomId), Is.True);
+            Assert.That(worker.WorkplaceRoomId, Is.EqualTo(sample.WorkplaceRoomId));
+            Assert.That(worker.WorkplaceLocation, Is.EqualTo(WorldLocation.InRoom(sample.WorkplaceRoomId)));
+            Assert.That(worker.CurrentLocation.IsOutside, Is.True);
+            Assert.That(worker.HomeRoomId, Is.EqualTo(sample.HomeRoomId));
+            Assert.That(worker.CurrentPurpose, Is.EqualTo(ResidentPurposeKind.None));
+            Assert.That(worker.CurrentActivity, Is.EqualTo(ActivityKind.Idle));
+
+            var restored = PopulationState.FromSaveData(new PopulationState(new[] { worker }, null).ToSaveData()).Persons[0];
+            Assert.That(restored.WorkplaceRoomId, Is.EqualTo(sample.WorkplaceRoomId));
+            Assert.That(restored.WorkplaceLocation.IsOutside, Is.False);
+            Assert.That(restored.CurrentLocation.IsOutside, Is.True);
+        }
+
+        [Test]
+        public void ReassignToRoomWork_DoesNotRedirectActiveCommute()
+        {
+            var sample = FiftyResidentFixture.Create().Persons[0];
+            var worker = new PersonRecord(new EntityId(99014), new EntityId(99015), sample.HomeRoomId,
+                default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
+            worker.UpdateActivity(ActivityKind.Commuting);
+
+            Assert.That(worker.ReassignToRoomWork(sample.WorkplaceRoomId), Is.False);
+            Assert.That(worker.WorkplaceRoomId.IsValid, Is.False);
+            Assert.That(worker.WorkplaceLocation.IsOutside, Is.True);
+        }
+
+        [Test]
         public void MealAndHomePurposeHoldForMinimumTimeAfterArrival()
         {
             var sample = FiftyResidentFixture.Create().Persons[0];
