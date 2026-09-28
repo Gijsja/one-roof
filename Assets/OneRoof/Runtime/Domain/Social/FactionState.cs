@@ -34,13 +34,17 @@ namespace OneRoof.Domain.Social
     /// <summary>Bounded, attributable resident connection. Affinity is in [-1, 1].</summary>
     public sealed class RelationshipEdge
     {
-        internal RelationshipEdge(EntityId first, EntityId second, float affinity, long lastContactTick, string cause)
-        { First = first; Second = second; Affinity = affinity; LastContactTick = lastContactTick; Cause = cause; }
+        internal RelationshipEdge(EntityId first, EntityId second, float affinity, long lastContactTick, string cause, long lastMeaningfulTick = 0, int sharedSupportDays = 0, string sharedIssue = null)
+        { First = first; Second = second; Affinity = affinity; LastContactTick = lastContactTick; Cause = cause; LastMeaningfulTick = lastMeaningfulTick; SharedSupportDays = sharedSupportDays; SharedIssue = sharedIssue; }
         public EntityId First { get; }
         public EntityId Second { get; }
         public float Affinity { get; internal set; }
+        public float PreviousAffinity { get; internal set; }
         public long LastContactTick { get; internal set; }
         public string Cause { get; internal set; }
+        public long LastMeaningfulTick { get; internal set; }
+        public int SharedSupportDays { get; internal set; }
+        public string SharedIssue { get; internal set; }
     }
 
     public sealed class FactionRecord
@@ -76,27 +80,29 @@ namespace OneRoof.Domain.Social
             people.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
             var live = new HashSet<int>();
             foreach (var person in people) live.Add(person.Id.Value);
-            var affiliations = new Dictionary<int, FactionSupport>();
-            foreach (var support in _supports)
-                if (support.IsMember && (!affiliations.TryGetValue(support.ResidentId.Value, out var strongest) ||
-                    support.Support > strongest.Support || support.Support == strongest.Support && string.CompareOrdinal(support.FactionId, strongest.FactionId) < 0))
-                    affiliations[support.ResidentId.Value] = support;
             _edges.RemoveAll(e => !live.Contains(e.First.Value) || !live.Contains(e.Second.Value) || tick - e.LastContactTick > EdgeExpiryTicks);
+            foreach (var edge in _edges)
+            {
+                edge.PreviousAffinity = edge.Affinity;
+                if (edge.Affinity > 0f) edge.Affinity = Math.Max(0f, edge.Affinity - .01f);
+                else if (edge.Affinity < 0f) edge.Affinity = Math.Min(0f, edge.Affinity + .01f);
+            }
             _degree.Clear();
             foreach (var edge in _edges) { Increment(edge.First.Value); Increment(edge.Second.Value); }
-            // Each bucket remembers at most the six lowest IDs. This is linear in population size.
+            var byId = new Dictionary<int, PersonRecord>();
+            foreach (var person in people) byId[person.Id.Value] = person;
             var home = new Dictionary<int, List<PersonRecord>>();
             var work = new Dictionary<int, List<PersonRecord>>();
             var transit = new Dictionary<int, List<PersonRecord>>();
             foreach (var person in people)
             {
-                AddBucket(home, person.HomeRoomId.Value, person);
-                if (person.WorkplaceRoomId.IsValid) AddBucket(work, person.WorkplaceRoomId.Value, person);
-                if (person.CurrentActivity == ActivityKind.Commuting && person.CurrentRoomId.IsValid && !person.CurrentLocation.IsOutside) AddBucket(transit, person.CurrentRoomId.Value, person);
+                AddBucket(home, person.HomeRoomId.Value, person, tick);
+                if (person.WorkplaceRoomId.IsValid) AddBucket(work, person.WorkplaceRoomId.Value, person, tick);
+                if (person.CurrentActivity == ActivityKind.Commuting && person.CurrentRoomId.IsValid && !person.CurrentLocation.IsOutside) AddBucket(transit, person.CurrentRoomId.Value, person, tick);
             }
-            ConnectBuckets(home, tick, "nearby home", affiliations);
-            ConnectBuckets(work, tick, "shared workplace", affiliations);
-            ConnectBuckets(transit, tick, "transit co-presence", affiliations);
+            ConnectBuckets(home, tick, "nearby home", byId);
+            ConnectBuckets(work, tick, "shared workplace", byId);
+            ConnectBuckets(transit, tick, "transit co-presence", byId);
             _edges.Sort((a, b) => a.First.Value != b.First.Value ? a.First.Value.CompareTo(b.First.Value) : a.Second.Value.CompareTo(b.Second.Value));
 
             var prior = new Dictionary<string, FactionSupport>();
@@ -171,50 +177,82 @@ namespace OneRoof.Domain.Social
         { if (a >= b && a >= c) return aa; return b >= c ? bb : cc; }
         private static string Key(int person, string faction) => person + ":" + faction;
         private void Increment(int id) { _degree.TryGetValue(id, out var n); _degree[id] = n + 1; }
-        private static void AddBucket(Dictionary<int, List<PersonRecord>> buckets, int key, PersonRecord person)
+        private static void AddBucket(Dictionary<int, List<PersonRecord>> buckets, int key, PersonRecord person, long tick)
         {
             if (!buckets.TryGetValue(key, out var list)) { list = new List<PersonRecord>(MaxEdgesPerResident + 1); buckets[key] = list; }
-            if (list.Count <= MaxEdgesPerResident) list.Add(person);
+            if (list.Count < MaxEdgesPerResident + 1) { list.Add(person); return; }
+            var worst = 0;
+            for (var i = 1; i < list.Count; i++)
+                if (CompareContact(list[i], list[worst], key, tick) > 0) worst = i;
+            if (CompareContact(person, list[worst], key, tick) < 0) list[worst] = person;
         }
-        private void ConnectBuckets(Dictionary<int, List<PersonRecord>> buckets, long tick, string cause, Dictionary<int, FactionSupport> affiliations)
+        private void ConnectBuckets(Dictionary<int, List<PersonRecord>> buckets, long tick, string cause, Dictionary<int, PersonRecord> byId)
         {
             var keys = new List<int>(buckets.Keys); keys.Sort();
             foreach (var key in keys)
             {
                 var list = buckets[key];
+                // A stable day/key hash samples crowded contexts without preferring low resident IDs.
+                list.Sort((a, b) => CompareContact(a, b, key, tick));
                 for (var i = 0; i < list.Count; i++)
-                    for (var j = i + 1; j < list.Count; j++) Connect(list[i].Id, list[j].Id, tick, cause, affiliations);
+                    for (var j = i + 1; j < list.Count; j++) Connect(list[i].Id, list[j].Id, tick, cause, byId);
             }
         }
-        private void Connect(EntityId a, EntityId b, long tick, string cause, Dictionary<int, FactionSupport> affiliations)
+        private static int CompareContact(PersonRecord a, PersonRecord b, int key, long tick)
+        {
+            var order = ContactOrder(a.Id.Value, key, tick).CompareTo(ContactOrder(b.Id.Value, key, tick));
+            return order != 0 ? order : a.Id.Value.CompareTo(b.Id.Value);
+        }
+        private static uint ContactOrder(int id, int key, long tick)
+        {
+            unchecked
+            {
+                var value = (uint)id * 2654435761u ^ (uint)key * 2246822519u ^ (uint)(tick / DailySchedule.TicksPerDay) * 3266489917u;
+                value ^= value >> 16; value *= 2246822519u; value ^= value >> 13;
+                return value;
+            }
+        }
+        private void Connect(EntityId a, EntityId b, long tick, string context, Dictionary<int, PersonRecord> byId)
         {
             if (a == b) return;
             if (a.Value > b.Value) { var tmp = a; a = b; b = tmp; }
-            affiliations.TryGetValue(a.Value, out var first);
-            affiliations.TryGetValue(b.Value, out var second);
-            var opposed = first != null && second != null &&
-                (first.FactionId == FactionIds.TenantUnion && second.FactionId == FactionIds.CorporateCoalition ||
-                 second.FactionId == FactionIds.TenantUnion && first.FactionId == FactionIds.CorporateCoalition ||
-                 first.FactionId == FactionIds.MerchantGuild && second.FactionId == FactionIds.CivicEcoCouncil ||
-                 second.FactionId == FactionIds.MerchantGuild && first.FactionId == FactionIds.CivicEcoCouncil);
-            var contactCause = opposed ? "conflicting faction priorities during " + cause : cause;
+            var shared = SharedGrievance(byId[a.Value], byId[b.Value]);
             foreach (var edge in _edges)
                 if (edge.First == a && edge.Second == b)
                 {
-                    edge.Affinity = Math.Max(-1f, Math.Min(1f, edge.Affinity + (opposed ? -.1f : .05f)));
+                    if (edge.LastContactTick == tick) return;
                     edge.LastContactTick = tick;
-                    edge.Cause = contactCause;
+                    if (shared != null)
+                    {
+                        edge.SharedSupportDays = string.Equals(edge.SharedIssue, shared, StringComparison.Ordinal)
+                            ? Math.Min(10000, edge.SharedSupportDays + 1) : 1;
+                        edge.SharedIssue = shared;
+                        if (edge.SharedSupportDays >= 2)
+                        {
+                            edge.Affinity = Math.Min(1f, edge.Affinity + .04f);
+                            edge.LastMeaningfulTick = tick;
+                            edge.Cause = "shared grievance: " + shared;
+                        }
+                    }
+                    else { edge.SharedSupportDays = 0; edge.SharedIssue = null; }
                     return;
                 }
             _degree.TryGetValue(a.Value, out var da); _degree.TryGetValue(b.Value, out var db);
             if (da >= MaxEdgesPerResident || db >= MaxEdgesPerResident) return;
-            _edges.Add(new RelationshipEdge(a, b, opposed ? -.1f : .1f, tick, contactCause)); Increment(a.Value); Increment(b.Value);
+            _edges.Add(new RelationshipEdge(a, b, 0f, tick, "encounter: " + context, 0, shared == null ? 0 : 1, shared)); Increment(a.Value); Increment(b.Value);
+        }
+        private static string SharedGrievance(PersonRecord first, PersonRecord second)
+        {
+            foreach (var grievance in first.Wellbeing.Grievances)
+                foreach (var other in second.Wellbeing.Grievances)
+                    if (string.Equals(grievance, other, StringComparison.Ordinal)) return grievance;
+            return null;
         }
 
         public FactionSaveData ToSaveData()
         {
-            var data = new FactionSaveData { version = 1, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
-            for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, lastContactTick = e.LastContactTick, cause = e.Cause }; }
+            var data = new FactionSaveData { version = 2, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
+            for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, previousAffinity = e.PreviousAffinity, lastContactTick = e.LastContactTick, cause = e.Cause, lastMeaningfulTick = e.LastMeaningfulTick, sharedSupportDays = e.SharedSupportDays, sharedIssue = e.SharedIssue }; }
             for (var i = 0; i < _supports.Count; i++) { var s = _supports[i]; data.supports[i] = new FactionSupportSaveData { residentId = s.ResidentId.Value, factionId = s.FactionId, support = s.Support, sustainedDays = s.SustainedDays, driver = s.Driver, homeFloor = s.HomeFloor }; }
             for (var i = 0; i < _factions.Count; i++) { var f = _factions[i]; data.factions[i] = new FactionRecordSaveData { id = f.Id, pressure = f.Pressure, previousPressure = f.PreviousPressure, topGrievance = f.TopGrievance }; }
             return data;
@@ -226,7 +264,11 @@ namespace OneRoof.Domain.Social
             var live = new HashSet<int>(); foreach (var person in population.Persons) live.Add(person.Id.Value);
             if (data.edges != null) foreach (var e in data.edges)
                 if (e != null && e.first > 0 && e.second > e.first && live.Contains(e.first) && live.Contains(e.second))
-                    state._edges.Add(new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), Math.Max(-1f, Math.Min(1f, e.affinity)), Math.Max(0, e.lastContactTick), e.cause ?? "contact"));
+                {
+                    var edge = new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), Math.Max(-1f, Math.Min(1f, e.affinity)), Math.Max(0, e.lastContactTick), data.version >= 2 ? e.cause ?? "encounter" : "legacy tie (cause unavailable)", data.version >= 2 ? Math.Max(0, Math.Min(e.lastContactTick, e.lastMeaningfulTick)) : 0, data.version >= 2 && !string.IsNullOrEmpty(e.sharedIssue) ? Math.Max(0, e.sharedSupportDays) : 0, data.version >= 2 ? e.sharedIssue : null);
+                    edge.PreviousAffinity = data.version >= 2 ? Math.Max(-1f, Math.Min(1f, e.previousAffinity)) : edge.Affinity;
+                    state._edges.Add(edge);
+                }
             state._edges.Sort((a, b) => a.First.Value != b.First.Value ? a.First.Value.CompareTo(b.First.Value) : a.Second.Value.CompareTo(b.Second.Value));
             state._degree.Clear();
             for (var i = state._edges.Count - 1; i >= 0; i--)

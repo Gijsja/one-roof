@@ -82,7 +82,7 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void RepeatedContactBetweenOpposingMembersCreatesAttributableRivalry()
+        public void FactionDifferenceAndRepeatedEncounterDoNotCreateRivalry()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor();
             var original = sim.Population.Persons[0];
@@ -100,9 +100,85 @@ namespace OneRoof.Domain.Tests.EditMode
             };
             var state = FactionState.FromSaveData(data, population);
             state.Evaluate(population, sim.Topology, sim.Businesses, sim.Economy.Policy, 1440);
+            state.Evaluate(population, sim.Topology, sim.Businesses, sim.Economy.Policy, 2880);
             Assert.That(state.Edges.Count, Is.GreaterThan(0));
-            Assert.That(state.Edges[0].Affinity, Is.LessThan(0));
-            Assert.That(state.Edges[0].Cause, Does.Contain("conflicting faction priorities"));
+            Assert.That(state.Edges[0].Affinity, Is.Zero);
+            Assert.That(state.Edges[0].LastMeaningfulTick, Is.Zero);
+            Assert.That(state.Edges[0].Cause, Does.StartWith("encounter:"));
+        }
+
+        [Test]
+        public void RepeatedNamedGrievanceStrengthensTieAndSurvivesSaveLoad()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var first = sim.Population.Persons[0];
+            var second = new PersonRecord(new EntityId(9002), first.HouseholdId,
+                first.HomeRoomId, first.WorkplaceRoomId, first.Schedule, first.Needs, first.Traits);
+            var people = new PopulationState(new List<PersonRecord> { first, second }, sim.Population.Households);
+            first.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "Unpaid rent puts our lease at risk." });
+            second.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "Unpaid rent puts our lease at risk." });
+            var state = new FactionState();
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 1440);
+            Assert.That(state.Edges[0].Affinity, Is.Zero);
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 2880);
+            Assert.That(state.Edges[0].Affinity, Is.GreaterThan(0f));
+            Assert.That(state.Edges[0].Cause, Does.Contain("Unpaid rent"));
+            var restored = FactionState.FromSaveData(state.ToSaveData(), people);
+            Assert.That(restored.Edges[0].LastMeaningfulTick, Is.EqualTo(2880));
+            Assert.That(restored.Edges[0].Affinity, Is.EqualTo(state.Edges[0].Affinity));
+            Assert.That(restored.Edges[0].PreviousAffinity, Is.EqualTo(state.Edges[0].PreviousAffinity));
+            first.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, null);
+            second.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, null);
+            restored.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 4320);
+            Assert.That(restored.Edges[0].Affinity, Is.LessThan(state.Edges[0].Affinity));
+        }
+
+        [Test]
+        public void DenseContactSampleIncludesResidentsBeyondLowestIds()
+        {
+            var template = TowerSimulation.CreateStandardFiveFloor();
+            var first = template.Population.Persons[0];
+            var people = new List<PersonRecord>();
+            for (var i = 0; i < 300; i++)
+                people.Add(new PersonRecord(new EntityId(5000 + i), first.HouseholdId,
+                    first.HomeRoomId, first.WorkplaceRoomId, first.Schedule, first.Needs, first.Traits));
+            var population = new PopulationState(people, template.Population.Households);
+            var factions = new FactionState();
+            factions.Evaluate(population, template.Topology, template.Businesses, template.Economy.Policy, 1440);
+            var highest = 0;
+            foreach (var edge in factions.Edges)
+                highest = System.Math.Max(highest, edge.Second.Value);
+            Assert.That(highest, Is.GreaterThan(5100));
+            var restored = FactionState.FromSaveData(factions.ToSaveData(), population);
+            Assert.That(restored.Edges.Count, Is.EqualTo(factions.Edges.Count));
+            for (var i = 0; i < factions.Edges.Count; i++)
+            {
+                Assert.That(restored.Edges[i].First, Is.EqualTo(factions.Edges[i].First));
+                Assert.That(restored.Edges[i].Second, Is.EqualTo(factions.Edges[i].Second));
+            }
+        }
+
+        [Test]
+        public void ChangingSharedIssueRestartsSupportStreakAcrossSaveLoad()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var first = sim.Population.Persons[0];
+            var second = new PersonRecord(new EntityId(9003), first.HouseholdId,
+                first.HomeRoomId, first.WorkplaceRoomId, first.Schedule, first.Needs, first.Traits);
+            var people = new PopulationState(new List<PersonRecord> { first, second }, sim.Population.Households);
+            first.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "rent" });
+            second.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "rent" });
+            var state = new FactionState();
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 1440);
+            state = FactionState.FromSaveData(state.ToSaveData(), people);
+            first.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "commute" });
+            second.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "commute" });
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 2880);
+            Assert.That(state.Edges[0].Affinity, Is.Zero);
+            Assert.That(state.Edges[0].SharedSupportDays, Is.EqualTo(1));
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 4320);
+            Assert.That(state.Edges[0].Affinity, Is.GreaterThan(0f));
+            Assert.That(state.Edges[0].Cause, Does.Contain("commute"));
         }
 
         private static FactionRecord Find(TowerSimulation sim, string id)

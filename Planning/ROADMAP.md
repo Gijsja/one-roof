@@ -13,7 +13,7 @@ One Roof is a vertical-city simulation where the player acts as the building man
 - **Steward UI Shell:** Compact status card, grouped build palette, mode dock (Build, Inspect, Data, Manage), and overlay selection under `StewardTheme`. *(STATUS: COMPLETE; spatial overlay rendering remains OR-1006)*
 - **Unit Economics (ECON-001–004):** Closed-loop cash conservation across treasury, households, and businesses per [Economy](../Docs/12_ECONOMY.md). *(STATUS: COMPLETE)*
 - **Social Fabric (Milestone 9):** Bounded relationship graph, 4 factions, policy decrees, noise/tension overlays, civil actions, decision record, and playable management onboarding. *(STATUS: COMPLETE; spatial visual QA continues in OR-1006)*
-- **Social Fabric Deepening (Milestone 9.5):** Meaningful resident ties, issue-specific social influence, and locally grounded faction organizing. *(STATUS: READY; staged follow-up to M9)*
+- **Social Fabric Deepening (Milestone 9.5):** Meaningful resident ties, issue-specific social influence, and locally grounded faction organizing. *(STATUS: IN PROGRESS; OR-906A phase gate remains open)*
 - **Beta Exit (Milestone 10):** Blueprints, adaptive crisis pressure, and sustaining **City Status** for 30 in-game days. *(STATUS: READY)*
 
 ### Creative direction and player promise
@@ -422,7 +422,7 @@ graph TD
 
 ---
 
-### M9.5 — Relationships & Factions Deepening *(READY · staged follow-up)*
+### M9.5 — Relationships & Factions Deepening *(IN PROGRESS · staged follow-up)*
 **Goal:** Make the existing social fabric more credible and consequential: ties form through meaningful contact, trusted ties can carry named grievances, and sustained local organization explains when faction action becomes possible. Full design and constraints: [Relationships and Factions Deepening Design](RELATIONSHIPS_AND_FACTIONS_DEEPENING_DESIGN.md).
 
 - **`OR-906A` (Credible Relationship Ties):** Separate encounters from meaningful shared support and repeated conflict; remove faction identity as a direct source of personal animosity; add gentle return toward neutral; remove low-ID bias from crowded contact sampling. Project counterpart, affinity band/trend, last meaningful contact, and cause to resident inspection.

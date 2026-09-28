@@ -74,6 +74,14 @@ namespace OneRoof.Application.Inspectors
             foreach (var support in social.ResidentSupports)
                 if (support.ResidentId == residentId)
                     details.Add($"Faction {support.FactionId}: {support.Support:P0} support{(support.IsMember ? " (member)" : "")}; driver: {support.Driver}.");
+            foreach (var tie in social.ResidentTies)
+                if (tie.FirstId == residentId || tie.SecondId == residentId)
+                {
+                    var counterpart = tie.FirstId == residentId ? tie.SecondId : tie.FirstId;
+                    var band = tie.Affinity >= .2f ? "close" : tie.Affinity <= -.2f ? "strained" : "acquaintance";
+                    var meaningful = tie.LastMeaningfulTick > 0 ? $"meaningful contact at tick {tie.LastMeaningfulTick}" : "no meaningful contact recorded";
+                    details.Add($"Tie: resident #{counterpart}, {band} ({tie.Affinity:+0.00;-0.00;0.00}, {tie.Trend}); {meaningful}; {tie.Cause}.");
+                }
 
             var symptom = !resident.HasValue
                 ? "Resident location is not currently available."

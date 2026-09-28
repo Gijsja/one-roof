@@ -42,9 +42,26 @@ namespace OneRoof.Application.Social
     public sealed class FactionProjection
     {
         public FactionProjection(IList<FactionSummaryProjection> factions, IList<ResidentFactionProjection> residents)
-        { Factions = new ReadOnlyCollection<FactionSummaryProjection>(new List<FactionSummaryProjection>(factions)); ResidentSupports = new ReadOnlyCollection<ResidentFactionProjection>(new List<ResidentFactionProjection>(residents)); }
+            : this(factions, residents, new List<ResidentTieProjection>()) { }
+        public FactionProjection(IList<FactionSummaryProjection> factions, IList<ResidentFactionProjection> residents, IList<ResidentTieProjection> ties)
+        { Factions = new ReadOnlyCollection<FactionSummaryProjection>(new List<FactionSummaryProjection>(factions)); ResidentSupports = new ReadOnlyCollection<ResidentFactionProjection>(new List<ResidentFactionProjection>(residents)); ResidentTies = new ReadOnlyCollection<ResidentTieProjection>(new List<ResidentTieProjection>(ties)); }
         public IReadOnlyList<FactionSummaryProjection> Factions { get; }
         public IReadOnlyList<ResidentFactionProjection> ResidentSupports { get; }
+        public IReadOnlyList<ResidentTieProjection> ResidentTies { get; }
+    }
+
+    public sealed class ResidentTieProjection
+    {
+        public ResidentTieProjection(int firstId, int secondId, float affinity, float previousAffinity, long lastContactTick, long lastMeaningfulTick, string cause)
+        { FirstId = firstId; SecondId = secondId; Affinity = affinity; PreviousAffinity = previousAffinity; LastContactTick = lastContactTick; LastMeaningfulTick = lastMeaningfulTick; Cause = cause; }
+        public int FirstId { get; }
+        public int SecondId { get; }
+        public float Affinity { get; }
+        public float PreviousAffinity { get; }
+        public string Trend => Affinity > PreviousAffinity + .001f ? "strengthening" : Affinity < PreviousAffinity - .001f ? "easing toward neutral" : "steady";
+        public long LastContactTick { get; }
+        public long LastMeaningfulTick { get; }
+        public string Cause { get; }
     }
 
     public static class FactionProjectionService
@@ -72,7 +89,10 @@ namespace OneRoof.Application.Social
                 for (var i = 0; i < contributors.Count && i < 3; i++) representatives.Add(contributors[i].ResidentId.Value);
                 summaries.Add(new FactionSummaryProjection(faction.Id, Name(faction.Id), faction.Pressure, faction.PreviousPressure, faction.TopGrievance, faction.MemberCount, faction.SupporterCount, floorCounts, representatives));
             }
-            return new FactionProjection(summaries, residents);
+            var ties = new List<ResidentTieProjection>();
+            foreach (var edge in social.Edges)
+                ties.Add(new ResidentTieProjection(edge.First.Value, edge.Second.Value, edge.Affinity, edge.PreviousAffinity, edge.LastContactTick, edge.LastMeaningfulTick, edge.Cause));
+            return new FactionProjection(summaries, residents, ties);
         }
         private static string Name(string id)
         {
