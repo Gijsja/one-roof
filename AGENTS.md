@@ -56,4 +56,5 @@ One Roof is a deterministic vertical-city simulation: the Steward shapes systems
   - `python3 pipeline_client.py cmd console_status`: queries console errors.
   - `python3 pipeline_client.py eval "<expression>"`: evaluates C# state.
 - **Commit hygiene**: Always commit paired `.meta` files for any new assets. Keep generated directories (`Library/`, `Temp/`, `.plastic/`) untracked.
+- **Sandbox & Git Operations**: Project workspace files are writable in the standard sandbox, but `.git/` is mounted read-only. Use standard shell commands (`mv`, `cp`, `mkdir`) for file manipulation inside the sandbox (git automatically tracks renames on add). Any Git commands mutating repository index or history (`git add`, `git commit`, `git checkout`, `git stash`) require sandbox bypass (`BypassSandbox: true`).
 - For documentation-only changes, state that Unity validation was not run.
