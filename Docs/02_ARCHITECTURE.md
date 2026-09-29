@@ -1,130 +1,101 @@
-# Unity Architecture
+# Unity Architecture — One Roof (v0.10)
 
-## Runtime layers
+## 1. Runtime Layers & Assembly Boundaries
 
 ```text
-Bootstrap / composition root
-  ├── Application use cases and commands
-  │     ├── Domain simulation
-  │     └── Ports: clock, save store, path service, content catalog
-  ├── Infrastructure adapters
-  └── Presentation: tower, NPC views, UI, audio, VFX
+Bootstrap / Presentation Root (OneRoof.Presentation)
+  ├── UI Shell & Inspectors (OneRoof.UI)
+  ├── Application Projections & Commands (OneRoof.Application)
+  │     ├── Domain Simulation Engine (OneRoof.Domain) [Pure C#, 0 UnityEngine refs]
+  │     └── Content Catalogs & Regs (OneRoof.Content)
+  └── Infrastructure Adapters & Persistence (OneRoof.Infrastructure)
 ```
 
-The Domain assembly is pure C#. Unity-facing assemblies consume snapshots, projections, commands, and events.
+### Governing Invariants
+1. **Domain Purity**: `OneRoof.Domain` and `OneRoof.Application` strictly enforce `noEngineReferences: true` (zero `UnityEngine` references).
+2. **Projections Only**: Presentation and UI read immutable snapshots and projections; they dispatch validated commands (`TowerSimulation.CanExecute()`) and never directly mutate simulation state.
+3. **No Per-Agent Update Loops**: Simulation executes on a discrete fixed tick (1440 ticks/day). Presentation views are pooled, interpolated, and event-driven.
+4. **Stable Identity**: Entities use stable runtime integer IDs (`EntityId`); assets and content definitions use namespaced immutable string IDs (`ContentId`).
 
-## Proposed assemblies
+---
 
-- `OneRoof.Domain`
-- `OneRoof.Application`
-- `OneRoof.Infrastructure`
-- `OneRoof.Presentation`
-- `OneRoof.UI`
-- `OneRoof.Content`
-- `OneRoof.Editor`
-- Matching `.Tests.EditMode` assemblies
-- `OneRoof.Tests.PlayMode`
+## 2. Assemblies & Responsibilities
 
-## Simulation
+| Assembly | Engine Refs | Core Responsibilities |
+|---|---|---|
+| `OneRoof.Domain` | **False** (0) | Pure C# simulation models, topology state, hierarchical transit graph, elevator kinematics, resident needs/wellbeing, livelihoods, closed-loop economy, utility networks, factions, decrees, weather cycles. |
+| `OneRoof.Application` | **False** (0) | Commands, use cases, ports, and immutable read-only projections/snapshots (`TowerDataOverlays`, `ElevatorBankSnapshot`, `TreasuryFlowProjection`, `InspectionFacts`). |
+| `OneRoof.Infrastructure` | True | JSON serialization adapters, atomic file save store (`SaveEnvelope`), schema forward-migration pipeline. |
+| `OneRoof.Content` | True | ScriptableObjects, Sprite atlases, 17-bone rig definitions, 8-layer wardrobe catalogs, prop definitions. |
+| `OneRoof.Presentation` | True | Cutaway world renderers (`TowerStructurePresenter`, `ElevatorBankPresenter`, `RoomPresenter`, `TowerResidentPresenter`), pooled Spine views, parallax city, procedural rain/snow particle mesh, lighting, audio. |
+| `OneRoof.UI` | True | `ModeShellBarController`, `StewardTheme`, deep inspection cards (`DeepInspectionCardView`), congestion card, placement previews, policy decree panel. |
+| `OneRoof.Editor` | Editor | Scene builders, testbed harnesses, AssetLab validation tooling. |
 
-- Fixed tick independent from frame rate.
-- Stable integer IDs and deterministic seeded randomness.
-- Plain serializable records for people, households, rooms, businesses, factions, trips, and events.
-- Systems consume indexed state and produce state changes plus immutable domain events.
-- Fidelity tiers: aggregate/off-screen, scheduled/persistent, and visible/story-relevant.
-- No per-agent `Update()` loops.
+Each runtime assembly has a corresponding `.Tests.EditMode` test assembly, plus `OneRoof.Tests.PlayMode`.
 
-## Movement
+---
 
-Use a hierarchical graph:
+## 3. Movement & Hierarchical Transit
 
-1. Interaction point or room portal.
-2. Floor-local walk graph.
-3. Vertical transit graph of elevators, stairs, and transfer nodes.
-4. Destination floor-local graph.
+The transit simulation plans routes hierarchically across 4 discrete levels without continuous physics:
+1. **Room / Interaction Point**: Floor-local slots (`InteractionPoint`).
+2. **Floor Walk Graph**: Discrete horizontal cells (0.5m pitch) and portals.
+3. **Vertical Transit Graph**:
+   - **Elevators**: Multi-phase kinematics state machine (`Idle`, `Accelerating`, `Cruising`, `Decelerating`, `DoorsOpening`, `DoorsOpen`, `DoorsClosing`). Clamped to a hard 3-car limit per bank (`MaxCarsPerBank = 3`).
+   - **Stairs**: 2-cell vertical stairwells (`StairwellDoor` portals). Short-hop trips (1–2 floors delta) route natively via stairs. Queued elevator passengers divert to stairs upon excessive wait (`WaitTicks >= 15` or queue length `>= 3`).
+4. **Destination Floor Graph**: Corridor traversal and room entry.
 
-Route intent is domain data. Animation and physical interpolation are presentation concerns.
+### Outside World Seam
+`Outside` is a persistent world location, not a room or shortcut. It connects to the tower through the ground-floor lobby entrance. Demand move-ins and external workers cross this seam. Presentation renders a 3-depth parallax skyline (`OutsideCityPresenter`) responsive to camera panning and the day/night cycle.
 
-### Outside world boundary
+### Subterranean Undercity Seam
+Beneath Floor 0 lies an independent 32×12 cell excavation grid (1m pitch) owning `UndergroundDigState`. An access core connects the surface lobby to underground service shafts, corridors, and 14 specialized room types. Power and water networks bridge continuously from surface risers to undercity utility ports (`UndergroundUtilityPathState`).
 
-`Outside` is a persistent world location beyond the tower boundary, not a room and not a
-resident spawn shortcut. It connects to the tower through the ground-floor lobby entrance;
-resident move-ins and outbound trips cross that entrance. External destinations (including
-jobs) attach to the outside network and route through the lobby. The first implementation may
-use a compact street-edge node with no simulated city block, while preserving the location
-identity and route boundary. A street-level view and surrounding city remain a later
-presentation expansion; the tower cutaway may show the street horizon from its exterior edge.
-Outside location and route state belong to the Domain and must survive save/load; street art,
-camera framing, and frame interpolation remain Presentation concerns.
+---
 
-The first implementation uses `WorldLocation` (`Room` or `Outside`) on residents and trips.
-The transit graph adds one street-edge node joined only to the ground-floor lobby portal;
-in-flight routes are reconstructed from typed endpoints on load. Leasing arrivals begin at
-Outside and follow the same route seam as external workers. The cutaway draws a compact
-street edge at the ground slab; a larger street view remains deferred.
-`OutsideCityPresenter` builds a collider-free, three-depth skyline in Presentation. It moves
-only the layer roots on horizontal camera pans, shifts its anchor with ground-slab expansion,
-and derives window and sky colours from the existing day/night clock. City geometry is not
-simulation or save state.
+## 4. Playable Scenes Catalog
 
-### Underground excavation
+The project hosts 5 canonical scenes under `Assets/Scenes/`:
 
-Excavation is a separate deterministic domain state beneath the building; it does not create
-negative tower floors. Its 32×12, 1 m board is independent of tower floor slabs. Dig and floor
-brushes retain their 1×1, 2×2, and 3×3 footprints. An access core joins the lobby to a vertical
-service shaft; corridors connect rectangular room zones to that route. Domain commands validate
-the full footprint, cost, overlap, and reachability through `CanExecute`. Room definitions hold
-capacity, staffing, and upkeep. `UndergroundOperationsState` owns supplies, intel, staffing,
-exposure, policy priorities, and saveable investigator visits. It transfers money through the
-existing treasury and outside-market ledgers and exposes bounded tower-service modifiers.
-Immutable projections drive excavation, rooms, workers, and investigator presentation. Old 16×6
-cells migrate to the center of the expanded board.
+| Scene | Role & Setup |
+|---|---|
+| `Assets/Scenes/Tower_GoldStandard30.unity` | **30-Floor / 300-Resident City Playground (`TowerStartMode.GoldStandardCity`)**. Fully populated reference scale scene running at ~108 FPS and 171 draw calls with active stair transit. |
+| `Assets/Scenes/Tower_GroundStart.unity` | **Dynamic Ground Start Playground (`TowerStartMode.GroundFloorStart`)**. Starts at Floor 0 foundation; exercises dynamic vertical expansion and downward excavation. |
+| `Assets/Scenes/Tower.unity` | **Authored 5-Floor Playground (`TowerStartMode.StandardFiveFloor`)**. Legacy first-playable baseline scene. |
+| `Assets/Scenes/Testbed_Transit.unity` | **Isolated Transit Harness**. Lightweight 5-floor vertical transit harness wired to `FiftyResidentFixture`. |
+| `Assets/Scenes/AssetLab.unity` | **Artist Validation Lab**. Automated seam, rig, wardrobe, and anchor validation. |
 
-`UndergroundUtilityPathState` derives read-only power and water path segments from the built
-surface source, lobby access core, shaft, corridors, and room entrances. Segment IDs are stable;
-connection and actual flow are separate states. The undercity remains on its own coordinates,
-which Presentation maps to world space. The path snapshot is cached by topology, excavation,
-and backup-capacity changes and is never saved independently. Room inspectors expose route
-diagnostics separately from current staffing, supply, and disruption operating causes.
-Generator backup remains governed by its existing reachable, staffed, supplied daily operation;
-an explicit reverse-feed contract and utility-dependent underground production are later
-integration gates in `Planning/M10_1_CONNECTED_BUILDING_AND_UNDERCITY.md`.
+---
 
-## Presentation & UI
+## 5. Rendering & Batching Architecture
 
-- Pool visible Spine NPC views (`TowerResidentPresenter`) and active effects; 40–60 view cap.
-- Stream or activate floor presentation by camera range.
-- Bind views through entity IDs and read-only immutable projections.
-- `OutsideCityPresenter` creates a 3-depth parallax skyline outside the tower edge, responsive to horizontal camera panning and day/night transitions.
-- `TowerAtmospherePresenter` maps the 1440-tick daily cycle into 24-hour day/night presentation phases (warm window lighting and unlit ambient tint).
-- `ModeShellBarController` and `StewardTheme` form the UI shell; UI dispatches application commands and never mutates simulation state directly.
+- **Shader Model**: `OneRoofUnlit.shader` uses a single canonical `SRPDefaultUnlit` pass, maintaining 100% SRP Batcher compatibility.
+- **GPU Instancing**: Enabled across NPC shared materials (`Npc_DefaultSharedMaterial`, `PooledNpc_SharedMaterial`).
+- **Dynamic Procedural VFX**: `PixelRainPresenter` uses a single dynamic mesh buffer (672 quads, 2688 vertices, 1 draw call, 0 GC steady state) simulating rain, snow, splashes, eave drips, and radial fog puffs with alpha falloff.
+- **Performance Budget**:
+  - Draw calls: **<180** (currently 171 at 30 floors / 300 residents).
+  - Batches: **<100** (currently 86).
+  - Main thread frame time: **<16.6 ms (60 FPS)** (currently 9.27 ms / ~108 FPS).
+  - Simulation tick: **<4.0 ms p95** on reference hardware.
 
-## Scenes
+---
 
-- `Tower`: primary interactive world presentation and full gameplay scene.
-- `Tower_GroundStart`: lightweight starting topology scene for fresh tower development.
-- `Testbed_Transit`: isolated five-floor vertical transit proof.
-- `AssetLab`: Editor-only content preview, rig, and asset validation.
-- `Bootstrap` / `FrontEnd`: composition, profiles, and campaign selection.
+## 6. Persistence & Save Architecture
 
-## Content
+- **Root Envelope**: Versioned `SaveEnvelope` with typed metadata and payload string.
+- **Aggregate Push Pattern**: Sub-aggregates own `ToSaveData()` / `FromSaveData()` serialization (ARCH-004), eliminating reflection.
+- **Forward Migrations**: Every schema change supplies a forward migration and fixture test.
+- **Atomic Replace**: Saves write to a temporary file (`.tmp`) and replace the target file only upon verified completion.
 
-- ScriptableObjects hold authored definitions and tuning, never mutable campaign state.
-- Addressables group room themes, character layers, audio, and event presentation.
-- Content uses immutable string asset IDs; runtime entities use integer IDs.
-- A build-time validator detects missing IDs, duplicate IDs, invalid anchors, and broken references.
+---
 
-## Save strategy
+## 7. Tooling & Live Pipeline Probing (Python & CLI)
 
-- One versioned root save envelope (`SaveEnvelope`).
-- Store simulation state and player decisions, not view state.
-- Sub-aggregates own `ToSaveData()` / `FromSaveData()` serialization (ARCH-004).
-- Every schema change supplies a forward migration and fixture test.
-- Autosaves write to a temporary target and replace only after successful serialization.
-
-## Performance budgets
-
-- **First playable**: 50 persistent residents, 40 visible views maximum, 60 FPS presentation target.
-- **Beta boundary (North Star)**: 30 floors, 300 persistent residents, 60 pooled visible views maximum, simulation tick p95 below 4.0 ms, draw calls < 120 via instancing/atlasing, texture memory < 180 MB, 60 FPS presentation on reference hardware.
-- No managed allocation during steady-state simulation ticks.
-- Save/load below 1 second for first-playable state, below 2 seconds for 30-floor beta state.
+The project supports both headless batchmode runs and live Editor probing:
+- **Headless Batchmode**: Unity tests and compilation run via one-shot headless processes without UI.
+- **Live Pipeline Server (`com.unity.pipeline`)**: Port 7800 serves live Editor sessions.
+- **Python Probing Tools**: Python scripts (such as `pipeline_client.py` or MCP tools) communicate over localhost:7800:
+  - `python3 pipeline_client.py cmd get_performance_stats`: Queries live frame times, batches, and draw calls.
+  - `python3 pipeline_client.py cmd console_status`: Retrieves console log status.
+  - `python3 pipeline_client.py eval "<expression>"`: Evaluates scene state.
+- **Pipeline MCP**: Native agent tools (`mcp__unity__editor_status`, `mcp__unity__console_status`) query the same endpoint.
