@@ -1,0 +1,19 @@
+Room root: RoomView_2002
+Presenter: OneRoof.Presentation.Architecture.RoomBackdropPresenter; theme=residential:apartment; size=3x1.42
+Backdrop: path=RoomView_2002/Backdrop; enabled=True; sprite=backdrop_residential_studio#69658; spriteId=69660; material=Tower World Material (city transition)#-10044 shader=AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch
+Runtime room hierarchy:
+RoomView_2002 [Transform] [VisualEffectsPresenter] [RoomBackdropPresenter] [RoomFurnishingPresenter]
+  Backdrop [Transform] [SpriteRenderer]
+  EntranceDoor [Transform] [SpriteRenderer]
+  Window [Transform] [SpriteRenderer]
+  WallSconce [Transform] [SpriteRenderer]
+  Prop_prop.furniture.bed.v1 [Transform] [SpriteRenderer]
+  Prop_prop.decor.planter.v1 [Transform] [SpriteRenderer]
+  Prop_prop.furniture.sofa.v1 [Transform] [SpriteRenderer]
+  Prop_prop.furniture.bookcase.v1 [Transform] [SpriteRenderer]
+  Apt Tag 2002 [Transform] [MeshFilter] [MeshRenderer]
+  Room Wall L 2002 [Transform] [MeshFilter] [MeshRenderer]
+  Room Wall R 2002 [Transform] [MeshFilter] [MeshRenderer]
+
+Floor Deck 1/LeftWing/Tread | renderer=Tread#-8696 | material=Tower World Material#-1532 shader=OneRoof/Unlit | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Tread | renderer=Tread#-8750 | material=Tower World Material#-1532 shader=OneRoof/Unlit | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>

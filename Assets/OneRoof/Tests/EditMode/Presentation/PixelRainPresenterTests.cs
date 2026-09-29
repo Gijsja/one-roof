@@ -217,6 +217,29 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             Assert.That(_presenter.ActiveDropCount, Is.EqualTo(0),
                 "Fog condition must not spawn rain drops.");
+            Assert.That(_presenter.ActiveFogPuffCount, Is.GreaterThan(0),
+                "Fog condition should produce visible atmospheric puffs.");
+            Assert.That(_presenter.ActiveFogPuffCount, Is.LessThanOrEqualTo(6),
+                "Fog must stay sparse enough to keep the tower and interface readable.");
+
+            var mesh = _presenter.RainMeshRenderer.GetComponent<MeshFilter>().sharedMesh;
+            var vertices = mesh.vertices;
+            var colors = mesh.colors32;
+            for (var puffIndex = 0; puffIndex < _presenter.ActiveFogPuffCount; puffIndex++)
+            {
+                var centerIndex = puffIndex * 9;
+                var center = vertices[centerIndex];
+                Assert.That(colors[centerIndex].a, Is.LessThanOrEqualTo(13),
+                    "Fog must stay translucent at its center.");
+                for (var ringIndex = 1; ringIndex <= 8; ringIndex++)
+                {
+                    var edgeIndex = centerIndex + ringIndex;
+                    Assert.That(colors[edgeIndex].a, Is.EqualTo(0),
+                        "The radial fog edge must fade fully to transparent.");
+                    Assert.That(Mathf.Abs(vertices[edgeIndex].x - center.x), Is.LessThanOrEqualTo(1f),
+                        "Fog puff width must stay local instead of spanning the tower as a panel.");
+                }
+            }
         }
 
         [Test]

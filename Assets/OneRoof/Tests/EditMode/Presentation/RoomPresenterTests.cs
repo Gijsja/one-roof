@@ -139,12 +139,15 @@ namespace OneRoof.Presentation.Tests.EditMode
             var initialChildCount = _holder.transform.childCount;
             Assert.That(initialChildCount, Is.GreaterThan(0));
 
-            // Demolish one room from simulation
+            // Select a room whose demolition is currently safe. The standard
+            // fixture has occupied homes, and force intentionally does not bypass
+            // the resident/trip integrity guard.
             Room targetRoom = null;
             foreach (var r in topo.Rooms.Values)
             {
-                var ct = r.ContentType.Value ?? "";
-                if (ct.StartsWith("residential"))
+                if (r.ContentType.Value == "transit:elevator_shaft") continue;
+                var candidate = new OneRoof.Domain.Commands.DemolishRoomCommand(r.Id, force: true);
+                if (session.CanExecute(candidate).Accepted)
                 {
                     targetRoom = r;
                     break;
@@ -178,7 +181,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void EnsureRoomViews_AssignsMaterialToBackdropAndFurnishingRenderers()
+        public void EnsureRoomViews_UsesWorldMaterialForBackdropsAndTransparentMaterialForFurnishings()
         {
             var session = new TowerSimulationSession();
             _presenter.EnsureRoomViews(session.TopologyProjection());
@@ -210,7 +213,11 @@ namespace OneRoof.Presentation.Tests.EditMode
                     var sr = prop.GetComponent<SpriteRenderer>();
                     if (sr != null)
                     {
-                        Assert.That(sr.sharedMaterial, Is.EqualTo(_material));
+                        Assert.That(sr.sharedMaterial, Is.Not.Null);
+                        Assert.That(sr.sharedMaterial.renderQueue, Is.EqualTo((int)UnityEngine.Rendering.RenderQueue.Transparent));
+                        Assert.That(sr.sharedMaterial.GetInt("_SrcBlend"), Is.EqualTo((int)UnityEngine.Rendering.BlendMode.SrcAlpha));
+                        Assert.That(sr.sharedMaterial.GetInt("_DstBlend"), Is.EqualTo((int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
+                        Assert.That(sr.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0));
                     }
                 }
             }

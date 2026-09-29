@@ -16,6 +16,7 @@ namespace OneRoof.Domain.Infrastructure
 
         private readonly Dictionary<EntityId, float> _conditionByRoom = new Dictionary<EntityId, float>();
         private long _syncedRoomsVersion = long.MinValue;
+        private UtilityOperationsSnapshot _cachedSnapshot;
 
         public void Advance(BuildingTopologyState topology, PopulationState population, float undergroundRepairBoost = 0f)
         {
@@ -32,12 +33,14 @@ namespace OneRoof.Domain.Infrastructure
                     condition = Math.Max(0f, condition - WearPerTick);
                 _conditionByRoom[room.Id] = condition;
             }
+            _cachedSnapshot = null;
         }
 
         public UtilityOperationsSnapshot Snapshot(BuildingTopologyState topology)
         {
             if (topology == null) return UtilityOperationsSnapshot.Empty;
             SyncEquipmentIfTopologyChanged(topology);
+            if (_cachedSnapshot != null) return _cachedSnapshot;
             var equipment = new List<UtilityEquipmentProjection>();
             foreach (var room in topology.Rooms.Values)
             {
@@ -46,7 +49,8 @@ namespace OneRoof.Domain.Infrastructure
                 equipment.Add(new UtilityEquipmentProjection(room.Id.Value, room.Floor, room.ContentType.Value, condition, condition <= FailureThreshold));
             }
             equipment.Sort((a, b) => a.RoomId.CompareTo(b.RoomId));
-            return new UtilityOperationsSnapshot(equipment);
+            _cachedSnapshot = new UtilityOperationsSnapshot(equipment);
+            return _cachedSnapshot;
         }
 
         private void SyncEquipment(BuildingTopologyState topology)
@@ -64,6 +68,7 @@ namespace OneRoof.Domain.Infrastructure
             if (_syncedRoomsVersion == topology.RoomsVersion) return;
             SyncEquipment(topology);
             _syncedRoomsVersion = topology.RoomsVersion;
+            _cachedSnapshot = null;
         }
 
         public UtilityOperationsSaveData ToSaveData()
@@ -110,8 +115,18 @@ namespace OneRoof.Domain.Infrastructure
     public sealed class UtilityOperationsSnapshot
     {
         public static readonly UtilityOperationsSnapshot Empty = new UtilityOperationsSnapshot(Array.Empty<UtilityEquipmentProjection>());
-        public UtilityOperationsSnapshot(IReadOnlyList<UtilityEquipmentProjection> equipment) { Equipment = equipment ?? Array.Empty<UtilityEquipmentProjection>(); }
+        private readonly HashSet<int> _failedRoomIds = new HashSet<int>();
+
+        public UtilityOperationsSnapshot(IReadOnlyList<UtilityEquipmentProjection> equipment)
+        {
+            Equipment = equipment ?? Array.Empty<UtilityEquipmentProjection>();
+            for (var i = 0; i < Equipment.Count; i++)
+                if (Equipment[i].IsFailed) _failedRoomIds.Add(Equipment[i].RoomId);
+        }
+
         public IReadOnlyList<UtilityEquipmentProjection> Equipment { get; }
+
+        public bool IsFailed(int roomId) => _failedRoomIds.Contains(roomId);
     }
 
     public readonly struct UtilityEquipmentProjection

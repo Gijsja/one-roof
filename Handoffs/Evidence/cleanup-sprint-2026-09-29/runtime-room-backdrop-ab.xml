@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.6311829">
+  <test-suite type="TestSuite" id="1041" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.631183" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1034" name="OneRoof.Tests.PlayMode.dll" fullname="/tmp/one-roof-cleanup-validation/Library/ScriptAssemblies/OneRoof.Tests.PlayMode.dll" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.608601" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="307907" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1035" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.606855" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1036" name="Tests" fullname="OneRoof.Tests" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.602512" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1037" name="PlayMode" fullname="OneRoof.Tests.PlayMode" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.600920" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1020" name="RuntimeRoomBackdropABPlayModeTests" fullname="OneRoof.Tests.PlayMode.RuntimeRoomBackdropABPlayModeTests" classname="OneRoof.Tests.PlayMode.RuntimeRoomBackdropABPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.596371" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1021" name="TowerGroundStart_RuntimeRoomBackdropTargetedAB" fullname="OneRoof.Tests.PlayMode.RuntimeRoomBackdropABPlayModeTests.TowerGroundStart_RuntimeRoomBackdropTargetedAB" methodname="TowerGroundStart_RuntimeRoomBackdropTargetedAB" classname="OneRoof.Tests.PlayMode.RuntimeRoomBackdropABPlayModeTests" runstate="Runnable" seed="658581836" result="Passed" start-time="2026-09-29 19:00:46Z" end-time="2026-09-29 19:00:48Z" duration="1.576338" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

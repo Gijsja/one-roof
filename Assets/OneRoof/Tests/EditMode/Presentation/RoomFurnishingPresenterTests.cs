@@ -123,5 +123,33 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Object.DestroyImmediate(go);
             }
         }
+
+        [Test]
+        public void RoomFurnishingPresenter_PropsUseTransparentMaterial_WithAlphaBlending()
+        {
+            var go = new GameObject("FurnishedRoom");
+            try
+            {
+                var presenter = go.AddComponent<RoomFurnishingPresenter>();
+                presenter.FurnishRoom("residential:studio", 3.0f, 1.42f, true);
+
+                Assert.That(presenter.PlacedProps.Count, Is.GreaterThan(0));
+                foreach (var prop in presenter.PlacedProps)
+                {
+                    var sr = prop.GetComponent<SpriteRenderer>();
+                    Assert.That(sr.sharedMaterial, Is.Not.Null);
+                    Assert.That(sr.sharedMaterial.renderQueue, Is.EqualTo((int)UnityEngine.Rendering.RenderQueue.Transparent),
+                        "Prop material must be assigned to Transparent render queue to prevent black alpha bounding boxes.");
+                    if (sr.sharedMaterial.HasProperty("_ZWrite"))
+                    {
+                        Assert.That(sr.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0));
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }

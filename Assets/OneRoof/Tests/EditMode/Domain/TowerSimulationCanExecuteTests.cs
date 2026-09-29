@@ -5,6 +5,7 @@ using OneRoof.Domain.Identity;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
+using OneRoof.Domain.Trips;
 
 namespace OneRoof.Domain.Tests.EditMode
 {
@@ -139,7 +140,7 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void CanExecute_DemolishRoom_OccupiedApartment_RejectedUnlessForced()
+        public void CanExecute_DemolishRoom_OccupiedApartment_ForceCannotOrphanResidents()
         {
             // Find an apartment with an active household
             EntityId occupiedRoomId = default;
@@ -162,7 +163,33 @@ namespace OneRoof.Domain.Tests.EditMode
 
             var forcedCmd = new DemolishRoomCommand(occupiedRoomId, force: true);
             var forcedResult = _sim.CanExecute(forcedCmd);
-            Assert.That(forcedResult.Accepted, Is.True);
+            Assert.That(forcedResult.Accepted, Is.False);
+            Assert.That(forcedResult.Rejections[0].Code, Is.EqualTo(new ContentId("demolish:occupied")));
+        }
+
+        [Test]
+        public void CanExecute_DemolishRoom_ActiveTripReferencesTargetRoom_RejectedEvenWhenForced()
+        {
+            var person = _sim.Population.Persons[0];
+            var targetRoomId = person.WorkplaceRoomId;
+            for (var i = 0; i < _sim.Population.Persons.Count; i++)
+                _sim.Population.Persons[i].ReassignToOutsideWork();
+            var origin = _sim.Topology.TransitGraph.GetPortalNodeForRoom(person.HomeRoomId);
+            var destination = _sim.Topology.TransitGraph.GetPortalNodeForRoom(targetRoomId);
+            Assert.That(origin, Is.Not.Null);
+            Assert.That(destination, Is.Not.Null);
+            var route = _sim.Planner.FindRoute(origin.Id, destination.Id);
+            Assert.That(route, Is.Not.Null);
+
+            var trip = new TripRecord(new EntityId(90001), person.Id, person.HomeRoomId, targetRoomId,
+                TripPurpose.Work, _sim.Clock.CurrentTick, route);
+            _sim.Transit.SubmitTrip(trip, _sim.Topology, _sim.Clock.CurrentTick, _sim.Population);
+            Assert.That(_sim.Transit.IsPersonTravelling(person.Id), Is.True);
+
+            var result = _sim.CanExecute(new DemolishRoomCommand(targetRoomId, force: true));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("demolish:occupied")));
         }
 
         [Test]

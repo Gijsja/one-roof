@@ -1,0 +1,20 @@
+Property-block texture inspection before A/B; null means GetTexture returned no texture override.
+Targets are exact runtime-created slab/structure/room quads. Deck surfaces are inspection-only because tread texture is intentionally set by FloorDeckView.
+Floor Slab 1 | block _BaseMap=<null> | block _MainTex=<null> | material _BaseMap=<null> | material _MainTex=<null>
+Floor Line L 1 | block _BaseMap=<null> | block _MainTex=<null> | material _BaseMap=<null> | material _MainTex=<null>
+Floor Line R 1 | block _BaseMap=<null> | block _MainTex=<null> | material _BaseMap=<null> | material _MainTex=<null>
+RoomView_2002/Apt Tag 2002 | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+RoomView_2002/Room Wall L 2002 | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+RoomView_2002/Room Wall R 2002 | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Tread | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Tread | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Core | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Core | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Soffit | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Soffit | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Tread | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Tread | block _BaseMap=#-9930 | block _MainTex=#-9930 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Core | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Core | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/LeftWing/Soffit | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>
+Floor Deck 1/RightWing/Soffit | block _BaseMap=UnityWhite#-1338 | block _MainTex=UnityWhite#-1338 | material _BaseMap=<null> | material _MainTex=<null>

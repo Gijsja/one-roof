@@ -59,6 +59,28 @@ namespace OneRoof.Tests.PlayMode
                     }
                 Assert.That(changedSkyPixels, Is.GreaterThan(500),
                     "Rain must be visible in the camera image, not only simulated offscreen.");
+
+                controller.SetWeatherOverride(4);
+                yield return new WaitForSeconds(1.5f);
+                Assert.That(rain.Condition, Is.EqualTo(OneRoof.Domain.Weather.WeatherCondition.Fog));
+                Assert.That(rain.ActiveFogPuffCount, Is.GreaterThan(0));
+                Assert.That(rain.ActiveDropCount, Is.EqualTo(0),
+                    "Fog must replace rain drops rather than layering rain over the tower.");
+                var fogPixels = Capture(camera, Path.Combine(output, "fog.png"));
+                var changedFogPixels = 0;
+                for (var i = 0; i < clearPixels.Length; i++)
+                {
+                    var clear = clearPixels[i];
+                    var fog = fogPixels[i];
+                    if (Mathf.Abs(clear.r - fog.r) > 2 ||
+                        Mathf.Abs(clear.g - fog.g) > 2 ||
+                        Mathf.Abs(clear.b - fog.b) > 2)
+                        changedFogPixels++;
+                }
+                Assert.That(changedFogPixels, Is.GreaterThan(100),
+                    "Fog must affect the rendered camera image.");
+                Assert.That(changedFogPixels, Is.LessThan(1280 * 720 / 10),
+                    "Fog must not obscure more than ten percent of the rendered camera view.");
             }
             finally
             {

@@ -169,7 +169,7 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void DemolishRoom_OccupiedApartment_RejectsUnlessForced()
+        public void DemolishRoom_OccupiedApartment_RejectsEvenWhenForced()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor();
             var household = sim.Population.Households[0];
@@ -178,12 +178,14 @@ namespace OneRoof.Domain.Tests.EditMode
             // Attempt unforced demolish of occupied apartment
             var unforcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: false));
             Assert.That(unforcedResult.Accepted, Is.False);
-            Assert.That(unforcedResult.Rejections[0].Detail, Does.Contain("occupied apartment"));
+            Assert.That(unforcedResult.Rejections[0].Code, Is.EqualTo(new ContentId("demolish:occupied")));
 
-            // Forced demolish succeeds
+            // Force cannot bypass the state-integrity guard.
             var forcedResult = sim.DemolishRoom(new DemolishRoomCommand(homeRoomId, force: true));
-            Assert.That(forcedResult.Accepted, Is.True);
-            Assert.That(sim.Topology.TryGetRoom(homeRoomId, out _), Is.False);
+            Assert.That(forcedResult.Accepted, Is.False);
+            Assert.That(forcedResult.Rejections[0].Code, Is.EqualTo(new ContentId("demolish:occupied")));
+            Assert.That(sim.Topology.TryGetRoom(homeRoomId, out _), Is.True);
+            Assert.That(household.HomeRoomId, Is.EqualTo(homeRoomId));
         }
 
         [Test]

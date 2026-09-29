@@ -269,10 +269,36 @@ namespace OneRoof.Presentation.Furnishings
             var sr = propObj.AddComponent<SpriteRenderer>();
             sr.sprite = PropCatalog.GetPropSprite(contentId);
             sr.sortingOrder = -2;
-            if (_sharedMaterial != null) sr.sharedMaterial = _sharedMaterial;
+            sr.sharedMaterial = _sharedMaterial ?? GetOrCreateDefaultPropMaterial();
 
             _placedProps.Add(propObj);
             return propObj;
+        }
+
+        private static Material s_defaultPropMaterial;
+
+        public static Material GetOrCreateDefaultPropMaterial()
+        {
+            if (s_defaultPropMaterial != null) return s_defaultPropMaterial;
+
+            var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default")
+                ?? Shader.Find("OneRoof/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Unlit");
+
+            if (shader != null)
+            {
+                var mat = new Material(shader) { name = "Prop_DefaultTransparentMaterial" };
+                mat.SetOverrideTag("RenderType", "Transparent");
+                if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                s_defaultPropMaterial = mat;
+            }
+            return s_defaultPropMaterial;
         }
 
         public void ClearProps()

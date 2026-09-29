@@ -383,10 +383,14 @@ namespace OneRoof.Presentation.Tests.EditMode
         {
             // A palette row outside the persistent context strip becomes world
             // space after the chooser closes; the selected tool can build there.
-            var palettePosition = new Vector3(100f, Screen.height - 240f, 0f);
+            // Pin the same compact viewport used by the neighboring pointer-area
+            // regression so a tall Game view cannot move this point into the HUD.
+            const int screenHeight = 480;
+            const int screenWidth = 640;
+            var palettePosition = new Vector3(100f, screenHeight - 240f, 0f);
 
-            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: true), Is.True);
-            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false), Is.False);
+            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: true, screenHeight, screenWidth), Is.True);
+            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false, screenHeight, screenWidth), Is.False);
         }
 
         [Test]

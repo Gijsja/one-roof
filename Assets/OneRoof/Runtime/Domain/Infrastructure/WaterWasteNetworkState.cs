@@ -29,12 +29,12 @@ namespace OneRoof.Domain.Infrastructure
 
         public float PressureLossPerFloor { get; }
 
-        public WaterWasteNetworkSnapshot Evaluate(BuildingTopologyState topology)
+        public WaterWasteNetworkSnapshot Evaluate(BuildingTopologyState topology, UtilityOperationsSnapshot operations = null)
         {
             if (topology == null) return WaterWasteNetworkSnapshot.Empty;
 
-            var pumpCapacity = CalculateGroundCapacity(topology, WaterPumpContentId);
-            var collectorCapacity = CalculateGroundCapacity(topology, WasteCollectionContentId);
+            var pumpCapacity = CalculateGroundCapacity(topology, WaterPumpContentId, operations);
+            var collectorCapacity = CalculateGroundCapacity(topology, WasteCollectionContentId, operations);
             var totalDemand = CalculateTotalDemand(topology);
             var supplyFactor = totalDemand <= 0f ? 1f : Math.Min(1f, pumpCapacity / totalDemand);
             var floors = new List<WaterWasteFloorProjection>(topology.FloorCount);
@@ -44,10 +44,10 @@ namespace OneRoof.Domain.Infrastructure
                 var floor = slab.Key;
                 var rooms = topology.GetRoomsOnFloor(floor);
                 var demand = CalculateFloorDemand(rooms);
-                var waterColumn = FindContinuousColumn(topology, floor, WaterRiserContentId);
-                var pressure = CalculatePressure(topology, floor, waterColumn, supplyFactor);
+                var waterColumn = FindContinuousColumn(topology, floor, WaterRiserContentId, operations);
+                var pressure = CalculatePressure(topology, floor, waterColumn, supplyFactor, operations);
                 var waterReason = DetermineWaterFailure(pumpCapacity, waterColumn.HasValue, pressure);
-                var wasteColumn = FindContinuousColumn(topology, floor, WasteChuteContentId);
+                var wasteColumn = FindContinuousColumn(topology, floor, WasteChuteContentId, operations);
                 var wasteReason = DetermineWasteFailure(collectorCapacity, wasteColumn.HasValue);
                 floors.Add(new WaterWasteFloorProjection(floor, demand, pressure, waterColumn ?? 0, waterReason, wasteColumn ?? 0, wasteReason));
             }
@@ -55,28 +55,34 @@ namespace OneRoof.Domain.Infrastructure
             return new WaterWasteNetworkSnapshot(totalDemand, pumpCapacity, collectorCapacity, floors);
         }
 
-        private float CalculatePressure(BuildingTopologyState topology, int floor, int? waterColumn, float supplyFactor)
+        private float CalculatePressure(BuildingTopologyState topology, int floor, int? waterColumn, float supplyFactor,
+            UtilityOperationsSnapshot operations)
         {
             if (!waterColumn.HasValue) return 0f;
-            var sourceFloor = FindHighestBoosterFloor(topology, floor, waterColumn.Value);
+            var sourceFloor = FindHighestBoosterFloor(topology, floor, waterColumn.Value, operations);
             return Math.Max(0f, (1f - (floor - sourceFloor) * PressureLossPerFloor) * supplyFactor);
         }
 
-        private static int FindHighestBoosterFloor(BuildingTopologyState topology, int targetFloor, int column)
+        private static int FindHighestBoosterFloor(BuildingTopologyState topology, int targetFloor, int column,
+            UtilityOperationsSnapshot operations)
         {
             for (var floor = targetFloor; floor > 0; floor--)
             {
-                if (HasRoomOfType(topology.GetRoomsOnFloor(floor), BoosterPumpContentId) && HasRoomAtColumn(topology.GetRoomsOnFloor(floor), WaterRiserContentId, column)) return floor;
+                if (HasRoomOfType(topology.GetRoomsOnFloor(floor), BoosterPumpContentId, operations) &&
+                    HasRoomAtColumn(topology.GetRoomsOnFloor(floor), WaterRiserContentId, column, operations)) return floor;
             }
             return 0;
         }
 
-        private static float CalculateGroundCapacity(BuildingTopologyState topology, ContentId type)
+        private static float CalculateGroundCapacity(BuildingTopologyState topology, ContentId type,
+            UtilityOperationsSnapshot operations)
         {
             if (!topology.HasFloor(0)) return 0f;
             var rooms = topology.GetRoomsOnFloor(0);
             var capacity = 0f;
-            for (var i = 0; i < rooms.Count; i++) if (rooms[i].ContentType == type) capacity += Math.Max(0, rooms[i].Capacity);
+            for (var i = 0; i < rooms.Count; i++)
+                if (rooms[i].ContentType == type && IsOperational(rooms[i], operations))
+                    capacity += Math.Max(0, rooms[i].Capacity);
             return capacity;
         }
 
@@ -97,26 +103,28 @@ namespace OneRoof.Domain.Infrastructure
         private static bool IsInfrastructure(ContentId type) => type == WaterPumpContentId || type == WaterRiserContentId || type == BoosterPumpContentId || type == WasteChuteContentId || type == WasteCollectionContentId ||
             type == ElectricalGridState.SubstationContentId || type == ElectricalGridState.RiserContentId || type == ElectricalGridState.TransformerContentId;
 
-        private static bool HasRoomOfType(IReadOnlyList<Room> rooms, ContentId type)
+        private static bool HasRoomOfType(IReadOnlyList<Room> rooms, ContentId type, UtilityOperationsSnapshot operations)
         {
-            for (var i = 0; i < rooms.Count; i++) if (rooms[i].ContentType == type) return true;
+            for (var i = 0; i < rooms.Count; i++)
+                if (rooms[i].ContentType == type && IsOperational(rooms[i], operations)) return true;
             return false;
         }
 
-        private static int? FindContinuousColumn(BuildingTopologyState topology, int targetFloor, ContentId type)
+        private static int? FindContinuousColumn(BuildingTopologyState topology, int targetFloor, ContentId type,
+            UtilityOperationsSnapshot operations)
         {
             if (targetFloor < 0 || !topology.HasFloor(0)) return null;
             var groundRooms = topology.GetRoomsOnFloor(0);
             for (var roomIndex = 0; roomIndex < groundRooms.Count; roomIndex++)
             {
                 var groundRoom = groundRooms[roomIndex];
-                if (groundRoom.ContentType != type) continue;
+                if (groundRoom.ContentType != type || !IsOperational(groundRoom, operations)) continue;
                 for (var x = groundRoom.Bounds.MinX; x <= groundRoom.Bounds.MaxX; x++)
                 {
                     var complete = true;
                     for (var floor = 1; floor <= targetFloor; floor++)
                     {
-                        if (!HasRoomAtColumn(topology.GetRoomsOnFloor(floor), type, x)) { complete = false; break; }
+                        if (!HasRoomAtColumn(topology.GetRoomsOnFloor(floor), type, x, operations)) { complete = false; break; }
                     }
                     if (complete) return x;
                 }
@@ -124,15 +132,20 @@ namespace OneRoof.Domain.Infrastructure
             return null;
         }
 
-        private static bool HasRoomAtColumn(IReadOnlyList<Room> rooms, ContentId type, int x)
+        private static bool HasRoomAtColumn(IReadOnlyList<Room> rooms, ContentId type, int x,
+            UtilityOperationsSnapshot operations)
         {
             for (var i = 0; i < rooms.Count; i++)
             {
                 var room = rooms[i];
-                if (room.ContentType == type && room.Bounds.MinX <= x && room.Bounds.MaxX >= x) return true;
+                if (room.ContentType == type && room.Bounds.MinX <= x && room.Bounds.MaxX >= x &&
+                    IsOperational(room, operations)) return true;
             }
             return false;
         }
+
+        private static bool IsOperational(Room room, UtilityOperationsSnapshot operations) =>
+            operations == null || !operations.IsFailed(room.Id.Value);
 
         private static WaterFailureReason DetermineWaterFailure(float pumpCapacity, bool hasRiser, float pressure)
         {

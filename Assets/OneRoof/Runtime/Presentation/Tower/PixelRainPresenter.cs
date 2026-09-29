@@ -50,10 +50,10 @@ namespace OneRoof.Presentation.Tower
         private const int MaxRoofDrips = 64;
         private const int MaxSplashes = 64;
         private const int MaxSnowFlakes = 128;
-        private const int MaxFogPuffs = 32;
+        private const int MaxFogPuffs = 8;
         private const int TotalQuads = MaxRainDrops + MaxRoofDrips + MaxSplashes + MaxSnowFlakes + MaxFogPuffs;
-        private const int TotalVertices = TotalQuads * 4;
-        private const int TotalIndices = TotalQuads * 6;
+        private const int TotalVertices = (TotalQuads * 4) + (MaxFogPuffs * 5);
+        private const int TotalIndices = (TotalQuads * 6) + (MaxFogPuffs * 18);
 
         private struct RainDrop
         {
@@ -780,30 +780,30 @@ namespace OneRoof.Presentation.Tower
 
                 var alpha = (byte)(puff.Opacity * 255f);
                 var fogColor = new Color32(210, 220, 230, alpha);
-                var s = puff.Size;
-                var p0 = new Vector3(puff.Position.x - s, puff.Position.y - s * 0.4f, -0.44f);
-                var p1 = new Vector3(puff.Position.x + s, puff.Position.y - s * 0.4f, -0.44f);
-                var p2 = new Vector3(puff.Position.x + s, puff.Position.y + s * 0.4f, -0.44f);
-                var p3 = new Vector3(puff.Position.x - s, puff.Position.y + s * 0.4f, -0.44f);
+                var center = vertexIndex;
+                var radiusX = puff.Size;
+                var radiusY = puff.Size * 0.55f;
+                _vertices[center] = new Vector3(puff.Position.x, puff.Position.y, -0.44f);
+                _colors[center] = fogColor;
 
-                _vertices[vertexIndex + 0] = p0;
-                _vertices[vertexIndex + 1] = p1;
-                _vertices[vertexIndex + 2] = p2;
-                _vertices[vertexIndex + 3] = p3;
-                _colors[vertexIndex + 0] = fogColor;
-                _colors[vertexIndex + 1] = fogColor;
-                _colors[vertexIndex + 2] = new Color32(fogColor.r, fogColor.g, fogColor.b, (byte)(alpha * 0.5f));
-                _colors[vertexIndex + 3] = new Color32(fogColor.r, fogColor.g, fogColor.b, (byte)(alpha * 0.5f));
+                const int ringSegments = 8;
+                for (var segment = 0; segment < ringSegments; segment++)
+                {
+                    var angle = (Mathf.PI * 2f * segment) / ringSegments;
+                    var ringVertex = center + 1 + segment;
+                    _vertices[ringVertex] = new Vector3(
+                        puff.Position.x + Mathf.Cos(angle) * radiusX,
+                        puff.Position.y + Mathf.Sin(angle) * radiusY,
+                        -0.44f);
+                    _colors[ringVertex] = new Color32(fogColor.r, fogColor.g, fogColor.b, 0);
 
-                _triangles[triangleIndex + 0] = vertexIndex + 0;
-                _triangles[triangleIndex + 1] = vertexIndex + 2;
-                _triangles[triangleIndex + 2] = vertexIndex + 1;
-                _triangles[triangleIndex + 3] = vertexIndex + 0;
-                _triangles[triangleIndex + 4] = vertexIndex + 3;
-                _triangles[triangleIndex + 5] = vertexIndex + 2;
+                    var nextRingVertex = center + 1 + ((segment + 1) % ringSegments);
+                    _triangles[triangleIndex++] = center;
+                    _triangles[triangleIndex++] = ringVertex;
+                    _triangles[triangleIndex++] = nextRingVertex;
+                }
 
-                vertexIndex += 4;
-                triangleIndex += 6;
+                vertexIndex += 1 + ringSegments;
             }
 
             // Zero remaining vertices to prevent ghost quads
@@ -984,8 +984,8 @@ namespace OneRoof.Presentation.Tower
                         puff.Position = new Vector2(
                             Mathf.Lerp(viewLeft, viewRight, RandomValue()),
                             camPos.y + Mathf.Lerp(-ortho, ortho, RandomValue()));
-                        puff.Opacity = Mathf.Lerp(0.05f, 0.15f, RandomValue());
-                        puff.Size = Mathf.Lerp(2.5f, 5.5f, RandomValue());
+                        puff.Opacity = Mathf.Lerp(0.02f, 0.045f, RandomValue());
+                        puff.Size = Mathf.Lerp(0.5f, 1f, RandomValue());
                         puff.DriftX = (_windSpeed * 0.1f) + (RandomValue() - 0.5f) * 0.1f;
                         puff.Active = true;
                         active++;
@@ -994,7 +994,7 @@ namespace OneRoof.Presentation.Tower
                 }
 
                 puff.Position.x += puff.DriftX * deltaTime;
-                puff.Opacity = Mathf.MoveTowards(puff.Opacity, _rainIntensity * 0.2f, deltaTime * 0.02f);
+                puff.Opacity = Mathf.MoveTowards(puff.Opacity, _rainIntensity * 0.1f, deltaTime * 0.02f);
 
                 if (puff.Position.x < viewLeft - puff.Size || puff.Position.x > viewRight + puff.Size)
                     puff.Active = false;

@@ -151,10 +151,12 @@ namespace OneRoof.Domain
         public float AverageElevatorWaitTicks => ElevatorBank.AverageWaitTicks;
 
         /// <summary>Immutable electrical state derived from the authoritative topology at the time of request.</summary>
-        public ElectricalGridSnapshot ElectricalGridSnapshot() => ElectricalGrid.Evaluate(Topology, Operations.BackupPowerCapacity);
+        public ElectricalGridSnapshot ElectricalGridSnapshot() =>
+            ElectricalGrid.Evaluate(Topology, Operations.BackupPowerCapacity, UtilityOperations.Snapshot(Topology));
 
         /// <summary>Immutable water pressure and gravity-waste collection state derived from the authoritative topology.</summary>
-        public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() => WaterWasteNetwork.Evaluate(Topology);
+        public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() =>
+            WaterWasteNetwork.Evaluate(Topology, UtilityOperations.Snapshot(Topology));
 
         /// <summary>Mutable operational condition of installed utility equipment, projected without Unity dependencies.</summary>
         public UtilityOperationsSnapshot UtilityOperationsSnapshot() => UtilityOperations.Snapshot(Topology);
@@ -585,19 +587,13 @@ namespace OneRoof.Domain
                         });
                     }
 
-                    if (!demoCmd.Force && contentVal.StartsWith("residential:"))
+                    if (HasResidentsOrTripsReferencingRoom(demoCmd.RoomId))
                     {
-                        var households = Population.Households;
-                        for (var i = 0; i < households.Count; i++)
+                        return CommandResult.Reject(new[]
                         {
-                            if (households[i].HomeRoomId.Equals(demoCmd.RoomId))
-                            {
-                                return CommandResult.Reject(new[]
-                                {
-                                    new CommandRejectionReason(new ContentId("demolish:occupied"), "Cannot demolish occupied apartment with active tenants.")
-                                });
-                            }
-                        }
+                            new CommandRejectionReason(new ContentId("demolish:occupied"),
+                                "Cannot demolish a room used as a resident's home or current location, or referenced by an active trip.")
+                        });
                     }
 
                     return Topology.CanExecute(demoCmd);
@@ -910,6 +906,7 @@ namespace OneRoof.Domain
                         Economy.RecordConstructionSalvage(salvageRefund);
                     }
                     Businesses.RemoveBusinessForRoom(cmd.RoomId);
+                    ReassignUnproductiveLegacyWorkers();
                     SyncTransitServices();
                 }
 
@@ -920,11 +917,57 @@ namespace OneRoof.Domain
             if (fallbackResult.Accepted)
             {
                 Businesses.RemoveBusinessForRoom(cmd.RoomId);
+                ReassignUnproductiveLegacyWorkers();
                 SyncTransitServices();
             }
 
             return fallbackResult;
         }
+
+        private bool HasResidentsOrTripsReferencingRoom(EntityId roomId)
+        {
+            var people = Population.Persons;
+            for (var i = 0; i < people.Count; i++)
+            {
+                var person = people[i];
+                if (person.HomeRoomId.Equals(roomId) ||
+                    (!person.CurrentLocation.IsOutside && person.CurrentLocation.RoomId.Equals(roomId)))
+                {
+                    return true;
+                }
+            }
+
+            var graph = Topology.TransitGraph;
+            var activeTrips = Transit.ActiveTrips;
+            for (var i = 0; i < activeTrips.Count; i++)
+            {
+                var trip = activeTrips[i].Trip;
+                if (LocationReferencesRoom(trip.Origin, roomId) || LocationReferencesRoom(trip.Destination, roomId))
+                    return true;
+
+                // A trip may use this room's portal as an intermediate corridor node,
+                // even when the room is neither its origin nor its destination.
+                var legs = activeTrips[i].Route?.Legs;
+                if (legs == null) continue;
+                for (var legIndex = 0; legIndex < legs.Count; legIndex++)
+                {
+                    if (NodeReferencesRoom(graph, legs[legIndex].FromNodeId, roomId) ||
+                        NodeReferencesRoom(graph, legs[legIndex].ToNodeId, roomId))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool LocationReferencesRoom(WorldLocation location, EntityId roomId) =>
+            !location.IsOutside && location.RoomId.Equals(roomId);
+
+        private static bool NodeReferencesRoom(HierarchicalTransitGraph graph, EntityId nodeId, EntityId roomId) =>
+            graph != null && graph.TryGetNode(nodeId, out var node) && node.RoomId.HasValue &&
+            node.RoomId.Value.Equals(roomId);
 
         public CommandResult AddElevatorCar(int capacity = 10, int startingFloor = 0)
         {

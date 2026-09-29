@@ -225,7 +225,7 @@ namespace OneRoof.Presentation.Tower
                     _backdrops[room.Id] = backdropPresenter;
 
                     var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
-                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide, _worldMaterial);
+                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
                     _furnishings[room.Id] = furnishingPresenter;
                 }
 
