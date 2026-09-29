@@ -105,6 +105,7 @@ namespace OneRoof.Presentation.Tower
             var groundStart = floorCount == 1;
             var defaultOrtho = groundStart ? 3.2f : Mathf.Max(6.8f, (floorCount + 1) * 1.15f);
             // At multi-floor scale leave a readable slice of city beyond the lobby.
+            ctrl.MaxOrthographicSize = Mathf.Max(22f, defaultOrtho);
             var defaultPos = new Vector3(groundStart ? -4.6f : 0.2f, centerY, -10f);
             ctrl.SetOverviewDefaults(defaultPos, defaultOrtho);
             ctrl.SetBounds(-20f, 20f,

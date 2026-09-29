@@ -170,7 +170,7 @@ namespace OneRoof.Presentation.Population
 
             if (shader != null)
             {
-                _sharedMaterial = new Material(shader) { name = "PooledNpc_SharedMaterial" };
+                _sharedMaterial = new Material(shader) { name = "PooledNpc_SharedMaterial", enableInstancing = true };
             }
 
             return _sharedMaterial;

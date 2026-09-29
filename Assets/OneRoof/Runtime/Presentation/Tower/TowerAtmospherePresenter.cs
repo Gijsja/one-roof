@@ -38,6 +38,7 @@ namespace OneRoof.Presentation.Tower
         private TowerTopologyProjection _syncedTopology;
         private int _syncedRoomCount = -1;
 
+        public float WindowLightStrength { get; set; } = 1f;
         public int RoomToneSourceCount => _roomTones.Count;
         public int WindowLightCount => _windowVolumes.Count;
         public IReadOnlyList<MeshRenderer> WindowLightRenderers => _windowLightRenderers;
@@ -86,6 +87,7 @@ namespace OneRoof.Presentation.Tower
 
             if (_dayNightBlock == null) _dayNightBlock = new MaterialPropertyBlock();
             var windowColor = Color.Lerp(new Color(0.75f, 0.85f, 1f, 0.08f), new Color(1f, 0.72f, 0.35f, 0.5f), night);
+            windowColor.a *= Mathf.Clamp01(WindowLightStrength);
             for (var i = 0; i < _windowLightRenderers.Count; i++)
             {
                 var renderer = _windowLightRenderers[i];

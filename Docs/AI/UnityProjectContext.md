@@ -93,3 +93,12 @@
 - Do not put Unity references in save data or the Domain assembly.
 
 <!-- unity-onboarding:generated:end -->
+
+## Gold-standard playground inspection — 2026-09-29
+
+- Confirmed against `555ea10` plus this task: Unity 6000.3.24f1, URP 17.3.0, Input System 1.20.0, Pipeline 0.7.0-exp.1. Domain and Application remain engine-free.
+- `Tower_GoldStandard30` is a separate development scene, absent from startup Build Settings. Its `GoldStandardPlayground` activates the scene's inactive `TowerPlayableController` in `GoldStandardCity` mode and instantiates an authored `GoldCityEnvironment` prefab.
+- `GoldStandardCityFixture` seeds 30 floors, 100 three-person homes, mixed-use services, three lifts, stairs and physical utilities at 07:30. Existing room props, resident pool, weather, overlays and commands remain in use.
+- `GoldStandardLevelBuilder.Build` generates meshes/materials/prefab/scene with Unity APIs. Environment source and provenance: `Art/SourceArt/Proposed/GoldCity/ASSET_SPEC.md`.
+- CLI discovery reported no Editor instances; no Unity MCP tools were exposed. Validation runs in `/home/geisha/.codex/worktrees/gold-city-validation/one-roof`, with graphics enabled for captures.
+- Exact save continuation remains unverified: the new city test exposed unpersisted schedule trip-ID state. See the task handoff for evidence, validation totals and limits.

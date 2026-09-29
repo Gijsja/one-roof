@@ -80,7 +80,7 @@ namespace OneRoof.Presentation.Population
                 ?? Shader.Find("Sprites/Default");
             if (shader != null)
             {
-                s_defaultSharedMaterial = new Material(shader) { name = "Npc_DefaultSharedMaterial" };
+                s_defaultSharedMaterial = new Material(shader) { name = "Npc_DefaultSharedMaterial", enableInstancing = true };
             }
             return s_defaultSharedMaterial;
         }

@@ -259,6 +259,38 @@ namespace OneRoof.Domain.Transit
             return false;
         }
 
+        public bool TryRemoveQueuedPassenger(EntityId personId, out ElevatorPassenger passenger)
+        {
+            foreach (var kvp in _floorQueues)
+            {
+                var queue = kvp.Value;
+                if (queue.Count == 0) continue;
+                ElevatorPassenger found = null;
+                var list = new List<ElevatorPassenger>(queue.Count);
+                while (queue.Count > 0)
+                {
+                    var p = queue.Dequeue();
+                    if (found == null && p.PersonId.Equals(personId))
+                    {
+                        found = p;
+                    }
+                    else
+                    {
+                        list.Add(p);
+                    }
+                }
+                foreach (var p in list) queue.Enqueue(p);
+                if (found != null)
+                {
+                    passenger = found;
+                    return true;
+                }
+            }
+
+            passenger = null;
+            return false;
+        }
+
         public void ClearDeliveredPassengers() => _deliveredPassengers.Clear();
 
         public void EnqueuePassenger(ElevatorPassenger passenger)

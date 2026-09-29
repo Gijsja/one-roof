@@ -18,6 +18,7 @@ namespace OneRoof.Presentation.Tower
     /// </summary>
     public sealed class BuildingExteriorPresenter
     {
+        public float WindowLightStrength { get; set; } = 1f;
         public const float WallThickness = 0.36f;
         public const float CladdingThickness = 0.08f;
         public const float SpandrelProtrusion = 0.06f;
@@ -1028,6 +1029,7 @@ namespace OneRoof.Presentation.Tower
                 {
                     var targetNightCone = isOccupied ? ConeNightLitColor : ConeNightDarkColor;
                     var currentConeColor = Color.Lerp(ConeDayColor, targetNightCone, smoothNight);
+                    currentConeColor.a *= Mathf.Clamp01(WindowLightStrength);
                     SetColor(entry.ConeRenderer, currentConeColor);
                 }
             }

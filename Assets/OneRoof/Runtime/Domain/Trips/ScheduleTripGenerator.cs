@@ -24,6 +24,7 @@ namespace OneRoof.Domain.Trips
         private BuildingTopology _topology;
         private HierarchicalTransitGraph _graph;
         private TransitRoutePlanner _planner;
+        private TransitRoutePlanner _stairsPlanner;
         private Room[] _foodRooms;
         private Room[] _lobbyRooms;
         private readonly Dictionary<EntityId, long> _failedRouteCooldowns = new Dictionary<EntityId, long>();
@@ -45,6 +46,7 @@ namespace OneRoof.Domain.Trips
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
             RebuildRoomCandidates();
+            RebuildStairsPlanner();
 
             if (firstTripId <= 0)
             {
@@ -60,6 +62,23 @@ namespace OneRoof.Domain.Trips
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
             RebuildRoomCandidates();
+            RebuildStairsPlanner();
+        }
+
+        private void RebuildStairsPlanner()
+        {
+            if (_graph == null)
+            {
+                _stairsPlanner = null;
+                return;
+            }
+            var nonElevatorEdges = new List<TransitEdge>(_graph.Edges.Count);
+            foreach (var edge in _graph.Edges)
+            {
+                if (edge.Mode != TransitMode.Elevator) nonElevatorEdges.Add(edge);
+            }
+            var stairsGraph = new HierarchicalTransitGraph(_graph.Nodes, nonElevatorEdges);
+            _stairsPlanner = new TransitRoutePlanner(stairsGraph);
         }
 
         /// <summary>
@@ -178,7 +197,15 @@ namespace OneRoof.Domain.Trips
             TransitRoute route = null;
             if (originNode != null && destNode != null && !origin.Equals(destination))
             {
-                route = _planner.FindRoute(originNode.Id, destNode.Id);
+                if (Math.Abs(originNode.Floor - destNode.Floor) <= 2 && _stairsPlanner != null)
+                {
+                    route = _stairsPlanner.FindRoute(originNode.Id, destNode.Id);
+                }
+
+                if (route == null)
+                {
+                    route = _planner.FindRoute(originNode.Id, destNode.Id);
+                }
             }
 
             if (route == null && !origin.Equals(destination)) return null;

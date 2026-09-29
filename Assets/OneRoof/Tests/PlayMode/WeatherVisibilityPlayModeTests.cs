@@ -35,6 +35,19 @@ namespace OneRoof.Tests.PlayMode
                 var output = "/tmp/one-roof-rain-visibility";
                 Directory.CreateDirectory(output);
                 controller.SetWeatherOverride(0);
+                // Compare weather against a settled room, not its 0.55-second construction
+                // transition. A fixed 0.5-second wait can count the later backdrop/material
+                // restoration as fog coverage, depending on the renderer's frame timing.
+                var constructionDeadline = Time.realtimeSinceStartup + 3f;
+                foreach (var transition in holder.GetComponentsInChildren<VisualEffectsPresenter>())
+                {
+                    while (transition != null && transition.IsTransitioning)
+                    {
+                        Assert.That(Time.realtimeSinceStartup, Is.LessThan(constructionDeadline),
+                            "Room construction must settle before the weather reference capture.");
+                        yield return null;
+                    }
+                }
                 yield return new WaitForSeconds(0.5f);
                 var clearPixels = Capture(camera, Path.Combine(output, "clear.png"));
 

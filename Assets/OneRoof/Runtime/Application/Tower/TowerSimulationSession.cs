@@ -66,6 +66,15 @@ namespace OneRoof.Application.Tower
             return new TowerSimulationSession(TowerSimulation.CreateGroundFloorStart(startingTreasury));
         }
 
+        public static TowerSimulationSession CreateGoldStandardCity() => new TowerSimulationSession(GoldStandardCityFixture.Create());
+
+        public void ResetToGoldStandardCity()
+        {
+            _simulation = GoldStandardCityFixture.Create();
+            InvalidateUndergroundUtilityPathCache();
+            BumpVersion(topologyChanged: true);
+        }
+
         public long CurrentTick => _simulation.CurrentTick;
 
         /// <summary>Monotonic revision for every accepted simulation mutation and tick.</summary>

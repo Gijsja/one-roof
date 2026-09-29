@@ -119,48 +119,6 @@ Shader "OneRoof/Unlit"
             #pragma shader_feature_local_fragment _ALPHATEST_ON
             ENDHLSL
         }
-
-        Pass
-        {
-            Name "UniversalForward"
-            Tags { "LightMode" = "UniversalForward" }
-
-            HLSLPROGRAM
-            #pragma target 2.0
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma shader_feature_local_fragment _ALPHATEST_ON
-            ENDHLSL
-        }
-
-        Pass
-        {
-            Name "UniversalForwardOnly"
-            Tags { "LightMode" = "UniversalForwardOnly" }
-
-            HLSLPROGRAM
-            #pragma target 2.0
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma shader_feature_local_fragment _ALPHATEST_ON
-            ENDHLSL
-        }
-
-        Pass
-        {
-            Name "Universal2D"
-            Tags { "LightMode" = "Universal2D" }
-
-            HLSLPROGRAM
-            #pragma target 2.0
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma shader_feature_local_fragment _ALPHATEST_ON
-            ENDHLSL
-        }
     }
     Fallback Off
 }

@@ -355,10 +355,21 @@ namespace OneRoof.Domain.Transit
                 {
                     if (fromNode != null && toNode != null)
                     {
-                        var totalDistance = Math.Max(1, Math.Abs(toNode.Location.X - fromNode.Location.X));
-                        var progress = 1f - ((float)execution.LegRemainingTicks / totalDistance);
-                        execution.CurrentFloor = fromNode.Floor;
-                        execution.CurrentX = fromNode.Location.X + (toNode.Location.X - fromNode.Location.X) * Math.Clamp(progress, 0f, 1f);
+                        if (fromNode.Floor != toNode.Floor)
+                        {
+                            var totalTicks = Math.Max(1, leg.Cost);
+                            var progress = Math.Clamp(1f - ((float)execution.LegRemainingTicks / totalTicks), 0f, 1f);
+                            execution.CurrentFloor = progress < 0.5f ? fromNode.Floor : toNode.Floor;
+                            var lateralOffset = (float)Math.Sin(progress * Math.PI) * 0.5f;
+                            execution.CurrentX = fromNode.Location.X - lateralOffset;
+                        }
+                        else
+                        {
+                            var totalDistance = Math.Max(1, Math.Abs(toNode.Location.X - fromNode.Location.X));
+                            var progress = 1f - ((float)execution.LegRemainingTicks / totalDistance);
+                            execution.CurrentFloor = fromNode.Floor;
+                            execution.CurrentX = fromNode.Location.X + (toNode.Location.X - fromNode.Location.X) * Math.Clamp(progress, 0f, 1f);
+                        }
                     }
 
                     if (execution.LegRemainingTicks > 0)
@@ -384,10 +395,18 @@ namespace OneRoof.Domain.Transit
                         continue;
                     }
 
+                    var originFloor = fromNode?.Floor ?? 0;
+                    var destFloor = toNode?.Floor ?? 0;
+                    var floorDelta = Math.Abs(destFloor - originFloor);
+                    var queueLength = elevatorBank.GetQueueLength(originFloor);
+
                     if (!execution.IsQueuedInElevator && !execution.IsRidingElevator)
                     {
-                        var originFloor = fromNode?.Floor ?? 0;
-                        var destFloor = toNode?.Floor ?? 0;
+                        if (((floorDelta <= 2 && queueLength > 0) || queueLength >= 3) &&
+                            TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                        {
+                            continue;
+                        }
 
                         var passenger = new ElevatorPassenger(trip.PersonId, originFloor, destFloor);
                         elevatorBank.EnqueuePassenger(passenger);
@@ -410,6 +429,19 @@ namespace OneRoof.Domain.Transit
                             execution.IsQueuedInElevator = false;
                             execution.IsRidingElevator = false;
                             AdvanceLeg(i, execution, tick, person, onTripCompleted);
+                        }
+                        else if (trip.WaitTicks >= 15 || (floorDelta <= 2 && trip.WaitTicks >= 5))
+                        {
+                            if (elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var waiting))
+                            {
+                                trip.AddWaitTicks((int)waiting.WaitTicks);
+                                if (TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                                {
+                                    continue;
+                                }
+
+                                elevatorBank.EnqueuePassenger(waiting);
+                            }
                         }
                     }
                     else if (execution.IsRidingElevator)

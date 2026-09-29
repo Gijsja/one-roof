@@ -17,11 +17,12 @@ using UnityEngine;
 
 namespace OneRoof.Presentation.Tower
 {
-    /// <summary>Which simulation the scene boots: the five-floor first-playable fixture or a from-scratch ground floor.</summary>
+    /// <summary>Which simulation the scene boots: first-playable, ground start, or the city-scale playground.</summary>
     public enum TowerStartMode
     {
         StandardFiveFloor = 0,
-        GroundFloorStart = 1
+        GroundFloorStart = 1,
+        GoldStandardCity = 2
     }
 
     /// <summary>Presentation coordinator routing projection snapshots to four deep presenters.</summary>
@@ -94,6 +95,7 @@ namespace OneRoof.Presentation.Tower
         public bool IsAutoWeather => _weatherOverride < 0;
         public string WeatherModeDescription => _weatherOverride < 0 ? $"{_currentWeather.Description} (Auto)" : $"{_currentWeather.Description} (Manual)";
         public TowerStartMode StartMode => _startMode;
+        public bool IsGoldStandardCity => _startMode == TowerStartMode.GoldStandardCity;
         public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
         public ManagementOnboarding Onboarding => _onboarding;
@@ -101,13 +103,14 @@ namespace OneRoof.Presentation.Tower
         public void Initialize()
         {
             if (_sim != null) return;
-            _sim = IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
+            _sim = IsGoldStandardCity ? TowerSimulationSession.CreateGoldStandardCity() :
+                IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
             // Seed weather from world hash for determinism per save
-            var worldSeed = (ulong)(uint)_sim.GetHashCode();
+            var worldSeed = IsGoldStandardCity ? OneRoof.Domain.Topology.GoldStandardCityFixture.Seed : (ulong)(uint)_sim.GetHashCode();
             if (worldSeed == 0) worldSeed = 0xDEADBEEFCAFEUL;
             _weatherCycle = new MonthlyWeatherCycle(worldSeed);
             _lastWeatherSampleTick = -1; // force re-sample on first frame
-            if (!IsGroundStart) SeedMorningRush();
+            if (!IsGroundStart && !IsGoldStandardCity) SeedMorningRush();
             _mode = new ModeShellSession();
             _dataOverlays = new TowerDataOverlays(_sim); _predictor = new ElevatorPlacementPredictor();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
@@ -179,14 +182,28 @@ namespace OneRoof.Presentation.Tower
 
         private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); _outside?.Clear(); _exterior.Dispose(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
+        private bool _needsVisualSnapshot = true;
+
         private void Update()
         {
             if (!UnityEngine.Application.isPlaying) return;
             if (_sim == null) Initialize();
             HandleKeyboard();
-            if (!_isPaused && (_tickAcc += Time.deltaTime) >= _tickInterval) { _tickAcc -= _tickInterval; _sim.AdvanceOneTick(); }
-            UpdateOverlayAndPredictions();
-            RenderVisualSnapshot();
+            var tickAdvanced = false;
+            if (!_isPaused && (_tickAcc += Time.deltaTime) >= _tickInterval)
+            {
+                _tickAcc -= _tickInterval;
+                _sim.AdvanceOneTick();
+                tickAdvanced = true;
+            }
+
+            if (tickAdvanced || _needsVisualSnapshot)
+            {
+                UpdateOverlayAndPredictions();
+            }
+
+            RenderVisualSnapshot(tickAdvanced || _needsVisualSnapshot);
+            _needsVisualSnapshot = false;
         }
 
         private void InitSubcomponents()
@@ -260,7 +277,7 @@ namespace OneRoof.Presentation.Tower
             var maxFloor = _sim?.ElevatorMaxFloor ?? (fl - 1);
             _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
             _lastUndergroundCrewVersion = -1;
-            if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
+            if (!IsGoldStandardCity && topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _pixelRain?.SyncTopology(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
             if (_utilitiesNetworkLayer != null && _utilitiesNetworkLayer.IsVisible && _dataOverlays != null) UpdateUtilitiesOverlay(topo);
@@ -371,7 +388,7 @@ namespace OneRoof.Presentation.Tower
 
         public void ResetCommuteSimulation()
         {
-            if (IsGroundStart) _sim.ResetToGroundFloorStart(); else { _sim.Reset(); SeedMorningRush(); }
+            if (IsGoldStandardCity) _sim.ResetToGoldStandardCity(); else if (IsGroundStart) _sim.ResetToGroundFloorStart(); else { _sim.Reset(); SeedMorningRush(); }
             _dataOverlays = new TowerDataOverlays(_sim);
             _lastUtilityNetworkOverlay = null;
             _lastUtilityNetworkTopology = null;
@@ -390,6 +407,10 @@ namespace OneRoof.Presentation.Tower
             _pixelRain?.Initialize(camera);
             SyncPresenterGeometry();
             _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection());
+            // The authored city is already built; finish startup fades before its first frame.
+            // Subsequent room placements still use the normal construction transition.
+            if (IsGoldStandardCity)
+                foreach (var effect in GetComponentsInChildren<VisualEffectsPresenter>()) effect.Advance(1f);
         }
         private Camera UpdateCamera(bool resetView = false) =>
             TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
@@ -446,16 +467,28 @@ namespace OneRoof.Presentation.Tower
             _pixelRain?.SetWeather(_currentWeather);
         }
 
-        private void RenderVisualSnapshot() { var projection = _sim.Projection();
-            if (_lastUndergroundCrewVersion != _sim.Version)
+        private void RenderVisualSnapshot(bool tickAdvanced)
+        {
+            var projection = _sim.Projection();
+            if (tickAdvanced)
             {
-                _exterior.SyncUndergroundCrew(_sim.UndergroundOperationsProjection());
-                _lastUndergroundCrewVersion = _sim.Version;
+                if (_lastUndergroundCrewVersion != _sim.Version)
+                {
+                    _exterior.SyncUndergroundCrew(_sim.UndergroundOperationsProjection());
+                    _lastUndergroundCrewVersion = _sim.Version;
+                }
+                _room.UpdateHousingConditions(_sim.HousingProjection());
+                _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection());
+                _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount);
+                _outside?.UpdateLighting(_sim.DayPhase);
+                _exterior.UpdateLighting(_sim.DayPhase);
+                UpdateActiveWeather();
+                _pixelRain?.UpdateLighting(_sim.DayPhase);
             }
             _elevator.UpdateElevatorPositions(projection);
             _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator,
                 _exterior.VisibleUndergroundCrewResidentIds);
-            _room.UpdateHousingConditions(_sim.HousingProjection()); _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection()); _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount); _outside?.UpdateLighting(_sim.DayPhase); _exterior.UpdateLighting(_sim.DayPhase); UpdateActiveWeather(); _pixelRain?.UpdateLighting(_sim.DayPhase); _pixelRain?.UpdateWeather(Time.deltaTime);
+            _pixelRain?.UpdateWeather(Time.deltaTime);
             _exterior.AnimateUndergroundCrew(Time.time);
         }
         private static Material CreateWorldMaterial()
