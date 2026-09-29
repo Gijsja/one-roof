@@ -149,9 +149,14 @@ namespace OneRoof.Presentation.Tests.EditMode
             var block = new MaterialPropertyBlock();
             view.LeftTread.GetPropertyBlock(block);
             var color = block.GetColor("_BaseColor");
-            Assert.That(color.r, Is.EqualTo(parquet.SurfaceColor.r).Within(0.01f));
-            Assert.That(color.g, Is.EqualTo(parquet.SurfaceColor.g).Within(0.01f));
-            Assert.That(color.b, Is.EqualTo(parquet.SurfaceColor.b).Within(0.01f));
+            Assert.That(color, Is.EqualTo(Color.white), "Theme color is baked into the surface texture and must not tint it a second time.");
+            Assert.That(block.GetTexture("_BaseMap"), Is.SameAs(FloorThemeCatalog.GetOrLoadSurfaceSprite(parquet).texture));
+
+            view.LeftCore.GetPropertyBlock(block);
+            var coreColor = block.GetColor("_BaseColor");
+            Assert.That(coreColor.r, Is.EqualTo(parquet.CoreColor.r).Within(0.01f));
+            Assert.That(coreColor.g, Is.EqualTo(parquet.CoreColor.g).Within(0.01f));
+            Assert.That(coreColor.b, Is.EqualTo(parquet.CoreColor.b).Within(0.01f));
         }
 
         [Test]

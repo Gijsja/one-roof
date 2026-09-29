@@ -38,6 +38,9 @@ namespace OneRoof.Presentation.Tower
         private GameObject _leftWing;
         private GameObject _rightWing;
         private GameObject _continuousCenter;
+        private MeshRenderer _continuousTread;
+        private MeshRenderer _continuousCore;
+        private MeshRenderer _continuousSoffit;
 
         // Left Wing Renderers
         private MeshRenderer _leftTread;
@@ -113,7 +116,7 @@ namespace OneRoof.Presentation.Tower
                     var width = ShaftLeft - worldLeft;
                     var centerX = (worldLeft + ShaftLeft) * 0.5f;
 
-                    UpdateSegment(_leftTread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), _theme.SurfaceColor, TreadSortingOrder);
+                    UpdateSegment(_leftTread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), Color.white, TreadSortingOrder, GetSurfaceTexture());
                     UpdateSegment(_leftCore, new Vector3(centerX, coreY, CoreZ), new Vector2(width, coreH), _theme.CoreColor, CoreSortingOrder);
                     UpdateSegment(_leftSoffit, new Vector3(centerX, soffitY, SoffitZ), new Vector2(width, soffitH), _theme.SoffitColor, SoffitSortingOrder);
 
@@ -138,7 +141,7 @@ namespace OneRoof.Presentation.Tower
                     var width = worldRight - ShaftRight;
                     var centerX = (ShaftRight + worldRight) * 0.5f;
 
-                    UpdateSegment(_rightTread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), _theme.SurfaceColor, TreadSortingOrder);
+                    UpdateSegment(_rightTread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), Color.white, TreadSortingOrder, GetSurfaceTexture());
                     UpdateSegment(_rightCore, new Vector3(centerX, coreY, CoreZ), new Vector2(width, coreH), _theme.CoreColor, CoreSortingOrder);
                     UpdateSegment(_rightSoffit, new Vector3(centerX, soffitY, SoffitZ), new Vector2(width, soffitH), _theme.SoffitColor, SoffitSortingOrder);
 
@@ -165,13 +168,9 @@ namespace OneRoof.Presentation.Tower
 
                 var width = worldRight - worldLeft;
                 var centerX = (worldLeft + worldRight) * 0.5f;
-                var tread = _continuousCenter.transform.Find("Tread")?.GetComponent<MeshRenderer>();
-                var core = _continuousCenter.transform.Find("Core")?.GetComponent<MeshRenderer>();
-                var soffit = _continuousCenter.transform.Find("Soffit")?.GetComponent<MeshRenderer>();
-
-                UpdateSegment(tread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), _theme.SurfaceColor, TreadSortingOrder);
-                UpdateSegment(core, new Vector3(centerX, coreY, CoreZ), new Vector2(width, coreH), _theme.CoreColor, CoreSortingOrder);
-                UpdateSegment(soffit, new Vector3(centerX, soffitY, SoffitZ), new Vector2(width, soffitH), _theme.SoffitColor, SoffitSortingOrder);
+                UpdateSegment(_continuousTread, new Vector3(centerX, treadY, TreadZ), new Vector2(width, treadH), Color.white, TreadSortingOrder, GetSurfaceTexture());
+                UpdateSegment(_continuousCore, new Vector3(centerX, coreY, CoreZ), new Vector2(width, coreH), _theme.CoreColor, CoreSortingOrder);
+                UpdateSegment(_continuousSoffit, new Vector3(centerX, soffitY, SoffitZ), new Vector2(width, soffitH), _theme.SoffitColor, SoffitSortingOrder);
             }
         }
 
@@ -179,17 +178,21 @@ namespace OneRoof.Presentation.Tower
         {
             if (_theme == null) return;
 
-            SetRendererColor(_leftTread, _theme.SurfaceColor);
+            SetRendererColor(_leftTread, Color.white, GetSurfaceTexture());
             SetRendererColor(_leftCore, _theme.CoreColor);
             SetRendererColor(_leftSoffit, _theme.SoffitColor);
             SetRendererColor(_leftSill, _theme.ThresholdTrimColor);
             SetRendererColor(_leftFascia, _theme.ExteriorFasciaColor);
 
-            SetRendererColor(_rightTread, _theme.SurfaceColor);
+            SetRendererColor(_rightTread, Color.white, GetSurfaceTexture());
             SetRendererColor(_rightCore, _theme.CoreColor);
             SetRendererColor(_rightSoffit, _theme.SoffitColor);
             SetRendererColor(_rightSill, _theme.ThresholdTrimColor);
             SetRendererColor(_rightFascia, _theme.ExteriorFasciaColor);
+
+            SetRendererColor(_continuousTread, Color.white, GetSurfaceTexture());
+            SetRendererColor(_continuousCore, _theme.CoreColor);
+            SetRendererColor(_continuousSoffit, _theme.SoffitColor);
         }
 
         private void EnsureLeftWing()
@@ -224,9 +227,9 @@ namespace OneRoof.Presentation.Tower
             _continuousCenter = new GameObject("ContinuousDeck");
             _continuousCenter.transform.SetParent(transform, false);
 
-            CreateSubQuad("Tread", _continuousCenter.transform);
-            CreateSubQuad("Core", _continuousCenter.transform);
-            CreateSubQuad("Soffit", _continuousCenter.transform);
+            _continuousTread = CreateSubQuad("Tread", _continuousCenter.transform);
+            _continuousCore = CreateSubQuad("Core", _continuousCenter.transform);
+            _continuousSoffit = CreateSubQuad("Soffit", _continuousCenter.transform);
         }
 
         private MeshRenderer CreateSubQuad(string name, Transform parent)
@@ -247,17 +250,22 @@ namespace OneRoof.Presentation.Tower
             return renderer;
         }
 
-        private void UpdateSegment(MeshRenderer renderer, Vector3 localPos, Vector2 size, Color color, int sortingOrder)
+        private Texture GetSurfaceTexture()
+        {
+            return _theme != null ? FloorThemeCatalog.GetOrLoadSurfaceSprite(_theme)?.texture : null;
+        }
+
+        private void UpdateSegment(MeshRenderer renderer, Vector3 localPos, Vector2 size, Color color, int sortingOrder, Texture texture = null)
         {
             if (renderer == null) return;
             var t = renderer.transform;
             t.localPosition = localPos;
             t.localScale = new Vector3(Mathf.Max(0.001f, size.x), Mathf.Max(0.001f, size.y), 1f);
             renderer.sortingOrder = sortingOrder;
-            SetRendererColor(renderer, color);
+            SetRendererColor(renderer, color, texture);
         }
 
-        private void SetRendererColor(MeshRenderer renderer, Color color)
+        private void SetRendererColor(MeshRenderer renderer, Color color, Texture texture = null)
         {
             if (renderer == null || _worldMaterial == null) return;
             renderer.sharedMaterial = _worldMaterial;
@@ -266,6 +274,9 @@ namespace OneRoof.Presentation.Tower
             _colorBlock.Clear();
             _colorBlock.SetColor("_BaseColor", color);
             _colorBlock.SetColor("_Color", color);
+            var surfaceTexture = texture != null ? texture : Texture2D.whiteTexture;
+            _colorBlock.SetTexture("_BaseMap", surfaceTexture);
+            _colorBlock.SetTexture("_MainTex", surfaceTexture);
             renderer.SetPropertyBlock(_colorBlock);
         }
     }

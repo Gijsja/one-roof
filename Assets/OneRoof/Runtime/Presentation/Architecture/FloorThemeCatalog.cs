@@ -20,6 +20,7 @@ namespace OneRoof.Presentation.Architecture
 
         private static readonly Dictionary<string, FloorTheme> Themes = new Dictionary<string, FloorTheme>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Sprite> SpriteCache = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<Sprite> GeneratedSprites = new HashSet<Sprite>();
 
         static FloorThemeCatalog()
         {
@@ -156,7 +157,8 @@ namespace OneRoof.Presentation.Architecture
             {
                 if (room == null) continue;
                 var contentType = room.ContentType.Value ?? "";
-                if (contentType.Contains("elevator_shaft") || contentType.Contains("stairwell"))
+                if (contentType.IndexOf("elevator_shaft", StringComparison.OrdinalIgnoreCase) >= 0
+                    || contentType.IndexOf("stairwell", StringComparison.OrdinalIgnoreCase) >= 0)
                     continue;
 
                 var theme = MapContentTypeToTheme(contentType);
@@ -201,6 +203,7 @@ namespace OneRoof.Presentation.Architecture
 
             var fallback = CreateProceduralSurfaceSprite(theme);
             SpriteCache[key] = fallback;
+            GeneratedSprites.Add(fallback);
             return fallback;
         }
 
@@ -307,6 +310,22 @@ namespace OneRoof.Presentation.Architecture
 
         public static void ClearCache()
         {
+            foreach (var sprite in GeneratedSprites)
+            {
+                if (sprite == null) continue;
+                var texture = sprite.texture;
+                if (Application.isPlaying)
+                {
+                    UnityEngine.Object.Destroy(sprite);
+                    if (texture != null) UnityEngine.Object.Destroy(texture);
+                }
+                else
+                {
+                    UnityEngine.Object.DestroyImmediate(sprite);
+                    if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
+                }
+            }
+            GeneratedSprites.Clear();
             SpriteCache.Clear();
             Themes.Clear();
             RegisterDefaultThemes();
