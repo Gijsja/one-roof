@@ -49,7 +49,9 @@ namespace OneRoof.Presentation.Tower
         private const int MaxRainDrops = 384;
         private const int MaxRoofDrips = 64;
         private const int MaxSplashes = 64;
-        private const int TotalQuads = MaxRainDrops + MaxRoofDrips + MaxSplashes;
+        private const int MaxSnowFlakes = 128;
+        private const int MaxFogPuffs = 32;
+        private const int TotalQuads = MaxRainDrops + MaxRoofDrips + MaxSplashes + MaxSnowFlakes + MaxFogPuffs;
         private const int TotalVertices = TotalQuads * 4;
         private const int TotalIndices = TotalQuads * 6;
 
@@ -81,9 +83,29 @@ namespace OneRoof.Presentation.Tower
             public bool Active;
         }
 
+        private struct SnowFlake
+        {
+            public Vector2 Position;
+            public Vector2 Velocity;
+            public float Size;
+            public float SwayPhase;
+            public bool Active;
+        }
+
+        private struct FogPuff
+        {
+            public Vector2 Position;
+            public float Opacity;
+            public float Size;
+            public float DriftX;
+            public bool Active;
+        }
+
         private readonly RainDrop[] _rainDrops = new RainDrop[MaxRainDrops];
         private readonly RoofDrip[] _roofDrips = new RoofDrip[MaxRoofDrips];
         private readonly SplashParticle[] _splashes = new SplashParticle[MaxSplashes];
+        private readonly SnowFlake[] _snowFlakes = new SnowFlake[MaxSnowFlakes];
+        private readonly FogPuff[] _fogPuffs = new FogPuff[MaxFogPuffs];
         private readonly List<RoofEave> _roofEaves = new List<RoofEave>();
         private readonly float[] _eaveDripTimers = new float[MaxRoofDrips];
 
@@ -125,6 +147,8 @@ namespace OneRoof.Presentation.Tower
         public int ActiveDropCount { get; private set; }
         public int ActiveDripCount { get; private set; }
         public int ActiveSplashCount { get; private set; }
+        public int ActiveSnowFlakeCount { get; private set; }
+        public int ActiveFogPuffCount { get; private set; }
         public int RoofEaveCount => _roofEaves.Count;
         public IReadOnlyList<RoofEave> RoofEaves => _roofEaves;
         public AudioSource RainAudioSource => _rainSource;
@@ -181,6 +205,8 @@ namespace OneRoof.Presentation.Tower
                 WeatherCondition.Drizzle => 0.25f,
                 WeatherCondition.Rain => 0.65f,
                 WeatherCondition.Storm => 1.0f,
+                WeatherCondition.Fog => 0.40f,
+                WeatherCondition.Snow => 0.50f,
                 _ => 0f
             };
 
@@ -200,6 +226,14 @@ namespace OneRoof.Presentation.Tower
             {
                 _windSpeed = -0.9f;
             }
+            else if (_condition == WeatherCondition.Snow)
+            {
+                _windSpeed = (RandomValue() - 0.5f) * 0.3f; // gentle random snow drift
+            }
+            else if (_condition == WeatherCondition.Fog)
+            {
+                _windSpeed = 0f;
+            }
         }
 
         public void UpdateWeather(float deltaTime)
@@ -209,9 +243,10 @@ namespace OneRoof.Presentation.Tower
             // Smoothly ramp rain intensity
             _rainIntensity = Mathf.MoveTowards(_rainIntensity, _targetIntensity, deltaTime * 0.5f);
 
-            UpdateAudioVolume();
+            UpdateAudioVolume(deltaTime);
 
-            if (_rainIntensity <= 0.001f && ActiveDropCount == 0 && ActiveDripCount == 0 && ActiveSplashCount == 0)
+            if (_rainIntensity <= 0.001f && ActiveDropCount == 0 && ActiveDripCount == 0 && ActiveSplashCount == 0
+                && ActiveSnowFlakeCount == 0 && ActiveFogPuffCount == 0)
             {
                 if (_meshRenderer != null && _meshRenderer.enabled) _meshRenderer.enabled = false;
                 return;
@@ -222,6 +257,10 @@ namespace OneRoof.Presentation.Tower
             UpdateRainDrops(deltaTime);
             UpdateRoofDrips(deltaTime);
             UpdateSplashes(deltaTime);
+            if (_condition == WeatherCondition.Snow) UpdateSnowFlakes(deltaTime);
+            else { DeactivateSnowFlakes(); }
+            if (_condition == WeatherCondition.Fog) UpdateFogPuffs(deltaTime);
+            else { DeactivateFogPuffs(); }
             RebuildMeshGeometry();
         }
 
@@ -274,9 +313,13 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < MaxRainDrops; i++) _rainDrops[i].Active = false;
             for (var i = 0; i < MaxRoofDrips; i++) _roofDrips[i].Active = false;
             for (var i = 0; i < MaxSplashes; i++) _splashes[i].Active = false;
+            for (var i = 0; i < MaxSnowFlakes; i++) _snowFlakes[i].Active = false;
+            for (var i = 0; i < MaxFogPuffs; i++) _fogPuffs[i].Active = false;
             ActiveDropCount = 0;
             ActiveDripCount = 0;
             ActiveSplashCount = 0;
+            ActiveSnowFlakeCount = 0;
+            ActiveFogPuffCount = 0;
             _roofEaves.Clear();
 
             if (_proceduralMesh != null)
@@ -353,6 +396,14 @@ namespace OneRoof.Presentation.Tower
 
         private void UpdateRainDrops(float deltaTime)
         {
+            // Snow and Fog do not spawn rain drops
+            if (_condition == WeatherCondition.Snow || _condition == WeatherCondition.Fog)
+            {
+                for (var i = 0; i < MaxRainDrops; i++) _rainDrops[i].Active = false;
+                ActiveDropCount = 0;
+                return;
+            }
+
             var targetDrops = Mathf.RoundToInt(_rainIntensity * MaxRainDrops);
             var streetY = TowerStructurePresenter.FloorY(0) - 0.70f;
             var camPos = _camera != null ? _camera.transform.position : new Vector3(0f, 3.5f, -10f);
@@ -422,6 +473,12 @@ namespace OneRoof.Presentation.Tower
 
         private void UpdateRoofDrips(float deltaTime)
         {
+            if (_condition == WeatherCondition.Snow || _condition == WeatherCondition.Fog)
+            {
+                ActiveDripCount = 0;
+                return;
+            }
+
             var eaveCount = _roofEaves.Count;
             if (eaveCount == 0 || _rainIntensity <= 0.05f)
             {
@@ -682,21 +739,90 @@ namespace OneRoof.Presentation.Tower
                 triangleIndex += 6;
             }
 
+            // 4. Pack Snow Flakes
+            var snowColor = Color32.Lerp(new Color32(230, 240, 255, 210), new Color32(180, 200, 230, 150), _nightFactor);
+            for (var i = 0; i < MaxSnowFlakes; i++)
+            {
+                ref var flake = ref _snowFlakes[i];
+                if (!flake.Active) continue;
+
+                var s = flake.Size;
+                var p0 = new Vector3(flake.Position.x - s * 0.5f, flake.Position.y - s * 0.5f, -0.45f);
+                var p1 = new Vector3(flake.Position.x + s * 0.5f, flake.Position.y - s * 0.5f, -0.45f);
+                var p2 = new Vector3(flake.Position.x + s * 0.5f, flake.Position.y + s * 0.5f, -0.45f);
+                var p3 = new Vector3(flake.Position.x - s * 0.5f, flake.Position.y + s * 0.5f, -0.45f);
+
+                _vertices[vertexIndex + 0] = p0;
+                _vertices[vertexIndex + 1] = p1;
+                _vertices[vertexIndex + 2] = p2;
+                _vertices[vertexIndex + 3] = p3;
+                _colors[vertexIndex + 0] = snowColor;
+                _colors[vertexIndex + 1] = snowColor;
+                _colors[vertexIndex + 2] = snowColor;
+                _colors[vertexIndex + 3] = snowColor;
+
+                _triangles[triangleIndex + 0] = vertexIndex + 0;
+                _triangles[triangleIndex + 1] = vertexIndex + 2;
+                _triangles[triangleIndex + 2] = vertexIndex + 1;
+                _triangles[triangleIndex + 3] = vertexIndex + 0;
+                _triangles[triangleIndex + 4] = vertexIndex + 3;
+                _triangles[triangleIndex + 5] = vertexIndex + 2;
+
+                vertexIndex += 4;
+                triangleIndex += 6;
+            }
+
+            // 5. Pack Fog Puffs
+            for (var i = 0; i < MaxFogPuffs; i++)
+            {
+                ref var puff = ref _fogPuffs[i];
+                if (!puff.Active) continue;
+
+                var alpha = (byte)(puff.Opacity * 255f);
+                var fogColor = new Color32(210, 220, 230, alpha);
+                var s = puff.Size;
+                var p0 = new Vector3(puff.Position.x - s, puff.Position.y - s * 0.4f, -0.44f);
+                var p1 = new Vector3(puff.Position.x + s, puff.Position.y - s * 0.4f, -0.44f);
+                var p2 = new Vector3(puff.Position.x + s, puff.Position.y + s * 0.4f, -0.44f);
+                var p3 = new Vector3(puff.Position.x - s, puff.Position.y + s * 0.4f, -0.44f);
+
+                _vertices[vertexIndex + 0] = p0;
+                _vertices[vertexIndex + 1] = p1;
+                _vertices[vertexIndex + 2] = p2;
+                _vertices[vertexIndex + 3] = p3;
+                _colors[vertexIndex + 0] = fogColor;
+                _colors[vertexIndex + 1] = fogColor;
+                _colors[vertexIndex + 2] = new Color32(fogColor.r, fogColor.g, fogColor.b, (byte)(alpha * 0.5f));
+                _colors[vertexIndex + 3] = new Color32(fogColor.r, fogColor.g, fogColor.b, (byte)(alpha * 0.5f));
+
+                _triangles[triangleIndex + 0] = vertexIndex + 0;
+                _triangles[triangleIndex + 1] = vertexIndex + 2;
+                _triangles[triangleIndex + 2] = vertexIndex + 1;
+                _triangles[triangleIndex + 3] = vertexIndex + 0;
+                _triangles[triangleIndex + 4] = vertexIndex + 3;
+                _triangles[triangleIndex + 5] = vertexIndex + 2;
+
+                vertexIndex += 4;
+                triangleIndex += 6;
+            }
+
             // Zero remaining vertices to prevent ghost quads
             for (var v = vertexIndex; v < TotalVertices; v++)
             {
                 _vertices[v] = Vector3.zero;
                 _colors[v] = Color.clear;
             }
+            // Degenerate unused triangle slots (all 3 indices to same vertex = zero-area, not rendered)
+            var degenerateVertex = vertexIndex > 0 ? vertexIndex - 1 : 0;
             for (var t = triangleIndex; t < TotalIndices; t++)
             {
-                _triangles[t] = 0;
+                _triangles[t] = degenerateVertex;
             }
 
             _proceduralMesh.vertices = _vertices;
             _proceduralMesh.colors32 = _colors;
             _proceduralMesh.triangles = _triangles;
-            _proceduralMesh.RecalculateBounds();
+            if (vertexIndex > 0) _proceduralMesh.RecalculateBounds();
         }
 
         private void EnsureMeshBuffers()
@@ -785,11 +911,110 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private void UpdateAudioVolume()
+        private void UpdateSnowFlakes(float deltaTime)
+        {
+            var targetFlakes = Mathf.RoundToInt(_rainIntensity * MaxSnowFlakes);
+            var camPos = _camera != null ? _camera.transform.position : new Vector3(0f, 3.5f, -10f);
+            var ortho = _camera != null ? _camera.orthographicSize : 6.8f;
+            var aspect = _camera != null ? _camera.aspect : 1.777f;
+            var viewLeft = camPos.x - ortho * aspect - 1f;
+            var viewRight = camPos.x + ortho * aspect + 1f;
+            var spawnY = camPos.y + ortho + 0.5f;
+            var streetY = TowerStructurePresenter.FloorY(0) - 0.70f;
+            var active = 0;
+            var time = UnityApplication.isPlaying ? UnityEngine.Time.time : 0f;
+
+            for (var i = 0; i < MaxSnowFlakes; i++)
+            {
+                ref var flake = ref _snowFlakes[i];
+                if (!flake.Active)
+                {
+                    if (active < targetFlakes && RandomValue() < 0.12f)
+                    {
+                        flake.Position = new Vector2(
+                            Mathf.Lerp(viewLeft, viewRight, RandomValue()),
+                            spawnY + RandomValue() * 2f);
+                        var speed = Mathf.Lerp(1.2f, 2.4f, RandomValue());
+                        flake.Velocity = new Vector2(_windSpeed * 0.25f, -speed);
+                        flake.Size = Mathf.Lerp(0.04f, 0.09f, RandomValue());
+                        flake.SwayPhase = RandomValue() * Mathf.PI * 2f;
+                        flake.Active = true;
+                        active++;
+                    }
+                    continue;
+                }
+
+                // Gentle sway
+                var sway = Mathf.Sin(time * 1.8f + flake.SwayPhase) * 0.3f;
+                flake.Position += (flake.Velocity + new Vector2(sway, 0f)) * deltaTime;
+
+                if (flake.Position.y <= streetY || IsInsideBuilding(flake.Position.x, flake.Position.y))
+                {
+                    flake.Active = false;
+                    continue;
+                }
+                active++;
+            }
+            ActiveSnowFlakeCount = active;
+        }
+
+        private void DeactivateSnowFlakes()
+        {
+            for (var i = 0; i < MaxSnowFlakes; i++) _snowFlakes[i].Active = false;
+            ActiveSnowFlakeCount = 0;
+        }
+
+        private void UpdateFogPuffs(float deltaTime)
+        {
+            var targetPuffs = Mathf.RoundToInt(_rainIntensity * MaxFogPuffs);
+            var camPos = _camera != null ? _camera.transform.position : new Vector3(0f, 3.5f, -10f);
+            var ortho = _camera != null ? _camera.orthographicSize : 6.8f;
+            var aspect = _camera != null ? _camera.aspect : 1.777f;
+            var viewLeft = camPos.x - ortho * aspect;
+            var viewRight = camPos.x + ortho * aspect;
+            var active = 0;
+
+            for (var i = 0; i < MaxFogPuffs; i++)
+            {
+                ref var puff = ref _fogPuffs[i];
+                if (!puff.Active)
+                {
+                    if (active < targetPuffs && RandomValue() < 0.05f)
+                    {
+                        puff.Position = new Vector2(
+                            Mathf.Lerp(viewLeft, viewRight, RandomValue()),
+                            camPos.y + Mathf.Lerp(-ortho, ortho, RandomValue()));
+                        puff.Opacity = Mathf.Lerp(0.05f, 0.15f, RandomValue());
+                        puff.Size = Mathf.Lerp(2.5f, 5.5f, RandomValue());
+                        puff.DriftX = (_windSpeed * 0.1f) + (RandomValue() - 0.5f) * 0.1f;
+                        puff.Active = true;
+                        active++;
+                    }
+                    continue;
+                }
+
+                puff.Position.x += puff.DriftX * deltaTime;
+                puff.Opacity = Mathf.MoveTowards(puff.Opacity, _rainIntensity * 0.2f, deltaTime * 0.02f);
+
+                if (puff.Position.x < viewLeft - puff.Size || puff.Position.x > viewRight + puff.Size)
+                    puff.Active = false;
+                else
+                    active++;
+            }
+            ActiveFogPuffCount = active;
+        }
+
+        private void DeactivateFogPuffs()
+        {
+            for (var i = 0; i < MaxFogPuffs; i++) _fogPuffs[i].Active = false;
+            ActiveFogPuffCount = 0;
+        }
+
+        private void UpdateAudioVolume(float deltaTime)
         {
             if (_rainSource == null) return;
             var targetVolume = _rainIntensity * (_condition == WeatherCondition.Storm ? 0.45f : 0.22f);
-            _rainSource.volume = Mathf.MoveTowards(_rainSource.volume, targetVolume, Time.deltaTime * 0.4f);
+            _rainSource.volume = Mathf.MoveTowards(_rainSource.volume, targetVolume, deltaTime * 0.4f);
 
             if (_roofEaves.Count > 0 && _dripSource != null)
             {

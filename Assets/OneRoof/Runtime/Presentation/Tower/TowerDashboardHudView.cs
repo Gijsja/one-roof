@@ -42,13 +42,22 @@ namespace OneRoof.Presentation.Tower
 
             var phase = sim.DayPhase;
             var weather = _controller.CurrentWeather;
-            var weatherColor = weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Storm ? StewardTheme.Amber :
-                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Rain ? StewardTheme.Mint : StewardTheme.Muted;
+            var weatherColor =
+                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Storm ? StewardTheme.Amber :
+                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Rain  ? StewardTheme.Mint :
+                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Snow  ? new Color(0.72f, 0.88f, 1.00f) :
+                weather.Condition == OneRoof.Domain.Weather.WeatherCondition.Fog   ? new Color(0.65f, 0.65f, 0.65f) :
+                StewardTheme.Muted;
             GUILayout.BeginHorizontal();
             GUILayout.Label($"THE STEWARD'S TOWER  /  DAY {phase.DayNumber}  /  {phase.ClockLabel}", StewardTheme.Label(10, StewardTheme.Muted, true));
             GUILayout.FlexibleSpace();
             GUILayout.Label(weather.Description.ToUpperInvariant(), StewardTheme.Label(10, weatherColor, true));
             GUILayout.EndHorizontal();
+            if (weather.Intensity > 0.01f)
+            {
+                var barWidth = Mathf.RoundToInt(weather.Intensity * 60f); // max 60px bar
+                GUILayout.Label(new string('█', Mathf.Max(1, barWidth / 5)), StewardTheme.Label(8, weatherColor));
+            }
             GUILayout.Space(5);
             StewardTheme.Rule(364);
             GUILayout.Space(5);
@@ -97,7 +106,7 @@ namespace OneRoof.Presentation.Tower
             GUILayout.BeginHorizontal();
             GUILayout.Label(_controller.IsPaused ? "● PAUSED  /  SPACE TO RESUME" : "● LIVE  /  SPACE TO PAUSE", StewardTheme.Label(10, _controller.IsPaused ? StewardTheme.Amber : StewardTheme.Mint, true));
             GUILayout.FlexibleSpace();
-            GUILayout.Label($"WEATHER: {(_controller.IsAutoWeather ? "AUTO" : "MANUAL")} (W)", StewardTheme.Label(10, StewardTheme.Muted, true));
+            GUILayout.Label($"WEATHER: {(_controller.IsAutoWeather ? $"AUTO M{sim.DayPhase.DayNumber / 30 + 1}" : "MANUAL")} (W)", StewardTheme.Label(10, StewardTheme.Muted, true));
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }

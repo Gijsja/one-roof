@@ -21,14 +21,23 @@ namespace OneRoof.Domain.Weather
         public string Description { get; }
         public bool IsPrecipitating => Condition != WeatherCondition.Clear && Intensity > 0.01f;
 
+        /// <summary>Returns true when this weather state significantly reduces visibility.</summary>
+        public bool IsReducedVisibility =>
+            Condition == WeatherCondition.Fog ||
+            Condition == WeatherCondition.Snow ||
+            (Condition == WeatherCondition.Storm && Intensity > 0.7f);
+
         public static string DefaultDescription(WeatherCondition condition) => condition switch
         {
-            WeatherCondition.Clear => "Clear Skies",
+            WeatherCondition.Clear   => "Clear Skies",
             WeatherCondition.Drizzle => "Light Drizzle",
-            WeatherCondition.Rain => "Steady Rain",
-            WeatherCondition.Storm => "Thunderstorm",
+            WeatherCondition.Rain    => "Steady Rain",
+            WeatherCondition.Storm   => "Thunderstorm",
+            WeatherCondition.Fog     => "Morning Fog",
+            WeatherCondition.Snow    => "Light Snowfall",
             _ => "Clear Skies"
         };
+
 
         public bool Equals(WeatherSample other) =>
             Condition == other.Condition &&

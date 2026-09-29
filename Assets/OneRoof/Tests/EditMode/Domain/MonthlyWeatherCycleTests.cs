@@ -142,5 +142,113 @@ namespace OneRoof.Domain.Tests.EditMode
                 Assert.That(sample.Intensity, Is.InRange(0f, 1f));
             });
         }
+
+        [Test]
+        public void Sample_DoesNotFlickerClear_DuringRainTransition()
+        {
+            // Scan across all months until we find a Clear-to-Rain boundary
+            var cycle = new MonthlyWeatherCycle(0xABCDEF123456UL);
+            var foundTransition = false;
+
+            for (var month = 1; month <= 12; month++)
+            {
+                var events = cycle.GetMonthlyEvents(month);
+                for (var i = 0; i < events.Count - 1; i++)
+                {
+                    var cur = events[i];
+                    var next = events[i + 1];
+                    if (cur.Condition == WeatherCondition.Clear &&
+                        (next.Condition == WeatherCondition.Rain || next.Condition == WeatherCondition.Storm))
+                    {
+                        // Within the 45-tick transition window, no sample should be Clear
+                        // unless the intensity is legitimately near zero
+                        var boundary = next.StartTick;
+                        for (var t = 1; t <= 44; t++)
+                        {
+                            var sample = cycle.Sample(boundary + t);
+                            // Once we are 10+ ticks into a Rain/Storm front, condition must not flip back to Clear
+                            if (t >= 10 && sample.Intensity > 0.05f)
+                            {
+                                Assert.That(sample.Condition, Is.Not.EqualTo(WeatherCondition.Clear),
+                                    $"Flicker at tick {boundary + t} (month {month}, event {i}→{i+1})");
+                            }
+                        }
+                        foundTransition = true;
+                        break;
+                    }
+                }
+                if (foundTransition) break;
+            }
+
+            if (!foundTransition)
+            {
+                Assert.Ignore("No Clear→Rain/Storm transition found in the tested seed — skip.");
+            }
+        }
+
+        [Test]
+        public void GenerateMonthEvents_CoversFogAndSnow_AsValidStates()
+        {
+            // Scan across 12 months; all produced WeatherConditions must be valid enum values
+            var cycle = new MonthlyWeatherCycle(0xFAB15EED_C0FEUL);
+            var validConditions = new System.Collections.Generic.HashSet<WeatherCondition>
+            {
+                WeatherCondition.Clear, WeatherCondition.Drizzle, WeatherCondition.Rain,
+                WeatherCondition.Storm, WeatherCondition.Fog, WeatherCondition.Snow
+            };
+
+            for (var month = 1; month <= 12; month++)
+            {
+                var events = cycle.GetMonthlyEvents(month);
+                foreach (var evt in events)
+                {
+                    Assert.That(validConditions, Does.Contain(evt.Condition),
+                        $"Unexpected condition {evt.Condition} in month {month}");
+                    Assert.That(evt.DurationTicks, Is.GreaterThan(0), $"Zero-duration event in month {month}");
+                    Assert.That(evt.PeakIntensity, Is.InRange(0f, 1f), $"Intensity out of range in month {month}");
+                }
+            }
+        }
+
+        [Test]
+        public void MonthlyEvents_AreContiguous_AcrossAllTwelveMonths()
+        {
+            var cycle = new MonthlyWeatherCycle(0x1234_5678_90ABUL);
+            for (var month = 1; month <= 12; month++)
+            {
+                var events = cycle.GetMonthlyEvents(month);
+                Assert.That(events.Count, Is.GreaterThan(0), $"Month {month} produced no events");
+                var monthStart = (long)(month - 1) * MonthlyWeatherCycle.TicksPerMonth;
+                var monthEnd   = monthStart + MonthlyWeatherCycle.TicksPerMonth;
+                Assert.That(events[0].StartTick, Is.EqualTo(monthStart),
+                    $"Month {month} first event does not start at month boundary");
+                Assert.That(events[^1].EndTick, Is.EqualTo(monthEnd),
+                    $"Month {month} last event does not end at month boundary");
+                for (var i = 0; i < events.Count - 1; i++)
+                {
+                    Assert.That(events[i].EndTick, Is.EqualTo(events[i + 1].StartTick),
+                        $"Gap/overlap between event {i} and {i+1} in month {month}");
+                }
+            }
+        }
+
+        [Test]
+        public void WeatherSample_IsReducedVisibility_ForFogAndSnow()
+        {
+            var fogSample = new WeatherSample(WeatherCondition.Fog, 0.5f, 0f);
+            Assert.That(fogSample.IsReducedVisibility, Is.True, "Fog must flag reduced visibility");
+
+            var snowSample = new WeatherSample(WeatherCondition.Snow, 0.5f, 0f);
+            Assert.That(snowSample.IsReducedVisibility, Is.True, "Snow must flag reduced visibility");
+
+            var clearSample = new WeatherSample(WeatherCondition.Clear, 0f, 0f);
+            Assert.That(clearSample.IsReducedVisibility, Is.False, "Clear must not flag reduced visibility");
+
+            var mildRainSample = new WeatherSample(WeatherCondition.Rain, 0.5f, -0.5f);
+            Assert.That(mildRainSample.IsReducedVisibility, Is.False, "Rain below 0.7 intensity must not flag reduced visibility");
+
+            var severeStormSample = new WeatherSample(WeatherCondition.Storm, 0.9f, -2f);
+            Assert.That(severeStormSample.IsReducedVisibility, Is.True, "Storm > 0.7 must flag reduced visibility");
+        }
     }
 }

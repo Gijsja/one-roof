@@ -188,5 +188,50 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_presenter.TargetIntensity, Is.EqualTo(0.95f).Within(0.001f));
             Assert.That(_presenter.WindSpeed, Is.EqualTo(-2.5f).Within(0.001f));
         }
+
+        [Test]
+        public void SetWeather_Snow_DoesNotCrash_AndProducesNoRainDrops()
+        {
+            var sample = new WeatherSample(WeatherCondition.Snow, 0.8f, -0.1f, "Light Snowfall");
+            _presenter.SetWeather(sample);
+            Assert.That(_presenter.Condition, Is.EqualTo(WeatherCondition.Snow));
+
+            // Simulate 30 frames — must not throw
+            for (var frame = 0; frame < 30; frame++)
+                _presenter.UpdateWeather(0.016f);
+
+            // Rain drops must be 0 (snow replaces rain particles)
+            Assert.That(_presenter.ActiveDropCount, Is.EqualTo(0),
+                "Snow condition must not spawn rain drops.");
+        }
+
+        [Test]
+        public void SetWeather_Fog_DoesNotCrash_AndProducesNoRainDrops()
+        {
+            var sample = new WeatherSample(WeatherCondition.Fog, 0.5f, 0f, "Morning Fog");
+            _presenter.SetWeather(sample);
+            Assert.That(_presenter.Condition, Is.EqualTo(WeatherCondition.Fog));
+
+            for (var frame = 0; frame < 30; frame++)
+                _presenter.UpdateWeather(0.016f);
+
+            Assert.That(_presenter.ActiveDropCount, Is.EqualTo(0),
+                "Fog condition must not spawn rain drops.");
+        }
+
+        [Test]
+        public void UpdateWeather_ClearSky_LeavesNoActiveParticles()
+        {
+            // Start rainy, then clear, simulate fade-out
+            _presenter.SetWeather(WeatherCondition.Rain, 0.8f);
+            for (var i = 0; i < 5; i++) _presenter.UpdateWeather(0.016f);
+
+            _presenter.SetWeather(WeatherCondition.Clear, 0f);
+            // Simulate 5 seconds of fade-out (intensity ramps down at 0.5/s)
+            for (var i = 0; i < 400; i++) _presenter.UpdateWeather(0.016f);
+
+            Assert.That(_presenter.ActiveDropCount, Is.EqualTo(0), "No rain drops after full clear-sky fade.");
+            Assert.That(_presenter.ActiveSplashCount, Is.EqualTo(0), "No splashes after full clear-sky fade.");
+        }
     }
 }

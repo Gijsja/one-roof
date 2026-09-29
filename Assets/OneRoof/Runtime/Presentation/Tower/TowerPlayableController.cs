@@ -67,6 +67,8 @@ namespace OneRoof.Presentation.Tower
         private Material _worldMat; private MaterialPropertyBlock _colorBlock;
         private float _tickAcc, _tickInterval = 0.35f; private bool _isPaused;
         private long _lastUndergroundCrewVersion = -1;
+        private UtilitiesOverlayProjection _lastUtilityNetworkOverlay;
+        private TowerTopologyProjection _lastUtilityNetworkTopology;
 
         public TowerSimulationSession SimulationSession => _sim; public TowerSimulationSession TransitSession => _sim;
         public ModeShellSession ModeSession => _mode; public TowerDataOverlays DataOverlays => _dataOverlays;
@@ -81,9 +83,10 @@ namespace OneRoof.Presentation.Tower
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
         public TowerAtmospherePresenter AtmospherePresenter => _atmosphere;
         public PixelRainPresenter RainPresenter => _pixelRain;
-        private readonly MonthlyWeatherCycle _weatherCycle = new MonthlyWeatherCycle();
-        private int _weatherOverride = -1; // -1: Auto, 0: Clear, 1: Drizzle, 2: Rain, 3: Storm
+        private MonthlyWeatherCycle _weatherCycle = new MonthlyWeatherCycle();
+        private int _weatherOverride = -1; // -1: Auto, 0: Clear, 1: Drizzle, 2: Rain, 3: Storm, 4: Fog, 5: Snow
         private WeatherSample _currentWeather = new WeatherSample(WeatherCondition.Clear, 0f, 0f, "Clear Skies");
+        private long _lastWeatherSampleTick = -1;
 
         public MonthlyWeatherCycle WeatherCycle => _weatherCycle;
         public WeatherSample CurrentWeather => _currentWeather;
@@ -99,6 +102,11 @@ namespace OneRoof.Presentation.Tower
         {
             if (_sim != null) return;
             _sim = IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
+            // Seed weather from world hash for determinism per save
+            var worldSeed = (ulong)(uint)_sim.GetHashCode();
+            if (worldSeed == 0) worldSeed = 0xDEADBEEFCAFEUL;
+            _weatherCycle = new MonthlyWeatherCycle(worldSeed);
+            _lastWeatherSampleTick = -1; // force re-sample on first frame
             if (!IsGroundStart) SeedMorningRush();
             _mode = new ModeShellSession();
             _dataOverlays = new TowerDataOverlays(_sim); _predictor = new ElevatorPlacementPredictor();
@@ -234,7 +242,7 @@ namespace OneRoof.Presentation.Tower
             else if (scrutiny) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             else if (footTraffic) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             else if (businessHealth) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            else if (utilities) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
+            else if (utilities) UpdateUtilitiesOverlay();
             else if (noise) _noisePresenter.UpdateOverlay(_dataOverlays.Noise);
             else if (factionTension) _factionTensionPresenter.UpdateOverlay(_dataOverlays.FactionTension, _sim.TopologyProjection());
             else if (p.IsDataMode) _overlayPresenter.UpdateOverlay(_dataOverlays.ElevatorWait);
@@ -255,7 +263,7 @@ namespace OneRoof.Presentation.Tower
             if (topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _pixelRain?.SyncTopology(topo);
             _elevator.EnsureElevatorViews(_sim?.ElevatorCarCount ?? 1); _resident.EnsureResidentViews(_sim?.ResidentCount ?? InitialResidentCount);
-            if (_utilitiesNetworkLayer != null && _utilitiesNetworkLayer.IsVisible && _dataOverlays != null) _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, topo);
+            if (_utilitiesNetworkLayer != null && _utilitiesNetworkLayer.IsVisible && _dataOverlays != null) UpdateUtilitiesOverlay(topo);
         }
 
         private void HandleKeyboard()
@@ -280,10 +288,23 @@ namespace OneRoof.Presentation.Tower
             if (_scrutinyPresenter.IsVisible) _scrutinyPresenter.UpdateOverlay(_dataOverlays.Scrutiny);
             if (_footTrafficPresenter.IsVisible) _footTrafficPresenter.UpdateOverlay(_dataOverlays.FootTraffic);
             if (_businessHealthPresenter.IsVisible) _businessHealthPresenter.UpdateOverlay(_dataOverlays.BusinessHealth);
-            if (_utilitiesPresenter.IsVisible) { _utilitiesPresenter.UpdateOverlay(_dataOverlays.Utilities); _utilitiesNetworkLayer.UpdateOverlay(_dataOverlays.Utilities, _sim?.TopologyProjection()); }
+            if (_utilitiesPresenter.IsVisible) UpdateUtilitiesOverlay();
             if (_noisePresenter.IsVisible) _noisePresenter.UpdateOverlay(_dataOverlays.Noise);
             if (_factionTensionPresenter.IsVisible) _factionTensionPresenter.UpdateOverlay(_dataOverlays.FactionTension, _sim.TopologyProjection());
             if (_placementCard.IsOpen) _placementCard.SetPreview(_predictor.PredictAddition(c), OnConfirmElevatorPlacement);
+        }
+
+        private void UpdateUtilitiesOverlay(TowerTopologyProjection topology = null)
+        {
+            var overlay = _dataOverlays.Utilities;
+            _utilitiesPresenter.UpdateOverlay(overlay);
+            topology = topology ?? _sim?.TopologyProjection();
+            if (ReferenceEquals(overlay, _lastUtilityNetworkOverlay) &&
+                ReferenceEquals(topology, _lastUtilityNetworkTopology)) return;
+
+            _utilitiesNetworkLayer.UpdateOverlay(overlay, topology);
+            _lastUtilityNetworkOverlay = overlay;
+            _lastUtilityNetworkTopology = topology;
         }
 
         public void InspectBottleneck() { _mode.SwitchMode(InteractionMode.Inspect); var c = _sim.CongestionProjection(); var ov = _dataOverlays.ElevatorWait; _inspectorCard.Inspect(new ElevatorCongestionInspectorProjection(0, "Floor 0 Elevator Congestion", $"Morning commute bottleneck: {c.TotalQueued} residents waiting.", ov.ContributingCauses, ov.RecommendedAction, true, "transit:elevator_car")); _onboarding.ObserveInspector(true); }
@@ -352,6 +373,9 @@ namespace OneRoof.Presentation.Tower
         {
             if (IsGroundStart) _sim.ResetToGroundFloorStart(); else { _sim.Reset(); SeedMorningRush(); }
             _dataOverlays = new TowerDataOverlays(_sim);
+            _lastUtilityNetworkOverlay = null;
+            _lastUtilityNetworkTopology = null;
+            _lastWeatherSampleTick = -1;
             if (_gridPlacement != null) _gridPlacement.SimulationSession = _sim;
             if (_inspectSelection != null) _inspectSelection.SimulationSession = _sim;
             _inspectorCard.Close(); _placementCard.Close(); _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
@@ -365,13 +389,13 @@ namespace OneRoof.Presentation.Tower
         public void CycleWeatherOverride()
         {
             _weatherOverride++;
-            if (_weatherOverride > 3) _weatherOverride = -1;
+            if (_weatherOverride > 5) _weatherOverride = -1;
             UpdateActiveWeather();
         }
 
         public void SetWeatherOverride(int conditionIndex)
         {
-            _weatherOverride = conditionIndex >= -1 && conditionIndex <= 3 ? conditionIndex : -1;
+            _weatherOverride = conditionIndex >= -1 && conditionIndex <= 5 ? conditionIndex : -1;
             UpdateActiveWeather();
         }
 
@@ -379,6 +403,7 @@ namespace OneRoof.Presentation.Tower
         {
             if (_weatherOverride >= 0)
             {
+                // Manual override — always apply
                 var cond = (WeatherCondition)_weatherOverride;
                 var intensity = cond switch
                 {
@@ -386,6 +411,8 @@ namespace OneRoof.Presentation.Tower
                     WeatherCondition.Drizzle => 0.25f,
                     WeatherCondition.Rain => 0.65f,
                     WeatherCondition.Storm => 1.0f,
+                    WeatherCondition.Fog => 0.40f,
+                    WeatherCondition.Snow => 0.50f,
                     _ => 0f
                 };
                 var wind = cond switch
@@ -399,7 +426,13 @@ namespace OneRoof.Presentation.Tower
             }
             else if (_sim != null)
             {
-                _currentWeather = _weatherCycle.Sample(_sim.CurrentTick);
+                // Auto mode — only re-sample when the tick advances (not every render frame)
+                var tick = _sim.CurrentTick;
+                if (tick != _lastWeatherSampleTick)
+                {
+                    _currentWeather = _weatherCycle.Sample(tick);
+                    _lastWeatherSampleTick = tick;
+                }
             }
 
             _pixelRain?.SetWeather(_currentWeather);

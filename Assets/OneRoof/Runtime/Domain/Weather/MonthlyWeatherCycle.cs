@@ -85,7 +85,9 @@ namespace OneRoof.Domain.Weather
                 }
             }
 
-            if (intensity < 0.02f)
+            // Only force Clear when the current event IS Clear (avoids flickering
+            // Clear samples during a Clear-to-Rain easing window).
+            if (intensity < 0.02f && current.Condition == WeatherCondition.Clear)
             {
                 condition = WeatherCondition.Clear;
             }
@@ -114,6 +116,7 @@ namespace OneRoof.Domain.Weather
 
             var monthSeed = _worldSeed ^ ((ulong)monthNumber * 104729UL) ^ 0xA5A5A5A5A5A5A5A5UL;
             var rng = new DeterministicRandomStream(monthSeed);
+            var isWinter = IsWinterMonth(monthNumber);
 
             var currentTick = monthStartTick;
             var previousCondition = WeatherCondition.Clear;
@@ -144,12 +147,29 @@ namespace OneRoof.Domain.Weather
                             intensity = 0.20f + (rng.NextInt(0, 15) * 0.01f);
                             wind = -0.3f - (rng.NextInt(0, 5) * 0.05f);
                         }
+                        else if (roll < 92)
+                        {
+                            condition = WeatherCondition.Fog;
+                            durationHours = rng.NextInt(3, 9);
+                            intensity = 0.30f + (rng.NextInt(0, 20) * 0.01f);
+                            wind = rng.NextInt(-1, 2) * 0.03f;
+                        }
                         else
                         {
-                            condition = WeatherCondition.Rain;
-                            durationHours = rng.NextInt(6, 15);
-                            intensity = 0.55f + (rng.NextInt(0, 20) * 0.01f);
-                            wind = -0.8f - (rng.NextInt(0, 8) * 0.08f);
+                            if (isWinter && rng.NextInt(0, 100) < 35)
+                            {
+                                condition = WeatherCondition.Snow;
+                                durationHours = rng.NextInt(4, 12);
+                                intensity = 0.45f + (rng.NextInt(0, 25) * 0.01f);
+                                wind = rng.NextInt(-2, 3) * 0.04f;
+                            }
+                            else
+                            {
+                                condition = WeatherCondition.Rain;
+                                durationHours = rng.NextInt(6, 15);
+                                intensity = 0.55f + (rng.NextInt(0, 20) * 0.01f);
+                                wind = -0.8f - (rng.NextInt(0, 8) * 0.08f);
+                            }
                         }
                         break;
 
@@ -167,6 +187,13 @@ namespace OneRoof.Domain.Weather
                             durationHours = rng.NextInt(5, 13);
                             intensity = 0.60f + (rng.NextInt(0, 15) * 0.01f);
                             wind = -0.9f - (rng.NextInt(0, 7) * 0.07f);
+                        }
+                        else if (roll < 92)
+                        {
+                            condition = WeatherCondition.Fog;
+                            durationHours = rng.NextInt(2, 6);
+                            intensity = 0.25f + (rng.NextInt(0, 15) * 0.01f);
+                            wind = 0f;
                         }
                         else
                         {
@@ -187,10 +214,20 @@ namespace OneRoof.Domain.Weather
                         }
                         else if (roll < 65)
                         {
-                            condition = WeatherCondition.Storm;
-                            durationHours = rng.NextInt(2, 6);
-                            intensity = 0.90f + (rng.NextInt(0, 11) * 0.01f);
-                            wind = -2.0f - (rng.NextInt(0, 6) * 0.1f);
+                            if (isWinter && rng.NextInt(0, 100) < 50)
+                            {
+                                condition = WeatherCondition.Snow;
+                                durationHours = rng.NextInt(3, 9);
+                                intensity = 0.70f + (rng.NextInt(0, 15) * 0.01f);
+                                wind = rng.NextInt(-2, 3) * 0.05f;
+                            }
+                            else
+                            {
+                                condition = WeatherCondition.Storm;
+                                durationHours = rng.NextInt(2, 6);
+                                intensity = 0.90f + (rng.NextInt(0, 11) * 0.01f);
+                                wind = -2.0f - (rng.NextInt(0, 6) * 0.1f);
+                            }
                         }
                         else
                         {
@@ -201,6 +238,7 @@ namespace OneRoof.Domain.Weather
                         }
                         break;
 
+
                     case WeatherCondition.Storm:
                         if (roll < 75)
                         {
@@ -209,12 +247,60 @@ namespace OneRoof.Domain.Weather
                             intensity = 0.65f + (rng.NextInt(0, 10) * 0.01f);
                             wind = -1.2f;
                         }
+                        else if (isWinter && rng.NextInt(0, 100) < 40)
+                        {
+                            condition = WeatherCondition.Snow;
+                            durationHours = rng.NextInt(2, 5);
+                            intensity = 0.25f;
+                            wind = -0.5f;
+                        }
                         else
                         {
                             condition = WeatherCondition.Drizzle;
                             durationHours = rng.NextInt(2, 5);
                             intensity = 0.25f;
                             wind = -0.5f;
+                        }
+                        break;
+
+                    case WeatherCondition.Fog:
+                        if (roll < 70)
+                        {
+                            condition = WeatherCondition.Clear;
+                            durationHours = rng.NextInt(8, 25);
+                            intensity = 0f;
+                            wind = rng.NextInt(-2, 3) * 0.04f;
+                        }
+                        else
+                        {
+                            condition = WeatherCondition.Drizzle;
+                            durationHours = rng.NextInt(3, 8);
+                            intensity = 0.20f + (rng.NextInt(0, 15) * 0.01f);
+                            wind = -0.25f;
+                        }
+                        break;
+
+                    case WeatherCondition.Snow:
+                        if (roll < 50)
+                        {
+                            condition = WeatherCondition.Clear;
+                            durationHours = rng.NextInt(12, 37);
+                            intensity = 0f;
+                            wind = 0f;
+                        }
+                        else if (roll < 80)
+                        {
+                            condition = WeatherCondition.Snow;
+                            durationHours = rng.NextInt(2, 7);
+                            intensity = 0.30f + (rng.NextInt(0, 20) * 0.01f);
+                            wind = rng.NextInt(-2, 3) * 0.04f;
+                        }
+                        else
+                        {
+                            condition = WeatherCondition.Rain;
+                            durationHours = rng.NextInt(4, 10);
+                            intensity = 0.50f + (rng.NextInt(0, 15) * 0.01f);
+                            wind = -0.7f;
                         }
                         break;
 
@@ -235,6 +321,16 @@ namespace OneRoof.Domain.Weather
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// Returns true when <paramref name="monthNumber"/> maps to a calendar winter month
+        /// (December, January, or February) in a repeating 12-month cycle.
+        /// </summary>
+        private static bool IsWinterMonth(int monthNumber)
+        {
+            var calendarMonth = ((monthNumber - 1) % 12) + 1;
+            return calendarMonth == 12 || calendarMonth == 1 || calendarMonth == 2;
         }
 
         private static float SmoothStep(float t)
