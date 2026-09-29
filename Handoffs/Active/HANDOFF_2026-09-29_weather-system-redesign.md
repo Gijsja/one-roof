@@ -17,6 +17,7 @@ We identified 6 critical issues in the previous weather system and overhauled bo
 - **B4 (Degenerate Triangle Quad Cluster)**: `PixelRainPresenter.RebuildMeshGeometry()` wrote `_triangles[t] = 0` for all inactive particle slots, creating hundreds of degenerate triangles sharing vertex 0. Now writes zero-area degenerate triangles referencing `degenerateVertex = vertexIndex > 0 ? vertexIndex - 1 : 0`, and gates bounds recalculation.
 - **B5 (Headless-Unsafe Audio DeltaTime)**: `UpdateAudioVolume()` directly sampled `UnityEngine.Time.deltaTime`, which was unreliable in batchmode/headless test execution. It now accepts the simulation's forwarded `deltaTime`.
 - **B6 (Missing Atmospheric Conditions & Visuals)**: Expanded `WeatherCondition` with `Fog = 4` and `Snow = 5`, plus full procedural visual particle support in `PixelRainPresenter`.
+- **B7 (Weather label without visible rain)**: `InitSubcomponents()` created the rain mesh before `CreateWorldGeometry()` immediately cleared it. Simulation and HUD weather continued updating with a null mesh renderer. Rain initialization now runs after the world clear and camera setup, including on simulation reset.
 
 ### 1.2 Domain Layer Enhancements (`OneRoof.Domain.Weather`)
 - `WeatherCondition`: Added `Fog = 4` and `Snow = 5` enum entries preserving integer compatibility.
@@ -70,9 +71,16 @@ We identified 6 critical issues in the previous weather system and overhauled bo
 - `OneRoof.Domain` purity verified: 0 UnityEngine references.
 - All new files committed with paired `.meta` files (unique GUIDs).
 
+### Ground-start visual regression (B7)
+- Isolated worktree: `/home/geisha/.codex/worktrees/rain-visibility-validation/one-roof`, Unity 6000.3.24f1 with graphics enabled.
+- Before fix: `/tmp/rain-visibility-baseline.xml`, exit 2; active rain drops existed, but the rain mesh renderer was null and the camera capture showed clear skies.
+- After fix: `/tmp/rain-visibility-pixels.xml`, exit 0, 1 passed. The camera-pixel assertion and visual review show rain in `/tmp/one-roof-rain-visibility/rain.png` versus `/tmp/one-roof-rain-visibility/clear.png`.
+- Final graphics PlayMode suite: `/tmp/rain-visibility-full-playmode.xml`, exit 0, 11 passed, 0 failed.
+- The previous EditMode weather tests only checked particle simulation and therefore did not catch this presentation lifecycle failure. `WeatherVisibilityPlayModeTests` now covers the ground-start camera image.
+
 ---
 
 ## 3. Next Safe Action
 - Open `Tower` or `Tower_GroundStart` scene in Unity Editor.
 - Press `W` key repeatedly during Play Mode to cycle through: Clear → Drizzle → Rain → Storm → Fog → Snow → Auto.
-- Observe the HUD intensity bar and corresponding weather VFX in the outside stage.
+- Observe the HUD intensity bar and corresponding weather VFX in the outside stage. The ground-start rain capture now covers the missing-renderer regression.

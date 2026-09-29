@@ -217,7 +217,7 @@ namespace OneRoof.Presentation.Tower
             _atmosphere = Ensure<TowerAtmospherePresenter>(); _atmosphere.Initialize();
             var camera = TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
             _outside = Ensure<OutsideCityPresenter>(); _outside.Initialize(camera, _worldMat);
-            _pixelRain = Ensure<PixelRainPresenter>(); _pixelRain.Initialize(camera);
+            _pixelRain = Ensure<PixelRainPresenter>();
             if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
         }
 
@@ -383,8 +383,16 @@ namespace OneRoof.Presentation.Tower
         }
 
         private void SeedMorningRush() => _sim?.SeedMorningRush();
-        private void CreateWorldGeometry() { ClearWorldGeometry(); UpdateCamera(resetView: true); SyncPresenterGeometry(); _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection()); }
-        private void UpdateCamera(bool resetView = false) => TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
+        private void CreateWorldGeometry()
+        {
+            ClearWorldGeometry();
+            var camera = UpdateCamera(resetView: true);
+            _pixelRain?.Initialize(camera);
+            SyncPresenterGeometry();
+            _atmosphere?.UpdateSoundscape(_sim.Projection(), _sim.TopologyProjection());
+        }
+        private Camera UpdateCamera(bool resetView = false) =>
+            TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
         private void ClearWorldGeometry() { _structure.Clear(); _floorDecks?.Clear(); _exterior.Clear(); _pixelRain?.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
         public void CycleWeatherOverride()
         {
