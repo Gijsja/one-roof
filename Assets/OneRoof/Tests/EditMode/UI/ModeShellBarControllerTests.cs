@@ -153,5 +153,16 @@ namespace OneRoof.UI.Tests.EditMode
 
             Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Overlay: UTILITIES"));
         }
+
+        [Test]
+        public void BuildModeStatusText_UndergroundRoom_ExplainsDragAndRelease()
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Build, InteractionMode.Inspect, "underground:room_Workshop", null, null, null, null, null);
+
+            var text = ModeShellBarController.BuildModeStatusText(projection);
+
+            Assert.That(text, Does.Contain("Drag to size room, release to zone"));
+        }
     }
 }

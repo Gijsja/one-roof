@@ -159,6 +159,12 @@ namespace OneRoof.Presentation.Tower
                 if (selected)
                 {
                     GUILayout.Label(room.Cause, StewardTheme.Label(11, StewardTheme.Text));
+                    if (room.HasUtilityDiagnostics)
+                    {
+                        GUILayout.Label("Service routes (diagnostic)", StewardTheme.Label(10, StewardTheme.Muted));
+                        GUILayout.Label($"Power route: {room.PowerStatus}", StewardTheme.Label(10, StewardTheme.Text));
+                        GUILayout.Label($"Water route: {room.WaterStatus}", StewardTheme.Label(10, StewardTheme.Text));
+                    }
                     GUILayout.Label($"Capacity {room.Capacity} • Upkeep {room.DailyUpkeep}/day • Level {room.Depth / 3 + 1}",
                         StewardTheme.Label(10, StewardTheme.Muted));
                 }

@@ -42,6 +42,10 @@ Do not render every overlay as a heatmap. Use heatmaps for intensity, animated p
 
 A preview must show cost, invalid conditions, footprint, utility connections, and the most important predicted consequences (`PlacementGhostPresenter` / `PlacementPreviewCardView`). Predictions are estimates and must be labeled when confidence is low. Placement queries domain validity via `TowerSimulation.CanExecute(ICommand)`.
 
+For the M10.1/Undercity integration, the selected build action stays legible while the pointer is over the world. The hint names the required gesture (click for tower rooms, drag a rectangle for underground rooms, hold and paint for brushes), the authoritative cost, and a specific rejection. Utility-dependent placements show the actual built route to power and water or the first missing source/edge. The same answer must be available without relying on ghost colour. Blueprint copy/paste is deferred.
+
+The utilities overlay draws only built path segments. A missing source or gap must not appear as an operating feed. Built but disconnected pieces remain inspectable; animated motion means service is running and stops at the break. Surface-to-undercity routes cross an explicit lobby/core connection, with room and segment inspectors naming causes and recovery actions. See `Planning/M10_1_CONNECTED_BUILDING_AND_UNDERCITY.md`.
+
 ## Underground excavation
 
 The cutaway earth beneath the building is presented on a visible 1 m square grid.

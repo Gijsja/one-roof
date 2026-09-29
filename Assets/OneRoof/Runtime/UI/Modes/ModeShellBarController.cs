@@ -201,7 +201,7 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Studio Apt\n$1.5k (6c)", "residential:apartment", projection.SelectedBuildTool == "residential:apartment");
             DrawToolButton("Office\n$2.8k (8c)", "commercial:office", projection.SelectedBuildTool == "commercial:office");
             DrawToolButton("Diner\n$3.5k (10c)", "commercial:diner", projection.SelectedBuildTool == "commercial:diner");
-            DrawToolButton("New Floor\n$3.1k (31c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
+            DrawToolButton("New Floor\n$3.2k (32c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
@@ -372,7 +372,11 @@ namespace OneRoof.UI.Modes
 
             var statusText = BuildModeStatusText(projection);
 
-            GUILayout.Label(statusText, _contextStyle);
+            GUILayout.Label(statusText, _contextStyle, GUILayout.Width(projection.IsBuildMode &&
+                !string.IsNullOrEmpty(projection.SelectedBuildTool) ? 500f : 610f));
+            if (projection.IsBuildMode && !string.IsNullOrEmpty(projection.SelectedBuildTool) &&
+                GUILayout.Button("TOOLS", _normalButtonStyle, GUILayout.Width(100f), GUILayout.Height(28f)))
+                Session.SelectBuildTool(null);
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }
@@ -390,9 +394,12 @@ namespace OneRoof.UI.Modes
                     var isUndergroundBrush = projection.SelectedBuildTool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase) ||
                         projection.SelectedBuildTool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase) ||
                         projection.SelectedBuildTool.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase);
+                    var isUndergroundRoom = projection.SelectedBuildTool.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase);
                     var instruction = isUndergroundBrush
                         ? "Click or drag to dig/build · Right-click to cancel"
-                        : "Click to place · Right-click to cancel";
+                        : isUndergroundRoom
+                            ? "Drag to size room, release to zone · Right-click to cancel"
+                            : "Click to place · Right-click to cancel";
                     statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  {instruction}";
                 }
                 else

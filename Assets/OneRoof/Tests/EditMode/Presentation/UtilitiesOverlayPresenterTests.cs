@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using OneRoof.Application.Overlays;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Presentation.Overlays;
 using UnityEngine;
 
@@ -30,6 +31,22 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(summary, Does.Contain("Power 75%"));
             Assert.That(summary, Does.Not.Contain("Low pressure"));
             Assert.That(floor.AccessibilityLabel, Does.Contain("Low pressure"));
+        }
+
+        [Test]
+        public void UndergroundSummary_ReportsFlowForSelectedNetwork()
+        {
+            var paths = new UndergroundUtilityPathSnapshot(null, null, new[]
+            {
+                new UndergroundRoomUtilityStatus(1, UndergroundUtilityKind.Power, true, true, UndergroundUtilityCause.None),
+                new UndergroundRoomUtilityStatus(2, UndergroundUtilityKind.Power, true, false, UndergroundUtilityCause.SurfaceServiceUnavailable),
+                new UndergroundRoomUtilityStatus(1, UndergroundUtilityKind.Water, false, false, UndergroundUtilityCause.DisconnectedPath)
+            });
+            var overlay = new UtilitiesOverlayProjection(null, null, paths);
+            Assert.That(UtilitiesOverlayPresenter.FormatUndergroundSummary(overlay,
+                UtilitiesNetworkLayerPresenter.NetworkKind.Power), Does.Contain("1/2 rooms flowing"));
+            Assert.That(UtilitiesOverlayPresenter.FormatUndergroundSummary(overlay,
+                UtilitiesNetworkLayerPresenter.NetworkKind.Water), Does.Contain("No connected path"));
         }
     }
 }

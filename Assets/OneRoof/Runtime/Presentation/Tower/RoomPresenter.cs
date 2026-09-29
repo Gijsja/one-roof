@@ -144,7 +144,9 @@ namespace OneRoof.Presentation.Tower
                         if (UnityEngine.Application.isPlaying)
                         {
                             root.name = $"DemolishingRoom_{id}";
-                            root.AddComponent<VisualEffectsPresenter>().BeginDemolition();
+                            var effects = root.GetComponent<VisualEffectsPresenter>() ??
+                                root.AddComponent<VisualEffectsPresenter>();
+                            effects.BeginDemolition();
                         }
                         else UnityEngine.Object.DestroyImmediate(root);
                     }

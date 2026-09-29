@@ -80,6 +80,16 @@ existing treasury and outside-market ledgers and exposes bounded tower-service m
 Immutable projections drive excavation, rooms, workers, and investigator presentation. Old 16×6
 cells migrate to the center of the expanded board.
 
+`UndergroundUtilityPathState` derives read-only power and water path segments from the built
+surface source, lobby access core, shaft, corridors, and room entrances. Segment IDs are stable;
+connection and actual flow are separate states. The undercity remains on its own coordinates,
+which Presentation maps to world space. The path snapshot is cached by topology, excavation,
+and backup-capacity changes and is never saved independently. Room inspectors expose route
+diagnostics separately from current staffing, supply, and disruption operating causes.
+Generator backup remains governed by its existing reachable, staffed, supplied daily operation;
+an explicit reverse-feed contract and utility-dependent underground production are later
+integration gates in `Planning/M10_1_CONNECTED_BUILDING_AND_UNDERCITY.md`.
+
 ## Presentation & UI
 
 - Pool visible Spine NPC views (`TowerResidentPresenter`) and active effects; 40–60 view cap.

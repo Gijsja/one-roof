@@ -98,9 +98,11 @@ namespace OneRoof.Presentation.Overlays
             {
                 case NetworkKind.Power:
                     BuildPowerNetwork();
+                    BuildUndergroundNetwork(UndergroundUtilityKind.Power);
                     break;
                 case NetworkKind.Water:
                     BuildWaterNetwork();
+                    BuildUndergroundNetwork(UndergroundUtilityKind.Water);
                     break;
                 case NetworkKind.Waste:
                     BuildWasteNetwork();
@@ -124,8 +126,13 @@ namespace OneRoof.Presentation.Overlays
             var substationCenter = FindFirstRoomCenter(groundFloor, ElectricalGridState.SubstationContentId, -2.4f + 0.25f);
             var substationY = groundBaseY + 0.75f;
 
-            // Ground Substation source terminal
-            GetNodeMarker(new Vector3(substationCenter, substationY, NodeZ), 0.12f, _activeNodeMaterial, "Power_SubstationSource");
+            var hasSource = _topology != null
+                ? HasRoomOfType(groundFloor, ElectricalGridState.SubstationContentId)
+                : HasConnectedFloor(NetworkKind.Power);
+            if (hasSource)
+                GetNodeMarker(new Vector3(substationCenter, substationY, NodeZ), 0.12f,
+                    HasServicedFloor(NetworkKind.Power) ? _activeNodeMaterial : _disruptedNodeMaterial,
+                    "Power_SubstationSource");
 
             for (var i = 0; i < _overlay.Floors.Count; i++)
             {
@@ -135,13 +142,15 @@ namespace OneRoof.Presentation.Overlays
                 var lineMat = connected ? _activeLineMaterial : _disruptedLineMaterial;
                 var nodeMat = connected ? _activeNodeMaterial : _disruptedNodeMaterial;
 
-                var riserColumn = floorData.PowerColumn;
-                var riserX = CellCenterX(riserColumn);
+                var riserColumn = FindBuiltRiserColumn(floor, ElectricalGridState.RiserContentId,
+                    floorData.PowerColumn, floorData.PowerConnected);
+                if (!riserColumn.HasValue) continue;
+                var riserX = CellCenterX(riserColumn.Value);
                 var baseY = TowerStructurePresenter.FloorY(floor);
                 var ceilingY = baseY + 1.42f;
 
                 // On Ground floor: connect Substation to the riser trunk
-                if (floor == 0)
+                if (floor == 0 && hasSource)
                 {
                     GetLineSegment(
                         new Vector3(substationCenter, substationY, LayerZ),
@@ -150,35 +159,28 @@ namespace OneRoof.Presentation.Overlays
                 }
 
                 // Vertical Riser trunk segment
-                var hasRiser = floorData.PowerConnected || (_topology != null && HasRoomOfType(floor, ElectricalGridState.RiserContentId));
-                if (hasRiser)
-                {
-                    var bottomY = (floor == 0) ? substationY : baseY;
-                    var topY = baseY + DefaultFloorHeight;
-                    GetLineSegment(
-                        new Vector3(riserX, bottomY, LayerZ),
-                        new Vector3(riserX, topY, LayerZ),
-                        0.09f, lineMat, $"Power_Riser_FL{floor}");
-
-                    GetNodeMarker(new Vector3(riserX, ceilingY, NodeZ), 0.08f, nodeMat, $"Power_RiserJunction_FL{floor}");
-                }
+                var bottomY = (floor == 0) ? substationY : baseY;
+                var topY = baseY + DefaultFloorHeight;
+                GetLineSegment(
+                    new Vector3(riserX, bottomY, LayerZ),
+                    new Vector3(riserX, topY, LayerZ),
+                    0.09f, lineMat, $"Power_Riser_FL{floor}");
+                GetNodeMarker(new Vector3(riserX, ceilingY, NodeZ), 0.08f, nodeMat, $"Power_RiserJunction_FL{floor}");
 
                 // Horizontal ceiling raceway and consumer drops
                 if (_topology != null)
                 {
-                    var consumerRooms = GetConsumerRooms(floor);
                     var transCenter = FindFirstRoomCenterNullable(floor, ElectricalGridState.TransformerContentId);
 
-                    if (consumerRooms.Count > 0 || transCenter.HasValue)
+                    // A transformer is the physical floor distribution point. A built but
+                    // unserviced run remains visible using the disrupted material.
+                    if (transCenter.HasValue)
                     {
+                        var consumerRooms = GetConsumerRooms(floor);
                         var minX = riserX;
                         var maxX = riserX;
-
-                        if (transCenter.HasValue)
-                        {
-                            minX = Math.Min(minX, transCenter.Value);
-                            maxX = Math.Max(maxX, transCenter.Value);
-                        }
+                        minX = Math.Min(minX, transCenter.Value);
+                        maxX = Math.Max(maxX, transCenter.Value);
                         for (var c = 0; c < consumerRooms.Count; c++)
                         {
                             var cx = RoomCenterX(consumerRooms[c]);
@@ -193,16 +195,13 @@ namespace OneRoof.Presentation.Overlays
                             0.06f, lineMat, $"Power_CeilingRaceway_FL{floor}");
 
                         // Floor Transformer drop & marker
-                        if (transCenter.HasValue)
-                        {
-                            var tx = transCenter.Value;
-                            var transY = baseY + 0.80f;
-                            GetLineSegment(
-                                new Vector3(tx, ceilingY, LayerZ),
-                                new Vector3(tx, transY, LayerZ),
-                                0.05f, lineMat, $"Power_TransformerDrop_FL{floor}");
-                            GetNodeMarker(new Vector3(tx, transY, NodeZ), 0.10f, nodeMat, $"Power_TransformerNode_FL{floor}");
-                        }
+                        var tx = transCenter.Value;
+                        var transY = baseY + 0.80f;
+                        GetLineSegment(
+                            new Vector3(tx, ceilingY, LayerZ),
+                            new Vector3(tx, transY, LayerZ),
+                            0.05f, lineMat, $"Power_TransformerDrop_FL{floor}");
+                        GetNodeMarker(new Vector3(tx, transY, NodeZ), 0.10f, nodeMat, $"Power_TransformerNode_FL{floor}");
 
                         // Consumer room drops & terminal ports
                         for (var c = 0; c < consumerRooms.Count; c++)
@@ -227,8 +226,13 @@ namespace OneRoof.Presentation.Overlays
             var pumpCenter = FindFirstRoomCenter(groundFloor, WaterWasteNetworkState.WaterPumpContentId, -2.4f + 0.25f);
             var pumpY = groundBaseY + 0.50f;
 
-            // Ground Water Pump source terminal
-            GetNodeMarker(new Vector3(pumpCenter, pumpY, NodeZ), 0.12f, _activeNodeMaterial, "Water_PumpSource");
+            var hasSource = _topology != null
+                ? HasRoomOfType(groundFloor, WaterWasteNetworkState.WaterPumpContentId)
+                : HasConnectedFloor(NetworkKind.Water);
+            if (hasSource)
+                GetNodeMarker(new Vector3(pumpCenter, pumpY, NodeZ), 0.12f,
+                    HasServicedFloor(NetworkKind.Water) ? _activeNodeMaterial : _disruptedNodeMaterial,
+                    "Water_PumpSource");
 
             for (var i = 0; i < _overlay.Floors.Count; i++)
             {
@@ -238,13 +242,15 @@ namespace OneRoof.Presentation.Overlays
                 var lineMat = connected ? _activeLineMaterial : _disruptedLineMaterial;
                 var nodeMat = connected ? _activeNodeMaterial : _disruptedNodeMaterial;
 
-                var riserColumn = floorData.WaterColumn;
-                var riserX = CellCenterX(riserColumn);
+                var riserColumn = FindBuiltRiserColumn(floor, WaterWasteNetworkState.WaterRiserContentId,
+                    floorData.WaterColumn, floorData.WaterConnected);
+                if (!riserColumn.HasValue) continue;
+                var riserX = CellCenterX(riserColumn.Value);
                 var baseY = TowerStructurePresenter.FloorY(floor);
                 var subfloorY = baseY + 0.22f;
 
                 // On Ground floor: connect Pump to the water riser trunk
-                if (floor == 0)
+                if (floor == 0 && hasSource)
                 {
                     GetLineSegment(
                         new Vector3(pumpCenter, pumpY, LayerZ),
@@ -253,18 +259,13 @@ namespace OneRoof.Presentation.Overlays
                 }
 
                 // Vertical Water Riser trunk segment
-                var hasRiser = floorData.WaterConnected || (_topology != null && HasRoomOfType(floor, WaterWasteNetworkState.WaterRiserContentId));
-                if (hasRiser)
-                {
-                    var bottomY = (floor == 0) ? pumpY : baseY;
-                    var topY = baseY + DefaultFloorHeight;
-                    GetLineSegment(
-                        new Vector3(riserX, bottomY, LayerZ),
-                        new Vector3(riserX, topY, LayerZ),
-                        0.09f, lineMat, $"Water_Riser_FL{floor}");
-
-                    GetNodeMarker(new Vector3(riserX, subfloorY, NodeZ), 0.08f, nodeMat, $"Water_RiserJunction_FL{floor}");
-                }
+                var bottomY = (floor == 0) ? pumpY : baseY;
+                var topY = baseY + DefaultFloorHeight;
+                GetLineSegment(
+                    new Vector3(riserX, bottomY, LayerZ),
+                    new Vector3(riserX, topY, LayerZ),
+                    0.09f, lineMat, $"Water_Riser_FL{floor}");
+                GetNodeMarker(new Vector3(riserX, subfloorY, NodeZ), 0.08f, nodeMat, $"Water_RiserJunction_FL{floor}");
 
                 // Horizontal subfloor raceway and room taps
                 if (_topology != null)
@@ -321,6 +322,85 @@ namespace OneRoof.Presentation.Overlays
                     }
                 }
             }
+        }
+
+        private void BuildUndergroundNetwork(UndergroundUtilityKind kind)
+        {
+            var paths = _overlay.UndergroundPaths;
+            if (paths == null) return;
+            var segments = kind == UndergroundUtilityKind.Power ? paths.PowerSegments : paths.WaterSegments;
+            if (segments == null || segments.Count == 0) return;
+
+            var groundCenter = GridPlacementController.DefaultCellOriginX +
+                (GridPlacementController.DefaultFloorSlabMinX + GridPlacementController.DefaultFloorSlabMaxX + 1) *
+                GridPlacementController.DefaultCellWidth * .5f;
+            if (_topology != null && _topology.TryGetFloorSlab(0, out var ground))
+                groundCenter = GridPlacementController.DefaultCellOriginX +
+                    (ground.MinX + ground.MaxX + 1) * GridPlacementController.DefaultCellWidth * .5f;
+            var left = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize * .5f;
+            var baseline = TowerStructurePresenter.FloorY(0) - .74f;
+            var roomCenters = new Dictionary<int, Vector3>();
+            if (_overlay.Underground != null)
+            {
+                foreach (var room in _overlay.Underground.Rooms)
+                    roomCenters[room.Id] = new Vector3(
+                        left + (room.X + room.Width * .5f) * GridPlacementController.UndergroundCellSize,
+                        baseline - (room.Depth + room.Height * .5f) * GridPlacementController.UndergroundCellSize,
+                        LayerZ);
+            }
+
+            var label = kind == UndergroundUtilityKind.Power ? "Power" : "Water";
+            for (var i = 0; i < segments.Count; i++)
+            {
+                var segment = segments[i];
+                if (segment.From.Kind == UtilityPathPointKind.SurfaceRoom &&
+                    (_overlay.Underground == null || !_overlay.Underground.AccessCore.HasValue))
+                    continue;
+                var from = UtilityPointWorld(segment.From, kind, left, baseline, roomCenters);
+                var to = UtilityPointWorld(segment.To, kind, left, baseline, roomCenters);
+                var lineMaterial = segment.IsFlowing ? _activeLineMaterial : _disruptedLineMaterial;
+                var nodeMaterial = segment.IsFlowing ? _activeNodeMaterial : _disruptedNodeMaterial;
+                var name = $"Underground_{label}_{segment.Id}";
+
+                // Orthogonal bridge and room ports meet the same cell centers as the
+                // underground construction view. Cell-to-cell runs are already axial.
+                if (segment.From.Kind == UtilityPathPointKind.SurfaceRoom ||
+                    segment.To.Kind == UtilityPathPointKind.UndergroundRoom)
+                {
+                    var corner = new Vector3(to.x, from.y, LayerZ);
+                    if (Mathf.Abs(corner.x - from.x) > .001f)
+                        GetLineSegment(from, corner, .065f, lineMaterial, name + "_Horizontal");
+                    if (Mathf.Abs(to.y - corner.y) > .001f)
+                        GetLineSegment(corner, to, .065f, lineMaterial, name + "_Vertical");
+                }
+                else
+                {
+                    GetLineSegment(from, to, .065f, lineMaterial, name);
+                }
+
+                if (segment.To.Kind == UtilityPathPointKind.UndergroundRoom)
+                    GetNodeMarker(new Vector3(to.x, to.y, NodeZ), .07f, nodeMaterial, name + "_Port");
+            }
+        }
+
+        private Vector3 UtilityPointWorld(UtilityPathPoint point, UndergroundUtilityKind kind,
+            float left, float baseline, Dictionary<int, Vector3> roomCenters)
+        {
+            if (point.Kind == UtilityPathPointKind.SurfaceRoom)
+            {
+                var x = CellCenterX(point.X);
+                if (_topology != null && point.RoomId > 0 &&
+                    _topology.TryGetRoom(new OneRoof.Domain.Identity.EntityId(point.RoomId), out var room))
+                    x = RoomCenterX(room);
+                var y = TowerStructurePresenter.FloorY(0) +
+                    (kind == UndergroundUtilityKind.Power ? .75f : .50f);
+                return new Vector3(x, y, LayerZ);
+            }
+            if (point.Kind == UtilityPathPointKind.UndergroundRoom &&
+                roomCenters.TryGetValue(point.RoomId, out var center))
+                return center;
+            return new Vector3(left + (point.X + .5f) * GridPlacementController.UndergroundCellSize,
+                baseline - (point.Depth + .5f) * GridPlacementController.UndergroundCellSize, LayerZ);
         }
 
         private void BuildWasteNetwork()
@@ -712,6 +792,50 @@ namespace OneRoof.Presentation.Overlays
                 if (rooms[i].ContentType == type) return true;
             }
             return false;
+        }
+
+        private bool HasConnectedFloor(NetworkKind network)
+        {
+            if (_overlay == null) return false;
+            for (var i = 0; i < _overlay.Floors.Count; i++)
+            {
+                var floor = _overlay.Floors[i];
+                if (network == NetworkKind.Power && floor.PowerConnected) return true;
+                if (network == NetworkKind.Water && floor.WaterConnected) return true;
+            }
+            return false;
+        }
+
+        private bool HasServicedFloor(NetworkKind network)
+        {
+            if (_overlay == null) return false;
+            for (var i = 0; i < _overlay.Floors.Count; i++)
+            {
+                var floor = _overlay.Floors[i];
+                if (network == NetworkKind.Power && floor.PowerConnected &&
+                    floor.Voltage >= ElectricalGridState.BrownoutVoltageThreshold) return true;
+                if (network == NetworkKind.Water && floor.WaterConnected &&
+                    floor.WaterPressure >= WaterWasteNetworkState.MinimumServicePressure) return true;
+            }
+            return false;
+        }
+
+        private int? FindBuiltRiserColumn(int floor, ContentId type, int projectedColumn, bool connected)
+        {
+            if (_topology == null) return connected ? projectedColumn : (int?)null;
+            var rooms = _topology.GetRoomsOnFloor(floor);
+            int? firstBuiltColumn = null;
+            for (var i = 0; i < rooms.Count; i++)
+            {
+                var room = rooms[i];
+                if (room.ContentType != type) continue;
+                if (!firstBuiltColumn.HasValue) firstBuiltColumn = room.Bounds.MinX;
+                // Use the column chosen by the domain where it passes through this room.
+                // For a broken run, show the actual built stub instead of column zero.
+                if (connected && projectedColumn >= room.Bounds.MinX && projectedColumn <= room.Bounds.MaxX)
+                    return projectedColumn;
+            }
+            return firstBuiltColumn;
         }
 
         private float FindFirstRoomCenter(int floor, ContentId type, float fallbackX)

@@ -10,10 +10,18 @@ namespace OneRoof.Application.Overlays
 
     public sealed class UtilitiesOverlayProjection
     {
-        public UtilitiesOverlayProjection(IReadOnlyList<UtilitiesFloorProjection> floors, IReadOnlyList<UtilityEquipmentProjection> equipment)
-        { Floors = floors ?? Array.Empty<UtilitiesFloorProjection>(); Equipment = equipment ?? Array.Empty<UtilityEquipmentProjection>(); }
+        public UtilitiesOverlayProjection(IReadOnlyList<UtilitiesFloorProjection> floors, IReadOnlyList<UtilityEquipmentProjection> equipment,
+            UndergroundUtilityPathSnapshot undergroundPaths = null, UndergroundDigProjection underground = null)
+        {
+            Floors = floors ?? Array.Empty<UtilitiesFloorProjection>();
+            Equipment = equipment ?? Array.Empty<UtilityEquipmentProjection>();
+            UndergroundPaths = undergroundPaths;
+            Underground = underground;
+        }
         public IReadOnlyList<UtilitiesFloorProjection> Floors { get; }
         public IReadOnlyList<UtilityEquipmentProjection> Equipment { get; }
+        public UndergroundUtilityPathSnapshot UndergroundPaths { get; }
+        public UndergroundDigProjection Underground { get; }
         public int FailedEquipmentCount { get { var count = 0; foreach (var item in Equipment) if (item.IsFailed) count++; return count; } }
     }
 

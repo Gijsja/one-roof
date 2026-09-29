@@ -30,6 +30,10 @@ namespace OneRoof.Application.Tower
         private IReadOnlyList<HouseholdHousingLifecycleProjection> _cachedHousingProjection;
         private UndergroundDigProjection _cachedUndergroundProjection;
         private int _cachedUndergroundRevision = -1;
+        private UndergroundUtilityPathSnapshot _cachedUndergroundUtilityPaths;
+        private long _cachedUndergroundUtilityTopologyVersion = -1;
+        private int _cachedUndergroundUtilityRevision = -1;
+        private int _cachedUndergroundUtilityBackupCapacity = -1;
         private long _topologyVersion;
         private long _cachedTopologyVersion = -1;
         private long _cachedTick = -1;
@@ -93,7 +97,26 @@ namespace OneRoof.Application.Tower
         }
 
         public UndergroundOperationsProjection UndergroundOperationsProjection() =>
-            new UndergroundOperationsProjection(_simulation.Operations, _simulation.Underground, _simulation.CurrentTick);
+            new UndergroundOperationsProjection(_simulation.Operations, _simulation.Underground, _simulation.CurrentTick,
+                UndergroundUtilityPathProjection());
+
+        public UndergroundUtilityPathSnapshot UndergroundUtilityPathProjection()
+        {
+            var undergroundRevision = _simulation.Underground.Revision;
+            var backupCapacity = _simulation.Operations.BackupPowerCapacity;
+            if (_cachedUndergroundUtilityPaths != null &&
+                _cachedUndergroundUtilityTopologyVersion == _topologyVersion &&
+                _cachedUndergroundUtilityRevision == undergroundRevision &&
+                _cachedUndergroundUtilityBackupCapacity == backupCapacity)
+                return _cachedUndergroundUtilityPaths;
+            _cachedUndergroundUtilityPaths = UndergroundUtilityPathState.Project(
+                _simulation.Topology, _simulation.Underground,
+                _simulation.ElectricalGridSnapshot(), _simulation.WaterWasteNetworkSnapshot());
+            _cachedUndergroundUtilityTopologyVersion = _topologyVersion;
+            _cachedUndergroundUtilityRevision = undergroundRevision;
+            _cachedUndergroundUtilityBackupCapacity = backupCapacity;
+            return _cachedUndergroundUtilityPaths;
+        }
 
         public int ActiveTripCount => _simulation.ActiveTripCount;
 
@@ -240,6 +263,7 @@ namespace OneRoof.Application.Tower
         public void Reset()
         {
             _simulation = TowerSimulation.CreateStandardFiveFloor();
+            InvalidateUndergroundUtilityPathCache();
             BumpVersion(topologyChanged: true);
         }
 
@@ -247,6 +271,7 @@ namespace OneRoof.Application.Tower
         public void ResetToGroundFloorStart(long startingTreasury = TowerEconomyState.DefaultStartingTreasury)
         {
             _simulation = TowerSimulation.CreateGroundFloorStart(startingTreasury);
+            InvalidateUndergroundUtilityPathCache();
             BumpVersion(topologyChanged: true);
         }
 
@@ -519,6 +544,14 @@ namespace OneRoof.Application.Tower
             _cachedCongestionTick = -1;
             _cachedVersion = -1;
             _cachedCongestionVersion = -1;
+        }
+
+        private void InvalidateUndergroundUtilityPathCache()
+        {
+            _cachedUndergroundUtilityPaths = null;
+            _cachedUndergroundUtilityTopologyVersion = -1;
+            _cachedUndergroundUtilityRevision = -1;
+            _cachedUndergroundUtilityBackupCapacity = -1;
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Underground;
 
@@ -8,7 +9,8 @@ namespace OneRoof.Application.Tower
     /// <summary>Explanation-ready immutable view of the underground operation.</summary>
     public sealed class UndergroundOperationsProjection
     {
-        public UndergroundOperationsProjection(UndergroundOperationsState state, UndergroundDigState layout, long tick)
+        public UndergroundOperationsProjection(UndergroundOperationsState state, UndergroundDigState layout, long tick,
+            UndergroundUtilityPathSnapshot utilityPaths = null)
         {
             Supplies = state.Supplies;
             Intel = state.Intel;
@@ -39,9 +41,21 @@ namespace OneRoof.Application.Tower
                 residents.Add(assignment.Key);
             }
             var rooms = new List<UndergroundRoomOperationProjection>(layout.Rooms.Count);
+            var powerByRoom = new Dictionary<int, UndergroundRoomUtilityStatus>();
+            var waterByRoom = new Dictionary<int, UndergroundRoomUtilityStatus>();
+            if (utilityPaths != null)
+            {
+                foreach (var status in utilityPaths.RoomStatuses)
+                {
+                    if (status.Kind == UndergroundUtilityKind.Power) powerByRoom[status.RoomId] = status;
+                    else waterByRoom[status.RoomId] = status;
+                }
+            }
             for (var i = 0; i < layout.Rooms.Count; i++)
             {
                 var room = layout.Rooms[i];
+                powerByRoom.TryGetValue(room.Id, out var powerStatus);
+                waterByRoom.TryGetValue(room.Id, out var waterStatus);
                 assigned.TryGetValue(room.Id, out var residents);
                 if (residents != null) residents.Sort();
                 var staff = residents?.Count ?? 0;
@@ -56,7 +70,9 @@ namespace OneRoof.Application.Tower
                 rooms.Add(new UndergroundRoomOperationProjection(room.Id, room.Type, room.X,
                     room.Depth, room.Width, room.Height, room.Capacity, staff, room.RequiredStaff,
                     room.DailyUpkeep, room.IsReachable, disrupted, cause,
-                    new ReadOnlyCollection<int>(residents ?? new List<int>())));
+                    new ReadOnlyCollection<int>(residents ?? new List<int>()),
+                    utilityPaths != null, FormatUtilityStatus(powerStatus, UndergroundUtilityKind.Power),
+                    FormatUtilityStatus(waterStatus, UndergroundUtilityKind.Water)));
             }
             Rooms = new ReadOnlyCollection<UndergroundRoomOperationProjection>(rooms);
         }
@@ -64,6 +80,20 @@ namespace OneRoof.Application.Tower
         private static bool NeedsSupplies(UndergroundRoomType type) =>
             type == UndergroundRoomType.Generator || type == UndergroundRoomType.Workshop ||
             type == UndergroundRoomType.OperationsCenter || type == UndergroundRoomType.ResearchLab;
+
+        private static string FormatUtilityStatus(UndergroundRoomUtilityStatus status, UndergroundUtilityKind kind)
+        {
+            if (status.IsFlowing) return "Flowing";
+            var source = kind == UndergroundUtilityKind.Power ? "substation" : "water pump";
+            switch (status.Cause)
+            {
+                case UndergroundUtilityCause.NoSurfaceSource: return $"No surface {source}";
+                case UndergroundUtilityCause.NoAccessCore: return "No connected access core";
+                case UndergroundUtilityCause.DisconnectedPath: return "No corridor route to room";
+                case UndergroundUtilityCause.SurfaceServiceUnavailable: return "Surface service unavailable";
+                default: return status.IsConnected ? "Connected, no flow" : "Route unavailable";
+            }
+        }
 
         public int Supplies { get; }
         public int Intel { get; }
@@ -90,12 +120,16 @@ namespace OneRoof.Application.Tower
     {
         public UndergroundRoomOperationProjection(int id, UndergroundRoomType type, int x, int depth,
             int width, int height, int capacity, int staff, int requiredStaff, int upkeep,
-            bool reachable, bool disrupted, string cause, IReadOnlyList<int> assignedResidentIds)
+            bool reachable, bool disrupted, string cause, IReadOnlyList<int> assignedResidentIds,
+            bool hasUtilityDiagnostics = false, string powerStatus = null, string waterStatus = null)
         {
             Id = id; Type = type; X = x; Depth = depth; Width = width; Height = height;
             Capacity = capacity; Staff = staff; RequiredStaff = requiredStaff; DailyUpkeep = upkeep;
             IsReachable = reachable; IsDisrupted = disrupted; Cause = cause;
             AssignedResidentIds = assignedResidentIds;
+            HasUtilityDiagnostics = hasUtilityDiagnostics;
+            PowerStatus = powerStatus;
+            WaterStatus = waterStatus;
         }
         public int Id { get; }
         public UndergroundRoomType Type { get; }
@@ -111,5 +145,8 @@ namespace OneRoof.Application.Tower
         public bool IsDisrupted { get; }
         public string Cause { get; }
         public IReadOnlyList<int> AssignedResidentIds { get; }
+        public bool HasUtilityDiagnostics { get; }
+        public string PowerStatus { get; }
+        public string WaterStatus { get; }
     }
 }

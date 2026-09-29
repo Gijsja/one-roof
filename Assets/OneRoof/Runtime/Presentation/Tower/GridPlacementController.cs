@@ -1,5 +1,6 @@
 using System;
 using OneRoof.Application.Modes;
+using OneRoof.Application.Overlays;
 using OneRoof.Application.Prediction;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Commands;
@@ -36,6 +37,11 @@ namespace OneRoof.Presentation.Tower
 
         private ModeShellSession _modeSession;
         private TowerSimulationSession _simulationSession;
+        private TowerDataOverlays _overlays;
+        private readonly TowerEconomyState _costRules = new TowerEconomyState(0);
+        private long _connectionVersion = -1;
+        private int _connectionFloor = int.MinValue;
+        private string _connectionDetails = string.Empty;
         private PlacementGhostPresenter _ghostPresenter;
         private Camera _camera;
         private bool _digGestureActive;
@@ -65,7 +71,12 @@ namespace OneRoof.Presentation.Tower
         public TowerSimulationSession SimulationSession
         {
             get => _simulationSession;
-            set => _simulationSession = value;
+            set
+            {
+                _simulationSession = value;
+                _overlays = value == null ? null : new TowerDataOverlays(value);
+                _connectionVersion = -1;
+            }
         }
 
         public PlacementGhostPresenter GhostPresenter
@@ -113,7 +124,9 @@ namespace OneRoof.Presentation.Tower
         {
             if (isValid)
             {
-                return $"✔ {toolId}: floor {floor}, cells {bounds.MinX}–{bounds.MaxX}";
+                var separator = toolId?.LastIndexOf(':') ?? -1;
+                var name = separator >= 0 ? toolId.Substring(separator + 1) : toolId;
+                return $"✔ {name?.Replace('_', ' ')}: floor {floor}, cells {bounds.MinX}–{bounds.MaxX}";
             }
             var reason = string.IsNullOrEmpty(failureReason) ? "Placement invalid." : failureReason;
             return $"✖ {reason}";
@@ -221,7 +234,8 @@ namespace OneRoof.Presentation.Tower
                     TryGetToolPlacementBounds(toolId, floor, cellX, out var placementBounds);
                     var isValid = ValidatePlacement(toolId, floor, cellX, out var failureReason);
                     LastPlacementValid = isValid;
-                    LastPlacementHint = FormatPlacementHint(toolId, floor, placementBounds, isValid, failureReason);
+                    LastPlacementHint = FormatPlacementHint(toolId, floor, placementBounds, isValid, failureReason) +
+                        PlacementDetails(toolId, floor, cellX);
                     _lastHintScreenPos = screenPos;
 
                     var worldPos = CellToWorld(floor, placementBounds.MinX, placementBounds.Width);
@@ -280,13 +294,17 @@ namespace OneRoof.Presentation.Tower
                     fontSize = 11,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleLeft,
+                    wordWrap = true,
                     normal = { textColor = LastPlacementValid ? new Color(0.35f, 1f, 0.6f) : new Color(1f, 0.55f, 0.45f) }
                 };
             }
             _hintStyle.normal.textColor = LastPlacementValid ? new Color(0.35f, 1f, 0.6f) : new Color(1f, 0.55f, 0.45f);
 
             var guiY = Screen.height - _lastHintScreenPos.y;
-            GUI.Label(new Rect(_lastHintScreenPos.x + 16, guiY + 14, 430, 24), LastPlacementHint, _hintStyle);
+            var width = Mathf.Min(560f, Screen.width - 32f);
+            var x = Mathf.Clamp(_lastHintScreenPos.x + 16f, 16f, Screen.width - width - 16f);
+            var y = Mathf.Clamp(guiY + 14f, 16f, Screen.height - 62f);
+            GUI.Label(new Rect(x, y, width, 48f), LastPlacementHint, _hintStyle);
         }
 
         public static bool IsPointerOverUI(Vector3 screenPos, bool includeBuildPalette = true, int screenHeight = -1, int screenWidth = -1)
@@ -476,8 +494,9 @@ namespace OneRoof.Presentation.Tower
             var result = _simulationSession.CanExecute(command);
             LastPlacementValid = result.Accepted;
             LastPlacementHint = result.Accepted
-                ? $"✔ {UndergroundToolLabel(toolId)} · {width}×{height} m · connected"
+                ? $"✔ {UndergroundToolLabel(toolId)} · {width}×{height} m"
                 : $"✖ {result.Rejections[0].Message}";
+            LastPlacementHint += UndergroundPlacementDetails(command);
             _lastHintScreenPos = screenPos;
 
             var worldX = UndergroundLeftWorldX + (zoneX + width * 0.5f) * UndergroundCellSize;
@@ -615,6 +634,96 @@ namespace OneRoof.Presentation.Tower
             if (toolId.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)) return "Link corridor";
             if (toolId.Equals("underground:core", StringComparison.OrdinalIgnoreCase)) return "Extend access core";
             return "Zone " + toolId.Substring("underground:room_".Length);
+        }
+
+        private string UndergroundPlacementDetails(ICommand command)
+        {
+            switch (command)
+            {
+                case DigUndergroundCommand _: return " · No construction cost";
+                case BuildUndergroundFloorCommand _: return " · No construction cost";
+                case BuildUndergroundCoreCommand core:
+                    var shaftCount = _simulationSession.UndergroundProjection().ServiceShaftCells.Count;
+                    return $" · Cost ${100L * Math.Max(0, core.Depth + 1 - shaftCount):N0} · Requires a floored lobby column";
+                case BuildUndergroundCorridorCommand corridor:
+                    var existing = _simulationSession.UndergroundProjection().Corridors;
+                    var newCells = 0;
+                    for (var dx = 0; dx < corridor.Width; dx++)
+                    {
+                        var found = false;
+                        for (var i = 0; i < existing.Count; i++)
+                            if (existing[i].X == corridor.X + dx && existing[i].Depth == corridor.Depth) { found = true; break; }
+                        if (!found) newCells++;
+                    }
+                    return $" · Cost ${30L * newCells:N0} · Requires access corridor";
+                case ZoneUndergroundRoomCommand room:
+                    var definition = UndergroundRoomCatalog.Get(room.Type);
+                    return $" · Cost ${definition.BaseCost + 10L * room.Width * room.Height:N0} · Staff needed {definition.RequiredStaff} · Requires corridor entrance";
+                default: return string.Empty;
+            }
+        }
+
+        private string PlacementDetails(string toolId, int floor, int cellX)
+        {
+            if (!TryCreateCommand(toolId, floor, cellX, out var command, out _)) return string.Empty;
+            var cost = 0L;
+            var hasCost = true;
+            switch (command)
+            {
+                case BuildFloorSlabCommand slab: cost = _costRules.CalculateFloorSlabCost(slab.Bounds); break;
+                case ExpandGroundSlabCommand expansion:
+                    if (_simulationSession.TryGetFloorSlab(0, out var ground))
+                        cost = _costRules.CalculateGroundSlabExpansionCost(ground, expansion.Bounds);
+                    else hasCost = false;
+                    break;
+                case BuildRoomCommand room: cost = _costRules.CalculateRoomCost(room.ContentType, room.Bounds); break;
+                case AddElevatorCarCommand _: cost = TowerEconomyState.ElevatorCarCost; break;
+                case BuildStairwellCommand stair:
+                    cost = _costRules.CalculateStairwellCost(
+                        Math.Max(1, CountNewTransitFloors(stair.BottomFloor, stair.TopFloor,
+                            stair.StairMinX, stair.StairMaxX, new ContentId("amenity:stairwell"))),
+                        stair.StairMaxX - stair.StairMinX + 1); break;
+                case AddElevatorShaftCommand shaft:
+                    cost = _costRules.CalculateElevatorShaftCost(
+                        Math.Max(1, CountNewTransitFloors(shaft.BottomFloor, shaft.TopFloor,
+                            shaft.ShaftMinX, shaft.ShaftMaxX, new ContentId("transit:elevator_shaft"))),
+                        shaft.ShaftMaxX - shaft.ShaftMinX + 1); break;
+                default: hasCost = false; break;
+            }
+            var details = hasCost ? $" · Cost ${cost:N0}" : string.Empty;
+            if (command is BuildRoomCommand && _overlays != null && !toolId.StartsWith("utility:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_connectionVersion != _simulationSession.Version || _connectionFloor != floor)
+                {
+                    _connectionVersion = _simulationSession.Version;
+                    _connectionFloor = floor;
+                    _connectionDetails = string.Empty;
+                    var floors = _overlays.Utilities.Floors;
+                    for (var i = 0; i < floors.Count; i++)
+                    {
+                        if (floors[i].Floor != floor) continue;
+                        _connectionDetails = $" · Current floor: power {(floors[i].PowerConnected ? "connected" : "needs connection")}, water {(floors[i].WaterConnected ? "connected" : "needs connection")}";
+                        break;
+                    }
+                }
+                details += _connectionDetails;
+            }
+            return details;
+        }
+
+        private int CountNewTransitFloors(int bottom, int top, int minX, int maxX, ContentId type)
+        {
+            var count = 0;
+            for (var floor = bottom; floor <= top; floor++)
+            {
+                var rooms = _simulationSession.GetRoomsOnFloor(floor);
+                var found = false;
+                for (var i = 0; i < rooms.Count; i++)
+                    if (rooms[i].ContentType == type && rooms[i].Bounds.MinX == minX && rooms[i].Bounds.MaxX == maxX)
+                    { found = true; break; }
+                if (!found) count++;
+            }
+            return count;
         }
 
         private static bool TryMakeUndergroundCommand(string toolId, int x, int depth,

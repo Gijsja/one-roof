@@ -395,7 +395,8 @@ namespace OneRoof.Application.Overlays
                 floors.Add(new UtilitiesFloorProjection(floor, electrical.Voltage, electrical.BrownoutReason.ToString(), plumbing.WaterPressure, plumbing.WaterFailure.ToString(), plumbing.WasteFailure.ToString(), failures,
                     electrical.RiserColumn, plumbing.WaterRiserColumn, plumbing.WasteChuteColumn, electrical.IsConnected, plumbing.HasWaterService, plumbing.HasWasteCollection));
             }
-            return new UtilitiesOverlayProjection(floors, operations.Equipment);
+            return new UtilitiesOverlayProjection(floors, operations.Equipment,
+                _session.UndergroundUtilityPathProjection(), _session.UndergroundProjection());
         }
 
     }
