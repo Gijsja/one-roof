@@ -181,6 +181,67 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(state.Edges[0].Cause, Does.Contain("commute"));
         }
 
+        [Test]
+        public void SharedIssueAfterMissedEvaluationStartsNewStreak()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var first = sim.Population.Persons[0];
+            var second = new PersonRecord(new EntityId(9004), first.HouseholdId,
+                first.HomeRoomId, first.WorkplaceRoomId, first.Schedule, first.Needs, first.Traits);
+            var people = new PopulationState(new List<PersonRecord> { first, second }, sim.Population.Households);
+            first.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "rent" });
+            second.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "rent" });
+            var saved = new FactionSaveData
+            {
+                version = 2, lastEvaluationTick = 2880,
+                edges = new[] { new RelationshipEdgeSaveData { first = first.Id.Value, second = second.Id.Value,
+                    lastContactTick = 1440, sharedIssue = "rent", sharedSupportDays = 1 } }
+            };
+            var state = FactionState.FromSaveData(saved, people);
+            state.Evaluate(people, sim.Topology, sim.Businesses, sim.Economy.Policy, 4320);
+            Assert.That(state.Edges[0].SharedSupportDays, Is.EqualTo(1));
+            Assert.That(state.Edges[0].Affinity, Is.Zero);
+        }
+
+        [Test]
+        public void MalformedSocialSaveRestoresFiniteUniqueBoundedState()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var first = sim.Population.Persons[0];
+            var people = new List<PersonRecord> { first };
+            for (var i = 0; i < 8; i++)
+                people.Add(new PersonRecord(new EntityId(9100 + i), first.HouseholdId,
+                    first.HomeRoomId, first.WorkplaceRoomId, first.Schedule, first.Needs, first.Traits));
+            var population = new PopulationState(people, sim.Population.Households);
+            var edges = new List<RelationshipEdgeSaveData>();
+            for (var i = 1; i < people.Count; i++)
+                edges.Add(new RelationshipEdgeSaveData { first = first.Id.Value, second = people[i].Id.Value,
+                    affinity = float.NaN, previousAffinity = float.PositiveInfinity, sharedIssue = "rent", sharedSupportDays = int.MaxValue });
+            edges.Add(edges[0]);
+            var saved = new FactionSaveData
+            {
+                version = 2, edges = edges.ToArray(),
+                supports = new[]
+                {
+                    new FactionSupportSaveData { residentId = first.Id.Value, factionId = FactionIds.TenantUnion, support = float.NaN },
+                    new FactionSupportSaveData { residentId = first.Id.Value, factionId = FactionIds.TenantUnion, support = 1f }
+                },
+                factions = new[] { new FactionRecordSaveData { id = FactionIds.TenantUnion, pressure = float.NaN, previousPressure = float.PositiveInfinity } }
+            };
+            var state = FactionState.FromSaveData(saved, population);
+            Assert.That(state.Edges.Count, Is.EqualTo(FactionState.MaxEdgesPerResident));
+            foreach (var edge in state.Edges)
+            {
+                Assert.That(edge.Affinity, Is.Zero);
+                Assert.That(edge.PreviousAffinity, Is.Zero);
+                Assert.That(edge.SharedSupportDays, Is.EqualTo(10000));
+            }
+            Assert.That(state.Supports.Count, Is.EqualTo(1));
+            Assert.That(state.Supports[0].Support, Is.Zero);
+            Assert.That(state.Factions[0].Pressure, Is.Zero);
+            Assert.That(state.Factions[0].PreviousPressure, Is.Zero);
+        }
+
         private static FactionRecord Find(TowerSimulation sim, string id)
         {
             foreach (var record in sim.Factions.Factions) if (record.Id == id) return record;

@@ -71,6 +71,7 @@ namespace OneRoof.Application.Inspectors
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
             foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
             var social = FactionProjectionService.Capture(_session.Simulation);
+            var residentLinks = new List<ResidentInspectorLink>();
             foreach (var support in social.ResidentSupports)
                 if (support.ResidentId == residentId)
                     details.Add($"Faction {support.FactionId}: {support.Support:P0} support{(support.IsMember ? " (member)" : "")}; driver: {support.Driver}.");
@@ -80,7 +81,9 @@ namespace OneRoof.Application.Inspectors
                     var counterpart = tie.FirstId == residentId ? tie.SecondId : tie.FirstId;
                     var band = tie.Affinity >= .2f ? "close" : tie.Affinity <= -.2f ? "strained" : "acquaintance";
                     var meaningful = tie.LastMeaningfulTick > 0 ? $"meaningful contact at tick {tie.LastMeaningfulTick}" : "no meaningful contact recorded";
-                    details.Add($"Tie: resident #{counterpart}, {band} ({tie.Affinity:+0.00;-0.00;0.00}, {tie.Trend}); {meaningful}; {tie.Cause}.");
+                    var reason = tie.LastMeaningfulTick > 0 ? $"last affinity cause: {tie.Cause}" : $"encounter context: {tie.Cause}";
+                    details.Add($"Tie: resident #{counterpart}, {band} ({tie.Affinity:+0.00;-0.00;0.00}, {tie.Trend}); last encounter at tick {tie.LastContactTick}; {meaningful}; {reason}.");
+                    residentLinks.Add(new ResidentInspectorLink(counterpart));
                 }
 
             var symptom = !resident.HasValue
@@ -90,7 +93,8 @@ namespace OneRoof.Application.Inspectors
 
             return new InspectorDetailProjection(
                 $"Resident #{residentId}", symptom, details,
-                person.Grievances.Count > 0 ? "Open the Satisfaction overlay, then respond through transit capacity, services, or leasing." : "Observe needs and activity before changing tower systems.");
+                person.Grievances.Count > 0 ? "Open the Satisfaction overlay, then respond through transit capacity, services, or leasing." : "Observe needs and activity before changing tower systems.",
+                residentLinks);
         }
 
         public InspectorDetailProjection InspectRoom(int roomId)

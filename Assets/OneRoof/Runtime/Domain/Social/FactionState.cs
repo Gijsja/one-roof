@@ -221,10 +221,11 @@ namespace OneRoof.Domain.Social
                 if (edge.First == a && edge.Second == b)
                 {
                     if (edge.LastContactTick == tick) return;
+                    var consecutiveContact = edge.LastContactTick == LastEvaluationTick && LastEvaluationTick > 0;
                     edge.LastContactTick = tick;
                     if (shared != null)
                     {
-                        edge.SharedSupportDays = string.Equals(edge.SharedIssue, shared, StringComparison.Ordinal)
+                        edge.SharedSupportDays = consecutiveContact && string.Equals(edge.SharedIssue, shared, StringComparison.Ordinal)
                             ? Math.Min(10000, edge.SharedSupportDays + 1) : 1;
                         edge.SharedIssue = shared;
                         if (edge.SharedSupportDays >= 2)
@@ -262,31 +263,39 @@ namespace OneRoof.Domain.Social
             var state = new FactionState();
             if (data == null || data.version <= 0) return state;
             var live = new HashSet<int>(); foreach (var person in population.Persons) live.Add(person.Id.Value);
+            var seenEdges = new HashSet<long>();
             if (data.edges != null) foreach (var e in data.edges)
                 if (e != null && e.first > 0 && e.second > e.first && live.Contains(e.first) && live.Contains(e.second))
                 {
-                    var edge = new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), Math.Max(-1f, Math.Min(1f, e.affinity)), Math.Max(0, e.lastContactTick), data.version >= 2 ? e.cause ?? "encounter" : "legacy tie (cause unavailable)", data.version >= 2 ? Math.Max(0, Math.Min(e.lastContactTick, e.lastMeaningfulTick)) : 0, data.version >= 2 && !string.IsNullOrEmpty(e.sharedIssue) ? Math.Max(0, e.sharedSupportDays) : 0, data.version >= 2 ? e.sharedIssue : null);
-                    edge.PreviousAffinity = data.version >= 2 ? Math.Max(-1f, Math.Min(1f, e.previousAffinity)) : edge.Affinity;
+                    var pair = ((long)e.first << 32) | (uint)e.second;
+                    if (!seenEdges.Add(pair)) continue;
+                    var contactTick = Math.Max(0, e.lastContactTick);
+                    var edge = new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), ClampFinite(e.affinity, -1f, 1f), contactTick, data.version >= 2 ? e.cause ?? "encounter" : "legacy tie (cause unavailable)", data.version >= 2 ? Math.Max(0, Math.Min(contactTick, e.lastMeaningfulTick)) : 0, data.version >= 2 && !string.IsNullOrEmpty(e.sharedIssue) ? Math.Max(0, Math.Min(10000, e.sharedSupportDays)) : 0, data.version >= 2 ? e.sharedIssue : null);
+                    edge.PreviousAffinity = data.version >= 2 ? ClampFinite(e.previousAffinity, -1f, 1f) : edge.Affinity;
                     state._edges.Add(edge);
                 }
             state._edges.Sort((a, b) => a.First.Value != b.First.Value ? a.First.Value.CompareTo(b.First.Value) : a.Second.Value.CompareTo(b.Second.Value));
             state._degree.Clear();
-            for (var i = state._edges.Count - 1; i >= 0; i--)
+            for (var i = 0; i < state._edges.Count; i++)
             {
                 var e = state._edges[i]; state._degree.TryGetValue(e.First.Value, out var a); state._degree.TryGetValue(e.Second.Value, out var b);
-                if (a >= MaxEdgesPerResident || b >= MaxEdgesPerResident) { state._edges.RemoveAt(i); continue; }
+                if (a >= MaxEdgesPerResident || b >= MaxEdgesPerResident) { state._edges.RemoveAt(i--); continue; }
                 state.Increment(e.First.Value); state.Increment(e.Second.Value);
             }
+            var seenSupports = new HashSet<string>();
             if (data.supports != null) foreach (var s in data.supports)
                 if (s != null && live.Contains(s.residentId) && Array.IndexOf(FactionIds.All, s.factionId) >= 0)
-                    state._supports.Add(new FactionSupport(new EntityId(s.residentId), s.factionId, Math.Max(0f, Math.Min(1f, s.support)), Math.Max(0, s.sustainedDays), s.driver ?? "unavailable", s.homeFloor));
+                    if (seenSupports.Add(Key(s.residentId, s.factionId)))
+                        state._supports.Add(new FactionSupport(new EntityId(s.residentId), s.factionId, ClampFinite(s.support, 0f, 1f), Math.Max(0, Math.Min(10000, s.sustainedDays)), s.driver ?? "unavailable", s.homeFloor));
             state._supports.Sort((a, b) => a.ResidentId.Value != b.ResidentId.Value ? a.ResidentId.Value.CompareTo(b.ResidentId.Value) : string.CompareOrdinal(a.FactionId, b.FactionId));
             if (data.factions != null) foreach (var saved in data.factions)
                 if (saved != null) foreach (var faction in state._factions) if (faction.Id == saved.id)
-                    { faction.Pressure = Math.Max(0f, Math.Min(1f, saved.pressure)); faction.PreviousPressure = Math.Max(0f, Math.Min(1f, saved.previousPressure)); faction.TopGrievance = saved.topGrievance ?? "none"; }
+                    { faction.Pressure = ClampFinite(saved.pressure, 0f, 1f); faction.PreviousPressure = ClampFinite(saved.previousPressure, 0f, 1f); faction.TopGrievance = saved.topGrievance ?? "none"; }
             foreach (var faction in state._factions) foreach (var support in state._supports) if (support.FactionId == faction.Id) { faction.SupporterCount++; if (support.IsMember) faction.MemberCount++; }
             state.LastEvaluationTick = Math.Max(0, data.lastEvaluationTick);
             return state;
         }
+        private static float ClampFinite(float value, float min, float max)
+            => float.IsNaN(value) || float.IsInfinity(value) ? 0f : Math.Max(min, Math.Min(max, value));
     }
 }

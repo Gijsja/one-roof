@@ -112,6 +112,7 @@ namespace OneRoof.Presentation.Tower
         private void OnDisable()
         {
             UnsubscribeModeEvents();
+            if (_detailCard != null) _detailCard.ResidentInspectionRequested -= InspectLinkedResident;
             if (OutlinePresenter != null) OutlinePresenter.ClearAll();
         }
 
@@ -307,6 +308,8 @@ namespace OneRoof.Presentation.Tower
         public void ShowDetails(InspectTargetKind kind, int id)
         {
             if (_simulationSession == null) return;
+            DetailCard.ResidentInspectionRequested -= InspectLinkedResident;
+            DetailCard.ResidentInspectionRequested += InspectLinkedResident;
             var service = new TowerInspectionService(_simulationSession);
             switch (kind)
             {
@@ -320,6 +323,11 @@ namespace OneRoof.Presentation.Tower
                     DetailCard.Inspect(service.InspectElevatorBank());
                     break;
             }
+        }
+
+        private void InspectLinkedResident(int residentId)
+        {
+            ShowDetails(InspectTargetKind.Resident, residentId);
         }
 
         private bool IsPointerOverUI(Vector2 screenPos)

@@ -12,6 +12,10 @@ namespace OneRoof.Application.Inspectors
     public sealed class InspectorDetailProjection
     {
         public InspectorDetailProjection(string title, string symptom, IReadOnlyList<string> details, string suggestedResponse)
+            : this(title, symptom, details, suggestedResponse, null) { }
+
+        public InspectorDetailProjection(string title, string symptom, IReadOnlyList<string> details, string suggestedResponse,
+            IReadOnlyList<ResidentInspectorLink> residentLinks)
         {
             Title = title ?? string.Empty;
             Symptom = symptom ?? string.Empty;
@@ -19,11 +23,26 @@ namespace OneRoof.Application.Inspectors
                 ? new ReadOnlyCollection<string>(new List<string>(details))
                 : new ReadOnlyCollection<string>(Array.Empty<string>());
             SuggestedResponse = suggestedResponse ?? string.Empty;
+            ResidentLinks = residentLinks != null
+                ? new ReadOnlyCollection<ResidentInspectorLink>(new List<ResidentInspectorLink>(residentLinks))
+                : new ReadOnlyCollection<ResidentInspectorLink>(Array.Empty<ResidentInspectorLink>());
         }
 
         public string Title { get; }
         public string Symptom { get; }
         public IReadOnlyList<string> Details { get; }
         public string SuggestedResponse { get; }
+        public IReadOnlyList<ResidentInspectorLink> ResidentLinks { get; }
+    }
+
+    public sealed class ResidentInspectorLink
+    {
+        public ResidentInspectorLink(int residentId)
+        {
+            if (residentId <= 0) throw new ArgumentOutOfRangeException(nameof(residentId));
+            ResidentId = residentId;
+        }
+
+        public int ResidentId { get; }
     }
 }

@@ -21,5 +21,19 @@ namespace OneRoof.Application.Tests.EditMode
             Assert.That(support.ResidentId, Is.GreaterThan(0));
             Assert.That(support.Driver, Is.Not.Empty);
         }
+
+        [TestCase(-.40f, -.50f, "straining")]
+        [TestCase(-.50f, -.40f, "easing toward neutral")]
+        [TestCase(.40f, .50f, "strengthening")]
+        [TestCase(.50f, .40f, "easing toward neutral")]
+        [TestCase(0f, -.04f, "straining")]
+        [TestCase(0f, .04f, "strengthening")]
+        [TestCase(.30f, .30f, "steady")]
+        public void TieTrend_DescribesMovementRelativeToNeutral(float previous, float current, string expected)
+        {
+            var tie = new ResidentTieProjection(1, 2, current, previous, 10, 10, "test");
+
+            Assert.That(tie.Trend, Is.EqualTo(expected));
+        }
     }
 }

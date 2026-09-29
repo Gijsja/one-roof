@@ -58,7 +58,16 @@ namespace OneRoof.Application.Social
         public int SecondId { get; }
         public float Affinity { get; }
         public float PreviousAffinity { get; }
-        public string Trend => Affinity > PreviousAffinity + .001f ? "strengthening" : Affinity < PreviousAffinity - .001f ? "easing toward neutral" : "steady";
+        public string Trend
+        {
+            get
+            {
+                if (Math.Abs(Affinity - PreviousAffinity) <= .001f) return "steady";
+                if (Affinity < 0f && Affinity < PreviousAffinity) return "straining";
+                if (Affinity > 0f && Affinity > PreviousAffinity) return "strengthening";
+                return "easing toward neutral";
+            }
+        }
         public long LastContactTick { get; }
         public long LastMeaningfulTick { get; }
         public string Cause { get; }

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using OneRoof.Application.Inspectors;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Identity;
@@ -170,6 +171,22 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             _controller.ShowDetails(InspectTargetKind.Room, roomId);
             Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo($"Room #{roomId}"));
+        }
+
+        [Test]
+        public void ResidentLink_OpensCounterpartCardThroughSelectionController()
+        {
+            var residents = _simSession.TransitProjection().Residents;
+            Assert.That(residents.Count, Is.GreaterThan(1));
+            var first = residents[0].ResidentId;
+            var counterpart = residents[1].ResidentId;
+            _controller.ShowDetails(InspectTargetKind.Resident, first);
+            _controller.DetailCard.Inspect(new InspectorDetailProjection(
+                $"Resident #{first}", "Here", new string[0], "Observe",
+                new[] { new ResidentInspectorLink(counterpart) }));
+
+            Assert.That(_controller.DetailCard.TryInspectResidentLink(counterpart), Is.True);
+            Assert.That(_controller.DetailCard.CurrentProjection.Title, Is.EqualTo($"Resident #{counterpart}"));
         }
     }
 }
