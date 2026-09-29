@@ -314,7 +314,7 @@ namespace OneRoof.Presentation.Architecture
             {
                 if (sprite == null) continue;
                 var texture = sprite.texture;
-                if (Application.isPlaying)
+                if (UnityEngine.Application.isPlaying)
                 {
                     UnityEngine.Object.Destroy(sprite);
                     if (texture != null) UnityEngine.Object.Destroy(texture);
