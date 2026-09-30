@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Transit;
 using OneRoof.Content;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
@@ -46,6 +47,25 @@ namespace OneRoof.Presentation.Tower
         private Transform _terracesRoot;
         private Transform _volumetricLightRoot;
         private Transform _groundRoot;
+        private Transform _frontFacadeRoot;
+        private GameObject _framingObject;
+        private GameObject _fenestrationObject;
+        private GameObject _vitrinesObject;
+        private Mesh _framingMesh;
+        private Mesh _fenestrationMesh;
+        private Mesh _vitrineMesh;
+        private Material _glazingMaterial;
+        private float _facadeEnvelopeAlpha = 1f;
+
+        private readonly List<FrontFenestrationEntry> _frontFenestrationEntries = new List<FrontFenestrationEntry>();
+        private Color[] _fenestrationColors;
+        private Color[] _vitrineColors;
+        private int _elevatorVitrineColorStart;
+        private int _elevatorVitrineColorCount;
+        private int _storefrontVitrineColorStart;
+        private int _storefrontVitrineColorCount;
+        private int _hallwayVitrineColorStart;
+        private int _hallwayVitrineColorCount;
 
         private readonly List<GameObject> _leftWallSlices = new List<GameObject>();
         private readonly List<GameObject> _rightWallSlices = new List<GameObject>();
@@ -82,6 +102,15 @@ namespace OneRoof.Presentation.Tower
         public int RenderedFloorCount => _renderedFloorCount;
         public Transform Root => _root;
         public Transform VolumetricLightRoot => _volumetricLightRoot;
+        public Transform FrontFacadeRoot => _frontFacadeRoot;
+        public GameObject FramingObject => _framingObject;
+        public GameObject FenestrationObject => _fenestrationObject;
+        public GameObject VitrinesObject => _vitrinesObject;
+        public Mesh FramingMesh => _framingMesh;
+        public Mesh FenestrationMesh => _fenestrationMesh;
+        public Mesh VitrineMesh => _vitrineMesh;
+        public Material GlazingMaterial => _glazingMaterial;
+        public float FacadeEnvelopeAlpha => _facadeEnvelopeAlpha;
 
         public IReadOnlyList<GameObject> LeftWindowFrames => _leftWindowFrames;
         public IReadOnlyList<GameObject> LeftWindowGlasses => _leftWindowGlasses;
@@ -112,6 +141,35 @@ namespace OneRoof.Presentation.Tower
         public static readonly Color ConeDayColor = new Color(0.92f, 0.96f, 1.0f, 0.20f);
         public static readonly Color ConeNightLitColor = new Color(1.00f, 0.78f, 0.38f, 0.32f);
         public static readonly Color ConeNightDarkColor = new Color(0f, 0f, 0f, 0f);
+
+        public static readonly Color ElevatorVitrineDayColor = new Color(0.60f, 0.80f, 0.95f, 0.15f);
+        public static readonly Color ElevatorVitrineNightColor = new Color(0.95f, 0.85f, 0.65f, 0.18f);
+        public static readonly Color HallwayVitrineDayColor = new Color(0.45f, 0.70f, 0.85f, 0.16f);
+        public static readonly Color HallwayVitrineNightColor = new Color(0.95f, 0.85f, 0.65f, 0.20f);
+        public static readonly Color StorefrontVitrineDayColor = new Color(0.50f, 0.75f, 0.90f, 0.14f);
+        public static readonly Color StorefrontVitrineNightColor = new Color(1.00f, 0.85f, 0.55f, 0.28f);
+        public static readonly Color MullionColor = new Color(0.20f, 0.25f, 0.32f);
+
+        public enum VitrineType
+        {
+            ScenicElevator,
+            Storefront,
+            HallwayRibbon
+        }
+
+        private readonly struct FrontFenestrationEntry
+        {
+            public readonly int VertexStartIndex;
+            public readonly int Floor;
+            public readonly int BayIndex;
+
+            public FrontFenestrationEntry(int vertexStartIndex, int floor, int bayIndex)
+            {
+                VertexStartIndex = vertexStartIndex;
+                Floor = floor;
+                BayIndex = bayIndex;
+            }
+        }
 
         private readonly struct WindowLightingEntry
         {
@@ -146,6 +204,16 @@ namespace OneRoof.Presentation.Tower
                 _coneMaterial.SetInt("_ZWrite", 0);
                 _coneMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 _coneMaterial.SetOverrideTag("RenderType", "Transparent");
+            }
+
+            if (_worldMaterial != null && _glazingMaterial == null)
+            {
+                _glazingMaterial = new Material(_worldMaterial) { name = "Exterior Facade Glazing" };
+                _glazingMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _glazingMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _glazingMaterial.SetInt("_ZWrite", 0);
+                _glazingMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                _glazingMaterial.SetOverrideTag("RenderType", "Transparent");
             }
 
             Clear();
@@ -197,6 +265,7 @@ namespace OneRoof.Presentation.Tower
             EnsureExteriorWindows(topology, floorCount);
             BuildRoofline(topology, floorCount, topSlab);
             BuildSetbackTerraces(topology, floorCount);
+            BuildFrontFacadeEnvelope(topology, floorCount);
             CalculateStageBounds(floorCount, groundSlab, topSlab);
         }
 
@@ -222,6 +291,7 @@ namespace OneRoof.Presentation.Tower
             _terracesRoot = EnsureChildTransform(_root, "Setback Terraces");
             _volumetricLightRoot = EnsureChildTransform(_root, "Exterior Volumetric Lighting");
             _groundRoot = EnsureChildTransform(_root, "Ground Dressing");
+            _frontFacadeRoot = EnsureChildTransform(_root, "Front Facade Envelope");
         }
 
         private static Transform EnsureChildTransform(Transform parent, string name)
@@ -996,7 +1066,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateWindowLighting(DayPhase phase)
+        public void UpdateWindowLighting(DayPhase phase, TowerProjection projection = null)
         {
             var hour = phase.Hour + phase.Minute / 60f;
             // Smooth continuous night factor: 1.0 fully at night, 0.0 fully by day.
@@ -1033,6 +1103,61 @@ namespace OneRoof.Presentation.Tower
                     SetColor(entry.ConeRenderer, currentConeColor);
                 }
             }
+
+            // Front Facade Modular Fenestration (F5)
+            if (_fenestrationMesh != null && _fenestrationColors != null && _frontFenestrationEntries.Count > 0)
+            {
+                for (var i = 0; i < _frontFenestrationEntries.Count; i++)
+                {
+                    var entry = _frontFenestrationEntries[i];
+                    bool isOccupied;
+                    if (projection != null && projection.Residents != null)
+                    {
+                        isOccupied = IsBayOccupied(projection, entry.Floor, entry.BayIndex);
+                    }
+                    else
+                    {
+                        isOccupied = ((entry.Floor * 7 + entry.BayIndex * 3 + 1) % 5 != 0);
+                    }
+
+                    var targetNight = isOccupied ? WindowNightLitColor : WindowNightDarkColor;
+                    var c = Color.Lerp(WindowDayColor, targetNight, smoothNight);
+
+                    var vStart = entry.VertexStartIndex;
+                    if (vStart + 3 < _fenestrationColors.Length)
+                    {
+                        _fenestrationColors[vStart + 0] = c;
+                        _fenestrationColors[vStart + 1] = c;
+                        _fenestrationColors[vStart + 2] = c;
+                        _fenestrationColors[vStart + 3] = c;
+                    }
+                }
+                _fenestrationMesh.colors = _fenestrationColors;
+            }
+
+            // Front Facade Vitrines (Elevator, Hallways, Storefronts)
+            if (_vitrineMesh != null && _vitrineColors != null)
+            {
+                var elevatorColor = Color.Lerp(ElevatorVitrineDayColor, ElevatorVitrineNightColor, smoothNight);
+                for (var i = 0; i < _elevatorVitrineColorCount && _elevatorVitrineColorStart + i < _vitrineColors.Length; i++)
+                {
+                    _vitrineColors[_elevatorVitrineColorStart + i] = elevatorColor;
+                }
+
+                var storefrontColor = Color.Lerp(StorefrontVitrineDayColor, StorefrontVitrineNightColor, smoothNight);
+                for (var i = 0; i < _storefrontVitrineColorCount && _storefrontVitrineColorStart + i < _vitrineColors.Length; i++)
+                {
+                    _vitrineColors[_storefrontVitrineColorStart + i] = storefrontColor;
+                }
+
+                var hallwayColor = Color.Lerp(HallwayVitrineDayColor, HallwayVitrineNightColor, smoothNight);
+                for (var i = 0; i < _hallwayVitrineColorCount && _hallwayVitrineColorStart + i < _vitrineColors.Length; i++)
+                {
+                    _vitrineColors[_hallwayVitrineColorStart + i] = hallwayColor;
+                }
+
+                _vitrineMesh.colors = _vitrineColors;
+            }
         }
 
         public void Clear()
@@ -1054,9 +1179,20 @@ namespace OneRoof.Presentation.Tower
             }
             _coneMeshes.Clear();
 
+            DestroyGeneratedMesh(ref _framingMesh);
+            DestroyGeneratedMesh(ref _fenestrationMesh);
+            DestroyGeneratedMesh(ref _vitrineMesh);
+            _frontFenestrationEntries.Clear();
+            _fenestrationColors = null;
+            _vitrineColors = null;
+            _framingObject = null;
+            _fenestrationObject = null;
+            _vitrinesObject = null;
+
             _root = null;
             _leftFacadeRoot = null;
             _rightFacadeRoot = null;
+            _frontFacadeRoot = null;
             _rooflineRoot = null;
             _fixturesRoot = null;
             _terracesRoot = null;
@@ -1096,6 +1232,12 @@ namespace OneRoof.Presentation.Tower
                 if (UnityEngine.Application.isPlaying) Object.Destroy(_coneMaterial);
                 else Object.DestroyImmediate(_coneMaterial);
                 _coneMaterial = null;
+            }
+            if (_glazingMaterial != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_glazingMaterial);
+                else Object.DestroyImmediate(_glazingMaterial);
+                _glazingMaterial = null;
             }
         }
 
@@ -1223,7 +1365,8 @@ namespace OneRoof.Presentation.Tower
         private void SetColor(MeshRenderer renderer, Color color)
         {
             if (renderer == null) return;
-            var material = renderer.sharedMaterial == _coneMaterial ? _coneMaterial : _worldMaterial;
+            var material = renderer.sharedMaterial == _coneMaterial ? _coneMaterial
+                : (renderer.sharedMaterial == _glazingMaterial ? _glazingMaterial : _worldMaterial);
             if (material != null && renderer.sharedMaterial != material)
                 renderer.sharedMaterial = material;
             if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
@@ -1231,6 +1374,370 @@ namespace OneRoof.Presentation.Tower
             _colorBlock.SetColor("_BaseColor", color);
             _colorBlock.SetColor("_Color", color);
             renderer.SetPropertyBlock(_colorBlock);
+        }
+
+        public void SetFacadeEnvelopeAlpha(float alpha)
+        {
+            _facadeEnvelopeAlpha = Mathf.Clamp01(alpha);
+            if (_frontFacadeRoot == null) return;
+
+            if (_facadeEnvelopeAlpha <= 0.001f)
+            {
+                _frontFacadeRoot.gameObject.SetActive(false);
+            }
+            else
+            {
+                _frontFacadeRoot.gameObject.SetActive(true);
+                ApplyFacadeEnvelopeAlpha();
+            }
+        }
+
+        public float GetEffectiveVitrineAlpha(VitrineType type)
+        {
+            var baseAlpha = type == VitrineType.ScenicElevator ? 0.15f : (type == VitrineType.Storefront ? 0.14f : 0.16f);
+            return _facadeEnvelopeAlpha * baseAlpha;
+        }
+
+        public Color GetFenestrationColor(int floor, int bayIndex = 0)
+        {
+            if (_fenestrationColors == null || _fenestrationColors.Length == 0) return Color.clear;
+            for (var i = 0; i < _frontFenestrationEntries.Count; i++)
+            {
+                var entry = _frontFenestrationEntries[i];
+                if (entry.Floor == floor && entry.BayIndex == bayIndex)
+                {
+                    if (entry.VertexStartIndex < _fenestrationColors.Length)
+                        return _fenestrationColors[entry.VertexStartIndex];
+                }
+            }
+            return Color.clear;
+        }
+
+        public Color GetVitrineColor(VitrineType type)
+        {
+            if (_vitrineColors == null || _vitrineColors.Length == 0) return Color.clear;
+            switch (type)
+            {
+                case VitrineType.ScenicElevator:
+                    return _elevatorVitrineColorStart < _vitrineColors.Length ? _vitrineColors[_elevatorVitrineColorStart] : Color.clear;
+                case VitrineType.Storefront:
+                    return _storefrontVitrineColorStart < _vitrineColors.Length ? _vitrineColors[_storefrontVitrineColorStart] : Color.clear;
+                case VitrineType.HallwayRibbon:
+                    return _hallwayVitrineColorStart < _vitrineColors.Length ? _vitrineColors[_hallwayVitrineColorStart] : Color.clear;
+                default:
+                    return Color.clear;
+            }
+        }
+
+        private static bool IsBayOccupied(TowerProjection projection, int floor, int bayIndex)
+        {
+            if (projection == null || projection.Residents == null) return false;
+            for (var r = 0; r < projection.Residents.Count; r++)
+            {
+                var res = projection.Residents[r];
+                if (res.Floor == floor && (res.Status == TransitResidentStatus.InRoom || res.RoomId.HasValue))
+                {
+                    return true;
+                }
+            }
+            return ((floor * 7 + bayIndex * 3 + 1) % 5 != 0);
+        }
+
+        private void BuildFrontFacadeEnvelope(TowerTopologyProjection topology, int floorCount)
+        {
+            if (_frontFacadeRoot == null) return;
+
+            DestroyGeneratedMesh(ref _framingMesh);
+            DestroyGeneratedMesh(ref _fenestrationMesh);
+            DestroyGeneratedMesh(ref _vitrineMesh);
+            _frontFenestrationEntries.Clear();
+
+            var framingBuilder = new FacadeMeshBuilder();
+            var fenestrationBuilder = new FacadeMeshBuilder();
+            var vitrineBuilder = new FacadeMeshBuilder();
+
+            // Depth standards
+            const float opaqueZ = -0.36f;
+            const float vitrineZ = -0.345f;
+
+            // F2: Scenic Glass Elevator Vitrine
+            // Spans x in [-2.40f, -1.40f] across all 30 floors
+            const float elevatorLeft = -2.40f;
+            const float elevatorRight = -1.40f;
+            var bottomY = TowerStructurePresenter.FloorY(0) - 0.74f;
+            var topY = TowerStructurePresenter.FloorY(floorCount - 1) + 1.01f;
+
+            _elevatorVitrineColorStart = vitrineBuilder.AddQuad(
+                elevatorLeft, elevatorRight, bottomY, topY, vitrineZ, ElevatorVitrineDayColor);
+            _elevatorVitrineColorCount = 4;
+
+            // F4: Ground-Level Storefront Vitrines
+            // Floor 0 retail, diner, concourse: x in [-8.4f, 4.6f], height = 1.15m, alpha = 0.14
+            var groundY = TowerStructurePresenter.FloorY(0);
+            var storefrontMinY = groundY - 0.62f;
+            var storefrontMaxY = storefrontMinY + 1.15f;
+            const float storefrontLeft = -8.4f;
+            const float storefrontRight = 4.6f;
+
+            _storefrontVitrineColorStart = vitrineBuilder.AddQuad(
+                storefrontLeft, storefrontRight, storefrontMinY, storefrontMaxY, vitrineZ, StorefrontVitrineDayColor);
+            _storefrontVitrineColorCount = 4;
+
+            _hallwayVitrineColorStart = vitrineBuilder.Vertices.Count;
+
+            // Build floors:
+            for (var f = 0; f < floorCount; f++)
+            {
+                var floorY = TowerStructurePresenter.FloorY(f);
+                var slab = topology != null && topology.TryGetFloorSlab(f, out var s) ? s : new CellBounds(f, -14, 16);
+                var worldLeft = -2.4f + slab.MinX * 0.5f;
+                var worldRight = -2.4f + (slab.MaxX + 1) * 0.5f;
+
+                // F1: Floor Spandrel Band across slab edge
+                framingBuilder.AddQuad(worldLeft, worldRight, floorY - 0.74f, floorY - 0.58f, opaqueZ, SpandrelColor);
+
+                // F3: Circulation Hallway Glazing Ribbons at y in [floorY - 0.68f, floorY + 0.22f], alpha = 0.16
+                var ribbonMinY = floorY - 0.68f;
+                var ribbonMaxY = floorY + 0.22f;
+                if (worldLeft < elevatorLeft)
+                {
+                    vitrineBuilder.AddQuad(worldLeft, elevatorLeft, ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
+                }
+                if (elevatorRight < worldRight)
+                {
+                    vitrineBuilder.AddQuad(elevatorRight, worldRight, ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
+                }
+
+                // Horizontal Transoms (Curtain wall framing)
+                framingBuilder.AddQuad(worldLeft, worldRight, floorY + 0.22f, floorY + 0.26f, opaqueZ, MullionColor);
+                framingBuilder.AddQuad(worldLeft, worldRight, floorY + 0.81f, floorY + 0.85f, opaqueZ, MullionColor);
+
+                // Vertical Mullions flanking elevator shaft
+                framingBuilder.AddQuad(elevatorLeft - 0.04f, elevatorLeft, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+                framingBuilder.AddQuad(elevatorRight, elevatorRight + 0.04f, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+
+                // Flank edge vertical mullions
+                framingBuilder.AddQuad(worldLeft, worldLeft + 0.06f, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+                framingBuilder.AddQuad(worldRight - 0.06f, worldRight, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+
+                // Modular Window Fenestration & Intermediate Mullions
+                // Left Wing Bays
+                var bayIndex = 0;
+                var curX = worldLeft + 0.06f;
+                var leftLimit = elevatorLeft - 0.04f;
+                while (curX + 0.40f <= leftLimit)
+                {
+                    var nextX = Mathf.Min(curX + 1.0f, leftLimit);
+                    var windowMaxX = nextX - 0.04f;
+                    if (windowMaxX > curX)
+                    {
+                        var vStart = fenestrationBuilder.AddQuad(
+                            curX, windowMaxX, floorY + 0.26f, floorY + 0.81f, opaqueZ, WindowDayColor);
+                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex));
+                        bayIndex++;
+                    }
+                    if (nextX < leftLimit)
+                    {
+                        framingBuilder.AddQuad(nextX - 0.04f, nextX, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+                    }
+                    curX = nextX;
+                }
+
+                // Right Wing Bays
+                curX = elevatorRight + 0.04f;
+                var rightLimit = worldRight - 0.06f;
+                while (curX + 0.40f <= rightLimit)
+                {
+                    var nextX = Mathf.Min(curX + 1.0f, rightLimit);
+                    var windowMaxX = nextX - 0.04f;
+                    if (windowMaxX > curX)
+                    {
+                        var vStart = fenestrationBuilder.AddQuad(
+                            curX, windowMaxX, floorY + 0.26f, floorY + 0.81f, opaqueZ, WindowDayColor);
+                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex));
+                        bayIndex++;
+                    }
+                    if (nextX < rightLimit)
+                    {
+                        framingBuilder.AddQuad(nextX - 0.04f, nextX, floorY - 0.58f, floorY + 0.85f, opaqueZ, MullionColor);
+                    }
+                    curX = nextX;
+                }
+            }
+
+            // Top floor parapet spandrel:
+            var topSlab = topology != null && topology.TryGetFloorSlab(floorCount - 1, out var ts) ? ts : new CellBounds(floorCount - 1, -14, 16);
+            var topWorldLeft = -2.4f + topSlab.MinX * 0.5f;
+            var topWorldRight = -2.4f + (topSlab.MaxX + 1) * 0.5f;
+            var topFloorY = TowerStructurePresenter.FloorY(floorCount - 1);
+            framingBuilder.AddQuad(topWorldLeft, topWorldRight, topFloorY + 0.85f, topFloorY + 1.01f, opaqueZ, SpandrelColor);
+
+            _hallwayVitrineColorCount = vitrineBuilder.Vertices.Count - _hallwayVitrineColorStart;
+
+            // Generate combined meshes (3 draw calls total)
+            _framingMesh = framingBuilder.BuildMesh("Curtain Wall Framing Mesh");
+            _fenestrationMesh = fenestrationBuilder.BuildMesh("Modular Window Fenestration Mesh");
+            _vitrineMesh = vitrineBuilder.BuildMesh("Transparent Vitrines Mesh");
+
+            _fenestrationColors = _fenestrationMesh.colors;
+            _vitrineColors = _vitrineMesh.colors;
+
+            // Attach to GameObjects
+            _framingObject = EnsureChildWithMesh(_frontFacadeRoot, "Curtain Wall Framing", _framingMesh, _worldMaterial);
+            _fenestrationObject = EnsureChildWithMesh(_frontFacadeRoot, "Modular Window Fenestration", _fenestrationMesh, _worldMaterial);
+            _vitrinesObject = EnsureChildWithMesh(_frontFacadeRoot, "Transparent Vitrines (Light Cone)", _vitrineMesh, _glazingMaterial ?? _coneMaterial);
+
+            // Hierarchy anchors
+            var elevatorAnchor = EnsureChildTransform(_frontFacadeRoot, "Scenic Elevator Vitrine");
+            elevatorAnchor.localPosition = new Vector3(-1.90f, (bottomY + topY) * 0.5f, vitrineZ);
+            elevatorAnchor.localScale = new Vector3(1.0f, topY - bottomY, 1f);
+
+            var hallwayAnchor = EnsureChildTransform(_frontFacadeRoot, "Circulation Hallway Vitrines");
+            hallwayAnchor.localPosition = new Vector3(-1.90f, (bottomY + topY) * 0.5f, vitrineZ);
+
+            var storefrontAnchor = EnsureChildTransform(_frontFacadeRoot, "Ground Storefront Vitrines");
+            storefrontAnchor.localPosition = new Vector3((storefrontLeft + storefrontRight) * 0.5f, (storefrontMinY + storefrontMaxY) * 0.5f, vitrineZ);
+            storefrontAnchor.localScale = new Vector3(storefrontRight - storefrontLeft, 1.15f, 1f);
+
+            var spandrelAnchor = EnsureChildTransform(_frontFacadeRoot, "Spandrel Bands");
+            spandrelAnchor.localPosition = new Vector3(-1.90f, (bottomY + topY) * 0.5f, opaqueZ);
+
+            _frontFacadeRoot.gameObject.SetActive(_facadeEnvelopeAlpha > 0.001f);
+            ApplyFacadeEnvelopeAlpha();
+        }
+
+        private void ApplyFacadeEnvelopeAlpha()
+        {
+            if (_frontFacadeRoot == null) return;
+
+            if (_framingObject != null)
+            {
+                var r = _framingObject.GetComponent<MeshRenderer>();
+                if (r != null) SetColorWithAlpha(r, Color.white, _facadeEnvelopeAlpha);
+            }
+
+            if (_fenestrationObject != null)
+            {
+                var r = _fenestrationObject.GetComponent<MeshRenderer>();
+                if (r != null) SetColorWithAlpha(r, Color.white, _facadeEnvelopeAlpha);
+            }
+
+            if (_vitrinesObject != null)
+            {
+                var r = _vitrinesObject.GetComponent<MeshRenderer>();
+                if (r != null) SetColorWithAlpha(r, Color.white, _facadeEnvelopeAlpha);
+            }
+        }
+
+        private void SetColorWithAlpha(MeshRenderer renderer, Color tint, float alpha)
+        {
+            if (renderer == null) return;
+            if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(_colorBlock);
+            var col = new Color(tint.r, tint.g, tint.b, alpha);
+            _colorBlock.SetColor("_BaseColor", col);
+            _colorBlock.SetColor("_Color", col);
+            renderer.SetPropertyBlock(_colorBlock);
+        }
+
+        private static GameObject EnsureChildWithMesh(Transform parent, string name, Mesh mesh, Material material)
+        {
+            var child = parent.Find(name);
+            GameObject go;
+            MeshFilter filter;
+            MeshRenderer renderer;
+
+            if (child == null)
+            {
+                go = new GameObject(name);
+                go.transform.SetParent(parent, false);
+                filter = go.AddComponent<MeshFilter>();
+                renderer = go.AddComponent<MeshRenderer>();
+            }
+            else
+            {
+                go = child.gameObject;
+                filter = go.GetComponent<MeshFilter>() ?? go.AddComponent<MeshFilter>();
+                renderer = go.GetComponent<MeshRenderer>() ?? go.AddComponent<MeshRenderer>();
+            }
+
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localScale = Vector3.one;
+            filter.sharedMesh = mesh;
+            if (material != null) renderer.sharedMaterial = material;
+            return go;
+        }
+
+        private static void DestroyGeneratedMesh(ref Mesh mesh)
+        {
+            if (mesh == null) return;
+            if (UnityEngine.Application.isPlaying) Object.Destroy(mesh);
+            else Object.DestroyImmediate(mesh);
+            mesh = null;
+        }
+
+        private sealed class FacadeMeshBuilder
+        {
+            public readonly List<Vector3> Vertices = new List<Vector3>();
+            public readonly List<int> Triangles = new List<int>();
+            public readonly List<Color> Colors = new List<Color>();
+            public readonly List<Vector2> UVs = new List<Vector2>();
+
+            public int AddQuad(float minX, float maxX, float minY, float maxY, float z, Color color)
+            {
+                var startIndex = Vertices.Count;
+                var v0 = new Vector3(minX, minY, z);
+                var v1 = new Vector3(maxX, minY, z);
+                var v2 = new Vector3(maxX, maxY, z);
+                var v3 = new Vector3(minX, maxY, z);
+
+                Vertices.Add(v0);
+                Vertices.Add(v1);
+                Vertices.Add(v2);
+                Vertices.Add(v3);
+
+                Colors.Add(color);
+                Colors.Add(color);
+                Colors.Add(color);
+                Colors.Add(color);
+
+                UVs.Add(new Vector2(0f, 0f));
+                UVs.Add(new Vector2(1f, 0f));
+                UVs.Add(new Vector2(1f, 1f));
+                UVs.Add(new Vector2(0f, 1f));
+
+                Triangles.Add(startIndex + 0);
+                Triangles.Add(startIndex + 3);
+                Triangles.Add(startIndex + 2);
+                Triangles.Add(startIndex + 0);
+                Triangles.Add(startIndex + 2);
+                Triangles.Add(startIndex + 1);
+
+                Triangles.Add(startIndex + 0);
+                Triangles.Add(startIndex + 1);
+                Triangles.Add(startIndex + 2);
+                Triangles.Add(startIndex + 0);
+                Triangles.Add(startIndex + 2);
+                Triangles.Add(startIndex + 3);
+
+                return startIndex;
+            }
+
+            public Mesh BuildMesh(string name)
+            {
+                var mesh = new Mesh { name = name };
+                if (Vertices.Count > 65534)
+                {
+                    mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                }
+                mesh.SetVertices(Vertices);
+                mesh.SetTriangles(Triangles, 0);
+                mesh.SetColors(Colors);
+                mesh.SetUVs(0, UVs);
+                mesh.RecalculateNormals();
+                mesh.RecalculateBounds();
+                return mesh;
+            }
         }
     }
 
