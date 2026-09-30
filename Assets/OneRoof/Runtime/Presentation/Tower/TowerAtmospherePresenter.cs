@@ -38,6 +38,35 @@ namespace OneRoof.Presentation.Tower
         private TowerTopologyProjection _syncedTopology;
         private int _syncedRoomCount = -1;
 
+        private float _interiorAlpha = 1f;
+        private int _lastInteriorRendererCount = -1;
+        private Color _currentWindowColor = new Color(1f, 0.77f, 0.36f, 0.34f);
+
+        public void SetInteriorAlpha(float alpha)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            if (Mathf.Approximately(alpha, _interiorAlpha) && _lastInteriorRendererCount == _windowLightRenderers.Count) return;
+            _interiorAlpha = alpha;
+            _lastInteriorRendererCount = _windowLightRenderers.Count;
+            ApplyWindowColors();
+        }
+
+        private void ApplyWindowColors()
+        {
+            if (_dayNightBlock == null) _dayNightBlock = new MaterialPropertyBlock();
+            foreach (var renderer in _windowLightRenderers)
+            {
+                if (renderer == null) continue;
+                var roomAlpha = renderer.bounds.center.y < TowerStructurePresenter.FloorY(0) + 0.5f ? 1f : _interiorAlpha;
+                renderer.enabled = roomAlpha > 0.001f;
+                var color = _currentWindowColor; color.a *= roomAlpha;
+                renderer.GetPropertyBlock(_dayNightBlock);
+                _dayNightBlock.SetColor("_BaseColor", color);
+                _dayNightBlock.SetColor("_Color", color);
+                renderer.SetPropertyBlock(_dayNightBlock);
+            }
+        }
+
         public float WindowLightStrength { get; set; } = 1f;
         public int RoomToneSourceCount => _roomTones.Count;
         public int WindowLightCount => _windowVolumes.Count;
@@ -88,15 +117,8 @@ namespace OneRoof.Presentation.Tower
             if (_dayNightBlock == null) _dayNightBlock = new MaterialPropertyBlock();
             var windowColor = Color.Lerp(new Color(0.75f, 0.85f, 1f, 0.08f), new Color(1f, 0.72f, 0.35f, 0.5f), night);
             windowColor.a *= Mathf.Clamp01(WindowLightStrength);
-            for (var i = 0; i < _windowLightRenderers.Count; i++)
-            {
-                var renderer = _windowLightRenderers[i];
-                if (renderer == null) continue;
-                renderer.GetPropertyBlock(_dayNightBlock);
-                _dayNightBlock.SetColor("_BaseColor", windowColor);
-                _dayNightBlock.SetColor("_Color", windowColor);
-                renderer.SetPropertyBlock(_dayNightBlock);
-            }
+            _currentWindowColor = windowColor;
+            ApplyWindowColors();
 
             // Night is expressed by the window and exterior light colors. The
             // former full-building NightTint quad covered every foreground
@@ -111,6 +133,7 @@ namespace OneRoof.Presentation.Tower
             foreach (var volume in _windowVolumes) DestroyUnityObject(volume);
             _windowVolumes.Clear();
             _windowLightRenderers.Clear();
+            _lastInteriorRendererCount = -1;
             foreach (var material in _windowMaterials) DestroyUnityObject(material);
             _windowMaterials.Clear();
             foreach (var mesh in _generatedMeshes) DestroyUnityObject(mesh);

@@ -60,7 +60,7 @@ namespace OneRoof.Presentation.Tower
             if (_dashboard != null && _dashboard.IsCollapsed) return;
             GUILayout.BeginArea(new Rect(Mathf.Max(650, Screen.width-348), Screen.height-98, 332, 82), StewardTheme.Panel);
             GUILayout.Label("GOLD STANDARD  /  CITY PLAYGROUND", StewardTheme.Label(12, StewardTheme.Amber, true));
-            GUILayout.Label("5  Full tower     6  Street     7  Rooftop", StewardTheme.Label(11, StewardTheme.Text));
+            GUILayout.Label("5  Full tower   6  Street   7  Rooftop   F  Facade", StewardTheme.Label(11, StewardTheme.Text));
             GUILayout.Label("Space  Pause    W  Weather    R  Reset    H  Hide", StewardTheme.Label(10, StewardTheme.Muted));
             GUILayout.EndArea();
         }

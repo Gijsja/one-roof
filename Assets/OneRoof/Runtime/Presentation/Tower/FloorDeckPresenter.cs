@@ -31,6 +31,18 @@ namespace OneRoof.Presentation.Tower
         public IReadOnlyDictionary<int, FloorDeckView> Decks => _decksByFloor;
         public string GlobalThemeId => _globalThemeId;
 
+        // The combined facade spandrels replace upper interior deck trim in exterior mode.
+        // Keep the concourse deck because storefront interiors remain visible.
+        public void SetInteriorDecksVisible(bool visible)
+        {
+            foreach (var pair in _decksByFloor)
+            {
+                var active = visible || pair.Key == 0;
+                if (pair.Value != null && pair.Value.gameObject.activeSelf != active)
+                    pair.Value.gameObject.SetActive(active);
+            }
+        }
+
         public void Initialize(Transform parent, Material worldMaterial, MaterialPropertyBlock colorBlock)
         {
             _parent = parent;

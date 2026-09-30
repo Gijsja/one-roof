@@ -61,10 +61,30 @@ A failing suite proves nothing until failures are attributed. Check whether fail
 
 Record the worktree path (or its removal), exact commands, exit codes, result XML paths, test totals, and any pre-existing failures plus their baseline evidence. See `Handoffs/Active/` for examples.
 
-### Pipeline CLI
+## Pipeline & Automation Tooling Workflows
 
-The `unity` CLI (`unity test`, `unity pipeline`, `unity command`, `unity status`) is permitted
-validation evidence alongside raw one-shot `-batchmode` runs; `com.unity.pipeline` is installed.
-Prefer an isolated worktree and reuse a connected editor only for light read-only checks — never
-trigger heavy runs on an editor another session owns. Record the command, exit code, result paths,
-and attributed failures in the handoff either way.
+The project combines headless CLI execution, Python-driven test orchestration, live Editor probing via `com.unity.pipeline`, and pre-commit hygiene audits.
+
+### 1. Unity Pipeline CLI & Live Probing (`pipeline_client.py`)
+
+When the Unity Editor is running (interactively or via background service), `com.unity.pipeline` binds an HTTP server to the loopback interface (`http://127.0.0.1:7800`):
+- **Discovery & Auth**: Reads the JSON descriptor at `<projectPath>/Library/Pipeline/.unity-pipeline-port` to extract the active `port` and CSPRNG bearer `evalToken`. Requests must supply `Authorization: Bearer <evalToken>`.
+- **Live Probing Tooling (`pipeline_client.py`)**:
+  - `python3 pipeline_client.py cmd get_performance_stats`: Queries live rendering metrics (draw calls, batches, SetPass calls, CPU frame times). Used to verify presentation performance budgets (e.g. validating the 30-floor scale target in `Tower_GoldStandard30` at 171 draw calls and ~9.27 ms frame time).
+  - `python3 pipeline_client.py cmd console_status`: Checks current console errors and warnings. Enforces the strict rule of 0 console exceptions during live ticks.
+  - `python3 pipeline_client.py eval "<expression>"`: Evaluates arbitrary C# expressions on the fly (e.g. `TowerPlayableController.Instance.CurrentTick`, elevator queue lengths, or resident transit states) without halting playback.
+- **Pipeline CLI (`unity command`)**: The official `unity` CLI can similarly drive commands (`unity command get_performance_stats`, `unity command editor_status`, `unity command eval '...'`).
+- **Safety Policy**: Prefer an isolated worktree for destructive or heavy runs. Reuse a connected editor only for light read-only inspection or telemetry probes — never trigger heavy test suites on an editor another session owns.
+
+### 2. Headless Test Runner & Subprocess Bounding
+
+- **Timeout Governance**: Automated runs wrap Unity batchmode invocations inside Python subprocess harnesses (e.g. `subprocess.run(..., timeout=1500)`) or shell `timeout 1500` to prevent stalled headless processes.
+- **Batchmode Flag Invariant**: Never pass `-quit` when running `-runTests`. In Unity 6000.3, `-quit` causes immediate termination before executing the test runner or generating result XMLs.
+- **Artifact Verification**: Scripts parse the emitted NUnit XML report (`/tmp/<name>-editmode.xml`) to assert `total > 0` and `failures == 0`, and cross-reference failures against pristine baseline logs.
+
+### 3. Pre-Commit Hygiene & Asset Pipeline Automation
+
+Prior to committing changes or preparing milestone handoffs, automated Python scripts verify repository integrity:
+- **Meta File Audit**: Recursive traversal of `Assets/` verifying every asset and directory has a valid `.meta` file, with zero orphaned `.meta` files.
+- **Asset Specification & Schema Checks**: Validation of Spine 2D JSON schemas (verifying bone counts, slot attachments, and skin mappings) and SHA-256 verification of authored art slices against specifications.
+- **C# Syntax & Bracket Integrity**: Automated bracket/brace matching across all touched `.cs` files to catch unbalanced syntax before compiler invocation.

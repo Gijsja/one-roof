@@ -18,6 +18,25 @@ namespace OneRoof.Presentation.Architecture
         public float Height { get; private set; }
 
         private Material _sharedMaterial;
+        private float _interiorAlpha = 1f;
+        public float InteriorAlpha => _interiorAlpha;
+
+        public void SetInteriorAlpha(float alpha, Material fadeMaterial)
+        {
+            _interiorAlpha = Mathf.Clamp01(alpha);
+            ApplyInteriorAlpha(BackdropRenderer, fadeMaterial);
+            ApplyInteriorAlpha(DoorRenderer, fadeMaterial);
+            ApplyInteriorAlpha(WindowRenderer, fadeMaterial);
+            ApplyInteriorAlpha(SconceRenderer, fadeMaterial);
+        }
+
+        private void ApplyInteriorAlpha(SpriteRenderer renderer, Material fadeMaterial)
+        {
+            if (renderer == null) return;
+            var color = renderer.color; color.a = _interiorAlpha; renderer.color = color;
+            renderer.enabled = _interiorAlpha > 0.001f;
+            if (_sharedMaterial != null) renderer.sharedMaterial = _interiorAlpha < 1f && fadeMaterial != null ? fadeMaterial : _sharedMaterial;
+        }
         private Color _baseBackdropColor = Color.white;
 
         public void SetHousingCondition(OneRoof.Domain.Population.HousingConditionStage condition)
@@ -30,6 +49,7 @@ namespace OneRoof.Presentation.Architecture
                 _ => Color.white
             };
             BackdropRenderer.color = _baseBackdropColor * tint;
+            var color = BackdropRenderer.color; color.a = _interiorAlpha; BackdropRenderer.color = color;
         }
 
         public void Setup(string roomTheme, float width, float height, float worldLeft, float worldRight, float centerY, bool isWestSide, Material sharedMaterial = null)

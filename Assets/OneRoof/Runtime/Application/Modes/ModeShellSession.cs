@@ -25,7 +25,7 @@ namespace OneRoof.Application.Modes
                 _state.TargetCellX,
                 _state.SelectedEntityId,
                 _state.SelectedFloor,
-                _state.ActiveOverlayId);
+                _state.ActiveOverlayId, _state.FacadeMode);
         }
 
         public bool ExecuteCommand(SetInteractionModeCommand command)
@@ -70,6 +70,15 @@ namespace OneRoof.Application.Modes
             }
 
             return true;
+        }
+
+        public void ToggleFacadeMode() => SetFacadeMode((FacadeDisplayMode)(((int)_state.FacadeMode + 1) % 3));
+
+        public void SetFacadeMode(FacadeDisplayMode mode)
+        {
+            if (_state.FacadeMode == mode) return;
+            _state.SetFacadeMode(mode);
+            ModeChanged?.Invoke(Projection());
         }
 
         public void SwitchMode(InteractionMode mode)

@@ -13,7 +13,7 @@ namespace OneRoof.Application.Modes
             int? targetCellX,
             int? selectedEntityId,
             int? selectedFloor,
-            string activeOverlayId)
+            string activeOverlayId, FacadeDisplayMode facadeMode = FacadeDisplayMode.Auto)
         {
             CurrentMode = currentMode;
             PreviousMode = previousMode;
@@ -23,7 +23,10 @@ namespace OneRoof.Application.Modes
             SelectedEntityId = selectedEntityId;
             SelectedFloor = selectedFloor;
             ActiveOverlayId = activeOverlayId;
+            FacadeMode = facadeMode;
         }
+
+        public FacadeDisplayMode FacadeMode { get; }
 
         public InteractionMode CurrentMode { get; }
 

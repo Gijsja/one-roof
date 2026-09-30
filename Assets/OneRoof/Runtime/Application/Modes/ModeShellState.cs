@@ -2,12 +2,22 @@ using System;
 
 namespace OneRoof.Application.Modes
 {
+    public enum FacadeDisplayMode { Auto, LockedFacade, LockedCutaway }
+
     /// <summary>
     /// Tracks the player's active interaction context across Build, Inspect, and Data modes.
     /// UI controls dispatch commands to change mode context without directly mutating simulation state.
     /// </summary>
     public sealed class ModeShellState
     {
+        public FacadeDisplayMode FacadeMode { get; private set; } = FacadeDisplayMode.Auto;
+
+        public void SetFacadeMode(FacadeDisplayMode mode)
+        {
+            if (!Enum.IsDefined(typeof(FacadeDisplayMode), mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+            FacadeMode = mode;
+        }
+
         public InteractionMode CurrentMode { get; private set; } = InteractionMode.Inspect;
 
         public InteractionMode PreviousMode { get; private set; } = InteractionMode.Inspect;

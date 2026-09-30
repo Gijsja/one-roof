@@ -11,6 +11,72 @@ namespace OneRoof.Tests.PlayMode
     public sealed class TowerAtmosphereAndElevatorLimitsPlayModeTests
     {
         [UnityTest]
+        public IEnumerator Facade_FollowsCameraZoom_AndKeepsInteractionModesOpen()
+        {
+            var holder = new GameObject("Facade camera integration test");
+            try
+            {
+                var controller = holder.AddComponent<TowerPlayableController>();
+                yield return null;
+                var camera = Camera.main;
+                Assert.That(camera, Is.Not.Null);
+                camera.GetComponent<TowerCameraController>().enabled = false;
+                controller.ModeSession.SwitchMode(InteractionMode.Manage);
+                camera.orthographicSize = 18f;
+                yield return null;
+                Assert.That(controller.ExteriorPresenter.FacadeEnvelopeAlpha, Is.EqualTo(1f));
+                camera.orthographicSize = 8f;
+                yield return null;
+                Assert.That(controller.ExteriorPresenter.FrontFacadeRoot.gameObject.activeSelf, Is.False);
+                camera.orthographicSize = 18f;
+                foreach (var mode in new[] { InteractionMode.Build, InteractionMode.Inspect, InteractionMode.Data })
+                {
+                    controller.ModeSession.SwitchMode(mode);
+                    if (mode == InteractionMode.Inspect) controller.ModeSession.SelectEntity(1);
+                    yield return null;
+                    Assert.That(controller.ExteriorPresenter.FrontFacadeRoot.gameObject.activeSelf, Is.False);
+                }
+            }
+            finally
+            {
+                Object.Destroy(holder);
+                var camera = GameObject.Find("Tower Camera");
+                if (camera != null) Object.Destroy(camera);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Facade_FloorRemovalRetiresGeometryImmediately_AndSurvivesDeferredDestruction()
+        {
+            var holder = new GameObject("Facade geometry lifecycle test");
+            var material = new Material(Shader.Find("OneRoof/Unlit"));
+            var presenter = new BuildingExteriorPresenter();
+            try
+            {
+                presenter.Initialize(holder.transform, material, new MaterialPropertyBlock());
+                var slabs = new System.Collections.Generic.Dictionary<int, OneRoof.Domain.Topology.CellBounds>();
+                for (var f = 0; f < 3; f++) slabs[f] = new OneRoof.Domain.Topology.CellBounds(f, -14, 16);
+                presenter.EnsureExteriorViews(new OneRoof.Application.Tower.TowerTopologyProjection(slabs));
+                var root = presenter.Root;
+                var removedWall = root.Find("Left Facade/Left Wall 2");
+                slabs.Remove(2);
+                presenter.EnsureExteriorViews(new OneRoof.Application.Tower.TowerTopologyProjection(slabs));
+                Assert.That(removedWall.gameObject.activeSelf, Is.False);
+                Assert.That(root.Find("Left Facade/Left Wall 2"), Is.Null);
+                yield return null;
+                Assert.That(presenter.Root, Is.SameAs(root));
+                Assert.That(presenter.FrontFacadeRoot, Is.Not.Null);
+                Assert.That(presenter.LeftWindowFrames.Count, Is.EqualTo(2));
+            }
+            finally
+            {
+                presenter.Dispose();
+                Object.Destroy(material);
+                Object.Destroy(holder);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator TowerController_RestoresModeRoutingAfterDisableAndReenable()
         {
             var holder = new GameObject("Tower Controller Lifecycle Test");

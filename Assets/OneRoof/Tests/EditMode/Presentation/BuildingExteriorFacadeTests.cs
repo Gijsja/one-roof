@@ -179,8 +179,8 @@ namespace OneRoof.Presentation.Tests.EditMode
             var storefrontAnchor = _presenter.FrontFacadeRoot.Find("Ground Storefront Vitrines");
             Assert.That(storefrontAnchor, Is.Not.Null);
 
-            // Storefront covers x in [-8.4f, 4.6f] with height 1.15m
-            Assert.That(storefrontAnchor.localScale.x, Is.EqualTo(13.0f).Within(0.01f));
+            // Storefront follows the ground slab with height 1.15m
+            Assert.That(storefrontAnchor.localScale.x, Is.EqualTo(19.0f).Within(0.01f));
             Assert.That(storefrontAnchor.localScale.y, Is.EqualTo(1.15f).Within(0.01f));
 
             var groundY = TowerStructurePresenter.FloorY(0);
@@ -195,14 +195,14 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             for (var i = 0; i < vertices.Length; i++)
             {
-                if (Mathf.Abs(vertices[i].x - (-8.4f)) < 0.01f) foundLeft = true;
-                if (Mathf.Abs(vertices[i].x - 4.6f) < 0.01f) foundRight = true;
+                if (Mathf.Abs(vertices[i].x - (-12.4f)) < 0.01f) foundLeft = true;
+                if (Mathf.Abs(vertices[i].x - 6.6f) < 0.01f) foundRight = true;
                 if (Mathf.Abs(vertices[i].y - expectedMinY) < 0.01f) foundMinY = true;
                 if (Mathf.Abs(vertices[i].y - expectedMaxY) < 0.01f) foundMaxY = true;
             }
 
-            Assert.That(foundLeft, Is.True, "Storefront vitrine must reach x = -8.4f");
-            Assert.That(foundRight, Is.True, "Storefront vitrine must reach x = 4.6f");
+            Assert.That(foundLeft, Is.True, "Storefront vitrine must reach the ground slab left edge");
+            Assert.That(foundRight, Is.True, "Storefront vitrine must reach the ground slab right edge");
             Assert.That(foundMinY, Is.True, "Storefront vitrine must have bottom y = groundY - 0.62f");
             Assert.That(foundMaxY, Is.True, "Storefront vitrine must have top y = groundY + 0.53f");
         }
@@ -320,7 +320,7 @@ namespace OneRoof.Presentation.Tests.EditMode
 
             foreach (var r in allRenderers)
             {
-                if (r.name.Contains("Light Cone"))
+                if (r.name.Contains("Light Cone") || r.name == "Modular Window Fenestration" || r.name == "Batched Flank Window Glass")
                 {
                     Assert.That(r.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0),
                         $"Renderer {r.name} with 'Light Cone' must have ZWrite = 0");

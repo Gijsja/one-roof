@@ -19,6 +19,7 @@ namespace OneRoof.Presentation.Tower
     {
         private Transform _parent;
         private Material _worldMaterial;
+        private Material _interiorFadeMaterial;
         private MaterialPropertyBlock _colorBlock;
 
         private readonly HashSet<EntityId> _renderedRoomIds = new HashSet<EntityId>();
@@ -27,6 +28,26 @@ namespace OneRoof.Presentation.Tower
         private readonly Dictionary<EntityId, RoomFurnishingPresenter> _furnishings = new Dictionary<EntityId, RoomFurnishingPresenter>();
         private readonly Dictionary<EntityId, RoomBackdropPresenter> _backdrops = new Dictionary<EntityId, RoomBackdropPresenter>();
         private readonly HashSet<EntityId> _authoredRoomIds = new HashSet<EntityId>();
+
+        public float ClutterAlpha { get; private set; } = 1f;
+        public void SetClutterAlpha(float alpha)
+        {
+            ClutterAlpha = Mathf.Clamp01(alpha);
+            if (_interiorFadeMaterial == null && _worldMaterial != null)
+            {
+                _interiorFadeMaterial = new Material(_worldMaterial) { name = "Interior Crossfade" };
+                _interiorFadeMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _interiorFadeMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _interiorFadeMaterial.SetInt("_ZWrite", 0);
+                _interiorFadeMaterial.renderQueue = 3000;
+            }
+            foreach (var furnishing in _furnishings.Values)
+                if (furnishing != null) furnishing.SetClutterAlpha(IsGroundStorefront(furnishing.transform) ? 1f : ClutterAlpha);
+            foreach (var backdrop in _backdrops.Values)
+                if (backdrop != null) backdrop.SetInteriorAlpha(IsGroundStorefront(backdrop.transform) ? 1f : ClutterAlpha, _interiorFadeMaterial);
+        }
+
+        private static bool IsGroundStorefront(Transform room) => room.position.y < TowerStructurePresenter.FloorY(0) + 0.5f;
 
         public IReadOnlyCollection<EntityId> RenderedRoomIds => _renderedRoomIds;
 
@@ -308,6 +329,12 @@ namespace OneRoof.Presentation.Tower
 
         public void Clear()
         {
+            if (_interiorFadeMaterial != null)
+            {
+                if (UnityEngine.Application.isPlaying) UnityEngine.Object.Destroy(_interiorFadeMaterial);
+                else UnityEngine.Object.DestroyImmediate(_interiorFadeMaterial);
+                _interiorFadeMaterial = null;
+            }
             for (var i = 0; i < _roomObjects.Count; i++)
             {
                 var go = _roomObjects[i];

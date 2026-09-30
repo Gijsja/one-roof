@@ -14,6 +14,24 @@ namespace OneRoof.Presentation.Furnishings
         private readonly List<GameObject> _placedProps = new List<GameObject>();
         private Material _sharedMaterial;
 
+        private float _clutterAlpha = -1f;
+        public float ClutterAlpha => Mathf.Max(0f, _clutterAlpha);
+
+        public void SetClutterAlpha(float alpha)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            if (Mathf.Approximately(_clutterAlpha, alpha)) return;
+            _clutterAlpha = alpha;
+            foreach (var prop in _placedProps)
+            {
+                if (prop == null) continue;
+                var renderer = prop.GetComponent<SpriteRenderer>();
+                if (renderer == null) continue;
+                var color = renderer.color; color.a = alpha; renderer.color = color;
+                renderer.enabled = alpha > 0.001f;
+            }
+        }
+
         public IReadOnlyList<GameObject> PlacedProps => _placedProps;
 
         public bool TryGetDockPosition(InteractionPointKind kind, int slot, out Vector3 worldPosition)
@@ -318,6 +336,7 @@ namespace OneRoof.Presentation.Furnishings
                 }
             }
             _placedProps.Clear();
+            _clutterAlpha = -1f;
         }
 
         private void OnDestroy()

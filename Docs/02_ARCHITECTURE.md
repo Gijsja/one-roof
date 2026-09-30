@@ -99,3 +99,4 @@ The project supports both headless batchmode runs and live Editor probing:
   - `python3 pipeline_client.py cmd console_status`: Retrieves console log status.
   - `python3 pipeline_client.py eval "<expression>"`: Evaluates scene state.
 - **Pipeline MCP**: Native agent tools (`mcp__unity__editor_status`, `mcp__unity__console_status`) query the same endpoint.
+- **Workflow & Tooling Details**: See [`Docs/10_DEVELOPMENT_WORKFLOW.md`](10_DEVELOPMENT_WORKFLOW.md) for complete headless batchmode rules, Python test harnesses, and pre-commit hygiene procedures.

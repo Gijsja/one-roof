@@ -32,6 +32,15 @@ namespace OneRoof.UI.Modes
             set => _session = value;
         }
 
+        public bool IsFacadeVisible { get; set; }
+        public void OnFacadeToggleRequested()
+        {
+            if (_session == null) return;
+            var mode = _session.Projection().FacadeMode;
+            var visible = mode == FacadeDisplayMode.LockedFacade || (mode == FacadeDisplayMode.Auto && IsFacadeVisible);
+            _session.SetFacadeMode(visible ? FacadeDisplayMode.LockedCutaway : FacadeDisplayMode.LockedFacade);
+        }
+
         public InteractionMode ActiveMode => _session != null ? _session.CurrentMode : InteractionMode.Inspect;
 
         public ModeShellProjection CurrentProjection => _session?.Projection();
@@ -85,6 +94,7 @@ namespace OneRoof.UI.Modes
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard != null)
             {
+                if (keyboard.fKey.wasPressedThisFrame) OnFacadeToggleRequested();
                 if (keyboard.bKey.wasPressedThisFrame || keyboard.digit1Key.wasPressedThisFrame)
                 {
                     OnBuildModeRequested();
@@ -107,6 +117,7 @@ namespace OneRoof.UI.Modes
                 }
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.F)) OnFacadeToggleRequested();
             if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.Alpha1))
             {
                 OnBuildModeRequested();
@@ -180,6 +191,11 @@ namespace OneRoof.UI.Modes
             DrawModeButton("DATA  3", InteractionMode.Data, projection.IsDataMode);
             DrawModeButton("MANAGE  4", InteractionMode.Manage, projection.IsManageMode);
 
+            var facadeLabel = IsFacadeVisible ? "OUTSIDE  F" : "CUTAWAY  F";
+            if (GUILayout.Button(facadeLabel, _normalButtonStyle, GUILayout.Width(100), GUILayout.Height(32)))
+                OnFacadeToggleRequested();
+            if (GUILayout.Button("AUTO", projection.FacadeMode == FacadeDisplayMode.Auto ? _activeButtonStyle : _normalButtonStyle,
+                GUILayout.Width(52), GUILayout.Height(32))) Session.SetFacadeMode(FacadeDisplayMode.Auto);
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
 
@@ -326,7 +342,7 @@ namespace OneRoof.UI.Modes
         private void DrawOverlay(string label, string id, string active)
         {
             if (GUILayout.Button(label, id == active ? _activeButtonStyle : _normalButtonStyle,
-                    GUILayout.Width(144), GUILayout.Height(32))) Session.SetActiveOverlay(id);
+                    GUILayout.Width(108), GUILayout.Height(32))) Session.SetActiveOverlay(id);
         }
 
         private void DrawToolButton(string label, string toolId, bool isSelected, bool isDestructive = false)
@@ -350,7 +366,7 @@ namespace OneRoof.UI.Modes
         private void DrawModeButton(string label, InteractionMode mode, bool isActive)
         {
             var style = isActive ? _activeButtonStyle : _normalButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(32), GUILayout.Width(144)))
+            if (GUILayout.Button(label, style, GUILayout.Height(32), GUILayout.Width(108)))
             {
                 if (mode == InteractionMode.Build)
                 {

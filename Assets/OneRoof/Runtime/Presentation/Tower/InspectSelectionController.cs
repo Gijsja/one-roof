@@ -308,6 +308,7 @@ namespace OneRoof.Presentation.Tower
         public void ShowDetails(InspectTargetKind kind, int id)
         {
             if (_simulationSession == null) return;
+            if (_residentPresenter != null) _residentPresenter.InspectedResidentId = kind == InspectTargetKind.Resident ? id : (int?)null;
             DetailCard.ResidentInspectionRequested -= InspectLinkedResident;
             DetailCard.ResidentInspectionRequested += InspectLinkedResident;
             var service = new TowerInspectionService(_simulationSession);

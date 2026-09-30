@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Overlays;
 using OneRoof.Application.Transit;
 using OneRoof.Content;
 using OneRoof.Domain.Time;
@@ -56,6 +57,10 @@ namespace OneRoof.Presentation.Tower
         private Mesh _vitrineMesh;
         private Material _glazingMaterial;
         private float _facadeEnvelopeAlpha = 1f;
+        private TowerTopologyProjection _lightingTopology;
+        private readonly Dictionary<int, CellBounds> _renderedSlabs = new Dictionary<int, CellBounds>();
+        private readonly HashSet<int> _occupiedRooms = new HashSet<int>();
+        private readonly Dictionary<int, float> _floorPower = new Dictionary<int, float>();
 
         private readonly List<FrontFenestrationEntry> _frontFenestrationEntries = new List<FrontFenestrationEntry>();
         private Color[] _fenestrationColors;
@@ -81,6 +86,10 @@ namespace OneRoof.Presentation.Tower
         private readonly List<GameObject> _rightWindowGlasses = new List<GameObject>();
         private readonly List<GameObject> _rightWindowSills = new List<GameObject>();
         private readonly List<GameObject> _volumetricCones = new List<GameObject>();
+        private Mesh _batchedGlassMesh;
+        private Color[] _batchedGlassColors;
+        private Mesh _batchedConeMesh;
+        private Color[] _batchedConeColors;
         private readonly List<Mesh> _coneMeshes = new List<Mesh>();
         private readonly List<WindowLightingEntry> _windowLightingEntries = new List<WindowLightingEntry>();
         private readonly Dictionary<UndergroundCell, GameObject> _excavationViews = new Dictionary<UndergroundCell, GameObject>();
@@ -162,12 +171,16 @@ namespace OneRoof.Presentation.Tower
             public readonly int VertexStartIndex;
             public readonly int Floor;
             public readonly int BayIndex;
+            public readonly float MinX;
+            public readonly float MaxX;
 
-            public FrontFenestrationEntry(int vertexStartIndex, int floor, int bayIndex)
+            public FrontFenestrationEntry(int vertexStartIndex, int floor, int bayIndex, float minX, float maxX)
             {
                 VertexStartIndex = vertexStartIndex;
                 Floor = floor;
                 BayIndex = bayIndex;
+                MinX = minX;
+                MaxX = maxX;
             }
         }
 
@@ -223,7 +236,7 @@ namespace OneRoof.Presentation.Tower
         {
             if (_parent == null || _worldMaterial == null) return;
             var floorCount = topology != null ? topology.FloorCount : TowerStructurePresenter.InitialFloorCount;
-            if (floorCount <= 0) return;
+            if (floorCount <= 0) { Clear(); return; }
 
             CellBounds groundSlab = default;
             CellBounds topSlab = default;
@@ -239,7 +252,15 @@ namespace OneRoof.Presentation.Tower
                 topSlab = new CellBounds(floorCount - 1, -14, 17);
             }
 
-            var geometryUnchanged = _root != null && _renderedFloorCount == floorCount &&
+            _lightingTopology = topology;
+            var slabsUnchanged = _renderedSlabs.Count == floorCount;
+            for (var f = 0; slabsUnchanged && f < floorCount; f++)
+            {
+                var slab = topology != null && topology.TryGetFloorSlab(f, out var bounds)
+                    ? bounds : new CellBounds(f, -14, 17);
+                slabsUnchanged = _renderedSlabs.TryGetValue(f, out var previous) && previous.Equals(slab);
+            }
+            var geometryUnchanged = slabsUnchanged && _root != null && _renderedFloorCount == floorCount &&
                 _renderedGroundSlab.Equals(groundSlab) && _renderedTopSlab.Equals(topSlab);
             if (geometryUnchanged)
             {
@@ -253,6 +274,18 @@ namespace OneRoof.Presentation.Tower
             }
 
             EnsureHierarchyRoots();
+            RetireRemovedFloors(_leftFacadeRoot, floorCount);
+            RetireRemovedFloors(_rightFacadeRoot, floorCount);
+            RetireRemovedFloors(_volumetricLightRoot, floorCount);
+            for (var i = _terracesRoot.childCount - 1; i >= 0; i--)
+                RetireGeneratedChild(_terracesRoot.GetChild(i));
+            PruneRetiredViews(_leftWallSlices, _rightWallSlices, _leftSpandrels, _rightSpandrels,
+                _leftWindowFrames, _rightWindowFrames, _leftWindowGlasses, _rightWindowGlasses,
+                _leftWindowSills, _rightWindowSills, _volumetricCones);
+            _renderedSlabs.Clear();
+            for (var f = 0; f < floorCount; f++)
+                _renderedSlabs[f] = topology != null && topology.TryGetFloorSlab(f, out var bounds)
+                    ? bounds : new CellBounds(f, -14, 17);
             _renderedFloorCount = floorCount;
             _renderedGroundSlab = groundSlab;
             _renderedTopSlab = topSlab;
@@ -267,6 +300,42 @@ namespace OneRoof.Presentation.Tower
             BuildSetbackTerraces(topology, floorCount);
             BuildFrontFacadeEnvelope(topology, floorCount);
             CalculateStageBounds(floorCount, groundSlab, topSlab);
+        }
+
+        private void RetireRemovedFloors(Transform parent, int floorCount)
+        {
+            for (var i = parent.childCount - 1; i >= 0; i--)
+            {
+                var child = parent.GetChild(i);
+                var separator = child.name.LastIndexOf(' ');
+                if (separator < 0 || !int.TryParse(child.name.Substring(separator + 1), out var floor) || floor < floorCount)
+                    continue;
+                var filter = child.GetComponent<MeshFilter>();
+                if (filter != null && _coneMeshes.Remove(filter.sharedMesh))
+                {
+                    var mesh = filter.sharedMesh;
+                    DestroyGeneratedMesh(ref mesh);
+                }
+                RetireGeneratedChild(child);
+            }
+            if (floorCount <= 1)
+            {
+                var downspout = parent.Find("Left Downspout") ?? parent.Find("Right Downspout");
+                if (downspout != null) RetireGeneratedChild(downspout);
+            }
+        }
+
+        private static void RetireGeneratedChild(Transform child)
+        {
+            child.gameObject.SetActive(false);
+            child.SetParent(null, false);
+            DestroyGenerated(child.gameObject);
+        }
+
+        private static void PruneRetiredViews(params List<GameObject>[] lists)
+        {
+            foreach (var list in lists)
+                list.RemoveAll(view => view == null || view.transform.parent == null);
         }
 
         private void EnsureHierarchyRoots()
@@ -864,6 +933,7 @@ namespace OneRoof.Presentation.Tower
                 _windowLightingEntries.Add(new WindowLightingEntry(glassRenderer, coneRenderer, f, false));
             }
 
+            RebuildConeBatch();
             UpdateWindowLighting(new DayPhase(1, 12, 0, false));
         }
 
@@ -1040,10 +1110,10 @@ namespace OneRoof.Presentation.Tower
                 new Vector2(groundLeft, topFloorY), new Vector2(groundRight, topFloorY), topFloorY);
         }
 
-        public void UpdateLighting(DayPhase phase)
+        public void UpdateLighting(DayPhase phase, TowerProjection projection = null, UtilitiesOverlayProjection utilities = null)
         {
             UpdateAviationBeacons(phase);
-            UpdateWindowLighting(phase);
+            UpdateWindowLighting(phase, projection, utilities);
         }
 
         private void UpdateAviationBeacons(DayPhase phase)
@@ -1066,8 +1136,23 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        public void UpdateWindowLighting(DayPhase phase, TowerProjection projection = null)
+        public void UpdateWindowLighting(DayPhase phase, TowerProjection projection = null, UtilitiesOverlayProjection utilities = null)
         {
+            _floorPower.Clear();
+            if (utilities != null)
+                for (var i = 0; i < utilities.Floors.Count; i++)
+                {
+                    var floor = utilities.Floors[i];
+                    _floorPower[floor.Floor] = floor.PowerConnected ? Mathf.Clamp01(floor.Voltage) : 0f;
+                }
+            _occupiedRooms.Clear();
+            if (projection?.Residents != null)
+                for (var r = 0; r < projection.Residents.Count; r++)
+                {
+                    var resident = projection.Residents[r];
+                    if (resident.Status == TransitResidentStatus.InRoom && resident.RoomId.HasValue)
+                        _occupiedRooms.Add(resident.RoomId.Value);
+                }
             var hour = phase.Hour + phase.Minute / 60f;
             // Smooth continuous night factor: 1.0 fully at night, 0.0 fully by day.
             // Dawn ramp: 5.5h (full night) → 6.5h (full day). Dusk ramp: 19.5h → 20.5h.
@@ -1084,25 +1169,42 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < _windowLightingEntries.Count; i++)
             {
                 var entry = _windowLightingEntries[i];
-                var isOccupied = entry.IsLeft
-                    ? ((entry.Floor * 7 + 3) % 5 != 0)
-                    : ((entry.Floor * 13 + 2) % 5 != 0);
+                var slab = _renderedSlabs.TryGetValue(entry.Floor, out var bounds) ? bounds : default;
+                var edge = -2.4f + (entry.IsLeft ? slab.MinX : slab.MaxX + 1) * 0.5f;
+                var isOccupied = projection == null
+                    ? (entry.IsLeft ? ((entry.Floor * 7 + 3) % 5 != 0) : ((entry.Floor * 13 + 2) % 5 != 0))
+                    : IsBayOccupied(entry.Floor, entry.IsLeft ? edge : edge - 0.5f,
+                        entry.IsLeft ? edge + 0.5f : edge);
 
                 if (entry.GlassRenderer != null)
                 {
-                    var targetNightGlass = isOccupied ? WindowNightLitColor : WindowNightDarkColor;
+                    var targetNightGlass = Color.Lerp(WindowNightDarkColor, WindowNightLitColor, isOccupied ? PowerOnFloor(entry.Floor) : 0f);
                     var currentGlassColor = Color.Lerp(WindowDayColor, targetNightGlass, smoothNight);
                     SetColor(entry.GlassRenderer, currentGlassColor);
+                    if (_batchedGlassColors != null && i * 4 + 3 < _batchedGlassColors.Length)
+                        for (var vertex = 0; vertex < 4; vertex++) _batchedGlassColors[i * 4 + vertex] = currentGlassColor;
                 }
 
                 if (entry.ConeRenderer != null)
                 {
-                    var targetNightCone = isOccupied ? ConeNightLitColor : ConeNightDarkColor;
+                    var targetNightCone = Color.Lerp(ConeNightDarkColor, ConeNightLitColor, isOccupied ? PowerOnFloor(entry.Floor) : 0f);
                     var currentConeColor = Color.Lerp(ConeDayColor, targetNightCone, smoothNight);
                     currentConeColor.a *= Mathf.Clamp01(WindowLightStrength);
                     SetColor(entry.ConeRenderer, currentConeColor);
+                    if (_batchedConeColors != null && i * 4 + 3 < _batchedConeColors.Length)
+                    {
+                        for (var vertex = 0; vertex < 4; vertex++)
+                        {
+                            var color = currentConeColor;
+                            if (vertex == 1 || vertex == 2) color.a = 0f;
+                            _batchedConeColors[i * 4 + vertex] = color;
+                        }
+                    }
                 }
             }
+
+            if (_batchedConeMesh != null) _batchedConeMesh.colors = _batchedConeColors;
+            if (_batchedGlassMesh != null) _batchedGlassMesh.colors = _batchedGlassColors;
 
             // Front Facade Modular Fenestration (F5)
             if (_fenestrationMesh != null && _fenestrationColors != null && _frontFenestrationEntries.Count > 0)
@@ -1111,16 +1213,16 @@ namespace OneRoof.Presentation.Tower
                 {
                     var entry = _frontFenestrationEntries[i];
                     bool isOccupied;
-                    if (projection != null && projection.Residents != null)
+                    if (projection != null)
                     {
-                        isOccupied = IsBayOccupied(projection, entry.Floor, entry.BayIndex);
+                        isOccupied = IsBayOccupied(entry.Floor, entry.MinX, entry.MaxX);
                     }
                     else
                     {
                         isOccupied = ((entry.Floor * 7 + entry.BayIndex * 3 + 1) % 5 != 0);
                     }
 
-                    var targetNight = isOccupied ? WindowNightLitColor : WindowNightDarkColor;
+                    var targetNight = Color.Lerp(WindowNightDarkColor, WindowNightLitColor, isOccupied ? PowerOnFloor(entry.Floor) : 0f);
                     var c = Color.Lerp(WindowDayColor, targetNight, smoothNight);
 
                     var vStart = entry.VertexStartIndex;
@@ -1164,7 +1266,12 @@ namespace OneRoof.Presentation.Tower
         {
             if (_root != null)
             {
-                if (UnityEngine.Application.isPlaying) Object.Destroy(_root.gameObject);
+                if (UnityEngine.Application.isPlaying)
+                {
+                    _root.gameObject.SetActive(false);
+                    _root.SetParent(null, false);
+                    Object.Destroy(_root.gameObject);
+                }
                 else Object.DestroyImmediate(_root.gameObject);
             }
 
@@ -1178,6 +1285,10 @@ namespace OneRoof.Presentation.Tower
                 }
             }
             _coneMeshes.Clear();
+            DestroyGeneratedMesh(ref _batchedConeMesh);
+            _batchedConeColors = null;
+            DestroyGeneratedMesh(ref _batchedGlassMesh);
+            _batchedGlassColors = null;
 
             DestroyGeneratedMesh(ref _framingMesh);
             DestroyGeneratedMesh(ref _fenestrationMesh);
@@ -1222,6 +1333,9 @@ namespace OneRoof.Presentation.Tower
             _terraceObjects.Clear();
             _roofObjects.Clear();
             _renderedFloorCount = -1;
+            _renderedSlabs.Clear();
+            _lightingTopology = null;
+            _occupiedRooms.Clear();
         }
 
         public void Dispose()
@@ -1272,6 +1386,51 @@ namespace OneRoof.Presentation.Tower
             go.transform.localScale = new Vector3(size.x, size.y, 1f);
             SetColor(renderer, color);
             return go;
+        }
+
+        // Keep per-window geometry for topology inspection, but submit its light volumes once.
+        private void RebuildConeBatch()
+        {
+            DestroyGeneratedMesh(ref _batchedConeMesh);
+            DestroyGeneratedMesh(ref _batchedGlassMesh);
+            var glassVertices = new Vector3[_windowLightingEntries.Count * 4];
+            _batchedGlassColors = new Color[glassVertices.Length];
+            var vertices = new Vector3[_windowLightingEntries.Count * 4];
+            var triangles = new int[_windowLightingEntries.Count * 6];
+            var glassTriangles = new int[triangles.Length];
+            _batchedConeColors = new Color[vertices.Length];
+            for (var i = 0; i < _windowLightingEntries.Count; i++)
+            {
+                var glass = _windowLightingEntries[i].GlassRenderer;
+                var glassSource = glass.GetComponent<MeshFilter>().sharedMesh.vertices;
+                for (var v = 0; v < 4; v++)
+                    glassVertices[i * 4 + v] = _volumetricLightRoot.InverseTransformPoint(glass.transform.TransformPoint(glassSource[v]));
+                var glassIndices = glass.GetComponent<MeshFilter>().sharedMesh.triangles;
+                for (var t = 0; t < 6; t++) glassTriangles[i * 6 + t] = i * 4 + glassIndices[t];
+                glass.enabled = false;
+                var renderer = _windowLightingEntries[i].ConeRenderer;
+                var source = renderer.GetComponent<MeshFilter>().sharedMesh.vertices;
+                for (var v = 0; v < 4; v++)
+                    vertices[i * 4 + v] = _volumetricLightRoot.InverseTransformPoint(renderer.transform.TransformPoint(source[v]));
+                var offset = i * 4;
+                var indices = new[] { offset, offset + 1, offset + 2, offset, offset + 2, offset + 3 };
+                Array.Copy(indices, 0, triangles, i * 6, 6);
+                renderer.enabled = false;
+            }
+            _batchedConeMesh = new Mesh { name = "Batched Facade Light Cones" };
+            _batchedConeMesh.vertices = vertices;
+            _batchedConeMesh.triangles = triangles;
+            _batchedConeMesh.colors = _batchedConeColors;
+            _batchedConeMesh.RecalculateBounds();
+            var batch = EnsureChildWithMesh(_volumetricLightRoot, "Batched Light Cones", _batchedConeMesh, _coneMaterial);
+            SetColor(batch.GetComponent<MeshRenderer>(), Color.white);
+            _batchedGlassMesh = new Mesh { name = "Batched Facade Flank Glazing" };
+            _batchedGlassMesh.vertices = glassVertices;
+            _batchedGlassMesh.triangles = glassTriangles;
+            _batchedGlassMesh.colors = _batchedGlassColors;
+            _batchedGlassMesh.RecalculateBounds();
+            var glazing = EnsureChildWithMesh(_volumetricLightRoot, "Batched Flank Window Glass", _batchedGlassMesh, _glazingMaterial);
+            SetColor(glazing.GetComponent<MeshRenderer>(), Color.white);
         }
 
         private GameObject UpdateOrCreateLightCone(
@@ -1429,18 +1588,21 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private static bool IsBayOccupied(TowerProjection projection, int floor, int bayIndex)
+        private float PowerOnFloor(int floor) => _floorPower.TryGetValue(floor, out var voltage) ? voltage : 1f;
+
+        private bool IsBayOccupied(int floor, float minX, float maxX)
         {
-            if (projection == null || projection.Residents == null) return false;
-            for (var r = 0; r < projection.Residents.Count; r++)
+            if (_lightingTopology == null) return false;
+            var rooms = _lightingTopology.GetRoomsOnFloor(floor);
+            for (var i = 0; i < rooms.Count; i++)
             {
-                var res = projection.Residents[r];
-                if (res.Floor == floor && (res.Status == TransitResidentStatus.InRoom || res.RoomId.HasValue))
-                {
-                    return true;
-                }
+                var room = rooms[i];
+                if (!_occupiedRooms.Contains(room.Id.Value)) continue;
+                var left = -2.4f + room.Bounds.MinX * 0.5f;
+                var right = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+                if (left < maxX && right > minX) return true;
             }
-            return ((floor * 7 + bayIndex * 3 + 1) % 5 != 0);
+            return false;
         }
 
         private void BuildFrontFacadeEnvelope(TowerTopologyProjection topology, int floorCount)
@@ -1476,8 +1638,10 @@ namespace OneRoof.Presentation.Tower
             var groundY = TowerStructurePresenter.FloorY(0);
             var storefrontMinY = groundY - 0.62f;
             var storefrontMaxY = storefrontMinY + 1.15f;
-            const float storefrontLeft = -8.4f;
-            const float storefrontRight = 4.6f;
+            var groundSlab = topology != null && topology.TryGetFloorSlab(0, out var ground)
+                ? ground : new CellBounds(0, -14, 16);
+            var storefrontLeft = -2.4f + groundSlab.MinX * 0.5f;
+            var storefrontRight = -2.4f + (groundSlab.MaxX + 1) * 0.5f;
 
             _storefrontVitrineColorStart = vitrineBuilder.AddQuad(
                 storefrontLeft, storefrontRight, storefrontMinY, storefrontMaxY, vitrineZ, StorefrontVitrineDayColor);
@@ -1501,11 +1665,11 @@ namespace OneRoof.Presentation.Tower
                 var ribbonMaxY = floorY + 0.22f;
                 if (worldLeft < elevatorLeft)
                 {
-                    vitrineBuilder.AddQuad(worldLeft, elevatorLeft, ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
+                    vitrineBuilder.AddQuad(worldLeft, Mathf.Min(worldRight, elevatorLeft), ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
                 }
                 if (elevatorRight < worldRight)
                 {
-                    vitrineBuilder.AddQuad(elevatorRight, worldRight, ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
+                    vitrineBuilder.AddQuad(Mathf.Max(worldLeft, elevatorRight), worldRight, ribbonMinY, ribbonMaxY, vitrineZ, HallwayVitrineDayColor);
                 }
 
                 // Horizontal Transoms (Curtain wall framing)
@@ -1524,7 +1688,7 @@ namespace OneRoof.Presentation.Tower
                 // Left Wing Bays
                 var bayIndex = 0;
                 var curX = worldLeft + 0.06f;
-                var leftLimit = elevatorLeft - 0.04f;
+                var leftLimit = Mathf.Min(worldRight - 0.06f, elevatorLeft - 0.04f);
                 while (curX + 0.40f <= leftLimit)
                 {
                     var nextX = Mathf.Min(curX + 1.0f, leftLimit);
@@ -1533,7 +1697,7 @@ namespace OneRoof.Presentation.Tower
                     {
                         var vStart = fenestrationBuilder.AddQuad(
                             curX, windowMaxX, floorY + 0.26f, floorY + 0.81f, opaqueZ, WindowDayColor);
-                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex));
+                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex, curX, windowMaxX));
                         bayIndex++;
                     }
                     if (nextX < leftLimit)
@@ -1544,7 +1708,7 @@ namespace OneRoof.Presentation.Tower
                 }
 
                 // Right Wing Bays
-                curX = elevatorRight + 0.04f;
+                curX = Mathf.Max(worldLeft + 0.06f, elevatorRight + 0.04f);
                 var rightLimit = worldRight - 0.06f;
                 while (curX + 0.40f <= rightLimit)
                 {
@@ -1554,7 +1718,7 @@ namespace OneRoof.Presentation.Tower
                     {
                         var vStart = fenestrationBuilder.AddQuad(
                             curX, windowMaxX, floorY + 0.26f, floorY + 0.81f, opaqueZ, WindowDayColor);
-                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex));
+                        _frontFenestrationEntries.Add(new FrontFenestrationEntry(vStart, f, bayIndex, curX, windowMaxX));
                         bayIndex++;
                     }
                     if (nextX < rightLimit)
@@ -1584,7 +1748,7 @@ namespace OneRoof.Presentation.Tower
 
             // Attach to GameObjects
             _framingObject = EnsureChildWithMesh(_frontFacadeRoot, "Curtain Wall Framing", _framingMesh, _worldMaterial);
-            _fenestrationObject = EnsureChildWithMesh(_frontFacadeRoot, "Modular Window Fenestration", _fenestrationMesh, _worldMaterial);
+            _fenestrationObject = EnsureChildWithMesh(_frontFacadeRoot, "Modular Window Fenestration", _fenestrationMesh, _glazingMaterial);
             _vitrinesObject = EnsureChildWithMesh(_frontFacadeRoot, "Transparent Vitrines (Light Cone)", _vitrineMesh, _glazingMaterial ?? _coneMaterial);
 
             // Hierarchy anchors
@@ -1613,7 +1777,11 @@ namespace OneRoof.Presentation.Tower
             if (_framingObject != null)
             {
                 var r = _framingObject.GetComponent<MeshRenderer>();
-                if (r != null) SetColorWithAlpha(r, Color.white, _facadeEnvelopeAlpha);
+                if (r != null)
+                {
+                    r.sharedMaterial = _facadeEnvelopeAlpha < 1f ? _glazingMaterial : _worldMaterial;
+                    SetColorWithAlpha(r, Color.white, _facadeEnvelopeAlpha);
+                }
             }
 
             if (_fenestrationObject != null)
@@ -1712,13 +1880,6 @@ namespace OneRoof.Presentation.Tower
                 Triangles.Add(startIndex + 0);
                 Triangles.Add(startIndex + 2);
                 Triangles.Add(startIndex + 1);
-
-                Triangles.Add(startIndex + 0);
-                Triangles.Add(startIndex + 1);
-                Triangles.Add(startIndex + 2);
-                Triangles.Add(startIndex + 0);
-                Triangles.Add(startIndex + 2);
-                Triangles.Add(startIndex + 3);
 
                 return startIndex;
             }

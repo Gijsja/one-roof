@@ -270,7 +270,7 @@ namespace OneRoof.Presentation.Tower
             {
                 FocusUnderground();
             }
-            else if (keyboard != null && (keyboard.fKey.wasPressedThisFrame || keyboard.homeKey.wasPressedThisFrame))
+            else if (keyboard != null && keyboard.homeKey.wasPressedThisFrame)
             {
                 FocusOverview();
             }
@@ -279,7 +279,7 @@ namespace OneRoof.Presentation.Tower
             {
                 FocusUnderground();
             }
-            else if (Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Home))
+            else if (Input.GetKeyDown(KeyCode.Home))
             {
                 FocusOverview();
             }

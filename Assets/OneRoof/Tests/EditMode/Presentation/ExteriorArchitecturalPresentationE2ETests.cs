@@ -877,7 +877,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(renderers.Length, Is.GreaterThan(10));
             foreach (var r in renderers)
             {
-                if (r.name.Contains("Light Cone"))
+                if (r.name.Contains("Light Cone") || r.name == "Modular Window Fenestration" || r.name == "Batched Flank Window Glass")
                     Assert.That(r.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0));
                 else
                     Assert.That(r.sharedMaterial, Is.EqualTo(_worldMaterial));

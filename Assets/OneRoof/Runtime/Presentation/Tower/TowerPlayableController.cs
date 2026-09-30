@@ -36,6 +36,7 @@ namespace OneRoof.Presentation.Tower
         [SerializeField] private TowerStartMode _startMode = TowerStartMode.StandardFiveFloor;
 
         private TowerSimulationSession _sim; private ModeShellSession _mode;
+        private long _lastVisualVersion = -1;
         private TowerDataOverlays _dataOverlays; private ElevatorPlacementPredictor _predictor;
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
         private SatisfactionOverlayPresenter _satisfactionPresenter;
@@ -120,7 +121,7 @@ namespace OneRoof.Presentation.Tower
             _structure.BindFloorDeckPresenter(_floorDecks);
             _exterior.Initialize(transform, _worldMat, _colorBlock);
             _elevator.Initialize(transform, _worldMat, _colorBlock);
-            _room.Initialize(transform, _worldMat, _colorBlock); _resident.ViewPool = Ensure<NpcViewPool>(); _resident.Initialize(transform);
+            _room.Initialize(transform, _worldMat, _colorBlock); _resident.ViewPool = Ensure<NpcViewPool>(); _resident.ViewPool.MaxCapacity = 60; _resident.Initialize(transform);
             InitSubcomponents(); CreateWorldGeometry();
         }
 
@@ -197,6 +198,7 @@ namespace OneRoof.Presentation.Tower
                 tickAdvanced = true;
             }
 
+            if (_sim.Version != _lastVisualVersion) _needsVisualSnapshot = true;
             if (tickAdvanced || _needsVisualSnapshot)
             {
                 UpdateOverlayAndPredictions();
@@ -204,6 +206,7 @@ namespace OneRoof.Presentation.Tower
 
             RenderVisualSnapshot(tickAdvanced || _needsVisualSnapshot);
             _needsVisualSnapshot = false;
+            _lastVisualVersion = _sim.Version;
         }
 
         private void InitSubcomponents()
@@ -470,6 +473,19 @@ namespace OneRoof.Presentation.Tower
         private void RenderVisualSnapshot(bool tickAdvanced)
         {
             var projection = _sim.Projection();
+            var camera = Camera.main;
+            var mode = _mode.Projection();
+            var facadeAlpha = camera != null && camera.orthographic
+                ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(8f, 18f, camera.orthographicSize)) : 0f;
+            if (mode.FacadeMode == FacadeDisplayMode.LockedFacade) facadeAlpha = 1f;
+            else if (mode.FacadeMode == FacadeDisplayMode.LockedCutaway) facadeAlpha = 0f;
+            var needsInterior = mode.FacadeMode == FacadeDisplayMode.Auto &&
+                (mode.IsBuildMode || mode.IsDataMode || (mode.IsInspectMode && mode.SelectedEntityId.HasValue));
+            _exterior.SetFacadeEnvelopeAlpha(needsInterior ? 0f : facadeAlpha);
+            if (_modeBar != null) _modeBar.IsFacadeVisible = _exterior.FacadeEnvelopeAlpha >= 0.5f;
+            _room.SetClutterAlpha(1f - _exterior.FacadeEnvelopeAlpha);
+            _floorDecks.SetInteriorDecksVisible(_exterior.FacadeEnvelopeAlpha < 0.999f);
+            if (!mode.SelectedEntityId.HasValue) _resident.InspectedResidentId = null;
             if (tickAdvanced)
             {
                 if (_lastUndergroundCrewVersion != _sim.Version)
@@ -481,10 +497,11 @@ namespace OneRoof.Presentation.Tower
                 _atmosphere?.UpdateSoundscape(projection, _sim.TopologyProjection());
                 _atmosphere?.UpdateDayNight(_sim.DayPhase, _sim.FloorCount);
                 _outside?.UpdateLighting(_sim.DayPhase);
-                _exterior.UpdateLighting(_sim.DayPhase);
+                _exterior.UpdateLighting(_sim.DayPhase, projection, _dataOverlays?.Utilities);
                 UpdateActiveWeather();
                 _pixelRain?.UpdateLighting(_sim.DayPhase);
             }
+            _atmosphere?.SetInteriorAlpha(1f - _exterior.FacadeEnvelopeAlpha);
             _elevator.UpdateElevatorPositions(projection);
             _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator,
                 _exterior.VisibleUndergroundCrewResidentIds);
