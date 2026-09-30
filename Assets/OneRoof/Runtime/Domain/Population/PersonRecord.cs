@@ -29,7 +29,8 @@ namespace OneRoof.Domain.Population
             IEnumerable<NeedState> needs,
             IEnumerable<PersonTrait> traits,
             IEnumerable<PersonalityFacet> personalityFacets = null,
-            bool worksOutside = false)
+            bool worksOutside = false,
+            IEnumerable<SocialTrait> socialTraits = null)
         {
             id.EnsureValid();
             householdId.EnsureValid();
@@ -55,6 +56,9 @@ namespace OneRoof.Domain.Population
             PersonalityFacets = personalityFacets != null
                 ? new ReadOnlyCollection<PersonalityFacet>(new List<PersonalityFacet>(personalityFacets))
                 : new ReadOnlyCollection<PersonalityFacet>(DeriveFacets(Traits));
+            SocialTraits = socialTraits != null
+                ? new ReadOnlyCollection<SocialTrait>(new List<SocialTrait>(socialTraits))
+                : new ReadOnlyCollection<SocialTrait>(DeriveSocialTraits(Traits, Id));
             Wellbeing = new ResidentWellbeingState();
             Specialization = new SpecialistRoleState();
 
@@ -101,6 +105,7 @@ namespace OneRoof.Domain.Population
 
         public IReadOnlyList<PersonTrait> Traits { get; }
         public IReadOnlyList<PersonalityFacet> PersonalityFacets { get; }
+        public IReadOnlyList<SocialTrait> SocialTraits { get; }
         public ResidentWellbeingState Wellbeing { get; }
         public SpecialistRoleState Specialization { get; }
 
@@ -278,6 +283,29 @@ namespace OneRoof.Domain.Population
                 case PersonTraitKind.Extrovert: result.Add(new PersonalityFacet(PersonalityFacetKind.CommunityRooted)); break;
                 case PersonTraitKind.Frugal: result.Add(new PersonalityFacet(PersonalityFacetKind.FinanciallyCautious)); break;
                 case PersonTraitKind.Spendthrift: result.Add(new PersonalityFacet(PersonalityFacetKind.ServiceExpectant)); break;
+            }
+            return result;
+        }
+
+        private static List<SocialTrait> DeriveSocialTraits(IReadOnlyList<PersonTrait> traits, EntityId id)
+        {
+            var result = new List<SocialTrait>();
+            if (traits != null && traits.Count > 0)
+            {
+                switch (traits[0].Kind)
+                {
+                    case PersonTraitKind.Extrovert: result.Add(new SocialTrait(SocialTraitKind.Charismatic)); break;
+                    case PersonTraitKind.Introvert: result.Add(new SocialTrait(SocialTraitKind.Loyal)); break;
+                    case PersonTraitKind.NightOwl: result.Add(new SocialTrait(SocialTraitKind.Flirt)); break;
+                    case PersonTraitKind.EarlyBird: result.Add(new SocialTrait(SocialTraitKind.HopelessRomantic)); break;
+                    case PersonTraitKind.Spendthrift: result.Add(new SocialTrait(SocialTraitKind.HotHeaded)); break;
+                    case PersonTraitKind.Frugal: result.Add(new SocialTrait(SocialTraitKind.GrudgeHolder)); break;
+                }
+            }
+            if (result.Count == 0 && id.IsValid)
+            {
+                var kind = (SocialTraitKind)(Math.Abs(id.Value) % 8);
+                result.Add(new SocialTrait(kind));
             }
             return result;
         }

@@ -7,7 +7,9 @@ namespace OneRoof.Domain.Population
     /// <summary>Mutable domain-only wellbeing state; values remain normalized to [0,1].</summary>
     public sealed class ResidentWellbeingState
     {
+        public const int MaxThoughts = 16;
         private readonly List<string> _grievances = new List<string>();
+        private readonly List<ThoughtMemory> _thoughts = new List<ThoughtMemory>();
         public float Satisfaction { get; private set; } = 1f;
         public float Strain { get; private set; }
         public float Commute { get; private set; } = 1f;
@@ -17,6 +19,41 @@ namespace OneRoof.Domain.Population
         public float ServiceAccess { get; private set; } = 1f;
         public float RecentEvents { get; private set; } = 1f;
         public IReadOnlyList<string> Grievances => new ReadOnlyCollection<string>(_grievances);
+        public IReadOnlyList<ThoughtMemory> ActiveThoughts => _thoughts;
+        public IReadOnlyList<ThoughtMemory> Thoughts => _thoughts;
+
+        public float TotalThoughtMoodDelta
+        {
+            get
+            {
+                var sum = 0f;
+                for (var i = 0; i < _thoughts.Count; i++) sum += _thoughts[i].MoodDelta;
+                return sum;
+            }
+        }
+
+        public void AddThought(ThoughtMemory thought)
+        {
+            if (_thoughts.Count >= MaxThoughts)
+            {
+                PruneExpiredThoughts(thought.CreatedAtTick);
+            }
+            if (_thoughts.Count >= MaxThoughts)
+            {
+                _thoughts.RemoveAt(0);
+            }
+            _thoughts.Add(thought);
+        }
+
+        public void PruneExpiredThoughts(long currentTick)
+        {
+            _thoughts.RemoveAll(t => t.IsExpiredAt(currentTick));
+        }
+
+        public void ClearThoughts()
+        {
+            _thoughts.Clear();
+        }
 
         public void Update(float satisfaction, float strain, float commute, float crowding, float noise, float rentBurden, float serviceAccess, float recentEvents, IEnumerable<string> grievances)
         {

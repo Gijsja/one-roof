@@ -73,6 +73,7 @@ namespace OneRoof.Domain.Tests.EditMode
                 new[] { new PersonTrait(PersonTraitKind.EarlyBird) });
             person.UpdateActivity(ActivityKind.Eating);
             person.Specialization.AdvanceTowards(SpecialistRole.Service, 1f);
+            person.Wellbeing.AddThought(new ThoughtMemory("Saved thought", 5f, 10, 500));
 
             var household = new HouseholdRecord(
                 new EntityId(201),
@@ -101,6 +102,9 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Hygiene), Is.EqualTo(0.7f).Within(0.001f));
             Assert.That(restoredPerson.GetNeedSatisfaction(NeedKind.Purpose), Is.EqualTo(0.85f).Within(0.001f));
             Assert.That(restoredPerson.Specialization.Role, Is.EqualTo(SpecialistRole.Service));
+            Assert.That(restoredPerson.SocialTraits.Count, Is.GreaterThan(0));
+            Assert.That(restoredPerson.Wellbeing.ActiveThoughts.Count, Is.EqualTo(1));
+            Assert.That(restoredPerson.Wellbeing.ActiveThoughts[0].Description, Is.EqualTo("Saved thought"));
 
             var restoredHousehold = restored.GetHousehold(new EntityId(201));
             Assert.That(restoredHousehold.Budget, Is.EqualTo(0.75f));

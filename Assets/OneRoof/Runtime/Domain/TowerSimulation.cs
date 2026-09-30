@@ -71,6 +71,7 @@ namespace OneRoof.Domain
             Decisions = new DecisionRecordState();
             HousingLifecycle = new HouseholdLeaseLifecycleState();
             HousingLifecycleSystem = new HouseholdHousingLifecycleSystem();
+            Social = new ResidentSocialSystem();
             Operations = new UndergroundOperationsState();
         }
 
@@ -105,6 +106,7 @@ namespace OneRoof.Domain
         public ElectricalGridState ElectricalGrid { get; }
         public WaterWasteNetworkState WaterWasteNetwork { get; }
         public UtilityOperationsState UtilityOperations { get; private set; }
+        public ResidentSocialSystem Social { get; }
         public ResidentWellbeingSystem Wellbeing { get; }
         public ScrutinyState Scrutiny { get; }
         public FactionState Factions { get; private set; }
@@ -171,6 +173,7 @@ namespace OneRoof.Domain
             Needs.Advance(Population, currentTick);
             Specialists.Advance(Population, Topology, currentTick, (int)Math.Ceiling(Operations.TrainingBoost * 10f));
             UtilityOperations.Advance(Topology, Population, Operations.RepairBoost);
+            Social.Advance(Population, Topology, ElevatorBank, Factions, currentTick);
             Wellbeing.Advance(Population, ElevatorBank, Specialists.ServiceEfficiencyMultiplier + Operations.CareBoost, Economy.Policy.RentCapMultiplier, Economy.Policy.TransitSubsidyEnabled,
                 applyDailyArrearsStrain: currentTick.Value % _settlementPeriod == 0,
                 dayFraction: 1f / _settlementPeriod,

@@ -34,17 +34,22 @@ namespace OneRoof.Domain.Social
     /// <summary>Bounded, attributable resident connection. Affinity is in [-1, 1].</summary>
     public sealed class RelationshipEdge
     {
-        internal RelationshipEdge(EntityId first, EntityId second, float affinity, long lastContactTick, string cause, long lastMeaningfulTick = 0, int sharedSupportDays = 0, string sharedIssue = null)
-        { First = first; Second = second; Affinity = affinity; LastContactTick = lastContactTick; Cause = cause; LastMeaningfulTick = lastMeaningfulTick; SharedSupportDays = sharedSupportDays; SharedIssue = sharedIssue; }
+        internal RelationshipEdge(EntityId first, EntityId second, float affinity, long lastContactTick, string cause, long lastMeaningfulTick = 0, int sharedSupportDays = 0, string sharedIssue = null, RelationshipStage stage = RelationshipStage.Stranger)
+        {
+            First = first; Second = second; Affinity = affinity; LastContactTick = lastContactTick; Cause = cause;
+            LastMeaningfulTick = lastMeaningfulTick; SharedSupportDays = sharedSupportDays; SharedIssue = sharedIssue;
+            Stage = stage == RelationshipStage.Stranger ? RelationshipMilestones.DeriveStage(affinity) : stage;
+        }
         public EntityId First { get; }
         public EntityId Second { get; }
-        public float Affinity { get; internal set; }
-        public float PreviousAffinity { get; internal set; }
-        public long LastContactTick { get; internal set; }
-        public string Cause { get; internal set; }
-        public long LastMeaningfulTick { get; internal set; }
-        public int SharedSupportDays { get; internal set; }
-        public string SharedIssue { get; internal set; }
+        public float Affinity { get; set; }
+        public float PreviousAffinity { get; set; }
+        public RelationshipStage Stage { get; set; }
+        public long LastContactTick { get; set; }
+        public string Cause { get; set; }
+        public long LastMeaningfulTick { get; set; }
+        public int SharedSupportDays { get; set; }
+        public string SharedIssue { get; set; }
     }
 
     public sealed class FactionRecord
@@ -80,17 +85,23 @@ namespace OneRoof.Domain.Social
             people.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
             var live = new HashSet<int>();
             foreach (var person in people) live.Add(person.Id.Value);
+            var byId = new Dictionary<int, PersonRecord>();
+            foreach (var person in people) byId[person.Id.Value] = person;
             _edges.RemoveAll(e => !live.Contains(e.First.Value) || !live.Contains(e.Second.Value) || tick - e.LastContactTick > EdgeExpiryTicks);
             foreach (var edge in _edges)
             {
                 edge.PreviousAffinity = edge.Affinity;
                 if (edge.Affinity > 0f) edge.Affinity = Math.Max(0f, edge.Affinity - .01f);
-                else if (edge.Affinity < 0f) edge.Affinity = Math.Min(0f, edge.Affinity + .01f);
+                else if (edge.Affinity < 0f)
+                {
+                    var isGrudge = HasGrudge(byId, edge.First, edge.Second);
+                    var decay = isGrudge ? .002f : .01f;
+                    edge.Affinity = Math.Min(0f, edge.Affinity + decay);
+                }
+                edge.Stage = RelationshipMilestones.DeriveStage(edge.Affinity, edge.Stage);
             }
             _degree.Clear();
             foreach (var edge in _edges) { Increment(edge.First.Value); Increment(edge.Second.Value); }
-            var byId = new Dictionary<int, PersonRecord>();
-            foreach (var person in people) byId[person.Id.Value] = person;
             var home = new Dictionary<int, List<PersonRecord>>();
             var work = new Dictionary<int, List<PersonRecord>>();
             var transit = new Dictionary<int, List<PersonRecord>>();
@@ -233,6 +244,7 @@ namespace OneRoof.Domain.Social
                             edge.Affinity = Math.Min(1f, edge.Affinity + .04f);
                             edge.LastMeaningfulTick = tick;
                             edge.Cause = "shared grievance: " + shared;
+                            edge.Stage = RelationshipMilestones.DeriveStage(edge.Affinity, edge.Stage);
                         }
                     }
                     else { edge.SharedSupportDays = 0; edge.SharedIssue = null; }
@@ -240,8 +252,52 @@ namespace OneRoof.Domain.Social
                 }
             _degree.TryGetValue(a.Value, out var da); _degree.TryGetValue(b.Value, out var db);
             if (da >= MaxEdgesPerResident || db >= MaxEdgesPerResident) return;
-            _edges.Add(new RelationshipEdge(a, b, 0f, tick, "encounter: " + context, 0, shared == null ? 0 : 1, shared)); Increment(a.Value); Increment(b.Value);
+            _edges.Add(new RelationshipEdge(a, b, 0f, tick, "encounter: " + context, 0, shared == null ? 0 : 1, shared, RelationshipStage.Acquaintance)); Increment(a.Value); Increment(b.Value);
         }
+
+        public RelationshipEdge GetEdge(EntityId a, EntityId b)
+        {
+            if (a.Value > b.Value) { var tmp = a; a = b; b = tmp; }
+            for (var i = 0; i < _edges.Count; i++)
+                if (_edges[i].First == a && _edges[i].Second == b) return _edges[i];
+            return null;
+        }
+
+        public RelationshipEdge GetOrCreateEdge(EntityId a, EntityId b, long tick, string cause, RelationshipStage initialStage = RelationshipStage.Acquaintance)
+        {
+            if (a == b) return null;
+            if (a.Value > b.Value) { var tmp = a; a = b; b = tmp; }
+            for (var i = 0; i < _edges.Count; i++)
+            {
+                var e = _edges[i];
+                if (e.First == a && e.Second == b)
+                {
+                    e.LastContactTick = tick;
+                    return e;
+                }
+            }
+            _degree.TryGetValue(a.Value, out var da);
+            _degree.TryGetValue(b.Value, out var db);
+            if (da >= MaxEdgesPerResident || db >= MaxEdgesPerResident) return null;
+
+            var edge = new RelationshipEdge(a, b, 0f, tick, cause, 0, 0, null, initialStage);
+            _edges.Add(edge);
+            Increment(a.Value);
+            Increment(b.Value);
+            return edge;
+        }
+
+        private static bool HasGrudge(Dictionary<int, PersonRecord> byId, EntityId a, EntityId b)
+        {
+            if (byId.TryGetValue(a.Value, out var pa) && pa.SocialTraits != null)
+                for (var i = 0; i < pa.SocialTraits.Count; i++)
+                    if (pa.SocialTraits[i].Kind == SocialTraitKind.GrudgeHolder) return true;
+            if (byId.TryGetValue(b.Value, out var pb) && pb.SocialTraits != null)
+                for (var i = 0; i < pb.SocialTraits.Count; i++)
+                    if (pb.SocialTraits[i].Kind == SocialTraitKind.GrudgeHolder) return true;
+            return false;
+        }
+
         private static string SharedGrievance(PersonRecord first, PersonRecord second)
         {
             foreach (var grievance in first.Wellbeing.Grievances)
@@ -252,8 +308,8 @@ namespace OneRoof.Domain.Social
 
         public FactionSaveData ToSaveData()
         {
-            var data = new FactionSaveData { version = 2, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
-            for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, previousAffinity = e.PreviousAffinity, lastContactTick = e.LastContactTick, cause = e.Cause, lastMeaningfulTick = e.LastMeaningfulTick, sharedSupportDays = e.SharedSupportDays, sharedIssue = e.SharedIssue }; }
+            var data = new FactionSaveData { version = 3, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
+            for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, previousAffinity = e.PreviousAffinity, lastContactTick = e.LastContactTick, cause = e.Cause, lastMeaningfulTick = e.LastMeaningfulTick, sharedSupportDays = e.SharedSupportDays, sharedIssue = e.SharedIssue, stage = (int)e.Stage }; }
             for (var i = 0; i < _supports.Count; i++) { var s = _supports[i]; data.supports[i] = new FactionSupportSaveData { residentId = s.ResidentId.Value, factionId = s.FactionId, support = s.Support, sustainedDays = s.SustainedDays, driver = s.Driver, homeFloor = s.HomeFloor }; }
             for (var i = 0; i < _factions.Count; i++) { var f = _factions[i]; data.factions[i] = new FactionRecordSaveData { id = f.Id, pressure = f.Pressure, previousPressure = f.PreviousPressure, topGrievance = f.TopGrievance }; }
             return data;
@@ -270,7 +326,11 @@ namespace OneRoof.Domain.Social
                     var pair = ((long)e.first << 32) | (uint)e.second;
                     if (!seenEdges.Add(pair)) continue;
                     var contactTick = Math.Max(0, e.lastContactTick);
-                    var edge = new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), ClampFinite(e.affinity, -1f, 1f), contactTick, data.version >= 2 ? e.cause ?? "encounter" : "legacy tie (cause unavailable)", data.version >= 2 ? Math.Max(0, Math.Min(contactTick, e.lastMeaningfulTick)) : 0, data.version >= 2 && !string.IsNullOrEmpty(e.sharedIssue) ? Math.Max(0, Math.Min(10000, e.sharedSupportDays)) : 0, data.version >= 2 ? e.sharedIssue : null);
+                    var edgeAffinity = ClampFinite(e.affinity, -1f, 1f);
+                    var stage = data.version >= 3 && Enum.IsDefined(typeof(RelationshipStage), e.stage)
+                        ? (RelationshipStage)e.stage
+                        : RelationshipMilestones.DeriveStage(edgeAffinity);
+                    var edge = new RelationshipEdge(new EntityId(e.first), new EntityId(e.second), edgeAffinity, contactTick, data.version >= 2 ? e.cause ?? "encounter" : "legacy tie (cause unavailable)", data.version >= 2 ? Math.Max(0, Math.Min(contactTick, e.lastMeaningfulTick)) : 0, data.version >= 2 && !string.IsNullOrEmpty(e.sharedIssue) ? Math.Max(0, Math.Min(10000, e.sharedSupportDays)) : 0, data.version >= 2 ? e.sharedIssue : null, stage);
                     edge.PreviousAffinity = data.version >= 2 ? ClampFinite(e.previousAffinity, -1f, 1f) : edge.Affinity;
                     state._edges.Add(edge);
                 }

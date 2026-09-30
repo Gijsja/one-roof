@@ -309,6 +309,8 @@ namespace OneRoof.Domain.Persistence
         public long[] scheduleEndTicks;
         public int trait;
         public int[] personalityFacets;
+        public int[] socialTraits;
+        public ThoughtMemorySaveData[] thoughts;
         public float wellbeingSatisfaction;
         public float wellbeingStrain;
         public float hungerSatisfaction;
@@ -320,6 +322,16 @@ namespace OneRoof.Domain.Persistence
         public int specialistRole;
         public int specialistTrainingRole;
         public float specialistTrainingProgress;
+    }
+
+    [Serializable]
+    public sealed class ThoughtMemorySaveData
+    {
+        public string description;
+        public float moodDelta;
+        public long createdAtTick;
+        public long expiresAtTick;
+        public int targetResidentId;
     }
 
     [Serializable]

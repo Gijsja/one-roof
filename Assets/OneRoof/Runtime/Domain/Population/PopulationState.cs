@@ -205,6 +205,23 @@ namespace OneRoof.Domain.Population
                     scheduleEnds[i] = scheduleBlocks[i].EndTick.Value;
                 }
 
+                var sTraits = new int[p.SocialTraits.Count];
+                for (var i = 0; i < sTraits.Length; i++) sTraits[i] = (int)p.SocialTraits[i].Kind;
+
+                var thoughts = new ThoughtMemorySaveData[p.Wellbeing.ActiveThoughts.Count];
+                for (var i = 0; i < thoughts.Length; i++)
+                {
+                    var t = p.Wellbeing.ActiveThoughts[i];
+                    thoughts[i] = new ThoughtMemorySaveData
+                    {
+                        description = t.Description,
+                        moodDelta = t.MoodDelta,
+                        createdAtTick = t.CreatedAtTick,
+                        expiresAtTick = t.ExpiresAtTick,
+                        targetResidentId = t.TargetResidentId.Value
+                    };
+                }
+
                 personList.Add(new PersonSaveData
                 {
                     id = p.Id.Value,
@@ -224,6 +241,8 @@ namespace OneRoof.Domain.Population
                     scheduleEndTicks = scheduleEnds,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
                     personalityFacets = FacetIds(p),
+                    socialTraits = sTraits,
+                    thoughts = thoughts,
                     wellbeingSatisfaction = p.Wellbeing.Satisfaction,
                     wellbeingStrain = p.Wellbeing.Strain,
                     hungerSatisfaction = hunger,
@@ -312,6 +331,7 @@ namespace OneRoof.Domain.Population
                     };
                     var traits = new[] { trait };
                     var facets = p.personalityFacets == null ? null : RestoreFacets(p.personalityFacets);
+                    var socialTraits = p.socialTraits == null ? null : RestoreSocialTraits(p.socialTraits);
                     var person = new PersonRecord(
                         new EntityId(p.id),
                         new EntityId(p.householdId),
@@ -321,7 +341,8 @@ namespace OneRoof.Domain.Population
                             : new EntityId(p.workplaceRoomId),
                         schedule,
                         needs,
-                        traits, facets, p.workplaceLocationKind == (int)WorldLocationKind.Outside);
+                        traits, facets, p.workplaceLocationKind == (int)WorldLocationKind.Outside,
+                        socialTraits);
 
                     person.UpdateLocation(p.currentLocationKind == (int)WorldLocationKind.Outside
                         ? WorldLocation.Outside
@@ -335,6 +356,22 @@ namespace OneRoof.Domain.Population
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
                     person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);
                     person.Wellbeing.Update(p.wellbeingSatisfaction, p.wellbeingStrain, 1f, 1f, 1f, 1f, 1f, 1f, null);
+                    if (p.thoughts != null)
+                    {
+                        foreach (var t in p.thoughts)
+                        {
+                            if (t != null && !string.IsNullOrEmpty(t.description))
+                            {
+                                var targetId = t.targetResidentId > 0 ? new EntityId(t.targetResidentId) : default;
+                                person.Wellbeing.AddThought(new ThoughtMemory(
+                                    t.description,
+                                    t.moodDelta,
+                                    t.createdAtTick,
+                                    t.expiresAtTick,
+                                    targetId));
+                            }
+                        }
+                    }
                     persons.Add(person);
                 }
             }
@@ -373,6 +410,15 @@ namespace OneRoof.Domain.Population
             var result = new List<PersonalityFacet>();
             foreach (var id in ids)
                 if (Enum.IsDefined(typeof(PersonalityFacetKind), id)) result.Add(new PersonalityFacet((PersonalityFacetKind)id));
+            return result.ToArray();
+        }
+
+        private static SocialTrait[] RestoreSocialTraits(int[] ids)
+        {
+            if (ids == null) return Array.Empty<SocialTrait>();
+            var result = new List<SocialTrait>(ids.Length);
+            foreach (var id in ids)
+                if (Enum.IsDefined(typeof(SocialTraitKind), id)) result.Add(new SocialTrait((SocialTraitKind)id));
             return result.ToArray();
         }
     }

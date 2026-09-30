@@ -11,7 +11,7 @@ namespace OneRoof.Domain.Persistence
         public FactionRecordSaveData[] factions;
     }
     [Serializable] public sealed class RelationshipEdgeSaveData
-    { public int first; public int second; public float affinity; public float previousAffinity; public long lastContactTick; public string cause; public long lastMeaningfulTick; public int sharedSupportDays; public string sharedIssue; }
+    { public int first; public int second; public float affinity; public float previousAffinity; public long lastContactTick; public string cause; public long lastMeaningfulTick; public int sharedSupportDays; public string sharedIssue; public int stage; }
     [Serializable] public sealed class FactionSupportSaveData
     { public int residentId; public string factionId; public float support; public int sustainedDays; public string driver; public int homeFloor; }
     [Serializable] public sealed class FactionRecordSaveData
