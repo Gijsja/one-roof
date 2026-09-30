@@ -43,8 +43,27 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 
 ## Tooling & Validation Workflow
 
-- Target **Unity 6000.3 LTS** (`6000.3.24f1`).
-- **Validation Commands & Live Probing**: See [`Docs/WORKFLOW_AND_TESTING.md`](./Docs/WORKFLOW_AND_TESTING.md) for exact batchmode test invocations (EditMode 832 passing, PlayMode 15 passing; never pass `-quit` with `-runTests`) and `pipeline_client.py` telemetry probes.
+### Quickstart Tech Spec
+
+| Key | Specification |
+|---|---|
+| **Unity Version** | `6000.3.24f1` (Unity 6000.3 LTS) — defined in [`ProjectSettings/ProjectVersion.txt`](./ProjectSettings/ProjectVersion.txt) |
+| **Unity Binary** | `/home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity` |
+| **Project Path** | `/home/geisha/Vibecode/UnityAI/one-roof` |
+| **Render Pipeline** | Universal Render Pipeline (URP 17.3.0) |
+| **Assemblies** | `OneRoof.Domain` & `OneRoof.Application` (`noEngineReferences: true`, 0 `UnityEngine` refs) |
+| **Active Baseline** | 832 EditMode tests passing, 15 PlayMode tests passing |
+
+### Essential Validation Commands
+```bash
+# Fast compilation check
+/home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -quit -projectPath . -logFile /tmp/compile.log
+
+# EditMode tests (NEVER pass -quit with -runTests!)
+timeout 1500 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults /tmp/editmode.xml -logFile /tmp/editmode.log
+```
+
+- **Validation & Pipeline Probing**: See [`Docs/WORKFLOW_AND_TESTING.md`](./Docs/WORKFLOW_AND_TESTING.md) for full details, worktree isolation, and `pipeline_client.py` telemetry probes.
 - **Commit hygiene**: Always commit paired `.meta` files for any new assets. Keep generated directories (`Library/`, `Temp/`, `.plastic/`) untracked.
 - **Sandbox & Git Operations**: Project workspace files are writable in the standard sandbox, but `.git/` is mounted read-only. Use standard shell commands (`mv`, `cp`, `mkdir`) inside sandbox. Any Git commands mutating repository index or history (`git add`, `git commit`, `git checkout`, `git stash`) require sandbox bypass (`BypassSandbox: true`).
 - For documentation-only changes, state that Unity validation was not run.
