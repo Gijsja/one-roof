@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Economy;
+using OneRoof.Domain.CivilAction;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
@@ -28,6 +29,8 @@ namespace OneRoof.Domain.Social
         public int SustainedDays { get; internal set; }
         public string Driver { get; internal set; }
         public int HomeFloor { get; internal set; }
+        public int GrievanceDays { get; internal set; }
+        public float DirectPressure { get; internal set; }
         public bool IsMember => SustainedDays >= 2 && Support >= .55f;
     }
 
@@ -81,6 +84,7 @@ namespace OneRoof.Domain.Social
         public void Evaluate(PopulationState population, BuildingTopologyState topology, BusinessState businesses, PolicyDecreeState policy, long tick)
         {
             if (population == null || topology == null) throw new ArgumentNullException(population == null ? nameof(population) : nameof(topology));
+            if (LastEvaluationTick > 0 && tick <= LastEvaluationTick) return;
             var people = new List<PersonRecord>(population.Persons);
             people.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
             var live = new HashSet<int>();
@@ -162,6 +166,8 @@ namespace OneRoof.Domain.Social
                     var days = next >= .55f ? Math.Min(10000, (old?.SustainedDays ?? 0) + 1) : 0;
                     if (next < .15f) continue;
                     var support = new FactionSupport(person.Id, id, next, days, drivers[i], floor);
+                    support.DirectPressure = score;
+                    support.GrievanceDays = score >= .55f ? Math.Min(10000, old != null && old.Driver == drivers[i] ? old.GrievanceDays + 1 : 1) : 0;
                     _supports.Add(support);
                     pressureSum[i] += next;
                     counts[i]++;
@@ -182,6 +188,42 @@ namespace OneRoof.Domain.Social
                 foreach (var pair in driverCounts[i]) if (pair.Value > best || pair.Value == best && string.CompareOrdinal(pair.Key, record.TopGrievance) < 0) { best = pair.Value; record.TopGrievance = pair.Key; }
             }
             LastEvaluationTick = tick;
+        }
+
+        /// <summary>Local connected membership must sustain the same measured cause for three settlements.</summary>
+        public IReadOnlyList<CivilActionSignal> BuildOrganizedSignals(long tick)
+        {
+            var signals = new List<CivilActionSignal>();
+            foreach (var faction in _factions)
+            {
+                var candidates = new List<FactionSupport>();
+                foreach (var support in _supports)
+                    if (support.FactionId == faction.Id && support.IsMember && support.GrievanceDays >= 3 && support.DirectPressure >= .55f) candidates.Add(support);
+                candidates.Sort((a, b) => a.ResidentId.Value.CompareTo(b.ResidentId.Value));
+                var byId = new Dictionary<int, FactionSupport>();
+                foreach (var candidate in candidates) byId[candidate.ResidentId.Value] = candidate;
+                var visited = new HashSet<int>();
+                var best = new List<FactionSupport>();
+                foreach (var seed in candidates)
+                {
+                    if (!visited.Add(seed.ResidentId.Value)) continue;
+                    var connected = new List<FactionSupport> { seed };
+                    for (var index = 0; index < connected.Count; index++)
+                        foreach (var edge in _edges)
+                        {
+                            if (edge.Affinity < ResidentSocialInfluenceSystem.StrongAffinity || edge.LastContactTick > tick || tick - edge.LastContactTick > ResidentSocialInfluenceSystem.RecentContactTicks) continue;
+                            var neighborId = edge.First == connected[index].ResidentId ? edge.Second.Value : edge.Second == connected[index].ResidentId ? edge.First.Value : 0;
+                            if (!byId.TryGetValue(neighborId, out var other) || visited.Contains(neighborId) || other.Driver != seed.Driver || Math.Abs(other.HomeFloor - connected[index].HomeFloor) > 1) continue;
+                            visited.Add(neighborId); connected.Add(other);
+                        }
+                    if (connected.Count > best.Count) best = connected;
+                }
+                var ids = new int[best.Count]; var floors = new SortedSet<int>(); var pressure = 0f;
+                for (var index = 0; index < best.Count; index++) { ids[index] = best[index].ResidentId.Value; floors.Add(best[index].HomeFloor); pressure += best[index].DirectPressure; }
+                Array.Sort(ids); var floorIds = new int[floors.Count]; floors.CopyTo(floorIds);
+                signals.Add(new CivilActionSignal(faction.Id, best.Count == 0 ? 0f : pressure / best.Count, best.Count, best.Count == 0 ? "none" : best[0].Driver, ids, floorIds));
+            }
+            return signals;
         }
 
         private static string MaxDriver(float a, string aa, float b, string bb, float c, string cc)
@@ -374,10 +416,10 @@ namespace OneRoof.Domain.Social
 
         public FactionSaveData ToSaveData()
         {
-            var data = new FactionSaveData { version = 3, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
+            var data = new FactionSaveData { version = 4, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
             for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, previousAffinity = e.PreviousAffinity, lastContactTick = e.LastContactTick, cause = e.Cause, lastMeaningfulTick = e.LastMeaningfulTick, sharedSupportDays = e.SharedSupportDays, sharedIssue = e.SharedIssue, stage = (int)e.Stage }; }
             Array.Sort(data.edges, (a, b) => a.first != b.first ? a.first.CompareTo(b.first) : a.second.CompareTo(b.second));
-            for (var i = 0; i < _supports.Count; i++) { var s = _supports[i]; data.supports[i] = new FactionSupportSaveData { residentId = s.ResidentId.Value, factionId = s.FactionId, support = s.Support, sustainedDays = s.SustainedDays, driver = s.Driver, homeFloor = s.HomeFloor }; }
+            for (var i = 0; i < _supports.Count; i++) { var s = _supports[i]; data.supports[i] = new FactionSupportSaveData { residentId = s.ResidentId.Value, factionId = s.FactionId, support = s.Support, sustainedDays = s.SustainedDays, driver = s.Driver, homeFloor = s.HomeFloor, grievanceDays = s.GrievanceDays, directPressure = s.DirectPressure }; }
             for (var i = 0; i < _factions.Count; i++) { var f = _factions[i]; data.factions[i] = new FactionRecordSaveData { id = f.Id, pressure = f.Pressure, previousPressure = f.PreviousPressure, topGrievance = f.TopGrievance }; }
             return data;
         }
@@ -413,7 +455,7 @@ namespace OneRoof.Domain.Social
             if (data.supports != null) foreach (var s in data.supports)
                 if (s != null && live.Contains(s.residentId) && Array.IndexOf(FactionIds.All, s.factionId) >= 0)
                     if (seenSupports.Add(Key(s.residentId, s.factionId)))
-                        state._supports.Add(new FactionSupport(new EntityId(s.residentId), s.factionId, ClampFinite(s.support, 0f, 1f), Math.Max(0, Math.Min(10000, s.sustainedDays)), s.driver ?? "unavailable", s.homeFloor));
+                        state._supports.Add(new FactionSupport(new EntityId(s.residentId), s.factionId, ClampFinite(s.support, 0f, 1f), Math.Max(0, Math.Min(10000, s.sustainedDays)), s.driver ?? "unavailable", s.homeFloor) { GrievanceDays = data.version >= 4 ? Math.Max(0, Math.Min(10000, s.grievanceDays)) : 0, DirectPressure = data.version >= 4 ? ClampFinite(s.directPressure, 0f, 1f) : 0f });
             state._supports.Sort((a, b) => a.ResidentId.Value != b.ResidentId.Value ? a.ResidentId.Value.CompareTo(b.ResidentId.Value) : string.CompareOrdinal(a.FactionId, b.FactionId));
             if (data.factions != null) foreach (var saved in data.factions)
                 if (saved != null) foreach (var faction in state._factions) if (faction.Id == saved.id)

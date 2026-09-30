@@ -11,6 +11,7 @@ namespace OneRoof.Domain.Economy
         }
 
         public bool Accepted { get; }
+        public bool IsSuccess => Accepted;
         public long CashPaid { get; }
         public long CreditIssued { get; }
     }

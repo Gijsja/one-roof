@@ -251,19 +251,19 @@ namespace OneRoof.Domain.Tests.EditMode
         {
             var personA = CreatePerson(1, SocialTraitKind.Charismatic);
             var personB = CreatePerson(2, SocialTraitKind.HopelessRomantic);
-            personA.UpdateLocation(new EntityId(10)); // Same room
-            personB.UpdateLocation(new EntityId(10));
+            personA.UpdateLocation(new EntityId(6)); // Same room
+            personB.UpdateLocation(new EntityId(6));
             personA.UpdateActivity(ActivityKind.Leisure);
             personB.UpdateActivity(ActivityKind.Leisure);
 
             var population = new PopulationState(new[] { personA, personB }, new[]
             {
-                new HouseholdRecord(new EntityId(100), new[] { new EntityId(1) }, new EntityId(10), 0.8f, 1f),
-                new HouseholdRecord(new EntityId(101), new[] { new EntityId(2) }, new EntityId(10), 0.8f, 1f)
+                new HouseholdRecord(new EntityId(101), new[] { new EntityId(1) }, new EntityId(6), 0.8f, 1f),
+                new HouseholdRecord(new EntityId(102), new[] { new EntityId(2) }, new EntityId(6), 0.8f, 1f)
             });
 
             var factions = new FactionState();
-            var topologyState = BuildingTopologyState.CreateWithFixture();
+            var topologyState = BuildingTopologyState.FromBuildingTopology(_topology);
 
             _social.Advance(population, topologyState, null, factions, new Tick(60), intervalTicks: 60);
 
@@ -391,9 +391,9 @@ namespace OneRoof.Domain.Tests.EditMode
             });
 
             var factions = new FactionState();
-            _social.Advance(pop, _topology.State, null, factions, new Tick(60));
+            _social.Advance(pop, BuildingTopologyState.FromBuildingTopology(_topology), null, factions, new Tick(60));
 
-            // Since room 9999 is not in _topology.State, no room interaction occurs
+            // Since room 9999 is not in _topology, no room interaction occurs
             Assert.That(factions.Edges.Count, Is.Zero);
         }
 
@@ -417,7 +417,7 @@ namespace OneRoof.Domain.Tests.EditMode
 
             // Save and Restore FactionState
             var factionSave = factions.ToSaveData();
-            Assert.That(factionSave.version, Is.EqualTo(3));
+            Assert.That(factionSave.version, Is.EqualTo(4));
             Assert.That(factionSave.edges[0].stage, Is.EqualTo((int)RelationshipStage.Crush));
 
             var restoredFactions = FactionState.FromSaveData(factionSave, population);
@@ -440,6 +440,77 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(restoredP1.Wellbeing.ActiveThoughts[0].Description, Is.EqualTo("Met someone special"));
             Assert.That(restoredP1.Wellbeing.ActiveThoughts[0].MoodDelta, Is.EqualTo(10f));
             Assert.That(restoredP1.Wellbeing.ActiveThoughts[0].TargetResidentId, Is.EqualTo(p2.Id));
+        }
+
+        [Test]
+        public void Influence_UsesPriorDirectGrievances_AndDoesNotCascade()
+        {
+            var a = CreatePerson(1, SocialTraitKind.Loyal);
+            var b = CreatePerson(2, SocialTraitKind.Loyal);
+            var c = CreatePerson(3, SocialTraitKind.Loyal);
+            var pop = new PopulationState(new[] { c, b, a }, new HouseholdRecord[0]);
+            var factions = new FactionState();
+            factions.GetOrCreateEdge(a.Id, b.Id, 10, "conversation").Affinity = .8f;
+            factions.GetOrCreateEdge(b.Id, c.Id, 10, "conversation").Affinity = .8f;
+            a.Wellbeing.Update(.4f, 0f, 1f, 1f, 1f, .2f, 1f, 1f, new[] { "Rent pressure" });
+            var influence = new ResidentSocialInfluenceSystem();
+            influence.AdvanceSettlement(pop, factions, 10);
+            Assert.That(b.Wellbeing.SocialPressure, Is.Zero, "Current-boundary grievances must wait for the next settlement.");
+            influence.AdvanceSettlement(pop, factions, 20);
+            Assert.That(b.Wellbeing.SocialInfluences[0].Issue, Is.EqualTo("Rent pressure"));
+            Assert.That(b.Wellbeing.Grievances, Is.Empty, "Social influence must not create direct exposure.");
+            Assert.That(c.Wellbeing.SocialPressure, Is.Zero);
+            var restored = PopulationState.FromSaveData(pop.ToSaveData());
+            Assert.That(restored.GetPerson(b.Id).Wellbeing.SocialPressure, Is.EqualTo(.02f).Within(.0001f));
+            Assert.That(restored.GetPerson(a.Id).Wellbeing.PriorSettlementGrievances[0], Is.EqualTo("Rent pressure"));
+            a.Wellbeing.Update(1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, null);
+            influence.AdvanceSettlement(pop, factions, 30);
+            influence.AdvanceSettlement(pop, factions, 40);
+            Assert.That(b.Wellbeing.SocialPressure, Is.Zero, "Measured direct relief reverses shared concern.");
+        }
+
+        [Test]
+        public void Influence_RejectsWeakStaleTies_AndCapsMultipleNamedIssues()
+        {
+            var pop = FiftyResidentFixture.Create(_topology, new DeterministicRandomStream(42));
+            var a = pop.Persons[0]; var b = pop.Persons[1];
+            a.Wellbeing.Update(.4f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, new[] { "A", "B", "C", "D", "E", "F", "G" });
+            a.Wellbeing.CaptureSettlementGrievances();
+            var factions = new FactionState();
+            var edge = factions.GetOrCreateEdge(a.Id, b.Id, 10, "conversation");
+            var influence = new ResidentSocialInfluenceSystem();
+            edge.Affinity = .39f;
+            influence.AdvanceSettlement(pop, factions, 10);
+            Assert.That(b.Wellbeing.SocialPressure, Is.Zero);
+            edge.Affinity = .8f;
+            influence.AdvanceSettlement(pop, factions, ResidentSocialInfluenceSystem.RecentContactTicks + 11);
+            Assert.That(b.Wellbeing.SocialPressure, Is.Zero);
+            edge.LastContactTick = 5000;
+            influence.AdvanceSettlement(pop, factions, 5000);
+            Assert.That(b.Wellbeing.SocialPressure, Is.EqualTo(ResidentSocialInfluenceSystem.MaxPressure).Within(.0001f));
+            foreach (var item in b.Wellbeing.SocialInfluences) Assert.That(item.Pressure, Is.LessThanOrEqualTo(ResidentSocialInfluenceSystem.MaxIssuePressure));
+        }
+
+        [Test]
+        public void Influence_IsIndependentOfPopulationAndEdgeInsertionOrder()
+        {
+            var a = CreatePerson(1, SocialTraitKind.Loyal); var b = CreatePerson(2, SocialTraitKind.Loyal); var c = CreatePerson(3, SocialTraitKind.Loyal);
+            a.Wellbeing.RestoreSocialInfluence(new[] { "Rent" }, null);
+            c.Wellbeing.RestoreSocialInfluence(new[] { "Services" }, null);
+            var forward = new PopulationState(new[] { a, b, c }, new HouseholdRecord[0]);
+            var reverse = PopulationState.FromSaveData(forward.ToSaveData());
+            reverse = new PopulationState(new[] { reverse.GetPerson(c.Id), reverse.GetPerson(b.Id), reverse.GetPerson(a.Id) }, new HouseholdRecord[0]);
+            var first = new FactionState(); var second = new FactionState();
+            first.GetOrCreateEdge(a.Id, b.Id, 10, "conversation").Affinity = .8f;
+            first.GetOrCreateEdge(b.Id, c.Id, 10, "conversation").Affinity = .8f;
+            second.GetOrCreateEdge(b.Id, c.Id, 10, "conversation").Affinity = .8f;
+            second.GetOrCreateEdge(a.Id, b.Id, 10, "conversation").Affinity = .8f;
+            new ResidentSocialInfluenceSystem().AdvanceSettlement(forward, first, 10);
+            new ResidentSocialInfluenceSystem().AdvanceSettlement(reverse, second, 10);
+            var expected = forward.GetPerson(b.Id).Wellbeing.SocialInfluences;
+            var actual = reverse.GetPerson(b.Id).Wellbeing.SocialInfluences;
+            Assert.That(actual.Count, Is.EqualTo(expected.Count));
+            for (var index = 0; index < expected.Count; index++) { Assert.That(actual[index].Issue, Is.EqualTo(expected[index].Issue)); Assert.That(actual[index].Pressure, Is.EqualTo(expected[index].Pressure)); }
         }
 
         private static PersonRecord CreatePerson(int id, SocialTraitKind socialTrait)

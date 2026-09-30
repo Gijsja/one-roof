@@ -1,0 +1,517 @@
+[
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_00_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_00_pair.png",
+    "sha256": "ba1db47011166da09cf59174f07b1b034510559fc0a69a96e4b53a0f7ec19c16"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_00_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_00_pair.png.meta",
+    "sha256": "fd6b63569cf1b3098dc8e4c417778cafc63c6594d01bcbc30ae49b43fd6795ab"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_01_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_01_pair.png",
+    "sha256": "9b54f739361a7b7f85122d135f8114df9a3e08f975cc29ee7d12fa6281c74c1b"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_01_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_01_pair.png.meta",
+    "sha256": "fc48b5b65d6ecec350baf51da1f7a6fa8c167b172d6fef4cfcfa8b2d8b0465c3"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_02_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_02_pair.png",
+    "sha256": "608e4af9014975f1bf62a43f2b7c41536ca0d023625f2ef555e0fca1f65fa32f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_02_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_02_pair.png.meta",
+    "sha256": "36cd0798ac1e6a6f85a0d252a00d54154bff9d9a5674318cf1815a8e5d032a91"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_03_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_03_pair.png",
+    "sha256": "91d037e58079db991e9ca20f5dca1faff550e02311708559e29bfb2b05b88b85"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_03_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_03_pair.png.meta",
+    "sha256": "352d9b701785c0dde79cb88d5a746eb770e1d2c13e1417f2304a3b6d008c882a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_04_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_04_pair.png",
+    "sha256": "574053acfcbc64fd4f83560da58fb2a8244e6d8a7d440f2db17c1dfd241fc86a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_04_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_04_pair.png.meta",
+    "sha256": "64271db7fe534c63dc77ed478333afbfb6aa2a4b6441c51d92f440380ad9d60a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_05_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_05_pair.png",
+    "sha256": "b8221b5d9cb6d8d002e0bf473e75900608050e7cd7eedfca47f6541c885bad77"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_05_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_05_pair.png.meta",
+    "sha256": "ad717b02d8fe1cab78d31314446faa534baf321e40c5d8f158c54fc4d1a2ae38"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_06_pair.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_06_pair.png",
+    "sha256": "e761b980ec0f136e0f0d07bc6ba39702990ab4382b8659d3c36d60ade8daa93f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_06_pair.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_footwear_06_pair.png.meta",
+    "sha256": "326faa40dc2679e8435460c239ac363ea87d2e4c5307b5ce853f2a487fe9e5b4"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_00.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_00.png",
+    "sha256": "e76dd2e49f5b64b90ec19c2662916dbb57994becaa62c62eac3ea2f87233fab8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_00.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_00.png.meta",
+    "sha256": "cb784f0c52c5045321be219fad67f6f37144e86b4a2b02ef4e53a06644da3093"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_01.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_01.png",
+    "sha256": "12d6dc3958f05ab8ff194660649a4d96d4ca1117e92ef3ece6adf397d4bef66f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_01.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_01.png.meta",
+    "sha256": "f966421bc9197d2575a8c3d4477eb94109e760aa6a763eccb4aa2443a7339f07"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_02.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_02.png",
+    "sha256": "08c8b300918ee12cf777b574ae2ff9e3369ecbf68a8335e6b144d35f872a7ada"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_02.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_02.png.meta",
+    "sha256": "e058982f5c391c2e99c24197dcae65c045f3d5c92734638cb86608ad5468c274"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_03.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_03.png",
+    "sha256": "0a17d44431d24dc39cb0eb253224e35de5148d1d45f0a6e8b11044f5aaa7b2f2"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_03.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_03.png.meta",
+    "sha256": "3f4642186e25f03ae4a98b75f9ed86834ea2b46620f2ed381a3fb1fcae82f77b"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_04.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_04.png",
+    "sha256": "da5202ec4235c2f9fa9cb0705a78844c6d68a5af722bbfffc9d0ba408d7d72d2"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_04.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_04.png.meta",
+    "sha256": "a7f24ceca16ab1fd0caeb6c6d184e93a902d3550a384bac8d910adcda0f0ddd4"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_05.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_05.png",
+    "sha256": "6f71de893fcb0689ae9e07a3cce1b9abb4479e281ae961864822d94d499e6c71"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_05.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_05.png.meta",
+    "sha256": "993eb037f98d5601a3ac8042e34c138b63d459fbde3f4e955828218de0e57268"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_06.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_06.png",
+    "sha256": "510a895f428501078e62759963bd591640edc05b2a35d201ea299d8a546865cb"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_06.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_06.png.meta",
+    "sha256": "adc37698f626345bc8bec50866c804e420404073dc131d1336f8febd2ec16e94"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_07.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_07.png",
+    "sha256": "0f655dcb064e0402fd1b6594dd5984bfd6947e61eadd8c68d58157f4a8c5a6cb"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_07.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_07.png.meta",
+    "sha256": "ad802aafc5cd5127b6b282320a5b573f5ac314910afc51bb94043e67feba8914"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_08.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_08.png",
+    "sha256": "b3d29d9f4a1e3614eae76a16ee7c36f14c63fa5b1c95e00bfe8604674bce500c"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_08.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_08.png.meta",
+    "sha256": "5129c05286cd8ad368d0fb69aeb05b2d6a2fae9eee998182fa779b47d17ab6c8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_09_alt.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_09_alt.png",
+    "sha256": "19debb535e72fc52e375222f0242aed70587acb73ab02c61ca5de233e897ff62"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_09_alt.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_09_alt.png.meta",
+    "sha256": "276a9f7faf0b9c02cbd5120ea511877bed4cd93fbd0741cb05eac90ec3e9c51f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_10_alt.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_10_alt.png",
+    "sha256": "bc32cd4f290fc983f6a4940059b1518a85ff63a17069075ae28135c86951684c"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_10_alt.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_10_alt.png.meta",
+    "sha256": "afec748c1e0241382b2a0063429c91d977ec24add0f59f81dc59614eb419c821"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_11_alt.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_11_alt.png",
+    "sha256": "f42422085adac414df11afbea576cc9d3d1dd56ebf1b6c26ce7b58b3b5d0713d"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_head_11_alt.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_head_11_alt.png.meta",
+    "sha256": "7adbbfa06568e874cdec5258499a0714b0332db7e27324d1c2572c4a493e5e1a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_00_firehelmet.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_00_firehelmet.png",
+    "sha256": "3cb37053b031b5e977f0cdb089b7878dcb017d173581c827c7a427b7ba8db051"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_00_firehelmet.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_00_firehelmet.png.meta",
+    "sha256": "ac4cf7634f29840e2d6767ef63cd2a327be28967464010f1931fc0e8908841d0"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_01_hardhat.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_01_hardhat.png",
+    "sha256": "a200597e4b6f1e027832dbc3e16c9c976f01ee9e2c68f5f9a15da920bd3000a8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_01_hardhat.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_01_hardhat.png.meta",
+    "sha256": "5b61a43f38e40cc2d2e7d139f2b8749823312e9e28ac87f4fa7cd2cb7af75a8e"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_02_toque.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_02_toque.png",
+    "sha256": "6c861dd5fc5bcf3e446e8ad1f401bab97bddf5060814ca5a44e90600cec6f9d0"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_02_toque.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_02_toque.png.meta",
+    "sha256": "b596ab632979f8d61b8226d72385b4a3099a7bf2fb04c88f0fad79cdebde75cb"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_03_ballcap_red.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_03_ballcap_red.png",
+    "sha256": "43b05e124fb8a22ab1863f210ee5f93727a8ce973cfc433e86d86b85f32d85c5"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_03_ballcap_red.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_03_ballcap_red.png.meta",
+    "sha256": "38cc80968bbc7330d125967742a7fe724d411a8eadb39b64703eb87c25b1cfbd"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_04_policecap.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_04_policecap.png",
+    "sha256": "f45042c95f1111456e349740a04cc1d7c5affa1a5341e79ad39e96685ebd4191"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_04_policecap.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_04_policecap.png.meta",
+    "sha256": "02019c93e1bd0e287eb52608003bf17bc1fe4dfbe801360f8122c970097697ea"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_05_bellhop.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_05_bellhop.png",
+    "sha256": "bbb474c6a112a2b7ef0a6f621a728c8c92488f250dea56f56c714e1a37edba6f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_05_bellhop.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_05_bellhop.png.meta",
+    "sha256": "ad6bbc972b8f5c0db41311b6a39dcb9c68170709c547f22d796d8d3db7124605"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_06_baseball_navy.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_06_baseball_navy.png",
+    "sha256": "81c00e8abb8cedd082d0919ab08c62c517f4924a453d729bac75ea5d5b5af649"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_06_baseball_navy.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_06_baseball_navy.png.meta",
+    "sha256": "aea638d1652f33a127d69b7a8e8803a24f878ff1e8fdb75b232cc0fa01a6e432"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_07_astrohelmet.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_07_astrohelmet.png",
+    "sha256": "5668be944afe297444b6eb8827803b8467b6c8597ffe58e6f837d481016b43d9"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_07_astrohelmet.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_headgear_07_astrohelmet.png.meta",
+    "sha256": "68400f1863210470bd9cf8a44b9f494526c3e0e271c39e48085557a94f3da20c"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_00_navy_cargo.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_00_navy_cargo.png",
+    "sha256": "f8653a89ae758d932a93adde9f8d26d021700ea61364e52cdc4116709bc11125"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_00_navy_cargo.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_00_navy_cargo.png.meta",
+    "sha256": "47ea13c169a3ca0d695db9f43605a15f77a03cda038e0a9d555975ebe974ac27"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_01_white_stripe.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_01_white_stripe.png",
+    "sha256": "151f71a48743e120166242f1614411abb0c180d0c3be55814711bb3da2ff89e9"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_01_white_stripe.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_01_white_stripe.png.meta",
+    "sha256": "0e14eaac4a02d27e37a5d38b71018f799681631438a5a9c68daaa85d64234e4c"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_02_white.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_02_white.png",
+    "sha256": "e1b1769ddebeb9fc8e9a81d79f6fca6bfc2eb1b3a839241e413fd59ffd7dad38"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_02_white.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_02_white.png.meta",
+    "sha256": "82fd13cef404d51409080f81e1e617db9a57ddf909094a05459cacf26576866e"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_03_red_cargo.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_03_red_cargo.png",
+    "sha256": "183add7bee6edf136dec4cf712cd319eccda2c6b187814d7d7c0a72883806751"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_03_red_cargo.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_03_red_cargo.png.meta",
+    "sha256": "048e07dfcc710287c4be01566c3233deb46f8c8d7807203507b28f01381ed13b"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_04_black.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_04_black.png",
+    "sha256": "b89d450ad40e2caa50d9e1ca87930eecee3f2696e2c908e67d0bdee0f3b1ada0"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_04_black.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_04_black.png.meta",
+    "sha256": "e07b1694624271f21a138775a48318898e2d775ae463577a2810c8d0d9de6ec6"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_05_white_space.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_05_white_space.png",
+    "sha256": "bdf6bb08665d38c6818ff07baae5ca6b9e6d723c738b3ce11362cfcc7958677b"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_05_white_space.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_05_white_space.png.meta",
+    "sha256": "2c7f34b73e3975d039acec83c8aa2cc4d0a56fea19cde5db24dc62ac93b14dbb"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_06_black_tac_a.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_06_black_tac_a.png",
+    "sha256": "2222a9e6fa7090afa79d2ca1cd865debfe70f65cb862e2d5e3af99b2d996d348"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_06_black_tac_a.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_06_black_tac_a.png.meta",
+    "sha256": "746e07d85800aa6467ef8500eda91c803ef54ed0f723f509f78a592ef80f0fc8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_07_black_tac_b.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_07_black_tac_b.png",
+    "sha256": "ec578c56c38d0aa792e0d22a853c88155d829edec7a23e2e446df9bbf3b5def3"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_07_black_tac_b.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_07_black_tac_b.png.meta",
+    "sha256": "78baad1857458bf0093a7beaa0e0e46ee38043170ff3f309c188f9b8be79ccd1"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_08_red_shorts.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_08_red_shorts.png",
+    "sha256": "0b21048466b234164272ff807102c02014879fa1f833828feda6e573e84045c8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_08_red_shorts.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_lower_08_red_shorts.png.meta",
+    "sha256": "3a5f8b04051460e0d428968766d086e5b52482f4c80876c287d5e9f7d82618b6"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_00_hivis.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_00_hivis.png",
+    "sha256": "bef8683060be2db13ece376aa6eb847089be62f5bfa27fe0f95c2d074a1837fe"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_00_hivis.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_00_hivis.png.meta",
+    "sha256": "1e358a81bec72570a66b6d61cafd2b0c2d836f15aaba802cbb117e64b5f3a1e3"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_01_service_red.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_01_service_red.png",
+    "sha256": "22b88b657d113faf9a32c341a1d56438daa337c538a89ce8213740997b3de1fd"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_01_service_red.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_01_service_red.png.meta",
+    "sha256": "c17805432c6bcc48ddda14426267b14652956bcc7945f49a954230fb5a40be15"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_02_chef.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_02_chef.png",
+    "sha256": "e6851796afeba2bd0b5330eea721ae89832c127c60ca518541e3ae81152ae52a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_02_chef.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_02_chef.png.meta",
+    "sha256": "e729c36bf3fd5d1df1164ca0dad7294e33b7153a86592e5e3ecce02d7ba0a45e"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_03_firefighter.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_03_firefighter.png",
+    "sha256": "ed907c2e3edb9a05cb737baa786ff49c88082f48d1e3e1f1122d775c2260beec"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_03_firefighter.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_03_firefighter.png.meta",
+    "sha256": "1b6dcd278e771970741ae2696f8321c1955213d5cb30e5da04b086ad5f5cbb84"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_04_tactical.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_04_tactical.png",
+    "sha256": "7edfc6c832c5986aabf2815132b0323faebecbf3345aa71c1adb09c637ac96b2"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_04_tactical.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_04_tactical.png.meta",
+    "sha256": "15c258f14cfe73bfb400b7a68a8331cbe2adbbc558a1386f07af4a2416873add"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_05_medic_red.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_05_medic_red.png",
+    "sha256": "827fc1acece047c4279334f554714f923822d5e8c94721e836d55ede762e01fd"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_05_medic_red.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_05_medic_red.png.meta",
+    "sha256": "5f22a83235298100e0fe8f7e62fb2f6ba65524cabce1cfb751bf6ced674df142"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_06_suit.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_06_suit.png",
+    "sha256": "af6c6843695ff0c4f08fb7f4d761af627a14fa6fde359c92ac2d4039688cacd6"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_06_suit.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_06_suit.png.meta",
+    "sha256": "b69b49c4510e7af0e6a47ce47f10a3dcc09c738b0bb97e7d6cfbaef621f1a06d"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_07_pilot.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_07_pilot.png",
+    "sha256": "6fced5694b5e360c2cd22d52b07a974e6c45fdf4f51e6c3beeeab05becc07aa5"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_07_pilot.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_07_pilot.png.meta",
+    "sha256": "fbf337d33196240a31ea798653be732b70922c5b248fb67061c5b47162499e8a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_08_police.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_08_police.png",
+    "sha256": "7d1fc4baafc91b037d6833bc9d73a7504dcf09eb4b0289c759dcbae070fdd35a"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_08_police.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_08_police.png.meta",
+    "sha256": "462fd64c86ea3129bb0c5b1da7fd339a519b3f4e37ebd3fd8b4bde43626f7e33"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_09_service_bowtie.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_09_service_bowtie.png",
+    "sha256": "d2d0b06dd333702085b8feb6455e8344d704791716b18c8863008525cf3b2aaa"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_09_service_bowtie.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_09_service_bowtie.png.meta",
+    "sha256": "872d42f3b1abb7594185e2799178a12ca3b1cfb737571745437fce33dc6f0095"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_10_service_tie.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_10_service_tie.png",
+    "sha256": "f239b1e2eb5b3af4f036a57a5f312fe4fec25552af552158a63f2cdee81f7d30"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_10_service_tie.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_10_service_tie.png.meta",
+    "sha256": "e5884ad80d3e6948bfe0e9f7ee96c82a25fcb78abbfe2bc0825bb9cbc248369f"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_11_purple.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_11_purple.png",
+    "sha256": "e5e04d04bdd593eefb66b11e9e3413e14bfc9a93c9ae9fcb3671048863a594a3"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_11_purple.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_11_purple.png.meta",
+    "sha256": "3cddcc1abb96a29708714031aeff2dd7d197bac0d53c51fc885f1b2cdd4e6eb1"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_12_astronaut.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_12_astronaut.png",
+    "sha256": "72f8be33d748673483d9d8e1ad703d18083936ecfff2426918d5ca54d34d3718"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_12_astronaut.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front/wardrobe_front_upper_12_astronaut.png.meta",
+    "sha256": "c9015d184d418213f35279300e0343b525af0cc7b0a2bb872e2c39d354d85070"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe/Front.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe/Front.meta",
+    "sha256": "b1768cd79d3afe8a55a44f44499c839925db529edf7528d21b0d63a4c043a82b"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/Wardrobe.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/Wardrobe.meta",
+    "sha256": "0fb850b8d7b732eaa4b2da753c21eda86bb29b31fedcf248fef08f6ac5d3f0b8"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/resident-spritesheet-v1.png",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/resident-spritesheet-v1.png",
+    "sha256": "f62a15d1ac43cd46734fd1e3b2e210a55428c68d042a944cace7d0ebf21b32ae"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents/resident-spritesheet-v1.png.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents/resident-spritesheet-v1.png.meta",
+    "sha256": "5cf298bc5293abf30e09eff69c778edd7e8965be34d65a9c217a68488a82acc5"
+  },
+  {
+    "original": "Assets/OneRoof/Runtime/Content/Resources/Residents.meta",
+    "archived": "Art/Archive/ResidentRepresentations/2026-09-30/Resources/Residents.meta",
+    "sha256": "8390ecb7af86da939818696385900cf94d1fef5f3c616c64879541fe27620715"
+  }
+]

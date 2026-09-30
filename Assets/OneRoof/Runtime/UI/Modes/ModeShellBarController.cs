@@ -328,6 +328,7 @@ namespace OneRoof.UI.Modes
             GUILayout.BeginArea(DataPaletteRect(Screen.height), StewardTheme.Panel);
             GUILayout.Label("READ THE TOWER", StewardTheme.Label(15, StewardTheme.Text, true));
             GUILayout.Label("Choose a pattern, then select a floor or resident to trace its cause.", StewardTheme.Label(11, StewardTheme.Muted));
+            GUILayout.Label("* marks the selected overlay, mode or tool.", StewardTheme.Label(11, StewardTheme.Text));
             GUILayout.BeginHorizontal();
             DrawOverlay("ELEVATOR WAIT", "overlay:elevator_wait", projection.ActiveOverlayId);
             DrawOverlay("FOOT TRAFFIC", "overlay:foot_traffic", projection.ActiveOverlayId);
@@ -346,10 +347,13 @@ namespace OneRoof.UI.Modes
             GUILayout.EndArea();
         }
 
+        /// <summary>Selection remains visible when active and inactive colours look identical.</summary>
+        private static string SelectionLabel(string label, bool selected) => selected ? "* " + label : label;
+
         private void DrawOverlay(string label, string id, string active)
         {
-            if (GUILayout.Button(label, id == active ? _activeButtonStyle : _normalButtonStyle,
-                    GUILayout.Width(108), GUILayout.Height(32))) Session.SetActiveOverlay(id);
+            if (GUILayout.Button(SelectionLabel(label, id == active), id == active ? _activeButtonStyle : _normalButtonStyle,
+                    GUILayout.Width(132), GUILayout.Height(32))) Session.SetActiveOverlay(id);
         }
 
         private void DrawToolButton(string label, string toolId, bool isSelected, bool isDestructive = false)
@@ -357,7 +361,7 @@ namespace OneRoof.UI.Modes
             var style = isSelected
                 ? (isDestructive ? _demolishActiveButtonStyle : _activeToolButtonStyle)
                 : _toolButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(38), GUILayout.Width(132)))
+            if (GUILayout.Button(SelectionLabel(label, isSelected), style, GUILayout.Height(38), GUILayout.Width(132)))
             {
                 if (isSelected)
                 {
@@ -373,7 +377,7 @@ namespace OneRoof.UI.Modes
         private void DrawModeButton(string label, InteractionMode mode, bool isActive)
         {
             var style = isActive ? _activeButtonStyle : _normalButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(32), GUILayout.Width(108)))
+            if (GUILayout.Button(SelectionLabel(label, isActive), style, GUILayout.Height(32), GUILayout.Width(108)))
             {
                 if (mode == InteractionMode.Build)
                 {

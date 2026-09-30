@@ -73,7 +73,8 @@ namespace OneRoof.Application.Inspectors
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
             if (person.ActiveThoughts != null)
                 foreach (var t in person.ActiveThoughts) details.Add($"Thought: \"{t.Description}\" ({t.MoodDelta:+0.0;-0.0} mood, {t.RemainingTicks} ticks left)");
-            foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
+            foreach (var grievance in person.Grievances) details.Add($"Direct grievance: {grievance}");
+            foreach (var influence in person.SocialInfluences) details.Add($"Social concern: {influence.Issue} ({influence.Pressure:P0} pressure)");
             var social = FactionProjectionService.Capture(_session.Simulation);
             var residentLinks = new List<ResidentInspectorLink>();
             foreach (var support in social.ResidentSupports)

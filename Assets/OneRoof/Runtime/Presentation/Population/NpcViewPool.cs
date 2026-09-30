@@ -163,14 +163,10 @@ namespace OneRoof.Presentation.Population
                 return _sharedMaterial;
             }
 
-            var shader = Shader.Find("OneRoof/Unlit")
-                ?? Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
-                ?? Shader.Find("Sprites/Default");
-
-            if (shader != null)
+            var defaultMaterial = NpcSkeletalHierarchy.GetOrCreateDefaultSharedMaterial();
+            if (defaultMaterial != null)
             {
-                _sharedMaterial = new Material(shader) { name = "PooledNpc_SharedMaterial", enableInstancing = true };
+                _sharedMaterial = new Material(defaultMaterial) { name = "PooledNpc_SharedMaterial", enableInstancing = true };
             }
 
             return _sharedMaterial;

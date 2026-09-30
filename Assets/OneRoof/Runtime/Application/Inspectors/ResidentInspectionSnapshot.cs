@@ -44,6 +44,8 @@ namespace OneRoof.Application.Inspectors
             Commute = person.Wellbeing.Commute;
             RentBurden = person.Wellbeing.RentBurden;
             Grievances = new ReadOnlyCollection<string>(new List<string>(person.Wellbeing.Grievances));
+            SocialInfluences = new ReadOnlyCollection<SocialGrievanceInfluence>(new List<SocialGrievanceInfluence>(person.Wellbeing.SocialInfluences));
+            SocialPressure = person.Wellbeing.SocialPressure;
 
             var traits = new List<SocialTraitKind>();
             if (person.SocialTraits != null)
@@ -85,6 +87,8 @@ namespace OneRoof.Application.Inspectors
         public float Commute { get; }
         public float RentBurden { get; }
         public IReadOnlyList<string> Grievances { get; }
+        public IReadOnlyList<SocialGrievanceInfluence> SocialInfluences { get; }
+        public float SocialPressure { get; }
         public IReadOnlyList<SocialTraitKind> SocialTraits { get; }
         public IReadOnlyList<ThoughtMemorySnapshot> ActiveThoughts { get; }
         public float TotalThoughtMoodDelta { get; }

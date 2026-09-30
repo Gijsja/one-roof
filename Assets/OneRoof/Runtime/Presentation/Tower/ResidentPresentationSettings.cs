@@ -7,6 +7,8 @@ namespace OneRoof.Presentation.Tower
     [Serializable]
     public sealed class ResidentPresentationSettings
     {
+        [SerializeField, Min(0)] private int _maximumBubbles = 12;
+        [SerializeField, Min(0f)] private float _bubbleSpacingPixels = 6f;
         [SerializeField, Min(1)] private int _skeletalCapacity = 60;
         [SerializeField, Min(0)] private int _prewarmCount = 60;
         [SerializeField] private float _rigFadeStart = 6.5f;
@@ -15,6 +17,9 @@ namespace OneRoof.Presentation.Tower
         [SerializeField] private float _macroFadeEnd = 18f;
         [SerializeField, Min(0f)] private float _viewportMargin = 0.05f;
         [SerializeField, Range(0.01f, 1f)] private float _retainedRigPreference = 0.8f;
+
+        public int MaximumBubbles { get => _maximumBubbles; set => _maximumBubbles = value; }
+        public float BubbleSpacingPixels { get => _bubbleSpacingPixels; set => _bubbleSpacingPixels = value; }
 
         public int SkeletalCapacity { get => _skeletalCapacity; set => _skeletalCapacity = value; }
         public int PrewarmCount { get => _prewarmCount; set => _prewarmCount = value; }
@@ -27,6 +32,8 @@ namespace OneRoof.Presentation.Tower
 
         public void Validate()
         {
+            if (_maximumBubbles < 0) throw new ArgumentOutOfRangeException(nameof(MaximumBubbles));
+            if (!Finite(_bubbleSpacingPixels) || _bubbleSpacingPixels < 0f) throw new ArgumentOutOfRangeException(nameof(BubbleSpacingPixels));
             if (_skeletalCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(SkeletalCapacity));
             if (_prewarmCount < 0) throw new ArgumentOutOfRangeException(nameof(PrewarmCount));
             if (!Finite(_rigFadeStart) || !Finite(_rigFadeEnd) || !Finite(_macroFadeStart) || !Finite(_macroFadeEnd) ||

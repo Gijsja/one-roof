@@ -146,6 +146,11 @@ namespace OneRoof.Domain.Population
 
         // ── Serialization ──────────────────────────────────────────────────────
 
+        private static string[] SocialInfluenceIssues(ResidentWellbeingState state)
+        { var result = new string[state.SocialInfluences.Count]; for (var i = 0; i < result.Length; i++) result[i] = state.SocialInfluences[i].Issue; return result; }
+        private static float[] SocialInfluencePressures(ResidentWellbeingState state)
+        { var result = new float[state.SocialInfluences.Count]; for (var i = 0; i < result.Length; i++) result[i] = state.SocialInfluences[i].Pressure; return result; }
+
         public PopulationSaveData ToSaveData()
         {
             var householdList = new List<HouseholdSaveData>(_householdList.Count);
@@ -177,7 +182,8 @@ namespace OneRoof.Domain.Population
                     dailyCreditRepayment = h.DailyCreditRepayment,
                     recentDailyBudgetNetFlows = h.CopyRecentDailyBudgetNetFlows(),
                     dailyEssentialShortfall = h.DailyEssentialShortfall,
-                    underprovisionExposure = h.UnderprovisionExposure
+                    underprovisionExposure = h.UnderprovisionExposure,
+                    acquiredProps = new List<string>(h.AcquiredProps).ToArray()
                 });
             }
 
@@ -245,6 +251,9 @@ namespace OneRoof.Domain.Population
                     thoughts = thoughts,
                     wellbeingSatisfaction = p.Wellbeing.Satisfaction,
                     wellbeingStrain = p.Wellbeing.Strain,
+                    priorSettlementGrievances = new List<string>(p.Wellbeing.PriorSettlementGrievances).ToArray(),
+                    socialInfluenceIssues = SocialInfluenceIssues(p.Wellbeing),
+                    socialInfluencePressures = SocialInfluencePressures(p.Wellbeing),
                     hungerSatisfaction = hunger,
                     restSatisfaction = energy,
                     energySatisfaction = energy,
@@ -303,7 +312,8 @@ namespace OneRoof.Domain.Population
                         data.householdLedgerVersion >= 2 ? h.dailyCreditRepayment : 0,
                         data.householdLedgerVersion >= 3 ? h.recentDailyBudgetNetFlows : null,
                         data.householdLedgerVersion >= 3 ? h.dailyEssentialShortfall : 0,
-                        data.householdLedgerVersion >= 3 ? h.underprovisionExposure : 0));
+                        data.householdLedgerVersion >= 3 ? h.underprovisionExposure : 0,
+                        h.acquiredProps));
                 }
             }
 
@@ -356,6 +366,11 @@ namespace OneRoof.Domain.Population
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
                     person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);
                     person.Wellbeing.Update(p.wellbeingSatisfaction, p.wellbeingStrain, 1f, 1f, 1f, 1f, 1f, 1f, null);
+                    var influences = new List<SocialGrievanceInfluence>();
+                    if (p.socialInfluenceIssues != null && p.socialInfluencePressures != null)
+                        for (var index = 0; index < Math.Min(p.socialInfluenceIssues.Length, p.socialInfluencePressures.Length); index++)
+                            influences.Add(new SocialGrievanceInfluence(p.socialInfluenceIssues[index], p.socialInfluencePressures[index]));
+                    person.Wellbeing.RestoreSocialInfluence(p.priorSettlementGrievances, influences);
                     if (p.thoughts != null)
                     {
                         foreach (var t in p.thoughts)

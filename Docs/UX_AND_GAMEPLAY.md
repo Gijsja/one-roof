@@ -113,3 +113,17 @@ The inspector is an explainable cause chain, never a flat stat dump or dead end.
 - **Multi-Channel Encoding**: Every overlay state, alert, and economic indicator pairs color with glyphs, shapes, or text.
 - **Input Controls**: Keyboard accessible speed controls (pause, 1x, 2x, 3x) and hotkeys (`1`–`4`, `F`, `Home`).
 - **Text & Audio Independence**: Critical events provide plain-language text explanations independent of audio cues.
+
+
+## 8. Resident Thought, Action & Emotion Bubbles
+
+Resident bubbles are observation cues derived from immutable transit/activity projections and the latest active thought memory. They never create social outcomes or change resident decisions.
+
+- **Action**: A rounded warm-white card with a small pointer shows the current routine or journey (sleep, work, food, leisure, destination, lift queue).
+- **Thought**: A cool-white card with thought dots shows a remembered encounter. Connected, flirty, embarrassed, angry and impatient cues combine a distinct glyph, short text and a subtle tint. Flirting describes the encounter, without claiming a successful romance.
+- **Priority**: Long lift waits (30 ticks) precede social memories; sleep retains its action. Arguments precede awkward encounters, then positive social memories, then other thoughts and routine actions.
+- **Typography**: Two fitted lines inside a fixed compact surface. Unknown thoughts are bounded to 38 characters at a word boundary and receive neutral styling. The inspector retains the detailed cause context.
+- **Crowds & zoom**: Bubbles stay upright and unmirrored during walking, facing and sleeping. A centralized screen-space pass favors the inspected resident, then emotion priority, then stable resident ID. It suppresses overlaps, viewport clipping and excess cards (default 12, 6-pixel spacing). Routine bubbles disappear beyond the close skeletal zoom range; the inspected resident remains eligible.
+- **Authoring**: `ResidentPresentationSettings.MaximumBubbles` and `BubbleSpacingPixels` control density. Zero maximum hides all bubbles. Views and selection buffers are reused; there are no per-resident Update loops.
+
+The bubble is the world symptom step of the cause-chain. Inspecting the resident reveals the underlying thought, activity, needs, grievances and available systems responses.

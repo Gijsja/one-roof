@@ -287,6 +287,7 @@ namespace OneRoof.Domain.Persistence
         public long[] recentDailyBudgetNetFlows;
         public long dailyEssentialShortfall;
         public long underprovisionExposure;
+        public string[] acquiredProps;
     }
 
     [Serializable]
@@ -313,6 +314,9 @@ namespace OneRoof.Domain.Persistence
         public ThoughtMemorySaveData[] thoughts;
         public float wellbeingSatisfaction;
         public float wellbeingStrain;
+        public string[] priorSettlementGrievances;
+        public string[] socialInfluenceIssues;
+        public float[] socialInfluencePressures;
         public float hungerSatisfaction;
         public float restSatisfaction;
         public float energySatisfaction;

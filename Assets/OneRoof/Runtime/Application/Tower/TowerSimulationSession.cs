@@ -39,6 +39,8 @@ namespace OneRoof.Application.Tower
         private long _cachedUndergroundUtilityTopologyVersion = -1;
         private int _cachedUndergroundUtilityRevision = -1;
         private int _cachedUndergroundUtilityBackupCapacity = -1;
+        private long _cachedUndergroundUtilityTick = -1;
+        private UtilityOperationsSnapshot _cachedUndergroundUtilityEquipment;
         private long _topologyVersion;
         private long _cachedTopologyVersion = -1;
         private long _cachedTick = -1;
@@ -118,17 +120,20 @@ namespace OneRoof.Application.Tower
         {
             var undergroundRevision = _simulation.Underground.Revision;
             var backupCapacity = _simulation.Operations.BackupPowerCapacity;
+            var equipment = _simulation.UtilityOperations.Snapshot(_simulation.Topology);
             if (_cachedUndergroundUtilityPaths != null &&
                 _cachedUndergroundUtilityTopologyVersion == _topologyVersion &&
                 _cachedUndergroundUtilityRevision == undergroundRevision &&
-                _cachedUndergroundUtilityBackupCapacity == backupCapacity)
+                _cachedUndergroundUtilityBackupCapacity == backupCapacity &&
+                _cachedUndergroundUtilityTick == _simulation.CurrentTick &&
+                ReferenceEquals(_cachedUndergroundUtilityEquipment, equipment))
                 return _cachedUndergroundUtilityPaths;
-            _cachedUndergroundUtilityPaths = UndergroundUtilityPathState.Project(
-                _simulation.Topology, _simulation.Underground,
-                _simulation.ElectricalGridSnapshot(), _simulation.WaterWasteNetworkSnapshot());
+            _cachedUndergroundUtilityPaths = _simulation.UndergroundUtilitySnapshot();
             _cachedUndergroundUtilityTopologyVersion = _topologyVersion;
             _cachedUndergroundUtilityRevision = undergroundRevision;
             _cachedUndergroundUtilityBackupCapacity = backupCapacity;
+            _cachedUndergroundUtilityTick = _simulation.CurrentTick;
+            _cachedUndergroundUtilityEquipment = equipment;
             return _cachedUndergroundUtilityPaths;
         }
 
@@ -187,7 +192,7 @@ namespace OneRoof.Application.Tower
         {
             if (_simulation.Population.TryGetPerson(id, out var person))
             {
-                snapshot = new ResidentInspectionSnapshot(person, _simulation.CurrentTick.Value);
+                snapshot = new ResidentInspectionSnapshot(person, _simulation.CurrentTick);
                 return true;
             }
             snapshot = null;

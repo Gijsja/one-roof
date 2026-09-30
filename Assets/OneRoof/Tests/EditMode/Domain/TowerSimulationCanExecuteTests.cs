@@ -121,6 +121,15 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void WidenShaft_ChargesOneCellPerServedFloorAndUnlocksWideCar()
         {
+            // Use an empty shaft span: the standard populated fixture has rooms
+            // touching both sides of its shaft and correctly rejects widening.
+            var topology = new BuildingTopologyState();
+            for (var floor = 0; floor <= 4; floor++)
+                Assert.That(topology.Execute(new BuildFloorSlabCommand(floor, -10, 10), new Tick(0)).Accepted, Is.True);
+            Assert.That(topology.Execute(new AddElevatorShaftCommand(0, 1, 0, 4), new Tick(0)).Accepted, Is.True);
+            _sim = new TowerSimulation(new SimulationClock(new Tick(0)), topology,
+                new OneRoof.Domain.Population.PopulationState(null, null),
+                new ElevatorBank(0, 4, new[] { new ElevatorCar(new EntityId(501), 0, 10) }));
             var startingBalance = _sim.Economy.CashBalance;
             var widen = new WidenElevatorShaftCommand(0, 4, ElevatorShaftWideningSide.Right);
             var widened = _sim.ExecuteCommand(widen);
@@ -130,6 +139,19 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(_sim.Topology.GetRoomsOnFloor(0).Any(room =>
                 room.ContentType == new ContentId("transit:elevator_shaft") && room.Bounds.Width == 3), Is.True);
             Assert.That(_sim.CanExecute(new AddElevatorCarCommand(capacity: 12, startingFloor: 0)).Accepted, Is.True);
+        }
+
+        [Test]
+        public void WidenShaft_OccupiedAdjacentRoomsRejectWithoutChargingTreasury()
+        {
+            var startingBalance = _sim.Economy.CashBalance;
+            var result = _sim.ExecuteCommand(new WidenElevatorShaftCommand(0, 4, ElevatorShaftWideningSide.Right));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("topology:shaft_overlap")));
+            Assert.That(_sim.Economy.CashBalance, Is.EqualTo(startingBalance));
+            Assert.That(_sim.Topology.GetRoomsOnFloor(0).Single(room =>
+                room.ContentType == new ContentId("transit:elevator_shaft")).Bounds.Width, Is.EqualTo(2));
         }
 
         [Test]

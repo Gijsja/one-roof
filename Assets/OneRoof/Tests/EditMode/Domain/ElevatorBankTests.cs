@@ -185,6 +185,55 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(second.Capacity, Is.EqualTo(10));
         }
 
+        [TestCase(3, 4, 9)]
+        [TestCase(5, 3, 10)]
+        public void AddCarToUpgradedBankAppliesCurrentTier(int tier, int travelTicks, int capacity)
+        {
+            var bank = new ElevatorBank(0, 4, null);
+            bank.SetTier(tier);
+            var car = new ElevatorCar(new EntityId(1), 0, 6);
+
+            bank.AddCar(car);
+
+            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(travelTicks));
+            Assert.That(car.Capacity, Is.EqualTo(capacity));
+        }
+
+        [Test]
+        public void AddCarToUpgradedBankPreservesLargerCustomCapacity()
+        {
+            var bank = new ElevatorBank(0, 4, null);
+            bank.SetTier(5);
+            var car = new ElevatorCar(new EntityId(1), 0, 12);
+
+            bank.AddCar(car);
+
+            Assert.That(car.Capacity, Is.EqualTo(12));
+            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void UpgradeDuringTravelPreservesCurrentPhaseAndTimerThroughSave()
+        {
+            var car = new ElevatorCar(new EntityId(1), 0, 8);
+            var bank = new ElevatorBank(0, 2, new[] { car });
+            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(100), 0, 2));
+            for (var tick = 1; tick <= 6; tick++) bank.Advance(new Tick(tick));
+            Assert.That(car.Phase, Is.EqualTo(ElevatorCarPhase.Moving));
+            var remaining = car.TimerTicksRemaining;
+
+            bank.SetTier(5);
+            var restored = ElevatorBank.FromSaveData(bank.ToSaveData());
+
+            Assert.That(car.TimerTicksRemaining, Is.EqualTo(remaining));
+            Assert.That(restored.Tier, Is.EqualTo(5));
+            Assert.That(restored.Cars[0].Phase, Is.EqualTo(ElevatorCarPhase.Moving));
+            Assert.That(restored.Cars[0].TimerTicksRemaining, Is.EqualTo(remaining));
+            Assert.That(restored.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(3));
+            Assert.That(restored.Cars[0].Passengers.Count, Is.EqualTo(1));
+            Assert.That(AdvanceUntilDelivered(restored), Is.EqualTo(AdvanceUntilDelivered(bank)));
+        }
+
         [Test]
         public void SetTierRejectsValuesOutsideOneThroughFive()
         {

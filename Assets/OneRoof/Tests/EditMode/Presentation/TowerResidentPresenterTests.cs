@@ -439,6 +439,8 @@ namespace OneRoof.Presentation.Tests.EditMode
             var session = new TowerSimulationSession();
             var topology = session.TopologyProjection();
 
+            _presenter.EnsureResidentViews(1);
+
             // Romantic thought triggers Heart or Blush
             var romanticSnapshot = new TowerProjection(1L, 0, 0, 0f,
                 new List<TransitResidentProjection>

@@ -19,6 +19,7 @@ namespace OneRoof.Editor.AssetLab
             ValidateResidents(errors, ids);
             ValidateEmotes(errors, ids);
             ValidateRig(errors);
+            errors.AddRange(ResidentArtworkArchiveGuard.Validate());
             return errors;
         }
 
@@ -33,18 +34,24 @@ namespace OneRoof.Editor.AssetLab
         [MenuItem("One Roof/AssetLab/Configure Addressables")]
         public static void ConfigureAddressables()
         {
+            ResidentArtworkArchiveGuard.RequireValid();
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null) settings = AddressableAssetSettings.Create("Assets/AddressableAssetsData", "AddressableAssetSettings", true, true);
             AddFolder(settings, "Assets/OneRoof/Runtime/Content/Resources/Architecture", "architecture");
             AddFolder(settings, "Assets/OneRoof/Runtime/Content/Resources/Props", "props");
-            AddFolder(settings, "Assets/OneRoof/Runtime/Content/Resources/Residents", "residents");
+            // Resident representations are archived; do not automatically register restored PNGs.
             AddFolder(settings, "Assets/OneRoof/Runtime/Content/Resources/Emotes", "emotes");
             AddFolder(settings, "Assets/OneRoof/Runtime/Content/Resources/Rooms", "rooms");
             AssetDatabase.SaveAssets();
             Debug.Log("AssetLab Addressables groups configured.");
         }
 
-        public static void BuildAddressables() { AddressableAssetSettings.BuildPlayerContent(out _); }
+        public static void BuildAddressables()
+        {
+            ResidentArtworkArchiveGuard.RequireValid();
+            AddressableAssetSettings.BuildPlayerContent(out var result);
+            if (!string.IsNullOrEmpty(result.Error)) throw new UnityEditor.Build.BuildFailedException(result.Error);
+        }
 
         public static void ConfigureAndBuildAddressables()
         {

@@ -49,7 +49,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void Catalog_UsesSixAuthoredBodiesAtTheCandidateWorldScale()
+        public void Catalog_GeneratesNeutralProxiesWithoutPredefinedArtBindings()
         {
             var seen = new System.Collections.Generic.HashSet<string>();
             for (var i = 0; i < NpcContentRegistry.Count; i++)
@@ -57,11 +57,13 @@ namespace OneRoof.Presentation.Tests.EditMode
                 var record = NpcContentRegistry.GetByIndex(i);
                 var sprite = ResidentSpriteCatalog.GetResidentSprite(i);
                 Assert.That(sprite.name, Is.EqualTo(record.ContentId));
-                Assert.That(sprite.texture.width, Is.EqualTo(1536));
-                Assert.That(sprite.texture.height, Is.EqualTo(512));
-                Assert.That(sprite.rect.width, Is.EqualTo(256f));
-                Assert.That(sprite.rect.height, Is.EqualTo(512f));
-                Assert.That(sprite.pixelsPerUnit, Is.EqualTo(512f / record.WorldHeight).Within(.001f));
+                Assert.That(record.ResourcePath, Is.Empty);
+                Assert.That(sprite.texture.name, Does.StartWith("ProceduralResidentProxy_"));
+                Assert.That(sprite.texture.width, Is.EqualTo(32));
+                Assert.That(sprite.texture.height, Is.EqualTo(64));
+                Assert.That(sprite.rect.width, Is.EqualTo(32f));
+                Assert.That(sprite.rect.height, Is.EqualTo(64f));
+                Assert.That(sprite.pixelsPerUnit, Is.EqualTo(64f / record.WorldHeight).Within(.001f));
                 Assert.That(sprite.bounds.size.y, Is.EqualTo(record.WorldHeight).Within(.001f));
                 seen.Add(sprite.name);
             }
@@ -80,7 +82,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void Hierarchy_ScalesAuthoredCanvasToTheDeclaredWorldBounds()
+        public void Hierarchy_ScalesPickingProxyToTheDeclaredWorldBounds()
         {
             var go = new GameObject("ResidentBounds");
             try
@@ -95,6 +97,39 @@ namespace OneRoof.Presentation.Tests.EditMode
             {
                 Object.DestroyImmediate(go);
             }
+        }
+
+        [Test]
+        public void Animation_SameClipAndTimeReproducePoseAfterOtherClips()
+        {
+            var go = new GameObject("AnimationInspection");
+            try
+            {
+                var rig = go.AddComponent<NpcSkeletalHierarchy>();
+                rig.Initialize(3);
+                rig.SetTransitStatus(TransitResidentStatus.Walking);
+                Assert.That(rig.AnimationSelectionReason, Is.EqualTo("Transit: walking"));
+                rig.ApplyProceduralAnimation(1.25f);
+                var rotations = new System.Collections.Generic.Dictionary<string, Quaternion>();
+                var positions = new System.Collections.Generic.Dictionary<string, Vector3>();
+                foreach (var bone in rig.Bones)
+                {
+                    rotations[bone.Key] = bone.Value.localRotation;
+                    positions[bone.Key] = bone.Value.localPosition;
+                }
+                rig.SetAnimationClip(NpcAnimationClip.Sleep, "Test sleep");
+                rig.ApplyProceduralAnimation(4f);
+                rig.SetAnimationClip(NpcAnimationClip.Walk, "Test replay");
+                rig.ApplyProceduralAnimation(1.25f);
+                Assert.That(rig.LastAnimationSampleTime, Is.EqualTo(1.25f));
+                Assert.That(rig.AnimationSelectionReason, Is.EqualTo("Test replay"));
+                foreach (var bone in rig.Bones)
+                {
+                    Assert.That(Quaternion.Angle(bone.Value.localRotation, rotations[bone.Key]), Is.LessThan(0.001f), bone.Key);
+                    Assert.That(Vector3.Distance(bone.Value.localPosition, positions[bone.Key]), Is.LessThan(0.001f), bone.Key);
+                }
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]

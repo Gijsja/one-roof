@@ -13,6 +13,31 @@ namespace OneRoof.Domain.Tests.EditMode
     public sealed class FactionStateTests
     {
         [Test]
+        public void LocalOrganizationRequiresSustainedConnectedPressureAndRecoversOnRelief()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var a = sim.Population.Persons[0]; var b = sim.Population.Persons[1];
+            var saved = new FactionSaveData { version = 4,
+                edges = new[] { new RelationshipEdgeSaveData { first = a.Id.Value, second = b.Id.Value, affinity = .8f, lastContactTick = 100 } },
+                supports = new[] {
+                    new FactionSupportSaveData { residentId = a.Id.Value, factionId = FactionIds.TenantUnion, support = .8f, sustainedDays = 3, grievanceDays = 2, directPressure = .8f, driver = "arrears", homeFloor = 1 },
+                    new FactionSupportSaveData { residentId = b.Id.Value, factionId = FactionIds.TenantUnion, support = .8f, sustainedDays = 3, grievanceDays = 2, directPressure = .8f, driver = "arrears", homeFloor = 1 } } };
+            Assert.That(FactionState.FromSaveData(saved, sim.Population).BuildOrganizedSignals(100)[0].MemberCount, Is.Zero);
+            foreach (var support in saved.supports) support.grievanceDays = 3;
+            var state = FactionState.FromSaveData(saved, sim.Population);
+            Assert.That(state.BuildOrganizedSignals(100)[0].MemberCount, Is.EqualTo(2));
+            Assert.That(FactionState.FromSaveData(state.ToSaveData(), sim.Population).BuildOrganizedSignals(100)[0].MemberCount, Is.EqualTo(2));
+            saved.edges[0].affinity = .1f;
+            Assert.That(FactionState.FromSaveData(saved, sim.Population).BuildOrganizedSignals(100)[0].MemberCount, Is.EqualTo(1));
+            saved.edges[0].affinity = .8f;
+            saved.supports[1].homeFloor = 5;
+            Assert.That(FactionState.FromSaveData(saved, sim.Population).BuildOrganizedSignals(100)[0].MemberCount, Is.EqualTo(1));
+            saved.supports[1].homeFloor = 1;
+            foreach (var support in saved.supports) support.directPressure = .1f;
+            Assert.That(FactionState.FromSaveData(saved, sim.Population).BuildOrganizedSignals(100)[0].MemberCount, Is.Zero, "Current measured relief overrides historical support.");
+        }
+
+        [Test]
         public void FiftyResidentFixtureFormsDistinctGroupsAndReliefReducesTenantPressure()
         {
             var sim = TowerSimulation.CreateStandardFiveFloor(settlementPeriod: 1);

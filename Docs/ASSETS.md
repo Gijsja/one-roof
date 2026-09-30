@@ -17,7 +17,7 @@ Request → Asset Spec → Source Art → Normalize → Validate → Preview →
 - **Naming & Immutable ID**: Unique namespaced `ContentId` assigned by tooling; never rename released content IDs.
 - **Dimensional Integrity**: Exact pixel bounds, transparent backgrounds, and anchor point alignment.
 - **Perspective & Metric Profile**: 2.5D orthographic profile with 0.5m grid metric.
-- **Spine Compatibility**: Compatibility with the shared 17-bone rig, skin attachments, and slot order.
+- **Rig Compatibility**: Compatibility with the shared 17-bone attachment hierarchy, pivots and slot order. Artwork cannot select or replace animation implicitly.
 
 ---
 
@@ -37,10 +37,21 @@ Request → Asset Spec → Source Art → Normalize → Validate → Preview →
 
 ---
 
-## 3. Character Assembly Contract (Spine 2D)
+## 3. Character Assembly & Inspectable Animation Contract
 
-### Shared 17-Bone Skeletal Rig
-locomotion and interactions use a unified Spine 2D skeletal rig with 6 core clips (Idle, Walk, Sit, Sleep, Work, Gesture).
+### Shared 17-Bone Procedural Rig
+Current resident locomotion is evaluated by `NpcSkeletalHierarchy.ApplyProceduralAnimation(sampleTime)` using explicit bone transforms. The actual current poses are Idle, Walk, QueueWait, Ride, Sit and Sleep. Work/Gesture animation expansion remains planned, not delivered. The hierarchy/attachment vocabulary does not imply an opaque Spine runtime or Animator state machine.
+
+The central presenter selects the pose from transit state and room activity. `AnimationSelectionReason`, `LastAnimationSampleTime` and `AnimationPhaseOffset` expose the selection and evaluator inputs. Root facing/stature and bone-local transforms remain inspectable. No resident owns an Update loop.
+
+Open **One Roof → Residents → Animation Preview** to choose a palette/proportion variant and pose, scrub explicit time, flip facing and inspect evaluated bone positions/angles. The window creates an isolated preview object; it does not alter the Tower scene. Selecting a scene resident shows its current pose, selection reason and last sample time. The source button opens the evaluator. Replay at the same pose/time must reproduce transforms after other poses.
+
+### Predefined Resident Artwork Archive (2026-09-30)
+The old full-body sheet and wardrobe cutouts are archived outside Unity import in [Art/Archive/ResidentRepresentations/2026-09-30](../Art/Archive/ResidentRepresentations/2026-09-30/README.md). The archive preserves 50 PNGs and original metadata, checksums and registry snapshots. No archived image GUID remains referenced by scenes/prefabs/assets.
+
+Current resident content records have no Resources body path; wardrobe variants retain palettes/proportions but no cutout bindings. `WardrobePartCatalog` does not load imported art, and AssetLab does not automatically register the Residents folder. Dropping predefined PNGs back into Resources must not activate them. `ResidentSpriteCatalog` now generates a neutral silhouette for picking and distant LOD; visible close residents remain articulated geometry. This proxy is derived at runtime and contains no baked outfit or imported resident representation. Emotion icons and environment artwork remain active.
+
+Returning resident art is an explicit feature under OR-1102: validate modular anchors, body/garment coverage, supported poses and LOD before binding assets. SourceArt/Proposed sheets/specs are reference candidates, not approved runtime inputs.
 
 ### 8-Layer Wardrobe Composition
 Layer sorting order (back to front):

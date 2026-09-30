@@ -68,21 +68,53 @@ namespace OneRoof.Presentation.Population
         private static Sprite _footSprite;
         private static Sprite _captionBackgroundSprite;
         private string _caption;
+        private Transform _bubbleCompensation;
+        private SpriteRenderer _captionBackground;
+        private MeshRenderer _captionTextRenderer;
+        private bool _bubbleVisible = true;
+        private SpriteRenderer _bubbleTail;
+        private SpriteRenderer _thoughtDot;
+        private static Sprite _actionTailSprite;
+        private static Sprite _thoughtTailSprite;
+        private bool _isThought;
+        public Bounds BubbleBounds
+        {
+            get
+            {
+                var bounds = _captionBackground != null && !string.IsNullOrEmpty(_caption)
+                    ? _captionBackground.bounds : EmoteRenderer != null ? EmoteRenderer.bounds : new Bounds(transform.position, Vector3.zero);
+                if (_bubbleTail != null && !string.IsNullOrEmpty(_caption)) bounds.Encapsulate(_bubbleTail.bounds);
+                if (_isThought && _thoughtDot != null && !string.IsNullOrEmpty(_caption)) bounds.Encapsulate(_thoughtDot.bounds);
+                return bounds;
+            }
+        }
         private Material _sharedMaterial;
         private static Material s_defaultSharedMaterial;
+        private static Material s_bubbleSharedMaterial;
 
         public static Material GetOrCreateDefaultSharedMaterial()
         {
             if (s_defaultSharedMaterial != null) return s_defaultSharedMaterial;
-            var shader = Shader.Find("OneRoof/Unlit")
-                ?? Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+            // SpriteRenderer supplies its palette through renderer tint properties.
+            // The general surface shader does not consume those properties.
+            var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
                 ?? Shader.Find("Sprites/Default");
             if (shader != null)
             {
                 s_defaultSharedMaterial = new Material(shader) { name = "Npc_DefaultSharedMaterial", enableInstancing = true };
             }
             return s_defaultSharedMaterial;
+        }
+
+        private static Material GetOrCreateBubbleMaterial()
+        {
+            if (s_bubbleSharedMaterial != null) return s_bubbleSharedMaterial;
+            // Tower surfaces use an opaque material; bubbles require sprite alpha and tint.
+            var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default");
+            if (shader != null)
+                s_bubbleSharedMaterial = new Material(shader) { name = "ResidentBubble_Transparent" };
+            return s_bubbleSharedMaterial;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -94,7 +126,10 @@ namespace OneRoof.Presentation.Population
             _handSprite = null;
             _footSprite = null;
             _captionBackgroundSprite = null;
+            _actionTailSprite = null;
+            _thoughtTailSprite = null;
             s_defaultSharedMaterial = null;
+            s_bubbleSharedMaterial = null;
         }
 
         private void Awake()
@@ -108,12 +143,6 @@ namespace OneRoof.Presentation.Population
             _sharedMaterial = material;
             if (MainRenderer != null) MainRenderer.sharedMaterial = material;
             if (StatusPlateRenderer != null) StatusPlateRenderer.sharedMaterial = material;
-            if (EmoteRenderer != null) EmoteRenderer.sharedMaterial = material;
-            if (EmoteAnchor != null)
-            {
-                var background = EmoteAnchor.Find("CaptionBackground")?.GetComponent<SpriteRenderer>();
-                if (background != null) background.sharedMaterial = material;
-            }
             foreach (var slot in _wardrobeSlots.Values)
             {
                 if (slot != null) slot.sharedMaterial = material;
@@ -127,7 +156,7 @@ namespace OneRoof.Presentation.Population
         public void Initialize(int residentIndex, Material defaultMaterial = null)
         {
             EnsureHierarchy();
-            ApplySharedMaterial(defaultMaterial ?? GetOrCreateDefaultSharedMaterial());
+            ApplySharedMaterial(defaultMaterial ?? _sharedMaterial ?? GetOrCreateDefaultSharedMaterial());
             ResidentIndex = residentIndex;
             _facing = 1f;
             _poseWidthScale = 1f;
@@ -144,8 +173,8 @@ namespace OneRoof.Presentation.Population
             if (MainRenderer != null && sprite != null)
             {
                 MainRenderer.sprite = sprite;
-                // Keep the complete sprite as metadata for selection and fallback,
-                // but draw the articulated parts so the joint animation is visible.
+                // Neutral generated proxy supports picking and LOD only.
+                // The visible body is always assembled from articulated rig parts.
                 MainRenderer.enabled = false;
                 var worldWidth = ContentRecord != null ? ContentRecord.WorldWidth : NpcRigDefinition.NominalWorldWidth;
                 var worldHeight = ContentRecord != null ? ContentRecord.WorldHeight : NpcRigDefinition.NominalWorldHeight;
@@ -154,6 +183,7 @@ namespace OneRoof.Presentation.Population
                 UpdateBodyScale();
             }
 
+            _bubbleVisible = true;
             SetTransitStatus(TransitResidentStatus.Queued);
             SetEmote(NpcEmoteKind.None);
             SetCaption(null);
@@ -255,16 +285,23 @@ namespace OneRoof.Presentation.Population
             if (emoteGo == null)
             {
                 emoteGo = new GameObject("EmoteBubble");
-                emoteGo.transform.SetParent(Head != null ? Head : transform, false);
+                emoteGo.transform.SetParent(transform, false);
                 emoteGo.transform.localPosition = new Vector3(0f, 0.18f, -0.05f);
                 emoteGo.transform.localScale = Vector3.one;
             }
 
+            _bubbleCompensation = new GameObject("BubblePoseCompensation").transform;
+            _bubbleCompensation.SetParent(transform, false);
             EmoteAnchor = emoteGo.transform;
-            EmoteRenderer = emoteGo.GetComponent<SpriteRenderer>();
+            EmoteAnchor.SetParent(_bubbleCompensation, false);
+            var oldEmoteRenderer = emoteGo.GetComponent<SpriteRenderer>();
+            if (oldEmoteRenderer != null) oldEmoteRenderer.enabled = false;
+            var iconGo = new GameObject("EmotionIcon");
+            iconGo.transform.SetParent(EmoteAnchor, false);
+            EmoteRenderer = iconGo.GetComponent<SpriteRenderer>();
             if (EmoteRenderer == null)
             {
-                EmoteRenderer = emoteGo.AddComponent<SpriteRenderer>();
+                EmoteRenderer = iconGo.AddComponent<SpriteRenderer>();
                 EmoteRenderer.sortingOrder = 25;
                 EmoteRenderer.enabled = false;
             }
@@ -272,7 +309,7 @@ namespace OneRoof.Presentation.Population
             {
                 EmoteRenderer.enabled = CurrentEmote != NpcEmoteKind.None;
             }
-            if (_sharedMaterial != null) EmoteRenderer.sharedMaterial = _sharedMaterial;
+            EmoteRenderer.sharedMaterial = GetOrCreateBubbleMaterial();
 
             var captionGo = EmoteAnchor.Find("ActivityCaption")?.gameObject;
             if (captionGo == null)
@@ -293,7 +330,11 @@ namespace OneRoof.Presentation.Population
             }
             // Captions sit above every visible resident; keep them compact at
             // gameplay zoom so neighbouring routines remain distinguishable.
-            ActivityCaption.characterSize = 0.055f;
+            ActivityCaption.characterSize = 0.028f;
+            ActivityCaption.fontSize = 64;
+            ActivityCaption.richText = false;
+            ActivityCaption.transform.localPosition = new Vector3(0.08f, 0f, -0.02f);
+            _captionTextRenderer = captionGo.GetComponent<MeshRenderer>();
             var backgroundGo = EmoteAnchor.Find("CaptionBackground")?.gameObject;
             if (backgroundGo == null)
             {
@@ -301,7 +342,8 @@ namespace OneRoof.Presentation.Population
                 backgroundGo.transform.SetParent(EmoteAnchor, false);
                 backgroundGo.transform.localPosition = new Vector3(0.06f, -0.015f, 0.01f);
             }
-            backgroundGo.transform.localScale = CaptionBackgroundScale(_caption);
+            backgroundGo.transform.localPosition = new Vector3(0f, 0f, 0.01f);
+            backgroundGo.transform.localScale = new Vector3(0.92f, 0.816f, 1f);
             var background = backgroundGo.GetComponent<SpriteRenderer>();
             if (background == null)
             {
@@ -310,9 +352,28 @@ namespace OneRoof.Presentation.Population
                 background.color = new Color(0.91f, 0.96f, 0.98f, 0.93f);
                 background.sortingOrder = 24;
             }
-            if (_sharedMaterial != null) background.sharedMaterial = _sharedMaterial;
+            background.sharedMaterial = GetOrCreateBubbleMaterial();
+            _captionBackground = background;
             background.enabled = !string.IsNullOrEmpty(_caption);
             ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(_caption));
+            var tailGo = new GameObject("BubbleTail");
+            tailGo.transform.SetParent(EmoteAnchor, false);
+            tailGo.transform.localPosition = new Vector3(-0.10f, -0.175f, 0.012f);
+            tailGo.transform.localScale = new Vector3(0.07f, 0.07f, 1f);
+            _bubbleTail = tailGo.AddComponent<SpriteRenderer>();
+            _bubbleTail.sprite = GetBubbleTailSprite(false);
+            _bubbleTail.sharedMaterial = GetOrCreateBubbleMaterial();
+            _bubbleTail.sortingOrder = 24;
+            _bubbleTail.enabled = false;
+            var dotGo = new GameObject("ThoughtTrailDot");
+            dotGo.transform.SetParent(EmoteAnchor, false);
+            dotGo.transform.localPosition = new Vector3(-0.12f, -0.245f, 0.012f);
+            dotGo.transform.localScale = new Vector3(0.028f, 0.028f, 1f);
+            _thoughtDot = dotGo.AddComponent<SpriteRenderer>();
+            _thoughtDot.sprite = GetBubbleTailSprite(true);
+            _thoughtDot.sharedMaterial = GetOrCreateBubbleMaterial();
+            _thoughtDot.sortingOrder = 24;
+            _thoughtDot.enabled = false;
 
             // Bind-pose carry for procedural locomotion: hip bob/sway offsets compose on top.
             if (Hip != null) _hipBasePos = Hip.localPosition;
@@ -327,7 +388,10 @@ namespace OneRoof.Presentation.Population
 
             SetAnimationClip(status == TransitResidentStatus.Walking ? NpcAnimationClip.Walk :
                 status == TransitResidentStatus.Queued ? NpcAnimationClip.QueueWait :
-                status == TransitResidentStatus.Riding ? NpcAnimationClip.Ride : NpcAnimationClip.Idle);
+                status == TransitResidentStatus.Riding ? NpcAnimationClip.Ride : NpcAnimationClip.Idle,
+                status == TransitResidentStatus.Walking ? "Transit: walking" :
+                status == TransitResidentStatus.Queued ? "Transit: lift queue" :
+                status == TransitResidentStatus.Riding ? "Transit: lift ride" : "Transit: settled");
 
             switch (status)
             {
@@ -377,10 +441,39 @@ namespace OneRoof.Presentation.Population
             {
                 if (EmoteRenderer != null)
                 {
-                    EmoteRenderer.enabled = true;
+                    EmoteRenderer.enabled = _bubbleVisible;
                     EmoteRenderer.sprite = EmoteSpriteCatalog.GetSprite(emote, 0);
                 }
             }
+        }
+
+        public void SetBubble(ResidentBubbleCue cue)
+        {
+            EnsureHierarchy();
+            _isThought = cue.Kind == ResidentBubbleKind.Thought;
+            var color = _isThought ? new Color(0.93f, 0.92f, 1f, 0.97f) : new Color(0.93f, 0.97f, 1f, 0.97f);
+            var emote = NpcEmoteKind.Ellipsis;
+            switch (cue.Emotion)
+            {
+                case ResidentBubbleEmotion.Connected: color = new Color(0.87f, 0.98f, 0.91f, 0.97f); emote = NpcEmoteKind.ThumbsUp; break;
+                case ResidentBubbleEmotion.Flirty: color = new Color(1f, 0.88f, 0.94f, 0.97f); emote = NpcEmoteKind.Heart; break;
+                case ResidentBubbleEmotion.Embarrassed: color = new Color(1f, 0.93f, 0.86f, 0.97f); emote = NpcEmoteKind.Blush; break;
+                case ResidentBubbleEmotion.Angry: color = new Color(1f, 0.88f, 0.85f, 0.97f); emote = NpcEmoteKind.Anger; break;
+                case ResidentBubbleEmotion.Impatient: color = new Color(1f, 0.95f, 0.80f, 0.97f); emote = NpcEmoteKind.Sweat; break;
+                default:
+                    if (!_isThought) emote = cue.Text == "Sleeping" ? NpcEmoteKind.Sleeping : NpcEmoteKind.Target;
+                    break;
+            }
+            _captionBackground.color = color;
+            _bubbleTail.color = color;
+            _thoughtDot.color = color;
+            _bubbleTail.sprite = GetBubbleTailSprite(_isThought);
+            _bubbleTail.transform.localRotation = Quaternion.identity;
+            _bubbleTail.transform.localPosition = new Vector3(-0.10f, _isThought ? -0.195f : -0.19f, 0.012f);
+            _bubbleTail.transform.localScale = _isThought ? new Vector3(0.055f, 0.055f, 1f) : new Vector3(0.10f, 0.075f, 1f);
+            SetCaption(cue.Text);
+            SetEmote(emote);
+            SetBubbleVisible(_bubbleVisible);
         }
 
         public void SetCaption(string caption)
@@ -388,35 +481,97 @@ namespace OneRoof.Presentation.Population
             EnsureHierarchy();
             if (_caption == caption) return;
             _caption = caption;
-            ActivityCaption.text = caption ?? string.Empty;
-            ActivityCaption.gameObject.SetActive(!string.IsNullOrEmpty(caption));
-            var background = EmoteAnchor.Find("CaptionBackground").GetComponent<SpriteRenderer>();
-            background.enabled = !string.IsNullOrEmpty(caption);
-            background.transform.localScale = CaptionBackgroundScale(caption);
+            // A short bounded caption is safer than text escaping into neighbouring rooms.
+            var display = caption ?? string.Empty;
+            if (display.Length > 44) display = display.Substring(0, 41).TrimEnd() + "...";
+            if (!display.Contains("\n") && display.Length > 16)
+            {
+                var split = display.LastIndexOf(' ', Mathf.Min(22, display.Length - 1));
+                if (split > 0) display = display.Substring(0, split) + "\n" + display.Substring(split + 1);
+            }
+            ActivityCaption.text = display;
+            ActivityCaption.transform.localScale = Vector3.one;
+            // Mesh bounds include real font metrics rather than an assumed character width.
+            var size = _captionTextRenderer.localBounds.size;
+            var fit = Mathf.Min(1f, 0.64f / Mathf.Max(0.001f, size.x), 0.24f / Mathf.Max(0.001f, size.y));
+            ActivityCaption.transform.localScale = new Vector3(fit, fit, 1f);
             EmoteRenderer.transform.localPosition = string.IsNullOrEmpty(caption)
-                ? Vector3.zero : new Vector3(-0.42f, 0f, -0.01f);
-            EmoteRenderer.transform.localScale = string.IsNullOrEmpty(caption)
-                ? Vector3.one : new Vector3(2.4f, 2.4f, 1f);
+                ? Vector3.zero : new Vector3(-0.34f, 0f, -0.01f);
+            EmoteRenderer.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
+            SetBubbleVisible(_bubbleVisible);
+            RefreshBubblePose();
         }
 
-        private static Vector3 CaptionBackgroundScale(string caption)
+        public void SetBubbleVisible(bool visible)
         {
-            var width = Mathf.Clamp(0.18f + (caption?.Length ?? 0) * 0.057f, 0.58f, 1.18f);
-            return new Vector3(width, 0.12f, 1f);
+            _bubbleVisible = visible;
+            if (ActivityCaption != null) ActivityCaption.gameObject.SetActive(visible && !string.IsNullOrEmpty(_caption));
+            if (_captionBackground != null) _captionBackground.enabled = visible && !string.IsNullOrEmpty(_caption);
+            if (_bubbleTail != null) _bubbleTail.enabled = visible && !string.IsNullOrEmpty(_caption);
+            if (_thoughtDot != null) _thoughtDot.enabled = visible && _isThought && !string.IsNullOrEmpty(_caption);
+            if (EmoteRenderer != null) EmoteRenderer.enabled = visible && CurrentEmote != NpcEmoteKind.None;
+        }
+
+        public void RefreshBubblePose()
+        {
+            if (EmoteAnchor == null || _bubbleCompensation == null) return;
+            var scale = transform.localScale;
+            _bubbleCompensation.localScale = new Vector3(
+                1f / (Mathf.Abs(scale.x) > 0.001f ? scale.x : 1f),
+                1f / (Mathf.Abs(scale.y) > 0.001f ? scale.y : 1f), 1f);
+            EmoteAnchor.rotation = Quaternion.identity;
+            EmoteAnchor.position = transform.position + new Vector3(0f, 0.77f, -0.05f);
+        }
+
+        private static Sprite GetBubbleTailSprite(bool thought)
+        {
+            if (thought)
+            {
+                if (_thoughtTailSprite == null) _thoughtTailSprite = CreateDiscSprite();
+                return _thoughtTailSprite;
+            }
+            if (_actionTailSprite != null) return _actionTailSprite;
+            const int size = 24;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "ResidentActionPointer" };
+            var pixels = new Color[size * size];
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                pixels[y * size + x] = Mathf.Abs(x + 0.5f - size * 0.5f) <= (y + 1f) * 0.5f ? Color.white : Color.clear;
+            texture.SetPixels(pixels);
+            texture.Apply();
+            _actionTailSprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            return _actionTailSprite;
         }
 
         private static Sprite GetCaptionBackgroundSprite()
         {
             if (_captionBackgroundSprite != null) return _captionBackgroundSprite;
-            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            texture.SetPixel(0, 0, Color.white);
+            const int width = 96, height = 40;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "ResidentBubbleSurface" };
+            var pixels = new Color[width * height];
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                var dx = Mathf.Max(0f, Mathf.Abs(x + 0.5f - width * 0.5f) - (width * 0.5f - 8f));
+                var dy = Mathf.Max(0f, Mathf.Abs(y + 0.5f - height * 0.5f) - (height * 0.5f - 8f));
+                pixels[y * width + x] = dx * dx + dy * dy <= 64f ? Color.white : Color.clear;
+            }
+            texture.SetPixels(pixels);
             texture.Apply();
-            _captionBackgroundSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1),
-                new Vector2(0.5f, 0.5f), 1f);
+            _captionBackgroundSprite = Sprite.Create(texture, new Rect(0, 0, width, height),
+                new Vector2(0.5f, 0.5f), width);
             return _captionBackgroundSprite;
         }
 
-        public void SetAnimationClip(NpcAnimationClip animation) => CurrentAnimation = animation;
+        public string AnimationSelectionReason { get; private set; } = "Default idle";
+
+        public void SetAnimationClip(NpcAnimationClip animation, string reason = "Explicit pose selection")
+        {
+            CurrentAnimation = animation;
+            AnimationSelectionReason = reason;
+        }
 
         /// <summary>
         /// Faces the resident toward a signed x direction without touching stature.
@@ -580,9 +735,14 @@ namespace OneRoof.Presentation.Population
             return false;
         }
 
+        /// <summary>Time input of the last evaluated pose, exposed for animation inspection.</summary>
+        public float LastAnimationSampleTime { get; private set; }
+        public float AnimationPhaseOffset => _timeOffset;
+
         public void ApplyProceduralAnimation(float globalTime)
         {
             if (Spine == null || Head == null) return;
+            LastAnimationSampleTime = globalTime;
 
             // Rotation convention (front view, facing +x): +z swings a hanging limb forward.
             // Knees flex backward (heel lift, negative) and elbows flex forward (positive);
@@ -726,32 +886,15 @@ namespace OneRoof.Presentation.Population
                 SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 4f);
             }
 
-            // Emote bubble frame animation and subtle float. The bubble hangs off the mirrored
-            // head chain, so counter-mirror its anchor to keep glyphs legible when facing left.
-            if (EmoteAnchor != null)
-            {
-                EmoteAnchor.localScale = new Vector3(_facing, 1f, 1f);
-            }
-            if (CurrentEmote != NpcEmoteKind.None && EmoteRenderer != null)
+            // Central presenter owns animation and density; the view has no Update loop.
+            RefreshBubblePose();
+            if (CurrentEmote != NpcEmoteKind.None && EmoteRenderer != null && _bubbleVisible)
             {
                 var frame = (int)((globalTime / 0.15f) % 3);
                 var sprite = EmoteSpriteCatalog.GetSprite(CurrentEmote, frame);
-                if (sprite != null)
-                {
-                    EmoteRenderer.sprite = sprite;
-                }
-                EmoteRenderer.enabled = true;
-
-                if (EmoteAnchor != null)
-                {
-                    var bob = Mathf.Sin((globalTime + _timeOffset) * 4f) * 0.015f;
-                    EmoteAnchor.localPosition = new Vector3(0f, 0.18f + bob, -0.05f);
-                }
+                if (sprite != null) EmoteRenderer.sprite = sprite;
             }
-            else if (EmoteRenderer != null && EmoteRenderer.enabled)
-            {
-                EmoteRenderer.enabled = false;
-            }
+            SetBubbleVisible(_bubbleVisible);
         }
 
         private void RepointWardrobeSlots()

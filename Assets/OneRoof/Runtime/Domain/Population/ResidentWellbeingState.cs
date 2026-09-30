@@ -8,6 +8,35 @@ namespace OneRoof.Domain.Population
     public sealed class ResidentWellbeingState
     {
         public const int MaxThoughts = 16;
+        private readonly List<string> _priorSettlementGrievances = new List<string>();
+        private readonly List<SocialGrievanceInfluence> _socialInfluences = new List<SocialGrievanceInfluence>();
+        private readonly ReadOnlyCollection<string> _priorSettlementView;
+        private readonly ReadOnlyCollection<SocialGrievanceInfluence> _socialInfluenceView;
+        public ResidentWellbeingState() { _priorSettlementView = _priorSettlementGrievances.AsReadOnly(); _socialInfluenceView = _socialInfluences.AsReadOnly(); }
+        public IReadOnlyList<string> PriorSettlementGrievances => _priorSettlementView;
+        public IReadOnlyList<SocialGrievanceInfluence> SocialInfluences => _socialInfluenceView;
+        public float SocialPressure { get { var total = 0f; foreach (var influence in _socialInfluences) total += influence.Pressure; return total; } }
+        public void CaptureSettlementGrievances() { _priorSettlementGrievances.Clear(); _priorSettlementGrievances.AddRange(_grievances); }
+        public void RestoreSocialInfluence(IEnumerable<string> prior, IEnumerable<SocialGrievanceInfluence> influences)
+        {
+            _priorSettlementGrievances.Clear();
+            if (prior != null) foreach (var issue in prior) if (!string.IsNullOrEmpty(issue) && !_priorSettlementGrievances.Contains(issue)) _priorSettlementGrievances.Add(issue);
+            ReplaceSocialInfluences(influences);
+        }
+        internal void ReplaceSocialInfluences(IEnumerable<SocialGrievanceInfluence> influences)
+        {
+            _socialInfluences.Clear();
+            var remaining = ResidentSocialInfluenceSystem.MaxPressure;
+            if (influences != null) foreach (var influence in influences)
+            {
+                if (string.IsNullOrEmpty(influence.Issue) || remaining <= 0f || float.IsNaN(influence.Pressure)) continue;
+                var duplicate = false;
+                foreach (var existing in _socialInfluences) if (string.Equals(existing.Issue, influence.Issue, StringComparison.Ordinal)) { duplicate = true; break; }
+                if (duplicate) continue;
+                var pressure = Math.Min(remaining, Math.Max(0f, Math.Min(ResidentSocialInfluenceSystem.MaxIssuePressure, influence.Pressure)));
+                if (pressure > 0f) { _socialInfluences.Add(new SocialGrievanceInfluence(influence.Issue, pressure)); remaining -= pressure; }
+            }
+        }
         private readonly List<string> _grievances = new List<string>();
         private readonly List<ThoughtMemory> _thoughts = new List<ThoughtMemory>();
         public float Satisfaction { get; private set; } = 1f;

@@ -30,6 +30,7 @@ namespace OneRoof.Domain
         private int _nextElevatorCarId = 500;
         private int _nextEntityId = 3000;
         private readonly long _settlementPeriod;
+        private readonly ResidentSocialInfluenceSystem _socialInfluence = new ResidentSocialInfluenceSystem();
         private readonly List<PersonRecord> _outsideWorkers = new List<PersonRecord>();
         private readonly List<HouseholdRecord> _settlementHouseholds = new List<HouseholdRecord>();
 
@@ -117,24 +118,7 @@ namespace OneRoof.Domain
 
         private List<CivilActionSignal> BuildCivilActionSignals()
         {
-            var signals = new List<CivilActionSignal>(Factions.Factions.Count);
-            foreach (var faction in Factions.Factions)
-            {
-                var people = new List<int>();
-                var floors = new SortedSet<int>();
-                foreach (var support in Factions.Supports)
-                {
-                    if (support.FactionId != faction.Id || !support.IsMember) continue;
-                    people.Add(support.ResidentId.Value);
-                    floors.Add(support.HomeFloor);
-                }
-                people.Sort();
-                var floorArray = new int[floors.Count];
-                floors.CopyTo(floorArray);
-                signals.Add(new CivilActionSignal(faction.Id, faction.Pressure, faction.MemberCount,
-                    faction.TopGrievance, people.ToArray(), floorArray));
-            }
-            return signals;
+            return new List<CivilActionSignal>(Factions.BuildOrganizedSignals(CurrentTick));
         }
 
         public long CurrentTick => Clock.CurrentTick.Value;
@@ -154,7 +138,11 @@ namespace OneRoof.Domain
 
         /// <summary>Immutable electrical state derived from the authoritative topology at the time of request.</summary>
         public ElectricalGridSnapshot ElectricalGridSnapshot() =>
-            ElectricalGrid.Evaluate(Topology, Operations.BackupPowerCapacity, UtilityOperations.Snapshot(Topology));
+            ElectricalGrid.Evaluate(Topology, Operations.ConnectedBackupCapacity(Underground, CurrentTick), UtilityOperations.Snapshot(Topology));
+
+        public UndergroundUtilityPathSnapshot UndergroundUtilitySnapshot() =>
+            UndergroundUtilityPathState.Project(Topology, Underground, ElectricalGridSnapshot(),
+                WaterWasteNetworkSnapshot(), Operations, CurrentTick);
 
         /// <summary>Immutable water pressure and gravity-waste collection state derived from the authoritative topology.</summary>
         public WaterWasteNetworkSnapshot WaterWasteNetworkSnapshot() =>
@@ -224,7 +212,8 @@ namespace OneRoof.Domain
                 Businesses.ProcessBusinessCycle(Topology, Population, Economy,
                     CalculateResidentialOccupancyFactor() * CivilActions.BusinessOutputMultiplier,
                     Economy.Policy, payrollAlreadyProcessed: true);
-                Operations.AdvanceDaily(Underground, Population, Economy, OutsideMarket, Scrutiny, currentTick.Value);
+                Operations.AdvanceDaily(Underground, Population, Economy, OutsideMarket, Scrutiny, currentTick.Value,
+                    UndergroundUtilitySnapshot);
                 var utilityCellCount = CountUtilityCells();
                 var upkeep = utilityCellCount + (ElevatorBank.Cars.Count * 2L);
                 Economy.ChargeDailyExpense(upkeep, subsidy: false);
@@ -234,9 +223,10 @@ namespace OneRoof.Domain
                     Population.Households[i].UpdateArrearsDays();
                 }
                 var simulationDay = currentTick.Value / _settlementPeriod;
-                var housing = HousingLifecycleSystem.AdvanceDaily(HousingLifecycle, Population, simulationDay);
+                var housing = HousingLifecycleSystem.AdvanceDaily(HousingLifecycle, Population, simulationDay, OutsideMarket, Topology);
                 StartEligibleMoveOuts(housing, currentTick);
                 Economy.CompleteDailySettlement(currentTick.Value);
+                _socialInfluence.AdvanceSettlement(Population, Factions, currentTick.Value);
                 Factions.Evaluate(Population, Topology, Businesses, Economy.Policy, currentTick.Value);
                 CivilActions.Evaluate(currentTick.Value, BuildCivilActionSignals(), Scrutiny.Value);
                 Decisions.ObserveSettlement(this);
@@ -1309,7 +1299,7 @@ namespace OneRoof.Domain
             return data;
         }
 
-        public static TowerSimulation RestoreFromSaveData(TowerSaveData data, IRandomStream randomStream = null)
+        public static TowerSimulation RestoreFromSaveData(TowerSaveData data, IRandomStream randomStream = null, long settlementPeriod = DailySchedule.TicksPerDay)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (data.floorSlabs == null || data.rooms == null || data.portals == null ||
@@ -1323,7 +1313,7 @@ namespace OneRoof.Domain
             var economy = TowerEconomyState.FromSaveData(data.GetEconomySaveData());
             var scrutiny = data.scrutiny == null ? new ScrutinyState() : new ScrutinyState(data.scrutiny.value, data.scrutiny.previousValue, data.scrutiny.recentExpansionPressure, data.scrutiny.recentPolicyPressure);
 
-            var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny);
+            var sim = new TowerSimulation(clock, topology, population, elevatorBank, economy, randomStream, scrutiny, settlementPeriod: settlementPeriod);
             topology.TryGetFloorSlab(0, out var groundSlab);
             sim.Underground = UndergroundDigState.FromSaveData(data.undergroundCells, data.undergroundFloorCells,
                 !data.undergroundGridV2, groundSlab, !data.undergroundGridV3,
@@ -1347,13 +1337,13 @@ namespace OneRoof.Domain
 
         /// <summary>Safe boundary for loading untrusted or damaged save payloads.</summary>
         public static bool TryRestoreFromSaveData(TowerSaveData data, out TowerSimulation simulation, out string error,
-            IRandomStream randomStream = null)
+            IRandomStream randomStream = null, long settlementPeriod = DailySchedule.TicksPerDay)
         {
             simulation = null;
             error = null;
             try
             {
-                simulation = RestoreFromSaveData(data, randomStream);
+                simulation = RestoreFromSaveData(data, randomStream, settlementPeriod);
                 return true;
             }
             catch (Exception ex) when (!(ex is OutOfMemoryException))

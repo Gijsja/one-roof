@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Scrutiny;
@@ -14,7 +15,11 @@ namespace OneRoof.Domain.Underground
     /// <summary>Deterministic operating economy and noncombat investigation for the excavated district.</summary>
     public sealed class UndergroundOperationsState
     {
+        // Catalog generator capacity 80, with at most a 25% research boost.
+        private const int MaxGeneratorOutput = 100;
         private readonly Dictionary<int, int> _roomByResident = new Dictionary<int, int>();
+        private readonly Dictionary<int, int> _generatorOutput = new Dictionary<int, int>();
+        public IReadOnlyDictionary<int, int> GeneratorOutput => _generatorOutput;
         private readonly List<int> _orderedResidents = new List<int>();
         private int _disruptedRoomId;
         private long _disruptionEndsAtTick;
@@ -57,12 +62,27 @@ namespace OneRoof.Domain.Underground
 
         public bool IsDisrupted(int roomId, long tick) => roomId == _disruptedRoomId && tick < _disruptionEndsAtTick;
 
+        public int ConnectedBackupCapacity(UndergroundDigState layout, long tick)
+        {
+            long total = 0;
+            for (var i = 0; i < layout.Rooms.Count; i++)
+            {
+                var room = layout.Rooms[i];
+                if (room.Type == UndergroundRoomType.Generator && room.IsReachable &&
+                    !IsDisrupted(room.Id, tick) && _generatorOutput.TryGetValue(room.Id, out var output)) total += output;
+            }
+            return layout.AccessCore.HasValue && layout.IsShaft(layout.AccessCore.Value.X, layout.AccessCore.Value.Depth)
+                ? (int)Math.Min(int.MaxValue, total) : 0;
+        }
+
         public void AdvanceDaily(UndergroundDigState layout, PopulationState population,
-            TowerEconomyState economy, OutsideMarketState outside, ScrutinyState scrutiny, long tick)
+            TowerEconomyState economy, OutsideMarketState outside, ScrutinyState scrutiny, long tick,
+            Func<UndergroundUtilityPathSnapshot> projectUtilities = null)
         {
             if (layout == null || population == null || economy == null || outside == null || scrutiny == null) return;
             AssignResidents(layout, population);
             BackupPowerCapacity = 0;
+            _generatorOutput.Clear();
             RepairBoost = 0f;
             CareBoost = 0f;
             CommonsMoraleBoost = 0f;
@@ -93,6 +113,17 @@ namespace OneRoof.Domain.Underground
             var security = 0;
             var vault = 0;
             var researchFactor = 1f + Math.Min(.25f, ResearchPoints * .0025f);
+            // Fuelled generators bootstrap the network before other rooms consume power.
+            for (var i = 0; i < layout.Rooms.Count; i++)
+            {
+                var room = layout.Rooms[i];
+                if (room.Type != UndergroundRoomType.Generator || !room.IsReachable ||
+                    IsDisrupted(room.Id, tick) || CountStaff(room.Id) < room.RequiredStaff || !ConsumeSupplies(2)) continue;
+                var output = (int)Math.Round(Math.Max(1, room.Capacity) * researchFactor);
+                _generatorOutput[room.Id] = output;
+                BackupPowerCapacity += output;
+            }
+            var utilities = projectUtilities?.Invoke();
             for (var i = 0; i < layout.Rooms.Count; i++)
             {
                 var room = layout.Rooms[i];
@@ -103,13 +134,14 @@ namespace OneRoof.Domain.Underground
                 economy.ChargeDailyExpense(upkeep, false);
                 LastDailyCost += upkeep;
                 PayResidentWages(room.Id, population, economy);
+                // Staffing and installed-room upkeep persist through a service outage.
+                if (!HasRequiredUtilities(room, utilities)) continue;
                 var capacity = Math.Max(1, room.Capacity);
                 switch (room.Type)
                 {
                     case UndergroundRoomType.AccessHub: break;
                     case UndergroundRoomType.SupplyDepot: break;
                     case UndergroundRoomType.Generator:
-                        if (ConsumeSupplies(2)) BackupPowerCapacity += (int)Math.Round(capacity * researchFactor);
                         break;
                     case UndergroundRoomType.Workshop:
                         if (ConsumeSupplies(1)) RepairBoost += .02f * capacity * researchFactor;
@@ -151,6 +183,23 @@ namespace OneRoof.Domain.Underground
 
         private int _securityStrength;
         private int _vaultProtection;
+
+        private static bool HasRequiredUtilities(UndergroundRoom room, UndergroundUtilityPathSnapshot utilities)
+        {
+            if (room.Type == UndergroundRoomType.AccessHub || room.Type == UndergroundRoomType.SupplyDepot ||
+                room.Type == UndergroundRoomType.Generator) return true;
+            var power = false;
+            var water = false;
+            if (utilities != null) foreach (var status in utilities.RoomStatuses)
+            {
+                if (status.RoomId != room.Id || !status.IsFlowing) continue;
+                if (status.Kind == UndergroundUtilityKind.Power) power = true;
+                if (status.Kind == UndergroundUtilityKind.Water) water = true;
+            }
+            var needsWater = room.Type == UndergroundRoomType.Infirmary || room.Type == UndergroundRoomType.StaffCommons ||
+                room.Type == UndergroundRoomType.EmergencyShelter;
+            return power && (!needsWater || water);
+        }
 
         public void AdvanceTick(UndergroundDigState layout, TowerEconomyState economy,
             ScrutinyState scrutiny, long tick)
@@ -367,6 +416,10 @@ namespace OneRoof.Domain.Underground
         public UndergroundOperationsSaveData ToSaveData()
         {
             var ids = new List<int>(_roomByResident.Keys);
+            var generatorIds = new List<int>(_generatorOutput.Keys);
+            generatorIds.Sort();
+            var outputs = new int[generatorIds.Count];
+            for (var i = 0; i < generatorIds.Count; i++) outputs[i] = _generatorOutput[generatorIds[i]];
             ids.Sort();
             var rooms = new int[ids.Count];
             for (var i = 0; i < ids.Count; i++) rooms[i] = _roomByResident[ids[i]];
@@ -388,6 +441,7 @@ namespace OneRoof.Domain.Underground
                 investigatorPhaseTicks = _phaseTicks, lastVisitTick = _lastVisitTick,
                 securityStrength = _securityStrength, vaultProtection = _vaultProtection,
                 backupPowerCapacity = BackupPowerCapacity, repairBoost = RepairBoost,
+                generatorRoomIds = generatorIds.ToArray(), generatorCapacities = outputs,
                 careBoost = CareBoost, commonsMoraleBoost = CommonsMoraleBoost, trainingBoost = TrainingBoost,
                 shelterCapacity = ShelterCapacity, lastContractIncome = LastContractIncome,
                 lastDailyCost = LastDailyCost,
@@ -421,7 +475,15 @@ namespace OneRoof.Domain.Underground
             state._lastVisitTick = Math.Max(0, data.lastVisitTick);
             state._securityStrength = Math.Max(0, data.securityStrength);
             state._vaultProtection = Math.Max(0, data.vaultProtection);
-            state.BackupPowerCapacity = Math.Max(0, data.backupPowerCapacity);
+            // Legacy aggregate-only output cannot identify a physical generator.
+            // Regenerate it at the next daily boundary rather than inventing a feed.
+            if (data.generatorRoomIds != null && data.generatorCapacities != null)
+                for (var i = 0; i < Math.Min(data.generatorRoomIds.Length, data.generatorCapacities.Length); i++)
+                    if (data.generatorRoomIds[i] > 0 && data.generatorCapacities[i] > 0)
+                        state._generatorOutput[data.generatorRoomIds[i]] = Math.Min(MaxGeneratorOutput, data.generatorCapacities[i]);
+            long restoredOutput = 0;
+            foreach (var output in state._generatorOutput.Values) restoredOutput += output;
+            state.BackupPowerCapacity = (int)Math.Min(int.MaxValue, restoredOutput);
             state.RepairBoost = Math.Max(0f, data.repairBoost);
             state.CareBoost = Math.Max(0f, data.careBoost);
             state.CommonsMoraleBoost = Math.Max(0f, data.commonsMoraleBoost);

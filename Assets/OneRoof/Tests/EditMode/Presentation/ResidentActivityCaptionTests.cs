@@ -9,6 +9,65 @@ namespace OneRoof.Presentation.Tests.EditMode
 {
     public sealed class ResidentActivityCaptionTests
     {
+        [TestCase("Flirted with resident 2", ResidentBubbleEmotion.Flirty)]
+        [TestCase("Had deep conversation with resident 2", ResidentBubbleEmotion.Connected)]
+        [TestCase("Awkward encounter with resident 2", ResidentBubbleEmotion.Embarrassed)]
+        [TestCase("Heated argument with resident 2", ResidentBubbleEmotion.Angry)]
+        public void Bubble_ReflectsActualSocialMemory(string thought, ResidentBubbleEmotion emotion)
+        {
+            var resident = new TransitResidentProjection(1, 1, TransitResidentStatus.InRoom,
+                purposeLabel: "Socializing", recentThought: thought);
+            var cue = ResidentActivityCaption.Resolve(resident);
+            Assert.That(cue.Kind, Is.EqualTo(ResidentBubbleKind.Thought));
+            Assert.That(cue.Emotion, Is.EqualTo(emotion));
+            Assert.That(cue.Text.Length, Is.LessThanOrEqualTo(ResidentActivityCaption.MaximumBubbleCharacters));
+        }
+
+        [Test]
+        public void Bubble_LongLiftWaitOutranksSocialMemory()
+        {
+            var resident = new TransitResidentProjection(1, 12, TransitResidentStatus.Queued,
+                waitTicks: 30, recentThought: "Flirted with resident 2");
+            var cue = ResidentActivityCaption.Resolve(resident);
+            Assert.That(cue.Emotion, Is.EqualTo(ResidentBubbleEmotion.Impatient));
+            Assert.That(cue.Text, Is.EqualTo("Lift's late · F12"));
+            Assert.That(cue.Priority, Is.GreaterThan(70));
+        }
+
+        [Test]
+        public void Bubble_SleepDoesNotDisplayAnAwakeSocialEmotion()
+        {
+            var resident = new TransitResidentProjection(1, 1, TransitResidentStatus.InRoom,
+                activity: ActivityKind.Sleeping, recentThought: "Heated argument with resident 2");
+            var cue = ResidentActivityCaption.Resolve(resident);
+            Assert.That(cue.Kind, Is.EqualTo(ResidentBubbleKind.Action));
+            Assert.That(cue.Emotion, Is.EqualTo(ResidentBubbleEmotion.Neutral));
+            Assert.That(cue.Text, Is.EqualTo("Sleeping"));
+        }
+
+        [Test]
+        public void Bubble_UnknownMemoryKeepsMeaningWithoutInventingEmotion()
+        {
+            var resident = new TransitResidentProjection(1, 1, TransitResidentStatus.InRoom,
+                recentThought: "A very long unfamiliar memory that cannot fit inside a tidy thought bubble");
+            var cue = ResidentActivityCaption.Resolve(resident);
+            Assert.That(cue.Emotion, Is.EqualTo(ResidentBubbleEmotion.Neutral));
+            Assert.That(cue.Text, Does.StartWith("A very long unfamiliar memory"));
+            Assert.That(cue.Text, Does.EndWith("…"));
+            Assert.That(cue.Text.Length, Is.LessThanOrEqualTo(ResidentActivityCaption.MaximumBubbleCharacters));
+        }
+
+        [Test]
+        public void Bubble_SocialRoutineAloneDoesNotClaimAnEncounterOutcome()
+        {
+            var resident = new TransitResidentProjection(1, 1, TransitResidentStatus.InRoom,
+                purposeLabel: "Socializing");
+            var cue = ResidentActivityCaption.Resolve(resident);
+            Assert.That(cue.Kind, Is.EqualTo(ResidentBubbleKind.Action));
+            Assert.That(cue.Emotion, Is.EqualTo(ResidentBubbleEmotion.Neutral));
+            Assert.That(cue.Text, Is.EqualTo("Socializing"));
+        }
+
         [Test]
         public void PopulationCaption_ExplainsDestinationAndActivity()
         {

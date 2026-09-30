@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Topology;
 
 namespace OneRoof.Domain.Population
 {
@@ -207,7 +210,8 @@ namespace OneRoof.Domain.Population
             HousingConditionStage roomCondition,
             HouseholdLeasePhase leasePhase,
             bool hasNotice,
-            long noticeStartedDay)
+            long noticeStartedDay,
+            IEnumerable<string> furnishings = null)
         {
             householdId.EnsureValid();
             homeRoomId.EnsureValid();
@@ -218,6 +222,21 @@ namespace OneRoof.Domain.Population
             LeasePhase = leasePhase;
             HasNotice = hasNotice;
             NoticeStartedDay = hasNotice ? noticeStartedDay : -1;
+
+            var list = new List<string>();
+            if (furnishings != null)
+            {
+                foreach (var f in furnishings)
+                {
+                    if (!string.IsNullOrEmpty(f) && !list.Contains(f))
+                        list.Add(f);
+                }
+            }
+            if (list.Count == 0)
+            {
+                list.Add("prop.furniture.bed.v1");
+            }
+            Furnishings = list.AsReadOnly();
         }
 
         public EntityId HouseholdId { get; }
@@ -228,6 +247,7 @@ namespace OneRoof.Domain.Population
         public bool HasNotice { get; }
         public long NoticeStartedDay { get; }
         public bool IsMoveOutEligible => LeasePhase == HouseholdLeasePhase.MoveOutEligible;
+        public IReadOnlyList<string> Furnishings { get; }
     }
 
     /// <summary>
@@ -246,12 +266,19 @@ namespace OneRoof.Domain.Population
         public IReadOnlyList<HouseholdHousingLifecycleProjection> AdvanceDaily(
             HouseholdLeaseLifecycleState lifecycle,
             PopulationState population,
-            long simulationDay)
+            long simulationDay,
+            OutsideMarketState outsideMarket = null,
+            BuildingTopologyState topology = null)
         {
             if (lifecycle == null) throw new ArgumentNullException(nameof(lifecycle));
             if (simulationDay < 0) throw new ArgumentOutOfRangeException(nameof(simulationDay));
             var projections = new List<HouseholdHousingLifecycleProjection>();
             if (population == null) return projections;
+
+            if (outsideMarket != null && topology != null)
+            {
+                EvaluateOutsideFurniturePurchases(population, outsideMarket, topology);
+            }
 
             foreach (var household in population.Households)
             {
@@ -298,7 +325,53 @@ namespace OneRoof.Domain.Population
 
             return new HouseholdHousingLifecycleProjection(
                 household.Id, household.HomeRoomId, arrearsDays, roomCondition, leasePhase,
-                hasNotice, noticeStartedDay);
+                hasNotice, noticeStartedDay, household.AcquiredProps);
+        }
+
+        public void EvaluateOutsideFurniturePurchases(PopulationState population, OutsideMarketState outsideMarket, BuildingTopologyState topology)
+        {
+            if (population == null || outsideMarket == null || topology == null) return;
+
+            foreach (var household in population.Households)
+            {
+                if (household.RentArrearsDays > 0 || household.CashBalance < 100) continue;
+                if (!topology.TryGetRoom(household.HomeRoomId, out var room)) continue;
+
+                float roomWidth = room.Bounds.Width * 0.5f;
+
+                string id = null;
+                long cost = 0;
+
+                if (!household.AcquiredProps.Contains("prop.decor.planter.v1"))
+                {
+                    id = "prop.decor.planter.v1";
+                    cost = 15;
+                }
+                else if (roomWidth >= 2.0f && !household.AcquiredProps.Contains("prop.furniture.sofa.v1"))
+                {
+                    id = "prop.furniture.sofa.v1";
+                    cost = 45;
+                }
+                else if (roomWidth >= 2.5f && !household.AcquiredProps.Contains("prop.furniture.bookcase.v1"))
+                {
+                    id = "prop.furniture.bookcase.v1";
+                    cost = 30;
+                }
+                else if (roomWidth >= 3.0f && !household.AcquiredProps.Contains("prop.furniture.vanitydresser.v1"))
+                {
+                    id = "prop.furniture.vanitydresser.v1";
+                    cost = 60;
+                }
+
+                if (id != null)
+                {
+                    var res = outsideMarket.TryPurchase(household, cost, 0, OutsideServiceCategory.QualityService);
+                    if (res.IsSuccess)
+                    {
+                        household.TryAddAcquiredProp(id);
+                    }
+                }
+            }
         }
 
         public static bool HasPersistentNegativeBudget(HouseholdRecord household) =>

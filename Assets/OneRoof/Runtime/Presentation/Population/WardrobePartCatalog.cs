@@ -5,15 +5,12 @@ using UnityEngine;
 namespace OneRoof.Presentation.Population
 {
     /// <summary>
-    /// Presentation catalog bridging <see cref="NpcWardrobeVariant"/> part paths with sliced
-    /// transparent wardrobe sprites in Resources. Falls back to null (palette swatches) when a
-    /// part is unassigned or unimported, keeping headless tests and the procedural rig green.
+    /// Procedural-only attachment policy. Archived cutouts are never loaded implicitly.
+    /// Slot sizing remains available for a future validated modular attachment contract.
     /// Slot anchors assume bottom-center pivots at 512 PPU (see resident-wardrobe-parts spec).
     /// </summary>
     public static class WardrobePartCatalog
     {
-        private static readonly Dictionary<string, Sprite> SpriteCache =
-            new Dictionary<string, Sprite>();
 
         /// <summary>Target on-screen size in meters per wardrobe layer for auto-fit.</summary>
         public static Vector2 TargetSize(NpcLayerKind layer)
@@ -61,17 +58,9 @@ namespace OneRoof.Presentation.Population
 
         public static Sprite GetPart(string resourcePath)
         {
-            if (string.IsNullOrEmpty(resourcePath)) return null;
-            if (SpriteCache.TryGetValue(resourcePath, out var cached) && cached != null)
-            {
-                return cached;
-            }
-            var loaded = Resources.Load<Sprite>(resourcePath);
-            if (loaded != null)
-            {
-                SpriteCache[resourcePath] = loaded;
-            }
-            return loaded;
+            // Predefined cutouts are archived. Files reappearing in Resources cannot
+            // silently become runtime attachments; modular art needs an explicit contract.
+            return null;
         }
 
         public static Sprite GetPart(NpcWardrobeVariant variant, NpcLayerKind layer)
@@ -106,7 +95,7 @@ namespace OneRoof.Presentation.Population
 
         public static void ClearCache()
         {
-            SpriteCache.Clear();
+            // Compatibility hook; no imported part cache exists in procedural mode.
         }
     }
 }

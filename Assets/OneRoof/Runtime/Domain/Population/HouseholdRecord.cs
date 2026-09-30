@@ -18,6 +18,7 @@ namespace OneRoof.Domain.Population
         private readonly long[] _dailyBudgetNetHistory = new long[DailyBudgetHistoryCapacity];
         private int _dailyBudgetHistoryCount;
         private int _dailyBudgetHistoryNext;
+        private readonly List<string> _acquiredProps;
 
         public HouseholdRecord(
             EntityId id,
@@ -41,7 +42,8 @@ namespace OneRoof.Domain.Population
             long dailyCreditRepayment = 0,
             long[] recentDailyBudgetNetFlows = null,
             long dailyEssentialShortfall = 0,
-            long underprovisionExposure = 0)
+            long underprovisionExposure = 0,
+            IEnumerable<string> acquiredProps = null)
         {
             id.EnsureValid();
             homeRoomId.EnsureValid();
@@ -81,6 +83,22 @@ namespace OneRoof.Domain.Population
             DailyEssentialShortfall = Math.Max(0, dailyEssentialShortfall);
             UnderprovisionExposure = Math.Max(0, underprovisionExposure);
             RestoreDailyBudgetHistory(recentDailyBudgetNetFlows);
+
+            _acquiredProps = new List<string>();
+            if (acquiredProps != null)
+            {
+                foreach (var prop in acquiredProps)
+                {
+                    if (!string.IsNullOrEmpty(prop) && !_acquiredProps.Contains(prop))
+                    {
+                        _acquiredProps.Add(prop);
+                    }
+                }
+            }
+            if (_acquiredProps.Count == 0)
+            {
+                _acquiredProps.Add("prop.furniture.bed.v1");
+            }
         }
 
         // ── Identity ──────────────────────────────────────────────────────────
@@ -90,6 +108,8 @@ namespace OneRoof.Domain.Population
         public EntityId HomeRoomId { get; }
 
         public IReadOnlyList<EntityId> MemberIds { get; }
+
+        public IReadOnlyList<string> AcquiredProps => _acquiredProps;
 
         // ── Economy & wellbeing ───────────────────────────────────────────────
 
@@ -162,6 +182,14 @@ namespace OneRoof.Domain.Population
             Math.Max(0L, MemberIds.Count * 5L - DailyServiceSpend));
 
         // ── Mutation methods ──────────────────────────────────────────────────
+
+        public bool TryAddAcquiredProp(string propContentId)
+        {
+            if (string.IsNullOrEmpty(propContentId)) return false;
+            if (_acquiredProps.Contains(propContentId)) return false;
+            _acquiredProps.Add(propContentId);
+            return true;
+        }
 
         /// <summary>Compatibility adapter that converts a normalized budget delta into cash.</summary>
         public void AdjustBudget(float delta)

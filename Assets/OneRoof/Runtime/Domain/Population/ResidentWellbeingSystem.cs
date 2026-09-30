@@ -36,7 +36,7 @@ namespace OneRoof.Domain.Population
                 var service = Clamp(0.80f * serviceEfficiencyMultiplier);
                 if (underprovisioned) service = Math.Min(service, household.UnderprovisionExposure >= 96 ? 0.35f : 0.60f);
                 var events = Clamp(1f + person.Wellbeing.TotalThoughtMoodDelta * 0.015f);
-                var satisfaction = (commute + crowding + noise + rentAffordability + service + events) / 6f;
+                var satisfaction = Clamp((commute + crowding + noise + rentAffordability + service + events) / 6f + Math.Max(0f, person.Wellbeing.TotalThoughtMoodDelta * .015f) / 6f - person.Wellbeing.SocialPressure);
                 _grievanceBuffer.Clear();
                 if (commute < GrievanceThreshold) _grievanceBuffer.Add("Long elevator waits are disrupting daily travel.");
                 if (rentAffordability < GrievanceThreshold) _grievanceBuffer.Add("Household budget is under rent pressure.");

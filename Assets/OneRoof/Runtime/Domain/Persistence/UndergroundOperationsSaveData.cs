@@ -25,6 +25,8 @@ namespace OneRoof.Domain.Persistence
         public int securityStrength;
         public int vaultProtection;
         public int backupPowerCapacity;
+        public int[] generatorRoomIds;
+        public int[] generatorCapacities;
         public float repairBoost;
         public float careBoost;
         public float commonsMoraleBoost;

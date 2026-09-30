@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Underground;
 
 namespace OneRoof.Domain.Infrastructure
 {
@@ -66,7 +67,8 @@ namespace OneRoof.Domain.Infrastructure
     public static class UndergroundUtilityPathState
     {
         public static UndergroundUtilityPathSnapshot Project(BuildingTopologyState tower, UndergroundDigState underground,
-            ElectricalGridSnapshot electrical, WaterWasteNetworkSnapshot water)
+            ElectricalGridSnapshot electrical, WaterWasteNetworkSnapshot water,
+            UndergroundOperationsState operations = null, long tick = 0)
         {
             if (tower == null) throw new ArgumentNullException(nameof(tower));
             if (underground == null) throw new ArgumentNullException(nameof(underground));
@@ -75,9 +77,9 @@ namespace OneRoof.Domain.Infrastructure
 
             var distances = CollectDistances(underground);
             var power = Build(UndergroundUtilityKind.Power, tower, underground, distances,
-                ElectricalGridState.SubstationContentId.Value, HasGroundPower(electrical));
+                ElectricalGridState.SubstationContentId.Value, HasGroundPower(electrical), operations, tick);
             var waterPaths = Build(UndergroundUtilityKind.Water, tower, underground, distances,
-                WaterWasteNetworkState.WaterPumpContentId.Value, HasGroundWater(water));
+                WaterWasteNetworkState.WaterPumpContentId.Value, HasGroundWater(water), null, tick);
             var statuses = new List<UndergroundRoomUtilityStatus>(power.Item2.Count + waterPaths.Item2.Count);
             statuses.AddRange(power.Item2);
             statuses.AddRange(waterPaths.Item2);
@@ -87,7 +89,8 @@ namespace OneRoof.Domain.Infrastructure
 
         private static (List<UndergroundUtilitySegment>, List<UndergroundRoomUtilityStatus>) Build(
             UndergroundUtilityKind kind, BuildingTopologyState tower, UndergroundDigState underground,
-            Dictionary<UndergroundCell, int> distances, string sourceContentId, bool sourceServiceActive)
+            Dictionary<UndergroundCell, int> distances, string sourceContentId, bool sourceServiceActive,
+            UndergroundOperationsState operations, long tick)
         {
             var segments = new List<UndergroundUtilitySegment>();
             var statuses = new List<UndergroundRoomUtilityStatus>();
@@ -98,7 +101,17 @@ namespace OneRoof.Domain.Infrastructure
             sources.Sort((a, b) => a.Id.Value.CompareTo(b.Id.Value));
             var core = underground.AccessCore;
             var hasCorePath = core.HasValue && distances.ContainsKey(core.Value);
-            var hasSource = sources.Count > 0;
+            var surfaceServiceActive = sourceServiceActive;
+            var generators = new List<UndergroundRoom>();
+            var reachableCells = new HashSet<UndergroundCell>(distances.Keys);
+            if (operations != null) foreach (var room in underground.Rooms)
+                if (room.Type == UndergroundRoomType.Generator && room.IsReachable && !operations.IsDisrupted(room.Id, tick) &&
+                    operations.GeneratorOutput.TryGetValue(room.Id, out var output) && output > 0 &&
+                    FindPort(room, reachableCells, distances).HasValue) generators.Add(room);
+            generators.Sort((a, b) => a.Id.CompareTo(b.Id));
+            var hasGenerator = generators.Count > 0 && hasCorePath;
+            var hasSource = sources.Count > 0 || hasGenerator;
+            sourceServiceActive = sourceServiceActive || hasGenerator;
             var flowing = hasSource && hasCorePath && sourceServiceActive;
 
             for (var i = 0; i < sources.Count && hasCorePath; i++)
@@ -107,13 +120,23 @@ namespace OneRoof.Domain.Infrastructure
                 segments.Add(new UndergroundUtilitySegment($"{prefix}:source:{source.Id.Value}:core", kind,
                     new UtilityPathPoint(UtilityPathPointKind.SurfaceRoom,
                         (source.Bounds.MinX + source.Bounds.MaxX) / 2, 0, source.Id.Value),
-                    CellPoint(core.Value), true, sourceServiceActive));
+                    CellPoint(core.Value), true, surfaceServiceActive));
             }
 
             var built = new HashSet<UndergroundCell>(underground.ServiceShaftCells);
             built.UnionWith(underground.Corridors);
             var cells = new List<UndergroundCell>(built);
             cells.Sort();
+            foreach (var generator in generators)
+            {
+                var port = FindPort(generator, built, distances).Value;
+                segments.Add(new UndergroundUtilitySegment($"power:generator:{generator.Id}:port", kind,
+                    new UtilityPathPoint(UtilityPathPointKind.UndergroundRoom, generator.X + generator.Width / 2,
+                        generator.Depth + generator.Height / 2, generator.Id), CellPoint(port), true, true));
+                // The core is a physical bridge to the ground electrical bus.
+                segments.Add(new UndergroundUtilitySegment($"power:generator:{generator.Id}:surface", kind,
+                    CellPoint(core.Value), new UtilityPathPoint(UtilityPathPointKind.SurfaceRoom, 0, 0), true, true));
+            }
             for (var i = 0; i < cells.Count; i++)
             {
                 var from = cells[i];
@@ -150,7 +173,7 @@ namespace OneRoof.Domain.Infrastructure
                 var hasFrom = distances.TryGetValue(from, out var fromDistance);
                 var hasTo = distances.TryGetValue(to, out var toDistance);
                 var connected = hasFrom && hasTo;
-                var forward = !connected || fromDistance <= toDistance;
+                var forward = !connected || (hasGenerator && !surfaceServiceActive ? fromDistance >= toDistance : fromDistance <= toDistance);
                 segments.Add(new UndergroundUtilitySegment(
                     $"{prefix}:cell:{from.X}:{from.Depth}:{to.X}:{to.Depth}", kind,
                     CellPoint(forward ? from : to), CellPoint(forward ? to : from), connected, connected && flowing));

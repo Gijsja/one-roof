@@ -166,6 +166,9 @@ namespace OneRoof.Domain.Transit
                 throw new InvalidOperationException($"An elevator bank cannot contain more than {MaxCarsPerBank} cars.");
             }
 
+            // Preserve custom baseline cars, but additions to an upgraded bank
+            // must receive the same transport profile as its existing cars.
+            if (Tier > 1) car.ApplyTier(_tierProfile);
             _cars.Add(car);
             RebalanceDispatches();
         }

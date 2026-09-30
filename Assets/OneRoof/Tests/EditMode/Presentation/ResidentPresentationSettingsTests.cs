@@ -8,6 +8,15 @@ namespace OneRoof.Presentation.Tests.EditMode
 {
     public sealed class ResidentPresentationSettingsTests
     {
+        [Test]
+        public void BubbleSettings_RejectInvalidValuesAndAllowHiddenBubbles()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ResidentPresentationSettings { MaximumBubbles = -1 }.Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ResidentPresentationSettings { BubbleSpacingPixels = float.NaN }.Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ResidentPresentationSettings { BubbleSpacingPixels = -1f }.Validate());
+            Assert.DoesNotThrow(() => new ResidentPresentationSettings { MaximumBubbles = 0 }.Validate());
+        }
+
         [TestCase(0, 60)]
         [TestCase(-1, 60)]
         [TestCase(60, -1)]
@@ -66,11 +75,13 @@ namespace OneRoof.Presentation.Tests.EditMode
         [Test]
         public void Settings_InspectorSerializationRoundTrips()
         {
-            var authored = new ResidentPresentationSettings { SkeletalCapacity = 80, PrewarmCount = 12,
+            var authored = new ResidentPresentationSettings { SkeletalCapacity = 80, PrewarmCount = 12, MaximumBubbles = 5, BubbleSpacingPixels = 9f,
                 RigFadeStart = 3f, RigFadeEnd = 4f, MacroFadeStart = 9f, MacroFadeEnd = 10f,
                 ViewportMargin = 0.2f, RetainedRigPreference = 0.5f };
             var restored = JsonUtility.FromJson<ResidentPresentationSettings>(JsonUtility.ToJson(authored));
             restored.Validate();
+            Assert.That(restored.MaximumBubbles, Is.EqualTo(5));
+            Assert.That(restored.BubbleSpacingPixels, Is.EqualTo(9f));
             Assert.That(restored.SkeletalCapacity, Is.EqualTo(80));
             Assert.That(restored.PrewarmCount, Is.EqualTo(12));
             Assert.That(restored.RigFadeEnd, Is.EqualTo(4f));

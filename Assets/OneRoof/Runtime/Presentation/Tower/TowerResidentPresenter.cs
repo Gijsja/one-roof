@@ -42,6 +42,10 @@ namespace OneRoof.Presentation.Tower
         private readonly List<int> _releaseResidentIds = new List<int>(NpcViewPool.DefaultMaxCapacity);
         private NpcViewPool _viewPool;
         private Camera _camera;
+        private readonly ResidentBubbleLayout _bubbleLayout = new ResidentBubbleLayout();
+        private readonly List<ResidentBubbleLayoutCandidate> _bubbleCandidates = new List<ResidentBubbleLayoutCandidate>(60);
+        private readonly List<int> _visibleBubbleIds = new List<int>(12);
+        private readonly Dictionary<int, NpcSkeletalHierarchy> _bubbleViews = new Dictionary<int, NpcSkeletalHierarchy>(60);
         private int _targetResidentCount;
         private int[] _queueSlots = Array.Empty<int>();
         private int[] _arrivalSlots = Array.Empty<int>();
@@ -239,6 +243,9 @@ namespace OneRoof.Presentation.Tower
             var floorCount = Math.Max(TowerStructurePresenter.InitialFloorCount, topology != null ? topology.FloorCount : TowerStructurePresenter.InitialFloorCount);
             if (_queueSlots.Length != floorCount) { _queueSlots = new int[floorCount]; _arrivalSlots = new int[floorCount]; }
             Array.Clear(_queueSlots, 0, floorCount); Array.Clear(_arrivalSlots, 0, floorCount);
+            _bubbleCandidates.Clear();
+            _bubbleViews.Clear();
+            if (_camera == null) _camera = Camera.main;
             var queuedCountsPerFloor = _queueSlots;
             var arrivedCountsPerFloor = _arrivalSlots;
 
@@ -327,7 +334,7 @@ namespace OneRoof.Presentation.Tower
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
                             skeletal?.SetAnimationClip(resident.Activity == ActivityKind.Sleeping ? NpcAnimationClip.Sleep :
-                                resident.Activity == ActivityKind.Working || resident.Activity == ActivityKind.Leisure ? NpcAnimationClip.Sit : NpcAnimationClip.Idle);
+                                resident.Activity == ActivityKind.Working || resident.Activity == ActivityKind.Leisure ? NpcAnimationClip.Sit : NpcAnimationClip.Idle, "Room activity / interaction dock");
                             placedInRoom = true;
                         }
 
@@ -340,7 +347,7 @@ namespace OneRoof.Presentation.Tower
                             var arrivedY = TowerStructurePresenter.FloorY(destFloor) - 0.58f;
                             residentTransform.position = new Vector3(arrivedX, arrivedY, -0.1f);
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
-                            skeletal?.SetAnimationClip(NpcAnimationClip.Idle);
+                            skeletal?.SetAnimationClip(NpcAnimationClip.Idle, "Arrival without room dock");
                         }
                         break;
                     }
@@ -425,41 +432,8 @@ namespace OneRoof.Presentation.Tower
                     }
                 }
 
-                // Emotional emote expression
-                if (resident.Status == TransitResidentStatus.Queued)
-                {
-                    if (resident.WaitTicks >= 30) skeletal?.SetEmote(NpcEmoteKind.Anger);
-                    else if (resident.WaitTicks >= 15) skeletal?.SetEmote(NpcEmoteKind.Sweat);
-                    else if (resident.WaitTicks >= 5) skeletal?.SetEmote(NpcEmoteKind.Ellipsis);
-                    else skeletal?.SetEmote(NpcEmoteKind.None);
-                }
-                else if (HasSocialEmote(resident, out var socialEmote))
-                {
-                    skeletal?.SetEmote(socialEmote);
-                }
-                else if (resident.Status == TransitResidentStatus.InRoom)
-                {
-                    switch (resident.Activity)
-                    {
-                        case ActivityKind.Sleeping:
-                            skeletal?.SetEmote(NpcEmoteKind.Sleeping);
-                            break;
-                        case ActivityKind.Working:
-                            skeletal?.SetEmote(NpcEmoteKind.Lightbulb);
-                            break;
-                        case ActivityKind.Leisure:
-                            skeletal?.SetEmote(NpcEmoteKind.MusicNote);
-                            break;
-                        default:
-                            skeletal?.SetEmote(NpcEmoteKind.None);
-                            break;
-                    }
-                }
-                else
-                {
-                    skeletal?.SetEmote(NpcEmoteKind.None);
-                }
-                skeletal?.SetCaption(ResidentActivityCaption.For(resident));
+                var bubble = ResidentActivityCaption.Resolve(resident);
+                skeletal?.SetBubble(bubble);
 
                 // Waiting is the person-scale half of the congestion explanation chain.
                 // The aura starts only after a legible delay and reaches full intensity at 30 ticks.
@@ -470,8 +444,32 @@ namespace OneRoof.Presentation.Tower
 
                 skeletal?.ApplyProceduralAnimation(time);
                 if (_viewPool != null) PresentLodResident(resident, residentTransform, skeletal, time);
+                if (skeletal != null)
+                {
+                    skeletal.RefreshBubblePose();
+                    skeletal.SetBubbleVisible(false);
+                    var inspected = resident.ResidentId == InspectedResidentId;
+                    if (skeletal.gameObject.activeInHierarchy && resident.Status != TransitResidentStatus.Outside &&
+                        (_camera == null || inspected || _camera.orthographicSize <= _presentationSettings.RigFadeStart))
+                    {
+                        var bounds = skeletal.BubbleBounds;
+                        var min = _camera != null ? _camera.WorldToScreenPoint(bounds.min) : bounds.min;
+                        var max = _camera != null ? _camera.WorldToScreenPoint(bounds.max) : bounds.max;
+                        if (_camera == null || min.z > 0f)
+                        {
+                            _bubbleCandidates.Add(new ResidentBubbleLayoutCandidate(resident.ResidentId,
+                                Rect.MinMaxRect(min.x, min.y, max.x, max.y), inspected, bubble.Priority));
+                            _bubbleViews[resident.ResidentId] = skeletal;
+                        }
+                    }
+                }
             }
             if (_viewPool != null) FinishLodFrame();
+            _bubbleLayout.SelectVisible(_bubbleCandidates, _presentationSettings.MaximumBubbles, _visibleBubbleIds,
+                _camera != null ? _presentationSettings.BubbleSpacingPixels : 0.08f,
+                _camera != null ? (Rect?)_camera.pixelRect : null);
+            for (var i = 0; i < _visibleBubbleIds.Count; i++)
+                _bubbleViews[_visibleBubbleIds[i]].SetBubbleVisible(true);
         }
 
         public void Clear()
@@ -539,7 +537,8 @@ namespace OneRoof.Presentation.Tower
                     view.Bind(projection, _lodViews[resident.ResidentId].transform.parent.position);
                 }
                 var skeleton = view.SkeletalHierarchy;
-                if (newlyBound && skeleton != null) skeleton.ApplySharedMaterial(GetLodMaterial());
+                // Pool-owned sprite material preserves skin/clothing renderer tints.
+                // The mesh LOD material is reserved for proxy geometry.
                 if (skeleton == null || skeleton.MainRenderer == null) continue;
                 _residentViews.Add(skeleton.MainRenderer);
                 _residentSkeletons.Add(skeleton);
@@ -602,31 +601,5 @@ namespace OneRoof.Presentation.Tower
             return 0;
         }
 
-        private static bool HasSocialEmote(TransitResidentProjection resident, out NpcEmoteKind emote)
-        {
-            emote = NpcEmoteKind.None;
-            var thought = resident.RecentThought;
-            if (string.IsNullOrEmpty(thought)) return false;
-
-            if (thought.IndexOf("Flirt", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("special", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("crush", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("romantic", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                emote = (Math.Abs(resident.ResidentId) % 2 == 0) ? NpcEmoteKind.Heart : NpcEmoteKind.Blush;
-                return true;
-            }
-
-            if (thought.IndexOf("argument", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("spat", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("insult", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                thought.IndexOf("rival", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                emote = (Math.Abs(resident.ResidentId) % 2 == 0) ? NpcEmoteKind.Anger : NpcEmoteKind.BrokenHeart;
-                return true;
-            }
-
-            return false;
-        }
     }
 }

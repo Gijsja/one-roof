@@ -7,12 +7,46 @@ using OneRoof.Domain.Infrastructure;
 using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Underground;
 
 namespace OneRoof.Domain.Tests.EditMode
 {
     public sealed class UndergroundUtilityPathStateTests
     {
         private static readonly Tick BuildTick = new Tick(0);
+
+        [Test]
+        public void ConnectedGeneratorFeedsSurfaceWithoutSubstationAndProjectsReverseBridge()
+        {
+            var tower = CreateTower(includePowerSource: false);
+            var underground = CreateUnderground(roomType: UndergroundRoomType.Generator);
+            var operations = UndergroundOperationsState.FromSaveData(new UndergroundOperationsSaveData
+            { generatorRoomIds = new[] { 301 }, generatorCapacities = new[] { 80 }, backupPowerCapacity = 80 });
+            var electrical = new ElectricalGridState().Evaluate(tower, operations.ConnectedBackupCapacity(underground, 1));
+            var snapshot = UndergroundUtilityPathState.Project(tower, underground, electrical,
+                new WaterWasteNetworkState().Evaluate(tower), operations, 1);
+
+            Assert.That(electrical.SubstationCapacity, Is.EqualTo(80));
+            Assert.That(electrical.Floors.Single().IsConnected, Is.True);
+            Assert.That(snapshot.PowerSegments.Single(s => s.Id == "power:generator:301:surface").IsFlowing, Is.True);
+            Assert.That(snapshot.PowerSegments.Single(s => s.Id == "power:generator:301:port").From.Kind,
+                Is.EqualTo(UtilityPathPointKind.UndergroundRoom));
+            Assert.That(Status(snapshot, 301, UndergroundUtilityKind.Power).IsFlowing, Is.True);
+        }
+
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        public void DisconnectedGeneratorCannotFeedSurface(bool core, bool corridor)
+        {
+            var underground = CreateUnderground(core, corridor, UndergroundRoomType.Generator);
+            var operations = UndergroundOperationsState.FromSaveData(new UndergroundOperationsSaveData
+            { generatorRoomIds = new[] { 301 }, generatorCapacities = new[] { 80 }, backupPowerCapacity = 80 });
+            Assert.That(operations.ConnectedBackupCapacity(underground, 1), Is.Zero);
+            var tower = CreateTower(includePowerSource: false);
+            var snapshot = UndergroundUtilityPathState.Project(tower, underground, new ElectricalGridState().Evaluate(tower),
+                new WaterWasteNetworkState().Evaluate(tower), operations, 1);
+            Assert.That(snapshot.PowerSegments.Any(s => s.Id.StartsWith("power:generator:")), Is.False);
+        }
 
         [Test]
         public void ConnectedCoreAndCorridor_CarryBothServicesToRoomWithStableSegments()
@@ -138,7 +172,7 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         private static UndergroundDigState CreateUnderground(bool includeCore = true,
-            bool includeConnectingCorridor = true)
+            bool includeConnectingCorridor = true, UndergroundRoomType roomType = UndergroundRoomType.Workshop)
         {
             var cells = new List<UndergroundCellSaveData>();
             for (var depth = 0; depth <= 2; depth++)
@@ -151,7 +185,7 @@ namespace OneRoof.Domain.Tests.EditMode
             corridors.Add(new UndergroundCellSaveData { x = includeConnectingCorridor ? 17 : 18, depth = 1 });
             corridors.Add(new UndergroundCellSaveData { x = 17, depth = 0 });
             var rooms = new[] { new UndergroundRoomSaveData
-                { id = 301, type = (int)UndergroundRoomType.Workshop, x = 17, depth = 2, width = 2, height = 1 } };
+                { id = 301, type = (int)roomType, x = 17, depth = 2, width = 2, height = 1 } };
             return UndergroundDigState.FromSaveData(cells.ToArray(), cells.ToArray(), false, default, false,
                 corridors.ToArray(), shaft,
                 includeCore ? new UndergroundCellSaveData { x = 16, depth = 0 } : null, rooms);
