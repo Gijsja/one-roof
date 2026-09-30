@@ -1,10 +1,10 @@
-# One Roof — Agent Guide (v0.10)
+# One Roof — Agent Guide (v0.10+)
 
 ## Project & North Star
 
 One Roof is a deterministic vertical-city simulation: the Steward shapes systems (architecture, zoning, infrastructure, leases, decrees), while autonomous residents respond.
 
-- **Baseline (v0.10 Prototype Complete)**: 765 passing tests (754 EditMode, 11 PlayMode), 30-floor / 300-resident reference scale proven in `Tower_GoldStandard30.unity` at ~108 FPS and 171 draw calls, closed-loop unit economics, 8 data overlays, 4 factions, 12-month weather cycle, and secret undercity expansion.
+- **Baseline (v0.10+ Prototype Complete)**: 832 EditMode tests passing, 15 PlayMode tests passing; 30-floor / 300-resident reference scale verified in `Tower_GoldStandard30.unity` at ~100 FPS (10.0 ms frame time) and 83 draw calls overview (171 draw calls / 86 batches standard batching limit); 3-tier resident LOD & semantic zoom facade crossfades; inspector-authored presentation settings & zero-allocation view pooling; Sims-style resident social sandbox (traits, thoughts, 12-tier relationship spectrum); closed-loop unit economics; 8 data overlays; 4 factions; 12-month weather cycle; and secret undercity expansion with physical utility paths.
 - **North Star (Beta Boundary / City Status)**: Sustaining City Status for 30 consecutive in-game days under strict performance budgets (<4.0 ms tick, 60 FPS presentation), 6 adaptive crisis chains, and campaign board pacing.
 
 ---
@@ -18,20 +18,14 @@ One Roof is a deterministic vertical-city simulation: the Steward shapes systems
 
 ---
 
-## Agent Context Shield: Read on Demand
+## Agent Context Index: Read on Demand
 
-> [!IMPORTANT]
-> **DO NOT read all files in `Docs/` or `Planning/`.** Ingesting the entire documentation suite wastes over 50,000 tokens of context.
-> Check the active task in [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](./Handoffs/Active/), then consult **only the single canonical doc** relevant to your task:
-> - **Architecture & Assembly boundaries**: [`Docs/02_ARCHITECTURE.md`](./Docs/02_ARCHITECTURE.md)
-> - **Entity Records & Projections**: [`Docs/03_DATA_CONTRACTS.md`](./Docs/03_DATA_CONTRACTS.md)
-> - **Overlays, Mode Shell & Previews**: [`Docs/04_UX_CONTRACT.md`](./Docs/04_UX_CONTRACT.md)
-> - **Rig, Wardrobe & Assets**: [`Docs/05_ASSET_PIPELINE.md`](./Docs/05_ASSET_PIPELINE.md) & [`Docs/08_ASSET_CATALOG.md`](./Docs/08_ASSET_CATALOG.md)
-> - **Testing & Performance Budgets**: [`Docs/06_TEST_STRATEGY.md`](./Docs/06_TEST_STRATEGY.md)
-> - **Active Architecture Decisions**: [`Docs/07_DECISION_LOG.md`](./Docs/07_DECISION_LOG.md) (ADR-070+)
-> - **Cause-Chain Inspector UX**: [`Docs/09_CAUSE_CHAIN_INSPECTOR.md`](./Docs/09_CAUSE_CHAIN_INSPECTOR.md)
-> - **Headless Batchmode & Commands**: [`Docs/10_DEVELOPMENT_WORKFLOW.md`](./Docs/10_DEVELOPMENT_WORKFLOW.md)
-> - **Closed-Loop Economy & Decrees**: [`Docs/12_ECONOMY.md`](./Docs/12_ECONOMY.md)
+Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](./Handoffs/Active/) for active tasks, then consult **only the single canonical doc** relevant to your task:
+- **Architecture, Data Contracts & Economy**: [`Docs/ARCHITECTURE.md`](./Docs/ARCHITECTURE.md)
+- **UX, Overlays & Cause-Chain Inspector**: [`Docs/UX_AND_GAMEPLAY.md`](./Docs/UX_AND_GAMEPLAY.md)
+- **Workflow, Testing & Validation**: [`Docs/WORKFLOW_AND_TESTING.md`](./Docs/WORKFLOW_AND_TESTING.md)
+- **Rig, Wardrobe & Content Assets**: [`Docs/ASSETS.md`](./Docs/ASSETS.md)
+- **Active Architecture Decisions**: [`Docs/DECISIONS.md`](./Docs/DECISIONS.md) (ADR-070+)
 
 ---
 
@@ -43,18 +37,14 @@ One Roof is a deterministic vertical-city simulation: the Steward shapes systems
 4. **Projections only**: Presentation and UI consume immutable projections bound by stable entity IDs. UI dispatches validated commands via `TowerSimulation.CanExecute()`, never directly mutating simulation state.
 5. **No per-agent Update loops**: Simulation runs on a fixed discrete tick (1440 ticks/day). Views are pooled and presentation-interpolated.
 6. **Aggregate persistence**: All serialization lives in domain sub-aggregates (`ToSaveData()` / `FromSaveData()`). Zero scene references in saves.
-7. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/`. When accepted or completed, move prior handoffs to `Handoffs/Archive/`.
+7. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/`. Keep it concise, authoritative, and focused on current task status.
 
 ---
 
 ## Tooling & Validation Workflow
 
 - Target **Unity 6000.3 LTS** (`6000.3.24f1`).
-- **Headless Validation**: Validate from an isolated worktree via batchmode. **Never pass `-quit` with `-runTests`**. See [`Docs/10_DEVELOPMENT_WORKFLOW.md`](./Docs/10_DEVELOPMENT_WORKFLOW.md).
-- **Python & Pipeline Tooling**: When Unity Editor runs on port 7800 with `com.unity.pipeline`, Python scripts (e.g. `pipeline_client.py` or MCP clients) provide live queries:
-  - `python3 pipeline_client.py cmd get_performance_stats`: queries draw calls, batches, frame times.
-  - `python3 pipeline_client.py cmd console_status`: queries console errors.
-  - `python3 pipeline_client.py eval "<expression>"`: evaluates C# state.
+- **Validation Commands & Live Probing**: See [`Docs/WORKFLOW_AND_TESTING.md`](./Docs/WORKFLOW_AND_TESTING.md) for exact batchmode test invocations (EditMode 832 passing, PlayMode 15 passing; never pass `-quit` with `-runTests`) and `pipeline_client.py` telemetry probes.
 - **Commit hygiene**: Always commit paired `.meta` files for any new assets. Keep generated directories (`Library/`, `Temp/`, `.plastic/`) untracked.
-- **Sandbox & Git Operations**: Project workspace files are writable in the standard sandbox, but `.git/` is mounted read-only. Use standard shell commands (`mv`, `cp`, `mkdir`) for file manipulation inside the sandbox (git automatically tracks renames on add). Any Git commands mutating repository index or history (`git add`, `git commit`, `git checkout`, `git stash`) require sandbox bypass (`BypassSandbox: true`).
+- **Sandbox & Git Operations**: Project workspace files are writable in the standard sandbox, but `.git/` is mounted read-only. Use standard shell commands (`mv`, `cp`, `mkdir`) inside sandbox. Any Git commands mutating repository index or history (`git add`, `git commit`, `git checkout`, `git stash`) require sandbox bypass (`BypassSandbox: true`).
 - For documentation-only changes, state that Unity validation was not run.
