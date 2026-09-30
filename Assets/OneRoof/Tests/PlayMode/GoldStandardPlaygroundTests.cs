@@ -56,7 +56,7 @@ namespace OneRoof.Tests.PlayMode
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.LockedFacade);
                 yield return null;
                 Assert.That(tower.ExteriorPresenter.FacadeEnvelopeAlpha, Is.EqualTo(1f));
-                Assert.That(tower.ResidentPresenter.VisibleRigCount, Is.LessThanOrEqualTo(60));
+                Assert.That(tower.ResidentPresenter.VisibleRigCount, Is.LessThanOrEqualTo(tower.GetComponent<NpcViewPool>().MaxCapacity));
                 Capture(camera, Path.Combine(directory, "facade-street-close.png"));
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.LockedCutaway);
                 yield return null;
@@ -136,7 +136,7 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(tower.StructurePresenter.RenderedFloorCount, Is.EqualTo(30));
                 Assert.That(playground.Environment.TrafficCount, Is.EqualTo(12));
                 Assert.That(playground.Environment.GetComponentsInChildren<Collider>(), Is.Empty);
-                Assert.That(tower.GetComponent<NpcViewPool>().TotalInstantiatedCount, Is.LessThanOrEqualTo(60));
+                Assert.That(tower.GetComponent<NpcViewPool>().TotalInstantiatedCount, Is.LessThanOrEqualTo(tower.GetComponent<NpcViewPool>().MaxCapacity));
                 var clock = playground.Environment.AnimationClock;
                 yield return new WaitForSeconds(.1f);
                 Assert.That(playground.Environment.AnimationClock, Is.GreaterThan(clock));

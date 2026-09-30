@@ -34,6 +34,8 @@ namespace OneRoof.Presentation.Tower
         public void SetPaused(bool paused) => _isPaused = paused;
 
         [SerializeField] private TowerStartMode _startMode = TowerStartMode.StandardFiveFloor;
+        [SerializeField] private ResidentPresentationSettings _residentPresentation = new ResidentPresentationSettings();
+        public ResidentPresentationSettings ResidentPresentation => _residentPresentation;
 
         private TowerSimulationSession _sim; private ModeShellSession _mode;
         private long _lastVisualVersion = -1;
@@ -104,6 +106,7 @@ namespace OneRoof.Presentation.Tower
         public void Initialize()
         {
             if (_sim != null) return;
+            var presentation = (_residentPresentation ?? new ResidentPresentationSettings()).ValidatedCopy();
             _sim = IsGoldStandardCity ? TowerSimulationSession.CreateGoldStandardCity() :
                 IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
             // Seed weather from world hash for determinism per save
@@ -121,7 +124,12 @@ namespace OneRoof.Presentation.Tower
             _structure.BindFloorDeckPresenter(_floorDecks);
             _exterior.Initialize(transform, _worldMat, _colorBlock);
             _elevator.Initialize(transform, _worldMat, _colorBlock);
-            _room.Initialize(transform, _worldMat, _colorBlock); _resident.ViewPool = Ensure<NpcViewPool>(); _resident.ViewPool.MaxCapacity = 60; _resident.Initialize(transform);
+            _room.Initialize(transform, _worldMat, _colorBlock);
+            _resident.ConfigurePresentation(presentation);
+            _resident.ViewPool = Ensure<NpcViewPool>();
+            _resident.ViewPool.MaxCapacity = presentation.SkeletalCapacity;
+            _resident.ViewPool.Prewarm(Math.Min(presentation.PrewarmCount, _sim.ResidentCount));
+            _resident.Initialize(transform);
             InitSubcomponents(); CreateWorldGeometry();
         }
 
@@ -181,7 +189,7 @@ namespace OneRoof.Presentation.Tower
             }
         }
 
-        private void OnDestroy() { OnDisable(); _atmosphere?.Clear(); _outside?.Clear(); _exterior.Dispose(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
+        private void OnDestroy() { OnDisable(); _resident.Clear(); _atmosphere?.Clear(); _outside?.Clear(); _exterior.Dispose(); if (_worldMat != null) { if (UnityEngine.Application.isPlaying) Destroy(_worldMat); else DestroyImmediate(_worldMat); } }
 
         private bool _needsVisualSnapshot = true;
 

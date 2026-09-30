@@ -40,14 +40,14 @@ Managed via `RoomBackdropPresenter.cs` and `FloorThemeCatalog.cs`. Backdrops aut
 
 ## 3. Environment Prop Catalog (`Resources/Props/`)
 
-16 standardized props managed via `PropContentRegistry`, `PropCatalog`, and `RoomFurnishingPresenter`:
+19 standardized props managed via `PropContentRegistry`, `PropCatalog`, and `RoomFurnishingPresenter`:
 
 | Prop Family | Included Items | Interaction Anchors | Primary Room Theme |
 |---|---|---|---|
-| **Domestic Living** | 2-seat sofa, double bed, bookcase, kitchenette, coffee table, potted monstera | `seat-left/right`, `sleep`, `cook`, `browse` | Residential Apartments |
-| **Commercial Diner** | Diner booth, service counter, espresso bar, stool, wall menu board | `seat-booth`, `serve-counter`, `eat-stool` | Restaurants & Diners |
+| **Domestic Living** | 2-seat sofa, double bed, bookcase, kitchenette, coffee table, potted monstera, bedroom vanity dresser | `seat-left/right`, `sleep`, `cook`, `browse`, `groom-left/right` | Residential Apartments |
+| **Commercial Diner** | Diner booth, service counter, espresso bar, stool, wall menu board, recreation game table | `seat-booth`, `serve-counter`, `eat-stool`, `seat-left/right` | Restaurants & Diners |
 | **Corporate Office** | Ergonomic desk with dual monitors, rolling office chair, filing cabinet, whiteboard | `desk-work`, `seat`, `file-browse` | Offices & Workspaces |
-| **Civic & Lobby** | Reception curved desk, directory kiosk, coat rack, bench | `visitor-greet`, `staff-back`, `rest` | Ground Lobby & Skylobbies |
+| **Civic & Lobby** | Reception curved desk, directory kiosk, coat rack, bench, lounge conversation set | `visitor-greet`, `staff-back`, `rest`, `seat-left/right` | Ground Lobby, Skylobbies & Lounges |
 | **Building Systems** | Transformer panel, water pump, HVAC duct, fire extinguisher | `service-panel`, `inspect-meter` | Utility Substations & Shafts |
 
 ---

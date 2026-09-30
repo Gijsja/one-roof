@@ -61,5 +61,27 @@ namespace OneRoof.Application.Tests.EditMode
             Assert.That(projection.Details, Has.Some.Contains("Cars in service:"));
             Assert.That(projection.Details, Has.Some.Contains("Floor 0 queue:"));
         }
+
+        [Test]
+        public void InspectResident_ProjectsSocialTraits_ActiveThoughts_AndTrueRelationshipStage()
+        {
+            var session = new TowerSimulationSession();
+            session.SeedMorningRush();
+            var residentId = session.TransitProjection().Residents[0].ResidentId;
+            var id = new EntityId(residentId);
+            Assert.That(session.Population.TryGetPerson(id, out var person), Is.True);
+
+            person.Wellbeing.AddThought(new Domain.Population.ThoughtMemory("Had delightful conversation", 5f, 0, 1000));
+
+            var otherId = session.TransitProjection().Residents[1].ResidentId;
+            session.Simulation.Factions.GetOrCreateEdge(id, new EntityId(otherId), 100, "romantic spark", Domain.Social.RelationshipStage.Crush, 0.55f);
+
+            var projection = new TowerInspectionService(session).InspectResident(residentId);
+
+            Assert.That(projection, Is.Not.Null);
+            Assert.That(projection.Details, Has.Some.Contains("Social trait:"));
+            Assert.That(projection.Details, Has.Some.Contains("Thought: \"Had delightful conversation\" (+5.0 mood"));
+            Assert.That(projection.Details, Has.Some.Contains("Crush"));
+        }
     }
 }

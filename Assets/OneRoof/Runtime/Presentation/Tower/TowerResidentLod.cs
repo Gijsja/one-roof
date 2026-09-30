@@ -12,6 +12,7 @@ namespace OneRoof.Presentation.Tower
     public sealed partial class TowerResidentPresenter
     {
         private readonly Dictionary<int, SpriteRenderer> _lodViews = new Dictionary<int, SpriteRenderer>();
+        private readonly Queue<SpriteRenderer> _availableLodViews = new Queue<SpriteRenderer>();
         private readonly Dictionary<int, float> _lodWalkPositions = new Dictionary<int, float>();
         private readonly Dictionary<int, float> _lodHeadings = new Dictionary<int, float>();
         private readonly Dictionary<int, int> _lodProjectionIndices = new Dictionary<int, int>();
@@ -42,37 +43,56 @@ namespace OneRoof.Presentation.Tower
             _lodProjectionIndices.Clear();
             VisibleSpriteCount = VisibleMacroCount = VisibleRigCount = 0;
             _macroVertices.Clear(); _macroTriangles.Clear(); _macroColors.Clear();
+            // Retire first so replacement residents can reuse views in this same frame.
+            for (var i = 0; i < snapshot.Residents.Count; i++)
+                _lodActiveIds.Add(snapshot.Residents[i].ResidentId);
+            _lodRetiredIds.Clear();
+            foreach (var pair in _lodViews)
+                if (!_lodActiveIds.Contains(pair.Key)) _lodRetiredIds.Add(pair.Key);
+            foreach (var id in _lodRetiredIds)
+            {
+                var retired = _lodViews[id];
+                retired.enabled = false;
+                retired.transform.parent.gameObject.SetActive(false);
+                _availableLodViews.Enqueue(retired);
+                _lodViews.Remove(id);
+                _lodWalkPositions.Remove(id); _lodHeadings.Remove(id);
+            }
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
                 var resident = snapshot.Residents[i];
-                _lodActiveIds.Add(resident.ResidentId);
                 _lodProjectionIndices[resident.ResidentId] = i;
-                if (_lodViews.TryGetValue(resident.ResidentId, out var existing)) continue;
-                var root = new GameObject($"Resident LOD {resident.ResidentId}");
-                root.transform.SetParent(_parent, false);
-                var spriteObject = new GameObject("Single Sprite");
-                spriteObject.transform.SetParent(root.transform, false);
-                var renderer = spriteObject.AddComponent<SpriteRenderer>();
+                if (_lodViews.ContainsKey(resident.ResidentId)) continue;
+                SpriteRenderer renderer;
+                if (_availableLodViews.Count > 0) renderer = _availableLodViews.Dequeue();
+                else
+                {
+                    var root = new GameObject();
+                    root.transform.SetParent(_parent, false);
+                    var spriteObject = new GameObject("Single Sprite");
+                    spriteObject.transform.SetParent(root.transform, false);
+                    renderer = spriteObject.AddComponent<SpriteRenderer>();
+                }
+                var rootTransform = renderer.transform.parent;
+                rootTransform.name = $"Resident LOD {resident.ResidentId}";
+                rootTransform.localRotation = Quaternion.identity;
+                rootTransform.localScale = Vector3.one;
+                rootTransform.position = InitialLodPosition(resident, topology, rooms);
                 renderer.sprite = ResidentSpriteCatalog.GetResidentSprite(resident.ResidentId - 1);
                 renderer.sharedMaterial = GetLodMaterial();
+                renderer.color = Color.white;
+                renderer.transform.localPosition = Vector3.zero;
+                renderer.transform.localRotation = Quaternion.identity;
+                renderer.transform.localScale = Vector3.one;
                 var record = ResidentSpriteCatalog.GetRecord(resident.ResidentId - 1);
                 var height = record != null ? record.WorldHeight : 0.64f;
                 var width = record != null ? record.WorldWidth : 0.32f;
                 if (renderer.sprite != null)
                     renderer.transform.localScale = new Vector3(width / renderer.sprite.bounds.size.x,
                         height / renderer.sprite.bounds.size.y, 1f);
-                root.transform.position = InitialLodPosition(resident, topology, rooms);
                 renderer.enabled = false;
+                rootTransform.gameObject.SetActive(true);
                 _lodViews[resident.ResidentId] = renderer;
-            }
-            _lodRetiredIds.Clear();
-            foreach (var pair in _lodViews)
-                if (!_lodActiveIds.Contains(pair.Key)) _lodRetiredIds.Add(pair.Key);
-            foreach (var id in _lodRetiredIds)
-            {
-                DestroyLodObject(_lodViews[id].transform.parent.gameObject);
-                _lodViews.Remove(id);
-                _lodWalkPositions.Remove(id); _lodHeadings.Remove(id);
             }
         }
 
@@ -96,15 +116,15 @@ namespace OneRoof.Presentation.Tower
         {
             if (_camera == null) return true;
             var viewport = _camera.WorldToViewportPoint(position + new Vector3(0f, 0.3f, 0f));
-            return viewport.z > 0f && viewport.x >= -0.05f && viewport.x <= 1.05f &&
-                viewport.y >= -0.05f && viewport.y <= 1.05f;
+            return viewport.z > 0f && viewport.x >= -_presentationSettings.ViewportMargin && viewport.x <= 1f + _presentationSettings.ViewportMargin &&
+                viewport.y >= -_presentationSettings.ViewportMargin && viewport.y <= 1f + _presentationSettings.ViewportMargin;
         }
 
         private void SelectRigResidents(TowerProjection snapshot, IReadOnlyCollection<int> undergroundCrewResidentIds)
         {
             _visibleResidentIds.Clear();
             _rigCandidates.Clear(); _rigScores.Clear();
-            var close = _camera == null || _camera.orthographicSize < 8f;
+            var close = _camera == null || _camera.orthographicSize < _presentationSettings.RigFadeEnd;
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
                 var resident = snapshot.Residents[i];
@@ -115,12 +135,12 @@ namespace OneRoof.Presentation.Tower
                 if (!IsLodVisible(position) && !selected) continue;
                 var score = _camera == null ? i : ((Vector2)(position - _camera.transform.position)).sqrMagnitude;
                 // Retain a rig near the allocation boundary to avoid shuffling at tiny zoom/pan changes.
-                if (_viewPool.TryGetView(resident.ResidentId, out _)) score *= 0.8f;
+                if (_viewPool.TryGetView(resident.ResidentId, out _)) score *= _presentationSettings.RetainedRigPreference;
                 _rigScores[resident.ResidentId] = selected ? float.MinValue : score;
                 _rigCandidates.Add(resident.ResidentId);
             }
             _rigCandidates.Sort((a, b) => { var order = _rigScores[a].CompareTo(_rigScores[b]); return order != 0 ? order : a.CompareTo(b); });
-            var limit = Math.Min(_targetResidentCount, Math.Min(_viewPool.MaxCapacity, 60));
+            var limit = Math.Min(_targetResidentCount, _viewPool.MaxCapacity);
             for (var i = 0; i < _rigCandidates.Count && i < limit; i++) _visibleResidentIds.Add(_rigCandidates[i]);
         }
 
@@ -136,7 +156,7 @@ namespace OneRoof.Presentation.Tower
             var visible = resident.Status != TransitResidentStatus.Outside && IsLodVisible(transform.position);
             renderer.enabled = false;
             if (visible) _lodVisibleIds.Add(resident.ResidentId);
-            var rigAlpha = _camera == null ? 1f : 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(6.5f, 8f, _camera.orthographicSize));
+            var rigAlpha = _camera == null ? 1f : 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_presentationSettings.RigFadeStart, _presentationSettings.RigFadeEnd, _camera.orthographicSize));
             if (resident.ResidentId == InspectedResidentId) rigAlpha = 1f;
             if (skeleton != null)
             {
@@ -158,7 +178,7 @@ namespace OneRoof.Presentation.Tower
             var color = Color.Lerp(Color.white, NpcView.ResolveNpcColor(projection), 0.35f);
             var bob = resident.Status == TransitResidentStatus.Walking ? Mathf.Sin(time * 12f + resident.ResidentId) * 0.018f : 0f;
             renderer.transform.localPosition = new Vector3(0f, bob, 0f);
-            var macroAlpha = _camera == null ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(16f, 18f, _camera.orthographicSize));
+            var macroAlpha = _camera == null ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_presentationSettings.MacroFadeStart, _presentationSettings.MacroFadeEnd, _camera.orthographicSize));
             var spriteAlpha = (skeleton != null ? 1f - rigAlpha : 1f) * (1f - macroAlpha);
             if (spriteAlpha > 0.001f)
             {
@@ -225,7 +245,13 @@ namespace OneRoof.Presentation.Tower
         private void ClearLodViews()
         {
             foreach (var renderer in _lodViews.Values) if (renderer != null) DestroyLodObject(renderer.transform.parent.gameObject);
+            while (_availableLodViews.Count > 0)
+            {
+                var renderer = _availableLodViews.Dequeue();
+                if (renderer != null) DestroyLodObject(renderer.transform.parent.gameObject);
+            }
             _lodViews.Clear(); _lodProjectionIndices.Clear();
+            _lodActiveIds.Clear(); _lodRetiredIds.Clear();
             _lodWalkPositions.Clear(); _lodHeadings.Clear();
             DestroyLodObject(_macroObject); _macroObject = null;
             DestroyLodObject(_macroMesh); _macroMesh = null;

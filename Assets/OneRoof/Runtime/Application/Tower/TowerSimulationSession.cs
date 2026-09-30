@@ -25,6 +25,11 @@ namespace OneRoof.Application.Tower
     {
         private TowerSimulation _simulation;
         private TowerProjection _cachedTransitProjection;
+        // Scratch indexes never escape into a published projection. Retain capacity across rebuilds.
+        private readonly Dictionary<EntityId, ElevatorPassenger> _ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
+        private readonly Dictionary<EntityId, ElevatorPassenger> _queuedByPerson = new Dictionary<EntityId, ElevatorPassenger>();
+        private readonly Dictionary<EntityId, int> _roomOccupantCounts = new Dictionary<EntityId, int>();
+        private readonly Dictionary<EntityId, string> _travelPurposes = new Dictionary<EntityId, string>();
         private ElevatorBankCongestionProjection _cachedCongestionProjection;
         private TowerTopologyProjection _cachedTopologyProjection;
         private IReadOnlyList<HouseholdHousingLifecycleProjection> _cachedHousingProjection;
@@ -180,7 +185,7 @@ namespace OneRoof.Application.Tower
         {
             if (_simulation.Population.TryGetPerson(id, out var person))
             {
-                snapshot = new ResidentInspectionSnapshot(person);
+                snapshot = new ResidentInspectionSnapshot(person, _simulation.CurrentTick.Value);
                 return true;
             }
             snapshot = null;
@@ -380,25 +385,25 @@ namespace OneRoof.Application.Tower
             // Index elevator bank passenger states for rush hour and transit visualization
             var snapshot = _simulation.ElevatorBank.Snapshot();
 
-            var ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
+            _ridingByPerson.Clear();
+            _queuedByPerson.Clear();
+            _roomOccupantCounts.Clear();
+            _travelPurposes.Clear();
             foreach (var car in snapshot.Cars)
             {
                 foreach (var p in car.Passengers)
                 {
-                    ridingByPerson[p.PersonId] = p;
+                    _ridingByPerson[p.PersonId] = p;
                 }
             }
 
-            var queuedByPerson = new Dictionary<EntityId, ElevatorPassenger>();
             foreach (var p in snapshot.QueuedPassengers)
             {
-                queuedByPerson[p.PersonId] = p;
+                _queuedByPerson[p.PersonId] = p;
             }
 
-            var roomOccupantCounts = new Dictionary<EntityId, int>();
-            var travelPurposes = new Dictionary<EntityId, string>(_simulation.Transit.ActiveTripCount);
             foreach (var execution in _simulation.Transit.ActiveTrips)
-                travelPurposes[execution.Trip.PersonId] = TravelPurposeLabel(execution.Trip);
+                _travelPurposes[execution.Trip.PersonId] = TravelPurposeLabel(execution.Trip);
             var residents = new List<TransitResidentProjection>(_simulation.ResidentCount);
             var arrivedCount = 0;
 
@@ -413,7 +418,7 @@ namespace OneRoof.Application.Tower
                 int targetFloor = floor;
                 int slotInRoom = 0;
                 int waitTicks = 0;
-                var purposeLabel = travelPurposes.TryGetValue(person.Id, out var travelPurpose)
+                var purposeLabel = _travelPurposes.TryGetValue(person.Id, out var travelPurpose)
                     ? travelPurpose : PurposeLabel(person.CurrentPurpose);
 
                 switch (spatial.Phase)
@@ -426,12 +431,12 @@ namespace OneRoof.Application.Tower
                         arrivedCount++;
                         if (roomId.HasValue)
                         {
-                            if (!roomOccupantCounts.TryGetValue(roomId.Value, out var count))
+                            if (!_roomOccupantCounts.TryGetValue(roomId.Value, out var count))
                             {
                                 count = 0;
                             }
                             slotInRoom = count;
-                            roomOccupantCounts[roomId.Value] = count + 1;
+                            _roomOccupantCounts[roomId.Value] = count + 1;
                         }
                         break;
 
@@ -441,7 +446,7 @@ namespace OneRoof.Application.Tower
 
                     case ResidentMovementPhase.Queued:
                         status = TransitResidentStatus.Queued;
-                        if (queuedByPerson.TryGetValue(person.Id, out var qp))
+                        if (_queuedByPerson.TryGetValue(person.Id, out var qp))
                         {
                             targetFloor = qp.DestinationFloor;
                             waitTicks = (int)qp.WaitTicks;
@@ -450,7 +455,7 @@ namespace OneRoof.Application.Tower
 
                     case ResidentMovementPhase.Riding:
                         status = TransitResidentStatus.Riding;
-                        if (ridingByPerson.TryGetValue(person.Id, out var rp))
+                        if (_ridingByPerson.TryGetValue(person.Id, out var rp))
                         {
                             targetFloor = rp.DestinationFloor;
                             waitTicks = (int)rp.WaitTicks;
@@ -460,6 +465,12 @@ namespace OneRoof.Application.Tower
                     default:
                         status = TransitResidentStatus.InRoom;
                         break;
+                }
+
+                string recentThought = null;
+                if (person.Wellbeing.ActiveThoughts != null && person.Wellbeing.ActiveThoughts.Count > 0)
+                {
+                    recentThought = person.Wellbeing.ActiveThoughts[person.Wellbeing.ActiveThoughts.Count - 1].Description;
                 }
 
                 residents.Add(new TransitResidentProjection(
@@ -472,7 +483,8 @@ namespace OneRoof.Application.Tower
                     activity,
                     slotInRoom,
                     waitTicks,
-                    purposeLabel));
+                    purposeLabel,
+                    recentThought));
             }
 
             var elevators = new List<ElevatorProjection>(_simulation.ElevatorBank.Cars.Count);

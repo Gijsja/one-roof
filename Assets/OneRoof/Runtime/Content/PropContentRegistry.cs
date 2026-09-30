@@ -238,7 +238,31 @@ namespace OneRoof.Content
                     "Props/prop_utility_waste_hopper",
                     2, 1, "tall", "solid",
                     new[] { "work-front" },
-                    new[] { "utility:waste_collection", "utility:waste_chute" })
+                    new[] { "utility:waste_collection", "utility:waste_chute" }),
+
+                new PropContentRecord(
+                    "prop.furniture.conversationset.v1",
+                    "Lounge Conversation Set",
+                    "Props/prop_lounge_conversation_set",
+                    2, 1, "low", "solid",
+                    new[] { "seat-left", "seat-right" },
+                    new[] { "residential", "lobby", "diner" }),
+
+                new PropContentRecord(
+                    "prop.furniture.gametable.v1",
+                    "Recreation Game Table",
+                    "Props/prop_recreation_game_table",
+                    2, 1, "medium", "solid",
+                    new[] { "seat-left", "seat-right" },
+                    new[] { "residential", "restaurant", "diner", "office" }),
+
+                new PropContentRecord(
+                    "prop.furniture.vanitydresser.v1",
+                    "Bedroom Vanity Dresser",
+                    "Props/prop_residential_vanity_dresser",
+                    2, 2, "tall", "solid",
+                    new[] { "groom-left", "groom-right" },
+                    new[] { "residential" })
             };
 
             RecordsById = new Dictionary<string, PropContentRecord>(StringComparer.OrdinalIgnoreCase);

@@ -67,6 +67,9 @@ namespace OneRoof.Presentation.Furnishings
             if (contentId.Contains("bench") || contentId.Contains("maint") || contentId.Contains("toolcabinet") || contentId.Contains("partsshelf")) return new Color(0.42f, 0.32f, 0.22f);
             if (contentId.Contains("security") || contentId.Contains("monitor") || contentId.Contains("locker")) return new Color(0.25f, 0.32f, 0.48f);
             if (contentId.Contains("utility") || contentId.Contains("substation") || contentId.Contains("pump") || contentId.Contains("hopper") || contentId.Contains("pipechase")) return new Color(0.35f, 0.42f, 0.48f);
+            if (contentId.Contains("conversationset") || contentId.Contains("conversation")) return new Color(0.50f, 0.35f, 0.25f);
+            if (contentId.Contains("gametable")) return new Color(0.20f, 0.45f, 0.28f);
+            if (contentId.Contains("vanitydresser") || contentId.Contains("vanity")) return new Color(0.60f, 0.42f, 0.35f);
             return new Color(0.35f, 0.40f, 0.45f);
         }
 

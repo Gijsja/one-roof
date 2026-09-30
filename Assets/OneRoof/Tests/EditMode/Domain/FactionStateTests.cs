@@ -242,6 +242,16 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(state.Factions[0].PreviousPressure, Is.Zero);
         }
 
+        [Test]
+        public void FromSaveData_WithNullPopulation_ReturnsEmptyStateSafely()
+        {
+            var saved = new FactionSaveData { version = 3 };
+            var state = FactionState.FromSaveData(saved, null);
+            Assert.That(state, Is.Not.Null);
+            Assert.That(state.Edges.Count, Is.Zero);
+            Assert.That(state.Supports.Count, Is.Zero);
+        }
+
         private static FactionRecord Find(TowerSimulation sim, string id)
         {
             foreach (var record in sim.Factions.Factions) if (record.Id == id) return record;

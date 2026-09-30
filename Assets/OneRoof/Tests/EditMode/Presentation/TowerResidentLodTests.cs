@@ -62,6 +62,119 @@ namespace OneRoof.Presentation.Tests.EditMode
             if (macro > 0) Assert.That(_presenter.MacroMesh.vertexCount, Is.EqualTo(300 * 16));
         }
 
+        [TestCase(9f, 60, 240, 0)]
+        [TestCase(17f, 0, 300, 0)]
+        [TestCase(25f, 0, 0, 300)]
+        public void ConfiguredFadeRanges_AreCapturedBeforeInitialization(float zoom, int rigs, int sprites, int macro)
+        {
+            _presenter.Clear();
+            var settings = new ResidentPresentationSettings
+            {
+                RigFadeStart = 10f, RigFadeEnd = 14f,
+                MacroFadeStart = 20f, MacroFadeEnd = 22f
+            };
+            _presenter = new TowerResidentPresenter { ViewPool = _pool, PresentationCamera = _camera };
+            _presenter.ConfigurePresentation(settings);
+            // Authoring changes after capture must not alter the initialized presentation.
+            settings.RigFadeStart = 6.5f; settings.RigFadeEnd = 8f;
+            settings.MacroFadeStart = 16f; settings.MacroFadeEnd = 18f;
+            _presenter.Initialize(_holder.transform);
+            _presenter.EnsureResidentViews(300);
+            _camera.orthographicSize = zoom;
+            _presenter.UpdateResidentPositions(Snapshot(), null, 0f);
+            Assert.That(_presenter.VisibleResidentCount, Is.EqualTo(300));
+            Assert.That(_presenter.VisibleRigCount, Is.EqualTo(rigs));
+            Assert.That(_presenter.VisibleSpriteCount, Is.EqualTo(sprites));
+            Assert.That(_presenter.VisibleMacroCount, Is.EqualTo(macro));
+        }
+
+        [TestCase(5f)]
+        [TestCase(10f)]
+        [TestCase(20f)]
+        public void OutsideAndUndergroundResidents_AreExcludedAtEveryLodTier(float zoom)
+        {
+            _camera.orthographicSize = zoom;
+            _presenter.InspectedResidentId = 2;
+            var residents = new[]
+            {
+                new TransitResidentProjection(1, 0, TransitResidentStatus.Outside),
+                new TransitResidentProjection(2, 0, TransitResidentStatus.Walking),
+                new TransitResidentProjection(3, 0, TransitResidentStatus.Walking)
+            };
+            _presenter.UpdateResidentPositions(new TowerProjection(0, 0, 0, 0,
+                residents, Array.Empty<ElevatorProjection>()), null, 0f,
+                undergroundCrewResidentIds: new[] { 2 });
+            Assert.That(_presenter.VisibleResidentCount, Is.EqualTo(1));
+            Assert.That(_pool.TryGetView(1, out _), Is.False);
+            Assert.That(_pool.TryGetView(2, out _), Is.False);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out _), Is.False);
+            Assert.That(_presenter.TryGetResidentView(1, out _, out _, out _), Is.False);
+            Assert.That(_presenter.TryGetResidentView(2, out _, out _, out _), Is.True);
+        }
+
+        [TestCase(3)]
+        [TestCase(80)]
+        public void ConfiguredCapacity_DeterminesRigCount_AndPreservesInspectedPriority(int capacity)
+        {
+            _pool.MaxCapacity = capacity;
+            _camera.orthographicSize = 5f;
+            _presenter.InspectedResidentId = 300;
+            _presenter.UpdateResidentPositions(Snapshot(), null, 0f);
+            Assert.That(_pool.ActiveCount, Is.EqualTo(capacity));
+            Assert.That(_presenter.VisibleRigCount, Is.EqualTo(capacity));
+            Assert.That(_pool.TryGetView(300, out _), Is.True);
+            Assert.That(_presenter.VisibleResidentCount, Is.EqualTo(300));
+        }
+
+        private static TowerProjection SingleResident(int id, float cellX)
+        {
+            return new TowerProjection(0, 0, 0, 0,
+                new[] { new TransitResidentProjection(id, 0, TransitResidentStatus.Walking, 0, cellX) },
+                Array.Empty<ElevatorProjection>());
+        }
+
+        [Test]
+        public void ResidentTurnover_ReusesLodRoot_AndResetsFacingAppearanceAndPicking()
+        {
+            _camera.orthographicSize = 10f;
+            _presenter.UpdateResidentPositions(SingleResident(1, 8f), null, 1f);
+            _presenter.UpdateResidentPositions(SingleResident(1, 6f), null, 1f);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out var previousRoot), Is.True);
+            Assert.That(previousRoot.localScale.x, Is.LessThan(0f));
+            var renderer = previousRoot.GetComponentInChildren<SpriteRenderer>();
+            renderer.color = Color.clear;
+            renderer.transform.localPosition = Vector3.one;
+            previousRoot.localRotation = Quaternion.Euler(0f, 0f, 30f);
+
+            _presenter.UpdateResidentPositions(SingleResident(2, 10f), null, 0f);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out var sprite, out var replacementRoot), Is.True);
+            Assert.That(replacementRoot, Is.SameAs(previousRoot));
+            Assert.That(replacementRoot.name, Is.EqualTo("Resident LOD 2"));
+            Assert.That(replacementRoot.localScale.x, Is.GreaterThan(0f));
+            Assert.That(replacementRoot.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(sprite, Is.SameAs(ResidentSpriteCatalog.GetResidentSprite(1)));
+            Assert.That(renderer.color.a, Is.EqualTo(1f));
+            Assert.That(renderer.transform.localPosition.x, Is.Zero);
+            Assert.That(renderer.transform.localPosition.y, Is.EqualTo(Mathf.Sin(2f) * 0.018f).Within(0.0001f));
+            Assert.That(_holder.transform.childCount, Is.EqualTo(2), "One LOD root and the macro batch only.");
+        }
+
+        [Test]
+        public void EmptyPopulation_RetainsInactiveLodForReuse_AndClearDestroysIt()
+        {
+            _camera.orthographicSize = 10f;
+            _presenter.UpdateResidentPositions(SingleResident(1, 8f), null, 0f);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out var root), Is.True);
+            _presenter.UpdateResidentPositions(new TowerProjection(0, 0, 0, 0,
+                Array.Empty<TransitResidentProjection>(), Array.Empty<ElevatorProjection>()), null, 0f);
+            Assert.That(root.gameObject.activeSelf, Is.False);
+            Assert.That(_presenter.TryGetResidentView(0, out _, out _, out _), Is.False);
+            Assert.That(_presenter.TryGetResidentAt(Vector2.zero, 100f, out _, out _, out _, out _), Is.False);
+            _presenter.Clear();
+            Assert.That(root == null, Is.True);
+            Assert.That(_holder.transform.childCount, Is.Zero);
+        }
+
         [Test]
         public void ZoomRoundTrip_DoesNotLoseResidents_AndCanPickMacroResident()
         {

@@ -52,12 +52,13 @@ namespace OneRoof.Application.Social
 
     public sealed class ResidentTieProjection
     {
-        public ResidentTieProjection(int firstId, int secondId, float affinity, float previousAffinity, long lastContactTick, long lastMeaningfulTick, string cause)
-        { FirstId = firstId; SecondId = secondId; Affinity = affinity; PreviousAffinity = previousAffinity; LastContactTick = lastContactTick; LastMeaningfulTick = lastMeaningfulTick; Cause = cause; }
+        public ResidentTieProjection(int firstId, int secondId, float affinity, float previousAffinity, long lastContactTick, long lastMeaningfulTick, string cause, RelationshipStage stage = RelationshipStage.Stranger)
+        { FirstId = firstId; SecondId = secondId; Affinity = affinity; PreviousAffinity = previousAffinity; LastContactTick = lastContactTick; LastMeaningfulTick = lastMeaningfulTick; Cause = cause; Stage = stage; }
         public int FirstId { get; }
         public int SecondId { get; }
         public float Affinity { get; }
         public float PreviousAffinity { get; }
+        public RelationshipStage Stage { get; }
         public string Trend
         {
             get
@@ -100,7 +101,7 @@ namespace OneRoof.Application.Social
             }
             var ties = new List<ResidentTieProjection>();
             foreach (var edge in social.Edges)
-                ties.Add(new ResidentTieProjection(edge.First.Value, edge.Second.Value, edge.Affinity, edge.PreviousAffinity, edge.LastContactTick, edge.LastMeaningfulTick, edge.Cause));
+                ties.Add(new ResidentTieProjection(edge.First.Value, edge.Second.Value, edge.Affinity, edge.PreviousAffinity, edge.LastContactTick, edge.LastMeaningfulTick, edge.Cause, edge.Stage));
             return new FactionProjection(summaries, residents, ties);
         }
         private static string Name(string id)

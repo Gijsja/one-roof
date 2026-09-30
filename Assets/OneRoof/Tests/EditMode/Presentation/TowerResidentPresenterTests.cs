@@ -432,5 +432,36 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Assert.That(color.grayscale, Is.LessThan(0.97f), $"{layer} fallback must not read as blank white.");
             }
         }
+
+        [Test]
+        public void SocialThoughts_TriggerRomanticAndDisputeEmotes()
+        {
+            var session = new TowerSimulationSession();
+            var topology = session.TopologyProjection();
+
+            // Romantic thought triggers Heart or Blush
+            var romanticSnapshot = new TowerProjection(1L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.InRoom, 0, 0f, 1000, ActivityKind.Idle, 0, 0, "leisure", "Flirted with resident 101")
+                },
+                new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(romanticSnapshot, topology, 0f);
+            var romanticEmote = _presenter.ResidentSkeletons[0].CurrentEmote;
+            Assert.That(romanticEmote == OneRoof.Content.NpcEmoteKind.Heart || romanticEmote == OneRoof.Content.NpcEmoteKind.Blush, Is.True,
+                "Romantic thought must trigger Heart or Blush emote.");
+
+            // Dispute/argument thought triggers Anger or BrokenHeart
+            var disputeSnapshot = new TowerProjection(2L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.InRoom, 0, 0f, 1000, ActivityKind.Idle, 0, 0, "idle", "Heated argument with resident 102")
+                },
+                new List<ElevatorProjection>());
+            _presenter.UpdateResidentPositions(disputeSnapshot, topology, 0.1f);
+            var disputeEmote = _presenter.ResidentSkeletons[0].CurrentEmote;
+            Assert.That(disputeEmote == OneRoof.Content.NpcEmoteKind.Anger || disputeEmote == OneRoof.Content.NpcEmoteKind.BrokenHeart, Is.True,
+                "Dispute thought must trigger Anger or BrokenHeart emote.");
+        }
     }
 }

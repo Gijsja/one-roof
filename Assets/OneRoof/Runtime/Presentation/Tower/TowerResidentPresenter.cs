@@ -19,6 +19,15 @@ namespace OneRoof.Presentation.Tower
     /// </summary>
     public sealed partial class TowerResidentPresenter
     {
+        private ResidentPresentationSettings _presentationSettings = new ResidentPresentationSettings();
+
+        /// <summary>Captures validated authoring settings before any views are created.</summary>
+        public void ConfigurePresentation(ResidentPresentationSettings settings)
+        {
+            if (_parent != null) throw new InvalidOperationException("Configure resident presentation before initialization.");
+            _presentationSettings = (settings ?? throw new ArgumentNullException(nameof(settings))).ValidatedCopy();
+        }
+
         private Transform _parent;
         private readonly List<Renderer> _residentViews = new List<Renderer>();
         private readonly List<NpcSkeletalHierarchy> _residentSkeletons = new List<NpcSkeletalHierarchy>();
@@ -424,6 +433,10 @@ namespace OneRoof.Presentation.Tower
                     else if (resident.WaitTicks >= 5) skeletal?.SetEmote(NpcEmoteKind.Ellipsis);
                     else skeletal?.SetEmote(NpcEmoteKind.None);
                 }
+                else if (HasSocialEmote(resident, out var socialEmote))
+                {
+                    skeletal?.SetEmote(socialEmote);
+                }
                 else if (resident.Status == TransitResidentStatus.InRoom)
                 {
                     switch (resident.Activity)
@@ -587,6 +600,33 @@ namespace OneRoof.Presentation.Tower
                 }
             }
             return 0;
+        }
+
+        private static bool HasSocialEmote(TransitResidentProjection resident, out NpcEmoteKind emote)
+        {
+            emote = NpcEmoteKind.None;
+            var thought = resident.RecentThought;
+            if (string.IsNullOrEmpty(thought)) return false;
+
+            if (thought.IndexOf("Flirt", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("special", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("crush", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("romantic", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                emote = (Math.Abs(resident.ResidentId) % 2 == 0) ? NpcEmoteKind.Heart : NpcEmoteKind.Blush;
+                return true;
+            }
+
+            if (thought.IndexOf("argument", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("spat", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("insult", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                thought.IndexOf("rival", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                emote = (Math.Abs(resident.ResidentId) % 2 == 0) ? NpcEmoteKind.Anger : NpcEmoteKind.BrokenHeart;
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -1,13 +1,30 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using OneRoof.Domain.Population;
 
 namespace OneRoof.Application.Inspectors
 {
+    public readonly struct ThoughtMemorySnapshot
+    {
+        public ThoughtMemorySnapshot(string description, float moodDelta, long remainingTicks, int targetResidentId)
+        {
+            Description = description ?? string.Empty;
+            MoodDelta = moodDelta;
+            RemainingTicks = remainingTicks;
+            TargetResidentId = targetResidentId;
+        }
+
+        public string Description { get; }
+        public float MoodDelta { get; }
+        public long RemainingTicks { get; }
+        public int TargetResidentId { get; }
+    }
+
     /// <summary>A resident's inspection facts captured independently of later simulation ticks.</summary>
     public sealed class ResidentInspectionSnapshot
     {
-        internal ResidentInspectionSnapshot(PersonRecord person)
+        internal ResidentInspectionSnapshot(PersonRecord person, long currentTick = 0)
         {
             Activity = person.CurrentActivity;
             HouseholdId = person.HouseholdId.Value;
@@ -27,6 +44,27 @@ namespace OneRoof.Application.Inspectors
             Commute = person.Wellbeing.Commute;
             RentBurden = person.Wellbeing.RentBurden;
             Grievances = new ReadOnlyCollection<string>(new List<string>(person.Wellbeing.Grievances));
+
+            var traits = new List<SocialTraitKind>();
+            if (person.SocialTraits != null)
+            {
+                for (var i = 0; i < person.SocialTraits.Count; i++)
+                    traits.Add(person.SocialTraits[i].Kind);
+            }
+            SocialTraits = new ReadOnlyCollection<SocialTraitKind>(traits);
+
+            var thoughts = new List<ThoughtMemorySnapshot>();
+            if (person.Wellbeing.ActiveThoughts != null)
+            {
+                for (var i = 0; i < person.Wellbeing.ActiveThoughts.Count; i++)
+                {
+                    var t = person.Wellbeing.ActiveThoughts[i];
+                    var remaining = Math.Max(0, t.ExpiresAtTick - (currentTick > 0 ? currentTick : t.CreatedAtTick));
+                    thoughts.Add(new ThoughtMemorySnapshot(t.Description, t.MoodDelta, remaining, t.TargetResidentId.Value));
+                }
+            }
+            ActiveThoughts = new ReadOnlyCollection<ThoughtMemorySnapshot>(thoughts);
+            TotalThoughtMoodDelta = person.Wellbeing.TotalThoughtMoodDelta;
         }
 
         public ActivityKind Activity { get; }
@@ -47,5 +85,8 @@ namespace OneRoof.Application.Inspectors
         public float Commute { get; }
         public float RentBurden { get; }
         public IReadOnlyList<string> Grievances { get; }
+        public IReadOnlyList<SocialTraitKind> SocialTraits { get; }
+        public IReadOnlyList<ThoughtMemorySnapshot> ActiveThoughts { get; }
+        public float TotalThoughtMoodDelta { get; }
     }
 }

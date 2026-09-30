@@ -76,6 +76,7 @@ namespace OneRoof.Domain.Population
             {
                 var person = population.Persons[i];
                 if (person.CurrentLocation.IsOutside || !person.CurrentRoomId.IsValid) continue;
+                if (topology != null && !topology.Rooms.ContainsKey(person.CurrentRoomId)) continue;
                 if (person.CurrentActivity == ActivityKind.Leisure || person.CurrentActivity == ActivityKind.Idle)
                 {
                     var roomId = person.CurrentRoomId.Value;
@@ -297,6 +298,11 @@ namespace OneRoof.Domain.Population
                 }
             }
 
+            if (edge == null && factions != null && (kind == SocialInteractionKind.RomanticFlirtation || kind == SocialInteractionKind.DeepConversation || kind == SocialInteractionKind.InsultSpat || nextStage != RelationshipStage.Stranger || Math.Abs(nextAffinity) > 0.001f))
+            {
+                edge = factions.GetOrCreateEdge(a.Id, b.Id, currentTick.Value, context, nextStage, nextAffinity);
+            }
+
             if (edge != null)
             {
                 edge.PreviousAffinity = edge.Affinity;
@@ -353,6 +359,8 @@ namespace OneRoof.Domain.Population
             }
             else if (tA == SocialTraitKind.Charismatic)
             {
+                if (tB == SocialTraitKind.HopelessRomantic) return 0.35f;
+                if (tB == SocialTraitKind.HotHeaded) return 0.15f;
                 if (tB == SocialTraitKind.Jealous) return -0.25f;
                 if (tB == SocialTraitKind.Abrasive) return -0.20f;
                 return 0.20f;

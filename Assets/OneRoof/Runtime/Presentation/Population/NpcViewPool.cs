@@ -5,9 +5,9 @@ using UnityEngine;
 namespace OneRoof.Presentation.Population
 {
     /// <summary>
-    /// Fixed-capacity object pool for <see cref="NpcView"/> instances.
-    /// Enforces the strict performance budget of at most 40 visible views
-    /// while 50 or more simulation residents persist in Domain state.
+    /// Configurable-capacity skeletal view pool. The standalone default is 40;
+    /// Tower presentation supplies its own budget. Sprite and macro LOD views
+    /// represent residents beyond the skeletal budget.
     /// </summary>
     public sealed class NpcViewPool : MonoBehaviour
     {

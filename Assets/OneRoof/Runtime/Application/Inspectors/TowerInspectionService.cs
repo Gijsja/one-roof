@@ -64,11 +64,15 @@ namespace OneRoof.Application.Inspectors
             }
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
+            if (person.SocialTraits != null)
+                foreach (var socialTrait in person.SocialTraits) details.Add($"Social trait: {socialTrait}");
             details.Add($"Satisfaction: {person.Satisfaction:P0}");
             details.Add($"Strain: {person.Strain:P0}");
             details.Add($"Commute quality: {person.Commute:P0}");
             details.Add($"Rent burden: {person.RentBurden:P0}");
             foreach (var facet in person.PersonalityFacets) details.Add($"Personality: {facet.Kind}");
+            if (person.ActiveThoughts != null)
+                foreach (var t in person.ActiveThoughts) details.Add($"Thought: \"{t.Description}\" ({t.MoodDelta:+0.0;-0.0} mood, {t.RemainingTicks} ticks left)");
             foreach (var grievance in person.Grievances) details.Add($"Grievance: {grievance}");
             var social = FactionProjectionService.Capture(_session.Simulation);
             var residentLinks = new List<ResidentInspectorLink>();
@@ -79,10 +83,9 @@ namespace OneRoof.Application.Inspectors
                 if (tie.FirstId == residentId || tie.SecondId == residentId)
                 {
                     var counterpart = tie.FirstId == residentId ? tie.SecondId : tie.FirstId;
-                    var band = tie.Affinity >= .2f ? "close" : tie.Affinity <= -.2f ? "strained" : "acquaintance";
                     var meaningful = tie.LastMeaningfulTick > 0 ? $"meaningful contact at tick {tie.LastMeaningfulTick}" : "no meaningful contact recorded";
                     var reason = tie.LastMeaningfulTick > 0 ? $"last affinity cause: {tie.Cause}" : $"encounter context: {tie.Cause}";
-                    details.Add($"Tie: resident #{counterpart}, {band} ({tie.Affinity:+0.00;-0.00;0.00}, {tie.Trend}); last encounter at tick {tie.LastContactTick}; {meaningful}; {reason}.");
+                    details.Add($"Tie: resident #{counterpart}, {tie.Stage} ({tie.Affinity:+0.00;-0.00;0.00}, {tie.Trend}); last encounter at tick {tie.LastContactTick}; {meaningful}; {reason}.");
                     residentLinks.Add(new ResidentInspectorLink(counterpart));
                 }
 

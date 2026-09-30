@@ -102,6 +102,67 @@ namespace OneRoof.Application.Tests.EditMode
         }
 
         [Test]
+        public void TransitProjection_SameTickReusesSnapshotAndMutationsInvalidateIt()
+        {
+            var session = new TowerSimulationSession();
+            var initial = session.TransitProjection();
+            Assert.That(session.TransitProjection(), Is.SameAs(initial));
+
+            session.AdvanceOneTick();
+            var advanced = session.TransitProjection();
+            Assert.That(advanced, Is.Not.SameAs(initial));
+            Assert.That(advanced.Tick, Is.EqualTo(session.CurrentTick));
+
+            session.SeedMorningRush();
+            var seeded = session.TransitProjection();
+            Assert.That(seeded, Is.Not.SameAs(advanced));
+            Assert.That(session.AddCapacity().Accepted, Is.True);
+            var expanded = session.TransitProjection();
+            Assert.That(expanded, Is.Not.SameAs(seeded));
+            Assert.That(expanded.Elevators.Count, Is.EqualTo(seeded.Elevators.Count + 1));
+        }
+
+        [Test]
+        public void TransitProjection_RetainedSnapshotsSurviveLaterRebuildsAndReset()
+        {
+            var session = new TowerSimulationSession();
+            session.SeedMorningRush();
+            var retained = new List<TowerProjection>();
+            var residentCopies = new List<TransitResidentProjection[]>();
+            var elevatorCopies = new List<ElevatorProjection[]>();
+            var passengerCopies = new List<List<int[]>>();
+            for (var tick = 0; tick < 40; tick++)
+            {
+                var projection = session.TransitProjection();
+                retained.Add(projection);
+                residentCopies.Add(new List<TransitResidentProjection>(projection.Residents).ToArray());
+                elevatorCopies.Add(new List<ElevatorProjection>(projection.Elevators).ToArray());
+                var passengers = new List<int[]>();
+                foreach (var elevator in projection.Elevators)
+                    passengers.Add(new List<int>(elevator.PassengerIds).ToArray());
+                passengerCopies.Add(passengers);
+                session.AdvanceOneTick();
+            }
+
+            session.ResetToGroundFloorStart();
+            Assert.That(session.TransitProjection().Residents, Is.Empty);
+            session.Reset();
+            var reset = session.TransitProjection();
+            var fresh = new TowerSimulationSession().TransitProjection();
+            Assert.That(reset.Residents, Is.EqualTo(fresh.Residents),
+                "Scratch indexes must not leak room slots or travel purposes through reset.");
+
+            for (var snapshot = 0; snapshot < retained.Count; snapshot++)
+            {
+                Assert.That(retained[snapshot].Residents, Is.EqualTo(residentCopies[snapshot]));
+                Assert.That(retained[snapshot].Elevators, Is.EqualTo(elevatorCopies[snapshot]));
+                for (var car = 0; car < retained[snapshot].Elevators.Count; car++)
+                    Assert.That(retained[snapshot].Elevators[car].PassengerIds,
+                        Is.EqualTo(passengerCopies[snapshot][car]));
+            }
+        }
+
+        [Test]
         public void CongestionProjection_SameTick_ReusesImmutableSnapshot()
         {
             var session = new TowerSimulationSession();

@@ -47,7 +47,13 @@ namespace OneRoof.Domain.Population
 
         public void PruneExpiredThoughts(long currentTick)
         {
-            _thoughts.RemoveAll(t => t.IsExpiredAt(currentTick));
+            for (var i = _thoughts.Count - 1; i >= 0; i--)
+            {
+                if (_thoughts[i].IsExpiredAt(currentTick))
+                {
+                    _thoughts.RemoveAt(i);
+                }
+            }
         }
 
         public void ClearThoughts()

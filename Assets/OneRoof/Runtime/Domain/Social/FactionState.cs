@@ -188,6 +188,7 @@ namespace OneRoof.Domain.Social
         { if (a >= b && a >= c) return aa; return b >= c ? bb : cc; }
         private static string Key(int person, string faction) => person + ":" + faction;
         private void Increment(int id) { _degree.TryGetValue(id, out var n); _degree[id] = n + 1; }
+        private void Decrement(int id) { if (_degree.TryGetValue(id, out var n) && n > 0) _degree[id] = n - 1; }
         private static void AddBucket(Dictionary<int, List<PersonRecord>> buckets, int key, PersonRecord person, long tick)
         {
             if (!buckets.TryGetValue(key, out var list)) { list = new List<PersonRecord>(MaxEdgesPerResident + 1); buckets[key] = list; }
@@ -263,7 +264,13 @@ namespace OneRoof.Domain.Social
             return null;
         }
 
-        public RelationshipEdge GetOrCreateEdge(EntityId a, EntityId b, long tick, string cause, RelationshipStage initialStage = RelationshipStage.Acquaintance)
+        public RelationshipEdge GetOrCreateEdge(
+            EntityId a,
+            EntityId b,
+            long tick,
+            string cause,
+            RelationshipStage initialStage = RelationshipStage.Stranger,
+            float initialAffinity = 0f)
         {
             if (a == b) return null;
             if (a.Value > b.Value) { var tmp = a; a = b; b = tmp; }
@@ -278,14 +285,73 @@ namespace OneRoof.Domain.Social
             }
             _degree.TryGetValue(a.Value, out var da);
             _degree.TryGetValue(b.Value, out var db);
-            if (da >= MaxEdgesPerResident || db >= MaxEdgesPerResident) return null;
+            if (da >= MaxEdgesPerResident || db >= MaxEdgesPerResident)
+            {
+                var isMeaningful = initialStage != RelationshipStage.Stranger || Math.Abs(initialAffinity) > 0.001f;
+                if (!isMeaningful) return null;
 
-            var edge = new RelationshipEdge(a, b, 0f, tick, cause, 0, 0, null, initialStage);
+                RelationshipEdge evictA = null;
+                if (da >= MaxEdgesPerResident)
+                {
+                    for (var i = 0; i < _edges.Count; i++)
+                    {
+                        var e = _edges[i];
+                        if ((e.First == a || e.Second == a) &&
+                            e.Affinity == 0f && e.LastMeaningfulTick == 0 &&
+                            (e.Stage == RelationshipStage.Stranger || e.Stage == RelationshipStage.Acquaintance))
+                        {
+                            evictA = e;
+                            break;
+                        }
+                    }
+                    if (evictA == null) return null;
+                }
+
+                RelationshipEdge evictB = null;
+                if (db >= MaxEdgesPerResident)
+                {
+                    for (var i = 0; i < _edges.Count; i++)
+                    {
+                        var e = _edges[i];
+                        if (e != evictA && (e.First == b || e.Second == b) &&
+                            e.Affinity == 0f && e.LastMeaningfulTick == 0 &&
+                            (e.Stage == RelationshipStage.Stranger || e.Stage == RelationshipStage.Acquaintance))
+                        {
+                            evictB = e;
+                            break;
+                        }
+                    }
+                    if (evictB == null) return null;
+                }
+
+                if (evictA != null)
+                {
+                    Decrement(evictA.First.Value);
+                    Decrement(evictA.Second.Value);
+                    _edges.Remove(evictA);
+                }
+                if (evictB != null)
+                {
+                    Decrement(evictB.First.Value);
+                    Decrement(evictB.Second.Value);
+                    _edges.Remove(evictB);
+                }
+            }
+
+            var meaningful = (initialStage != RelationshipStage.Stranger || Math.Abs(initialAffinity) > 0.001f) && tick > 0 ? tick : 0;
+            var edge = new RelationshipEdge(a, b, initialAffinity, tick, cause, meaningful, 0, null, initialStage);
             _edges.Add(edge);
             Increment(a.Value);
             Increment(b.Value);
             return edge;
         }
+
+        public RelationshipEdge GetOrCreateEdge(
+            EntityId a,
+            EntityId b,
+            float initialAffinity = 0f,
+            RelationshipStage initialStage = RelationshipStage.Stranger)
+            => GetOrCreateEdge(a, b, 0, "encounter", initialStage, initialAffinity);
 
         private static bool HasGrudge(Dictionary<int, PersonRecord> byId, EntityId a, EntityId b)
         {
@@ -318,7 +384,7 @@ namespace OneRoof.Domain.Social
         public static FactionState FromSaveData(FactionSaveData data, PopulationState population)
         {
             var state = new FactionState();
-            if (data == null || data.version <= 0) return state;
+            if (population == null || data == null || data.version <= 0) return state;
             var live = new HashSet<int>(); foreach (var person in population.Persons) live.Add(person.Id.Value);
             var seenEdges = new HashSet<long>();
             if (data.edges != null) foreach (var e in data.edges)

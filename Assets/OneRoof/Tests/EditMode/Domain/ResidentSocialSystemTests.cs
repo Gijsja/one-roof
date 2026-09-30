@@ -300,6 +300,104 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void TraitChemistry_IsSymmetric_ForEveryTraitPair()
+        {
+            foreach (SocialTraitKind tA in System.Enum.GetValues(typeof(SocialTraitKind)))
+            {
+                foreach (SocialTraitKind tB in System.Enum.GetValues(typeof(SocialTraitKind)))
+                {
+                    var synAB = ResidentSocialSystem.TraitPairSynergy(tA, tB);
+                    var synBA = ResidentSocialSystem.TraitPairSynergy(tB, tA);
+                    Assert.That(synAB, Is.EqualTo(synBA).Within(0.0001f),
+                        $"Synergy({tA}, {tB}) = {synAB} must equal Synergy({tB}, {tA}) = {synBA}");
+                }
+            }
+        }
+
+        [Test]
+        public void ThoughtMemories_DirectlyModulateResidentSatisfactionAndStrain()
+        {
+            var p1 = CreatePerson(1, SocialTraitKind.Charismatic);
+            var pop = new PopulationState(new[] { p1 }, new[]
+            {
+                new HouseholdRecord(new EntityId(101), new[] { new EntityId(1) }, new EntityId(1), 0.8f, 1f)
+            });
+
+            var wellbeingSystem = new ResidentWellbeingSystem();
+            wellbeingSystem.Advance(pop, null);
+            var baseSatisfaction = p1.Wellbeing.Satisfaction;
+
+            // Add strong positive thoughts
+            p1.Wellbeing.AddThought(new ThoughtMemory("In love", 12f, 0, 1000));
+            wellbeingSystem.Advance(pop, null);
+            Assert.That(p1.Wellbeing.Satisfaction, Is.GreaterThan(baseSatisfaction));
+
+            // Clear thoughts and add severe negative thoughts
+            p1.Wellbeing.ClearThoughts();
+            p1.Wellbeing.AddThought(new ThoughtMemory("Furious argument", -12f, 0, 1000));
+            wellbeingSystem.Advance(pop, null);
+            Assert.That(p1.Wellbeing.Satisfaction, Is.LessThan(baseSatisfaction));
+        }
+
+        [Test]
+        public void EdgeEviction_EvictsDormantNeutralEdges_WhenMeaningfulInteractionOccursAtCap()
+        {
+            var pMain = CreatePerson(1, SocialTraitKind.Charismatic);
+            var neighbors = new List<PersonRecord>();
+            for (var i = 2; i <= 7; i++)
+            {
+                neighbors.Add(CreatePerson(i, SocialTraitKind.Loyal));
+            }
+
+            var factions = new FactionState();
+            // Fill 6 neutral edges for resident 1
+            for (var i = 0; i < 6; i++)
+            {
+                var edge = factions.GetOrCreateEdge(pMain.Id, neighbors[i].Id, 0, "neighbor", RelationshipStage.Acquaintance);
+                Assert.That(edge, Is.Not.Null);
+                Assert.That(edge.Affinity, Is.EqualTo(0f));
+                Assert.That(edge.LastMeaningfulTick, Is.Zero);
+            }
+            Assert.That(factions.Edges.Count, Is.EqualTo(6));
+
+            // An attempt to create another neutral acquaintance edge should fail (degree capped)
+            var newPerson = CreatePerson(99, SocialTraitKind.HopelessRomantic);
+            var neutralEdge = factions.GetOrCreateEdge(pMain.Id, newPerson.Id, 0, "neutral encounter", RelationshipStage.Stranger);
+            Assert.That(neutralEdge, Is.Null, "Neutral interaction should not evict dormant edges");
+
+            // A meaningful interaction (e.g. Crush) should evict a dormant edge and succeed
+            var meaningfulEdge = factions.GetOrCreateEdge(pMain.Id, newPerson.Id, 100, "romantic spark", RelationshipStage.Crush, 0.40f);
+            Assert.That(meaningfulEdge, Is.Not.Null, "Meaningful edge must evict dormant edge");
+            Assert.That(meaningfulEdge.Stage, Is.EqualTo(RelationshipStage.Crush));
+            Assert.That(meaningfulEdge.Affinity, Is.EqualTo(0.40f));
+            Assert.That(factions.Edges.Count, Is.EqualTo(6), "Edge cap must remain strictly respected");
+        }
+
+        [Test]
+        public void RoomGrouping_SkipsResidentsInNonexistentTopologyRooms()
+        {
+            var p1 = CreatePerson(1, SocialTraitKind.Flirt);
+            var p2 = CreatePerson(2, SocialTraitKind.HopelessRomantic);
+            // Room 9999 does not exist in topology
+            p1.UpdateLocation(new EntityId(9999));
+            p2.UpdateLocation(new EntityId(9999));
+            p1.UpdateActivity(ActivityKind.Leisure);
+            p2.UpdateActivity(ActivityKind.Leisure);
+
+            var pop = new PopulationState(new[] { p1, p2 }, new[]
+            {
+                new HouseholdRecord(new EntityId(101), new[] { new EntityId(1) }, new EntityId(1), 0.8f, 1f),
+                new HouseholdRecord(new EntityId(102), new[] { new EntityId(2) }, new EntityId(2), 0.8f, 1f)
+            });
+
+            var factions = new FactionState();
+            _social.Advance(pop, _topology.State, null, factions, new Tick(60));
+
+            // Since room 9999 is not in _topology.State, no room interaction occurs
+            Assert.That(factions.Edges.Count, Is.Zero);
+        }
+
+        [Test]
         public void SaveLoad_Preserves_RelationshipStages_SocialTraits_AndThoughts()
         {
             var p1 = CreatePerson(1, SocialTraitKind.Flirt);

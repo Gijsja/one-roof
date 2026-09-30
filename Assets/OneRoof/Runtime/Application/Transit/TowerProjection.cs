@@ -25,7 +25,8 @@ namespace OneRoof.Application.Transit
             ActivityKind activity = ActivityKind.Idle,
             int slotInRoom = 0,
             int waitTicks = 0,
-            string purposeLabel = null)
+            string purposeLabel = null,
+            string recentThought = null)
         {
             ResidentId = residentId;
             DestinationFloor = destinationFloor;
@@ -37,6 +38,7 @@ namespace OneRoof.Application.Transit
             SlotInRoom = slotInRoom;
             WaitTicks = waitTicks;
             PurposeLabel = purposeLabel;
+            RecentThought = recentThought;
         }
 
         public int ResidentId { get; }
@@ -59,6 +61,9 @@ namespace OneRoof.Application.Transit
 
         /// <summary>Human-readable purpose resolved from the resident's persistent routine.</summary>
         public string PurposeLabel { get; }
+
+        /// <summary>Attributable recent social thought description if present.</summary>
+        public string RecentThought { get; }
     }
 
     public readonly struct ElevatorProjection

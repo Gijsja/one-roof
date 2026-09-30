@@ -37,8 +37,8 @@ namespace OneRoof.Presentation.Furnishings
         public bool TryGetDockPosition(InteractionPointKind kind, int slot, out Vector3 worldPosition)
         {
             var matches = kind == InteractionPointKind.Sleep ? new[] { "bed" } :
-                kind == InteractionPointKind.Work ? new[] { "desk", "bench", "monitor" } :
-                kind == InteractionPointKind.Seat ? new[] { "sofa" } : new[] { "booth" };
+                kind == InteractionPointKind.Work ? new[] { "desk", "bench", "monitor", "vanity" } :
+                kind == InteractionPointKind.Seat ? new[] { "sofa", "booth", "chair", "conversation", "gametable" } : new[] { "booth" };
             var matchCount = 0;
             for (var i = 0; i < _placedProps.Count; i++)
             {
@@ -56,7 +56,10 @@ namespace OneRoof.Presentation.Furnishings
                     var prop = _placedProps[i];
                     if (prop != null && NameContainsAny(prop.name, matches) && selected-- == 0)
                     {
-                        worldPosition = prop.transform.position + new Vector3(0f, 0.06f, -0.2f);
+                        var lateralOffset = (kind == InteractionPointKind.Sleep || kind == InteractionPointKind.Seat)
+                            ? ((Mathf.Abs(slot) % 2 == 0) ? -0.16f : 0.16f)
+                            : 0f;
+                        worldPosition = prop.transform.position + new Vector3(lateralOffset, 0.06f, -0.2f);
                         return true;
                     }
                 }
@@ -144,6 +147,14 @@ namespace OneRoof.Presentation.Furnishings
                 var bookcaseX = 0f;
                 SpawnProp("prop.furniture.bookcase.v1", new Vector3(bookcaseX, baselineY, 0.45f));
             }
+
+            // Wide apartments get either a lounge conversation set or a vanity dresser
+            if (width >= 3.0f)
+            {
+                var extraPropId = isWestSide ? "prop.furniture.conversationset.v1" : "prop.furniture.vanitydresser.v1";
+                var extraX = isWestSide ? (width * 0.5f - 1.45f) : (-width * 0.5f + 1.45f);
+                SpawnProp(extraPropId, new Vector3(extraX, baselineY, 0.38f));
+            }
         }
 
         private void FurnishOffice(float width, float baselineY, bool isWestSide)
@@ -172,6 +183,13 @@ namespace OneRoof.Presentation.Furnishings
             // Diner booth on outer side
             var boothX = isWestSide ? (-width * 0.5f + 0.60f) : (width * 0.5f - 0.60f);
             SpawnProp("prop.commercial.booth.v1", new Vector3(boothX, baselineY, 0.35f));
+
+            // Game table in wide dining areas
+            if (width >= 2.5f)
+            {
+                var tableX = isWestSide ? (width * 0.5f - 0.65f) : (-width * 0.5f + 0.65f);
+                SpawnProp("prop.furniture.gametable.v1", new Vector3(tableX, baselineY, 0.36f));
+            }
         }
 
         private void FurnishLobby(float width, float baselineY, bool isWestSide)

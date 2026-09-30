@@ -71,6 +71,8 @@ The project hosts 5 canonical scenes under `Assets/Scenes/`:
 
 - **Shader Model**: `OneRoofUnlit.shader` uses a single canonical `SRPDefaultUnlit` pass, maintaining 100% SRP Batcher compatibility.
 - **GPU Instancing**: Enabled across NPC shared materials (`Npc_DefaultSharedMaterial`, `PooledNpc_SharedMaterial`).
+- **Resident Presentation Settings**: `TowerPlayableController` owns an Inspector-authored `ResidentPresentationSettings` profile, validated and captured at initialization. Defaults are 60 skeletal views, up to 60 prewarmed views (bounded by startup population), rig fade 6.5–8, macro fade 16–18, viewport margin 0.05, and retained-rig preference 0.8. Skeletal capacity is configurable; the standalone `NpcViewPool` default remains 40. Sprite/macro representations are not capped by the skeletal budget. Lightweight resident roots are pooled across population turnover and released on presenter cleanup.
+- **Projection Ownership**: Private passenger, occupancy, and travel-purpose scratch indexes retain capacity across transit projection rebuilds. Published resident, elevator, and passenger collections remain independently owned; retaining an old projection never exposes subsequent scratch-buffer mutations.
 - **Dynamic Procedural VFX**: `PixelRainPresenter` uses a single dynamic mesh buffer (672 quads, 2688 vertices, 1 draw call, 0 GC steady state) simulating rain, snow, splashes, eave drips, and radial fog puffs with alpha falloff.
 - **Performance Budget**:
   - Draw calls: **<180** (currently 171 at 30 floors / 300 residents).
