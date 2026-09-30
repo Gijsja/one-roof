@@ -162,5 +162,97 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.Throws<System.ArgumentOutOfRangeException>(
                 () => bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(998), 0, -1)));
         }
+
+        [TestCase(1, 5, 8)]
+        [TestCase(2, 5, 8)]
+        [TestCase(3, 4, 9)]
+        [TestCase(4, 4, 9)]
+        [TestCase(5, 3, 10)]
+        public void SetTierAppliesBankWideTimingAndCapacity(int tier, int expectedTravelTicks, int expectedCapacity)
+        {
+            var first = new ElevatorCar(new EntityId(2), 0, 6);
+            var second = new ElevatorCar(new EntityId(1), 0, 10);
+            var bank = new ElevatorBank(0, 4, new[] { first, second });
+
+            bank.SetTier(tier);
+
+            Assert.That(bank.Tier, Is.EqualTo(tier));
+            Assert.That(first.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
+            Assert.That(second.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
+            Assert.That(first.Timing.DoorCycleTicks, Is.EqualTo(2));
+            Assert.That(first.Timing.DwellTicks, Is.EqualTo(2));
+            Assert.That(first.Capacity, Is.EqualTo(expectedCapacity));
+            Assert.That(second.Capacity, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void SetTierRejectsValuesOutsideOneThroughFive()
+        {
+            var bank = new ElevatorBank(0, 2, null);
+            Assert.Throws<ArgumentOutOfRangeException>(() => bank.SetTier(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => bank.SetTier(6));
+            Assert.That(bank.Tier, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EqualDispatchCostsUseStableCarIdTieBreakRegardlessOfCarOrder()
+        {
+            var highId = new ElevatorCar(new EntityId(20), 0, 8);
+            var lowId = new ElevatorCar(new EntityId(10), 0, 8);
+            var bank = new ElevatorBank(0, 3, new[] { highId, lowId });
+            bank.SetTier(2);
+
+            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(100), 2, 3));
+
+            Assert.That(lowId.HasTargetFloor(2), Is.True);
+            Assert.That(highId.HasTargetFloor(2), Is.False);
+        }
+
+        [Test]
+        public void EtaDispatchCanChooseFartherCarAlreadyTravelingTowardCall()
+        {
+            var nearerButWrongWay = new ElevatorCar(new EntityId(1), 2, 8);
+            nearerButWrongWay.RestoreState(2, ElevatorCarPhase.Moving, ElevatorDirection.Down, 1, null);
+            var fartherButAligned = new ElevatorCar(new EntityId(2), 7, 8);
+            fartherButAligned.RestoreState(7, ElevatorCarPhase.Moving, ElevatorDirection.Down, 1, null);
+            var bank = new ElevatorBank(0, 8, new[] { nearerButWrongWay, fartherButAligned });
+            bank.SetTier(2);
+
+            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(101), 4, 5));
+
+            Assert.That(nearerButWrongWay.HasTargetFloor(4), Is.False);
+            Assert.That(fartherButAligned.HasTargetFloor(4), Is.True);
+        }
+
+        [TestCase(3, 4)]
+        [TestCase(5, 3)]
+        public void HigherTransportTierReducesMeasuredSingleFloorTripTicks(int tier, int expectedTravelTicks)
+        {
+            var bank = CreateSingleTripBank(tier, out var car);
+            var deliveredAt = AdvanceUntilDelivered(bank);
+
+            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
+            Assert.That(deliveredAt, Is.LessThan(AdvanceUntilDelivered(CreateSingleTripBank(1, out _))));
+        }
+
+        private static ElevatorBank CreateSingleTripBank(int tier, out ElevatorCar car)
+        {
+            car = new ElevatorCar(new EntityId(1), 0, 8);
+            var bank = new ElevatorBank(0, 1, new[] { car });
+            bank.SetTier(tier);
+            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(200), 0, 1));
+            return bank;
+        }
+
+        private static int AdvanceUntilDelivered(ElevatorBank bank)
+        {
+            for (var tick = 1; tick <= 30; tick++)
+            {
+                bank.Advance(new Tick(tick));
+                if (bank.DeliveredCount > 0) return tick;
+            }
+            Assert.Fail("Passenger was not delivered within 30 ticks.");
+            return int.MaxValue;
+        }
     }
 }

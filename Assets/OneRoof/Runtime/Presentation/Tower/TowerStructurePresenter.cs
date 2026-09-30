@@ -98,9 +98,21 @@ namespace OneRoof.Presentation.Tower
                 var slabRenderer = CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(centerX, y, 1f), new Vector2(width, 1.55f));
                 slabRenderer.gameObject.AddComponent<VisualEffectsPresenter>().BeginConstruction();
 
-                // Floor baseline dividers - split around elevator shaft [-2.40f, -1.40f] so the shaft remains an open vertical chute
-                const float shaftLeft = -2.40f;
-                const float shaftRight = -1.40f;
+                // Split the floor edge around the actual shaft footprint so widening keeps the chute open.
+                var shaftLeft = -2.40f;
+                var shaftRight = -1.40f;
+                if (topology != null)
+                {
+                    var floorRooms = topology.GetRoomsOnFloor(floor);
+                    for (var roomIndex = 0; roomIndex < floorRooms.Count; roomIndex++)
+                    {
+                        var room = floorRooms[roomIndex];
+                        if (room.ContentType.Value != "transit:elevator_shaft") continue;
+                        shaftLeft = -2.4f + room.Bounds.MinX * 0.5f;
+                        shaftRight = -2.4f + (room.Bounds.MaxX + 1) * 0.5f;
+                        break;
+                    }
+                }
                 var floorLineY = y - 0.74f;
                 var floorLineColor = FloorLineColor;
 

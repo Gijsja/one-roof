@@ -339,6 +339,7 @@ namespace OneRoof.Domain.Persistence
     {
         public int minFloor;
         public int maxFloor;
+        public int tier = 1;
         public ElevatorCarSaveData[] cars;
         public ElevatorPassengerSaveData[] queuedPassengers;
         public ElevatorPassengerSaveData[] deliveredPassengers;

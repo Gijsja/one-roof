@@ -36,7 +36,9 @@ namespace OneRoof.Presentation.Tower
             var topY = TowerStructurePresenter.FloorY(_renderedMaxFloor) + 0.74f;
             var shaftHeight = Mathf.Max(1.48f, topY - bottomY);
             var centerY = (bottomY + topY) * 0.5f;
-            return new Bounds(new Vector3(-1.90f, centerY, 0f), new Vector3(1.06f, shaftHeight, 1f));
+            var left = -2.4f + _shaftMinX * 0.5f;
+            var right = -2.4f + (_shaftMaxX + 1) * 0.5f;
+            return new Bounds(new Vector3((left + right) * 0.5f, centerY, 0f), new Vector3(right - left + 0.06f, shaftHeight, 1f));
         }
 
         public bool IsPointerInShaft(Vector2 worldPos, out Bounds bounds)
@@ -48,12 +50,14 @@ namespace OneRoof.Presentation.Tower
 
         private int _renderedMinFloor;
         private int _renderedMaxFloor;
+        private int _shaftMinX;
+        private int _shaftMaxX = 1;
 
         public static void CalculateCarLayout(int carIndex, int totalCars, out float x, out float width)
         {
             const float shaftInternalLeft = -2.32f;
             const float shaftInternalRight = -1.48f;
-            const float shaftWidth = shaftInternalRight - shaftInternalLeft; // 0.84f
+            const float shaftWidth = shaftInternalRight - shaftInternalLeft;
 
             if (totalCars <= 1)
             {
@@ -68,6 +72,27 @@ namespace OneRoof.Presentation.Tower
             var actualSpan = totalCars * width + totalGaps;
             var startX = -1.90f - actualSpan * 0.5f + width * 0.5f;
             x = startX + carIndex * (width + gap);
+        }
+
+        private void CalculateCarLayoutInCurrentShaft(int carIndex, int totalCars, bool isWide, out float x, out float width)
+        {
+            if (!isWide && _shaftMaxX - _shaftMinX <= 1)
+            {
+                CalculateCarLayout(carIndex, totalCars, out x, out width);
+                return;
+            }
+            var left = -2.32f + _shaftMinX * 0.5f;
+            var right = -1.48f + (_shaftMaxX - 1) * 0.5f;
+            var available = Mathf.Max(0.4f, right - left);
+            var gap = 0.03f;
+            width = Mathf.Clamp((available - gap * Mathf.Max(0, totalCars - 1)) / Mathf.Max(1, totalCars), 0.16f, 0.72f);
+            if (!isWide && _shaftMaxX - _shaftMinX > 1)
+                width = Mathf.Min(0.48f, width);
+            if (isWide)
+                width = Mathf.Min(available, width * 1.2f);
+            var span = totalCars * width + gap * Mathf.Max(0, totalCars - 1);
+            var start = (left + right) * 0.5f - span * 0.5f + width * 0.5f;
+            x = start + carIndex * (width + gap);
         }
 
         public void Initialize(Transform parent, Material worldMaterial, MaterialPropertyBlock colorBlock)
@@ -101,7 +126,9 @@ namespace OneRoof.Presentation.Tower
 
         public void EnsureShaftViews(int floorCount) => EnsureShaftViews(0, Mathf.Max(0, floorCount - 1));
 
-        public void EnsureShaftViews(int minFloor, int maxFloor)
+        public void EnsureShaftViews(int minFloor, int maxFloor) => EnsureShaftViews(minFloor, maxFloor, 0, 1);
+
+        public void EnsureShaftViews(int minFloor, int maxFloor, int shaftMinX, int shaftMaxX)
         {
             if (minFloor > maxFloor) maxFloor = minFloor;
             var bottomY = TowerStructurePresenter.FloorY(minFloor) - 0.74f;
@@ -109,12 +136,16 @@ namespace OneRoof.Presentation.Tower
             var shaftHeight = topY - bottomY;
             var centerY = (bottomY + topY) * 0.5f;
 
-            const float shaftCenterX = -1.90f;
-            const float shaftWidth = 1.00f;
-            const float colLeftX = -2.40f;
-            const float colRightX = -1.40f;
-            const float railLeftX = -2.36f;
-            const float railRightX = -1.44f;
+            _shaftMinX = shaftMinX;
+            _shaftMaxX = Mathf.Max(shaftMinX, shaftMaxX);
+            var shaftLeft = -2.4f + _shaftMinX * 0.5f;
+            var shaftRight = -2.4f + (_shaftMaxX + 1) * 0.5f;
+            var shaftCenterX = (shaftLeft + shaftRight) * 0.5f;
+            var shaftWidth = shaftRight - shaftLeft;
+            var colLeftX = shaftLeft;
+            var colRightX = shaftRight;
+            var railLeftX = shaftLeft + 0.04f;
+            var railRightX = shaftRight - 0.04f;
 
             var penthouseColor = new Color(0.38f, 0.48f, 0.62f);
             var pitBufferColor = new Color(0.28f, 0.36f, 0.48f);
@@ -126,8 +157,8 @@ namespace OneRoof.Presentation.Tower
                 _shaftRailRight = CreateQuad("Shaft Rail Right", new Color(0.48f, 0.58f, 0.72f), new Vector3(railRightX, centerY, 0.2f), new Vector2(0.035f, shaftHeight));
                 _shaftColumnLeft = CreateQuad("Shaft Column Left", new Color(0.35f, 0.45f, 0.58f), new Vector3(colLeftX, centerY, 0.15f), new Vector2(0.06f, shaftHeight));
                 _shaftColumnRight = CreateQuad("Shaft Column Right", new Color(0.35f, 0.45f, 0.58f), new Vector3(colRightX, centerY, 0.15f), new Vector2(0.06f, shaftHeight));
-                _shaftPenthouse = CreateQuad("Shaft Penthouse Cap", penthouseColor, new Vector3(shaftCenterX, topY + 0.08f, 0.1f), new Vector2(1.12f, 0.16f));
-                _shaftPitBuffer = CreateQuad("Shaft Pit Buffer", pitBufferColor, new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f), new Vector2(1.12f, 0.16f));
+                _shaftPenthouse = CreateQuad("Shaft Penthouse Cap", penthouseColor, new Vector3(shaftCenterX, topY + 0.08f, 0.1f), new Vector2(shaftWidth + 0.12f, 0.16f));
+                _shaftPitBuffer = CreateQuad("Shaft Pit Buffer", pitBufferColor, new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f), new Vector2(shaftWidth + 0.12f, 0.16f));
             }
             else
             {
@@ -147,7 +178,9 @@ namespace OneRoof.Presentation.Tower
                 _shaftColumnRight.transform.localScale = new Vector3(0.06f, shaftHeight, 1f);
 
                 _shaftPenthouse.transform.position = new Vector3(shaftCenterX, topY + 0.08f, 0.1f);
+                _shaftPenthouse.transform.localScale = new Vector3(shaftWidth + 0.12f, 0.16f, 1f);
                 _shaftPitBuffer.transform.position = new Vector3(shaftCenterX, bottomY - 0.08f, 0.1f);
+                _shaftPitBuffer.transform.localScale = new Vector3(shaftWidth + 0.12f, 0.16f, 1f);
 
                 SetRendererColor(_shaftCavity.GetComponent<MeshRenderer>(), new Color(0.08f, 0.11f, 0.16f));
                 SetRendererColor(_shaftRailLeft.GetComponent<MeshRenderer>(), new Color(0.48f, 0.58f, 0.72f));
@@ -168,14 +201,14 @@ namespace OneRoof.Presentation.Tower
             while (_elevatorViews.Count < targetCount)
             {
                 var index = _elevatorViews.Count;
-                CalculateCarLayout(index, targetCount, out var x, out var carWidth);
+                CalculateCarLayoutInCurrentShaft(index, targetCount, false, out var x, out var carWidth);
                 var view = CreateQuadRenderer($"Elevator Car {index}", new Color(0.13f, 0.31f, 0.29f), new Vector3(x, TowerStructurePresenter.FloorY(0), -0.12f), new Vector2(carWidth, 1.06f));
                 _elevatorViews.Add(view);
             }
 
             for (var i = 0; i < _elevatorViews.Count; i++)
             {
-                CalculateCarLayout(i, _elevatorViews.Count, out var carX, out var carWidth);
+                CalculateCarLayoutInCurrentShaft(i, _elevatorViews.Count, false, out var carX, out var carWidth);
                 if (_elevatorViews[i] != null)
                 {
                     // Authored Tower views used to retain their serialized default-white
@@ -264,7 +297,7 @@ namespace OneRoof.Presentation.Tower
 
                 var elevator = snapshot.Elevators[i];
                 var targetY = TowerStructurePresenter.FloorY(elevator.Floor);
-                CalculateCarLayout(i, snapshot.Elevators.Count, out var targetX, out var carWidth);
+                CalculateCarLayoutInCurrentShaft(i, snapshot.Elevators.Count, elevator.Capacity >= 12, out var targetX, out var carWidth);
 
                 var carTransform = _elevatorViews[i].transform;
                 carTransform.localScale = new Vector3(carWidth, 1.06f, 1f);

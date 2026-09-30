@@ -295,6 +295,13 @@ namespace OneRoof.UI.Modes
             DrawToolButton("Bulldoze\nReclaim 50%", "demolish:room", projection.SelectedBuildTool == "demolish:room", isDestructive: true);
             GUILayout.EndHorizontal();
 
+            GUILayout.Label("ELEVATOR TIERS", StewardTheme.Label(10, StewardTheme.Mint, true));
+            GUILayout.BeginHorizontal();
+            DrawToolButton("Upgrade Bank\n$2k–8k", "transit:elevator_upgrade", projection.SelectedBuildTool == "transit:elevator_upgrade");
+            DrawToolButton("Widen Shaft\n$500/floor", "transit:elevator_widen", projection.SelectedBuildTool == "transit:elevator_widen");
+            DrawToolButton("Wide Car\n$3.75k (12)", "transit:elevator_wide_car", projection.SelectedBuildTool == "transit:elevator_wide_car");
+            GUILayout.EndHorizontal();
+
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }

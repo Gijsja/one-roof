@@ -465,6 +465,84 @@ namespace OneRoof.Domain.Topology
             return CommandResult.Accept(new[] { evt });
         }
 
+        public CommandResult CanExecute(WidenElevatorShaftCommand cmd)
+        {
+            if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+
+            CellBounds? alignedBounds = null;
+            var shaftContentType = new ContentId("transit:elevator_shaft");
+            for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
+            {
+                if (!_floorSlabs.TryGetValue(floor, out var slab))
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:floor_not_found"), $"Floor {floor} missing for elevator shaft widening.") });
+
+                Room shaft = null;
+                if (_roomsByFloor.TryGetValue(floor, out var rooms))
+                {
+                    foreach (var room in rooms)
+                    {
+                        if (room.ContentType != shaftContentType) continue;
+                        if (shaft != null)
+                            return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_misaligned"), $"Floor {floor} contains multiple elevator shaft sections.") });
+                        shaft = room;
+                    }
+                }
+
+                if (shaft == null)
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_misaligned"), $"Floor {floor} has no elevator shaft to widen.") });
+
+                if (alignedBounds.HasValue &&
+                    (shaft.Bounds.MinX != alignedBounds.Value.MinX || shaft.Bounds.MaxX != alignedBounds.Value.MaxX))
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_misaligned"), "Elevator shaft bounds must match on every selected floor.") });
+                alignedBounds = shaft.Bounds;
+
+                var widenedMinX = cmd.Side == ElevatorShaftWideningSide.Left ? shaft.Bounds.MinX - 1 : shaft.Bounds.MinX;
+                var widenedMaxX = cmd.Side == ElevatorShaftWideningSide.Right ? shaft.Bounds.MaxX + 1 : shaft.Bounds.MaxX;
+                if (widenedMinX < slab.MinX || widenedMaxX > slab.MaxX)
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_outside_floor_slab"), $"Widened elevator shaft would exceed floor {floor} slab bounds ({slab.MinX}..{slab.MaxX}).") });
+
+                if (rooms != null) foreach (var room in rooms)
+                {
+                    if (room == shaft || !room.Bounds.Overlaps(new CellBounds(floor, widenedMinX, widenedMaxX))) continue;
+                    return CommandResult.Reject(new[] { new CommandRejectionReason(new ContentId("topology:shaft_overlap"), $"Widened elevator shaft overlaps room {room.Id} on floor {floor}.") });
+                }
+            }
+
+            return CommandResult.Success();
+        }
+
+        public CommandResult Execute(WidenElevatorShaftCommand cmd, Tick tick)
+        {
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var affectedIds = new List<EntityId>();
+            var shaftContentType = new ContentId("transit:elevator_shaft");
+            for (var floor = cmd.BottomFloor; floor <= cmd.TopFloor; floor++)
+            {
+                var rooms = _roomsByFloor[floor];
+                for (var i = 0; i < rooms.Count; i++)
+                {
+                    var room = rooms[i];
+                    if (room.ContentType != shaftContentType) continue;
+                    var minX = cmd.Side == ElevatorShaftWideningSide.Left ? room.Bounds.MinX - 1 : room.Bounds.MinX;
+                    var maxX = cmd.Side == ElevatorShaftWideningSide.Right ? room.Bounds.MaxX + 1 : room.Bounds.MaxX;
+                    var widened = new Room(room.Id, room.ContentType, new CellBounds(floor, minX, maxX), room.PortalIds, room.Capacity, room.InteractionPoints);
+                    rooms[i] = widened;
+                    _roomsById[room.Id] = widened;
+                    affectedIds.Add(room.Id);
+                    for (var portalIndex = 0; portalIndex < room.PortalIds.Count; portalIndex++)
+                        affectedIds.Add(room.PortalIds[portalIndex]);
+                    break;
+                }
+            }
+
+            RoomsVersion++;
+            InvalidateGraph();
+            var evt = new DomainEvent(AllocateId(), new ContentId("event:elevator_shaft_widened"), tick, affectedIds);
+            return CommandResult.Accept(new[] { evt });
+        }
+
         public CommandResult CanExecute(BuildStairwellCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));

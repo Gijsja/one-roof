@@ -286,7 +286,20 @@ namespace OneRoof.Presentation.Tower
             var topo = _sim?.TopologyProjection(); var fl = topo != null ? topo.FloorCount : InitialFloorCount;
             var minFloor = _sim?.ElevatorMinFloor ?? 0;
             var maxFloor = _sim?.ElevatorMaxFloor ?? (fl - 1);
-            _elevator.EnsureShaftViews(minFloor, maxFloor); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
+            var shaftMinX = 0;
+            var shaftMaxX = 1;
+            if (topo != null)
+            {
+                var shaftRooms = topo.GetRoomsOnFloor(minFloor);
+                for (var i = 0; i < shaftRooms.Count; i++)
+                {
+                    if (shaftRooms[i].ContentType.Value != "transit:elevator_shaft") continue;
+                    shaftMinX = shaftRooms[i].Bounds.MinX;
+                    shaftMaxX = shaftRooms[i].Bounds.MaxX;
+                    break;
+                }
+            }
+            _elevator.EnsureShaftViews(minFloor, maxFloor, shaftMinX, shaftMaxX); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
             _lastUndergroundCrewVersion = -1;
             if (!IsGoldStandardCity && topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
             _pixelRain?.SyncTopology(topo);

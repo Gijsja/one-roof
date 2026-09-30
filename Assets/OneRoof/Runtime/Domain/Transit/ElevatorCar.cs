@@ -33,9 +33,9 @@ namespace OneRoof.Domain.Transit
 
         public int CurrentFloor { get; private set; }
 
-        public int Capacity { get; }
+        public int Capacity { get; private set; }
 
-        public ElevatorTimingConfig Timing { get; }
+        public ElevatorTimingConfig Timing { get; private set; }
 
         public ElevatorCarPhase Phase { get; private set; }
 
@@ -54,6 +54,13 @@ namespace OneRoof.Domain.Transit
         public IReadOnlyCollection<int> TargetFloors => _targetFloors;
 
         public bool HasTargetFloor(int floor) => _targetFloors.Contains(floor);
+
+        internal void ApplyTier(ElevatorTierProfile profile)
+        {
+            Timing = profile.Timing;
+            // Upgrades never shrink a custom or previously upgraded car, or strand riders.
+            Capacity = Math.Max(Math.Max(_passengers.Count, Capacity), profile.CarCapacity);
+        }
 
         public void RequestFloor(int floor)
         {

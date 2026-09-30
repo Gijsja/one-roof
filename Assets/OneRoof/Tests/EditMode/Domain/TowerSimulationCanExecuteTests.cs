@@ -1,7 +1,9 @@
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Domain.Commands;
 using OneRoof.Domain.Economy;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
 using OneRoof.Domain.Transit;
@@ -84,6 +86,62 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(_sim.Economy.CashBalance, Is.EqualTo(before - 6 * TowerEconomyState.CostPerSlabCell));
             Assert.That(_sim.Topology.TryGetFloorSlab(0, out var expanded), Is.True);
             Assert.That(expanded.MinX, Is.EqualTo(ground.MinX - 6));
+        }
+
+        [Test]
+        public void UpgradeElevatorTier_AppliesNextTierAndChargesDocumentedCost()
+        {
+            var startingBalance = _sim.Economy.CashBalance;
+            var result = _sim.ExecuteCommand(new UpgradeElevatorTierCommand(2));
+
+            Assert.That(result.Accepted, Is.True);
+            Assert.That(_sim.ElevatorBank.Tier, Is.EqualTo(2));
+            Assert.That(_sim.Economy.CashBalance, Is.EqualTo(startingBalance - 2000));
+            Assert.That(_sim.ElevatorBank.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void UpgradeElevatorTier_RejectsSkippingTiers()
+        {
+            var result = _sim.CanExecute(new UpgradeElevatorTierCommand(3));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(_sim.ElevatorBank.Tier, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WideElevatorCar_RequiresWidenedShaft()
+        {
+            var result = _sim.CanExecute(new AddElevatorCarCommand(capacity: 12, startingFloor: 0));
+
+            Assert.That(result.Accepted, Is.False);
+            Assert.That(result.Rejections[0].Code, Is.EqualTo(new ContentId("transit:wide_car_requires_wide_shaft")));
+        }
+
+        [Test]
+        public void WidenShaft_ChargesOneCellPerServedFloorAndUnlocksWideCar()
+        {
+            var startingBalance = _sim.Economy.CashBalance;
+            var widen = new WidenElevatorShaftCommand(0, 4, ElevatorShaftWideningSide.Right);
+            var widened = _sim.ExecuteCommand(widen);
+
+            Assert.That(widened.Accepted, Is.True);
+            Assert.That(_sim.Economy.CashBalance, Is.EqualTo(startingBalance - 5 * TowerEconomyState.CostPerShaftCell));
+            Assert.That(_sim.Topology.GetRoomsOnFloor(0).Any(room =>
+                room.ContentType == new ContentId("transit:elevator_shaft") && room.Bounds.Width == 3), Is.True);
+            Assert.That(_sim.CanExecute(new AddElevatorCarCommand(capacity: 12, startingFloor: 0)).Accepted, Is.True);
+        }
+
+        [Test]
+        public void ElevatorTier_RoundTripsAndMissingTierDefaultsToOne()
+        {
+            _sim.ExecuteCommand(new UpgradeElevatorTierCommand(2));
+            var restored = ElevatorBank.FromSaveData(_sim.ElevatorBank.ToSaveData());
+            Assert.That(restored.Tier, Is.EqualTo(2));
+            Assert.That(restored.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(5));
+
+            var legacy = ElevatorBank.FromSaveData(new ElevatorBankSaveData { minFloor = 0, maxFloor = 0 });
+            Assert.That(legacy.Tier, Is.EqualTo(1));
         }
 
         [Test]

@@ -542,6 +542,26 @@ namespace OneRoof.Domain
                     return Topology.CanExecute(shaftCmd);
                 }
 
+                case WidenElevatorShaftCommand widenCmd:
+                {
+                    var topologyResult = Topology.CanExecute(widenCmd);
+                    if (!topologyResult.Accepted) return topologyResult;
+                    var cost = Economy.CalculateElevatorShaftCost(widenCmd.FloorSpan, 1);
+                    return Economy.CanAfford(cost)
+                        ? CommandResult.Success()
+                        : CommandResult.Fail($"Insufficient funds for elevator shaft widening ({cost} required).", "economy:insufficient_funds");
+                }
+
+                case UpgradeElevatorTierCommand tierCmd:
+                {
+                    if (tierCmd.TargetTier != ElevatorBank.Tier + 1)
+                        return CommandResult.Fail("Elevator tiers must be upgraded one step at a time.", "transit:invalid_tier_upgrade");
+                    var cost = Economy.CalculateElevatorTierUpgradeCost(tierCmd.TargetTier);
+                    return Economy.CanAfford(cost)
+                        ? CommandResult.Success()
+                        : CommandResult.Fail($"Insufficient funds for elevator tier {tierCmd.TargetTier} ({cost} required).", "economy:insufficient_funds");
+                }
+
                 case BuildStairwellCommand stairCmd:
                 {
                     var newFloors = CountNewStairFloors(stairCmd);
@@ -620,11 +640,17 @@ namespace OneRoof.Domain
                         });
                     }
 
-                    if (!Economy.CanAfford(TowerEconomyState.ElevatorCarCost))
+                    var carCost = carCmd.Capacity >= 12 ? TowerEconomyState.WideElevatorCarCost : TowerEconomyState.ElevatorCarCost;
+                    if (carCmd.Capacity >= 12 && !HasContinuousWideShaft(0, Topology.FloorCount - 1))
+                    {
+                        return CommandResult.Fail("A wide elevator car requires a continuous widened shaft across every active floor.", "transit:wide_car_requires_wide_shaft");
+                    }
+
+                    if (!Economy.CanAfford(carCost))
                     {
                         return CommandResult.Reject(new[]
                         {
-                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for elevator car ({TowerEconomyState.ElevatorCarCost} required).")
+                            new CommandRejectionReason(new ContentId("economy:insufficient_funds"), $"Insufficient funds for elevator car ({carCost} required).")
                         });
                     }
 
@@ -711,6 +737,8 @@ namespace OneRoof.Domain
                     return BuildRoom(roomCmd);
                 case AddElevatorShaftCommand shaftCmd:
                     return AddElevatorShaft(shaftCmd);
+                case WidenElevatorShaftCommand widenCmd:
+                    return WidenElevatorShaft(widenCmd);
                 case BuildStairwellCommand stairCmd:
                     return BuildStairwell(stairCmd);
                 case DemolishRoomCommand demoCmd:
@@ -722,6 +750,8 @@ namespace OneRoof.Domain
                     AddElevatorCarUnchecked(carCmd.Capacity, carCmd.StartingFloor);
                     return CommandResult.Success();
                 }
+                case UpgradeElevatorTierCommand tierCmd:
+                    return UpgradeElevatorTier(tierCmd);
                 case SetPolicyDecreeCommand policyCmd:
                     return ApplyPolicyDecree(policyCmd);
                 default:
@@ -864,6 +894,43 @@ namespace OneRoof.Domain
             return result;
         }
 
+        public CommandResult WidenElevatorShaft(WidenElevatorShaftCommand cmd)
+        {
+            if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var cost = Economy.CalculateElevatorShaftCost(cmd.FloorSpan, 1);
+            if (!Economy.TryDeduct(cost))
+                return CommandResult.Fail("Insufficient funds for elevator shaft widening.", "economy:insufficient_funds");
+
+            var result = Topology.Execute(cmd, Clock.CurrentTick);
+            if (!result.Accepted)
+            {
+                Economy.RefundExpense(cost);
+                return result;
+            }
+            Scrutiny.RecordExpansion(cmd.FloorSpan);
+            SyncTransitServices();
+            return result;
+        }
+
+        public CommandResult UpgradeElevatorTier(UpgradeElevatorTierCommand cmd)
+        {
+            if (cmd == null) throw new ArgumentNullException(nameof(cmd));
+            var validation = CanExecute(cmd);
+            if (!validation.Accepted) return validation;
+
+            var cost = Economy.CalculateElevatorTierUpgradeCost(cmd.TargetTier);
+            if (!Economy.TryDeduct(cost))
+                return CommandResult.Fail("Insufficient funds for elevator tier upgrade.", "economy:insufficient_funds");
+
+            ElevatorBank.SetTier(cmd.TargetTier);
+            Scrutiny.RecordCapacityOrServiceInvestment();
+            var evt = new DomainEvent(new EntityId(_nextEntityId++), new ContentId("event:elevator_tier_upgraded"), Clock.CurrentTick);
+            return CommandResult.Accept(new[] { evt });
+        }
+
         public CommandResult BuildStairwell(BuildStairwellCommand cmd)
         {
             if (cmd == null) throw new ArgumentNullException(nameof(cmd));
@@ -980,10 +1047,30 @@ namespace OneRoof.Domain
         private void AddElevatorCarUnchecked(int capacity, int startingFloor)
         {
             var carId = new EntityId(_nextElevatorCarId++);
-            var car = new ElevatorCar(carId, startingFloor, capacity);
+            var car = new ElevatorCar(carId, startingFloor, capacity, ElevatorTierProfile.ForTier(ElevatorBank.Tier).Timing);
             ElevatorBank.AddCar(car);
-            Economy.TryDeduct(TowerEconomyState.ElevatorCarCost);
+            Economy.TryDeduct(capacity >= 12 ? TowerEconomyState.WideElevatorCarCost : TowerEconomyState.ElevatorCarCost);
             Scrutiny.RecordCapacityOrServiceInvestment();
+        }
+
+        private bool HasContinuousWideShaft(int bottomFloor, int topFloor)
+        {
+            var shaftContentType = new ContentId("transit:elevator_shaft");
+            for (var floor = bottomFloor; floor <= topFloor; floor++)
+            {
+                Room shaft = null;
+                var rooms = Topology.GetRoomsOnFloor(floor);
+                for (var i = 0; i < rooms.Count; i++)
+                {
+                    if (rooms[i].ContentType == shaftContentType)
+                    {
+                        shaft = rooms[i];
+                        break;
+                    }
+                }
+                if (shaft == null || shaft.Bounds.Width < 3) return false;
+            }
+            return true;
         }
 
         /// <summary>

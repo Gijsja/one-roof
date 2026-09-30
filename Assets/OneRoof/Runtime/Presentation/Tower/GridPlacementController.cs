@@ -677,7 +677,9 @@ namespace OneRoof.Presentation.Tower
                     else hasCost = false;
                     break;
                 case BuildRoomCommand room: cost = _costRules.CalculateRoomCost(room.ContentType, room.Bounds); break;
-                case AddElevatorCarCommand _: cost = TowerEconomyState.ElevatorCarCost; break;
+                case AddElevatorCarCommand car: cost = car.Capacity >= 12 ? TowerEconomyState.WideElevatorCarCost : TowerEconomyState.ElevatorCarCost; break;
+                case UpgradeElevatorTierCommand tier: cost = new TowerEconomyState().CalculateElevatorTierUpgradeCost(tier.TargetTier); break;
+                case WidenElevatorShaftCommand widen: cost = _costRules.CalculateElevatorShaftCost(widen.FloorSpan, 1); break;
                 case BuildStairwellCommand stair:
                     cost = _costRules.CalculateStairwellCost(
                         Math.Max(1, CountNewTransitFloors(stair.BottomFloor, stair.TopFloor,
@@ -952,7 +954,10 @@ namespace OneRoof.Presentation.Tower
             }
 
             if (toolId.Equals("transit:elevator_shaft", StringComparison.OrdinalIgnoreCase) ||
-                toolId.Equals("transit:elevator_car", StringComparison.OrdinalIgnoreCase))
+                toolId.Equals("transit:elevator_car", StringComparison.OrdinalIgnoreCase) ||
+                toolId.Equals("transit:elevator_wide_car", StringComparison.OrdinalIgnoreCase) ||
+                toolId.Equals("transit:elevator_widen", StringComparison.OrdinalIgnoreCase) ||
+                toolId.Equals("transit:elevator_upgrade", StringComparison.OrdinalIgnoreCase))
             {
                 bounds = new CellBounds(floor, 0, 1);
                 return true;
@@ -995,6 +1000,41 @@ namespace OneRoof.Presentation.Tower
                 }
 
                 command = new AddElevatorCarCommand(startingFloor: floor);
+                return true;
+            }
+
+            if (toolId.Equals("transit:elevator_wide_car", StringComparison.OrdinalIgnoreCase))
+            {
+                if (cellX < -3 || cellX > 3)
+                {
+                    failureReason = "Wide elevator car must be placed within the central elevator shaft corridor.";
+                    return false;
+                }
+                command = new AddElevatorCarCommand(capacity: 12, startingFloor: floor);
+                return true;
+            }
+
+            if (toolId.Equals("transit:elevator_upgrade", StringComparison.OrdinalIgnoreCase))
+            {
+                command = new UpgradeElevatorTierCommand(Math.Min(5, _simulationSession.ElevatorTier + 1));
+                if (_simulationSession.ElevatorTier >= 5)
+                {
+                    failureReason = "Elevator bank is already at Tier 5.";
+                    command = null;
+                    return false;
+                }
+                return true;
+            }
+
+            if (toolId.Equals("transit:elevator_widen", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_simulationSession.FloorCount < 2)
+                {
+                    failureReason = "Elevator shaft widening requires at least two active floors.";
+                    return false;
+                }
+                var side = cellX <= 0 ? ElevatorShaftWideningSide.Left : ElevatorShaftWideningSide.Right;
+                command = new WidenElevatorShaftCommand(0, _simulationSession.FloorCount - 1, side);
                 return true;
             }
 

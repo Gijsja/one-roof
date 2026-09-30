@@ -21,6 +21,8 @@ namespace OneRoof.Domain.Economy
         public const int CostPerStairCell = 250;
         public const int CostPerUtilityCell = 400;
         public const int ElevatorCarCost = 2500;
+        public const int WideElevatorCarCost = 3750;
+        public const int ElevatorTierUpgradeCostPerStep = 2000;
 
         public const int RentPerResidentPerDay = 12;
 
@@ -185,6 +187,12 @@ namespace OneRoof.Domain.Economy
         public int CalculateElevatorShaftCost(int floorSpan, int shaftWidth)
         {
             return floorSpan * shaftWidth * CostPerShaftCell;
+        }
+
+        public long CalculateElevatorTierUpgradeCost(int targetTier)
+        {
+            if (targetTier < 2 || targetTier > 5) throw new ArgumentOutOfRangeException(nameof(targetTier));
+            return (long)ElevatorTierUpgradeCostPerStep * (targetTier - 1);
         }
 
         public int CalculateStairwellCost(int floorSpan, int stairWidth)

@@ -136,6 +136,8 @@ namespace OneRoof.Application.Tower
 
         public int ElevatorCarCount => _simulation.ElevatorBank.Cars.Count;
 
+        public int ElevatorTier => _simulation.ElevatorBank.Tier;
+
         public int DeliveredPassengerCount => _simulation.ElevatorBank.DeliveredCount;
 
         public long TreasuryBalance => _simulation.Economy.CashBalance;
