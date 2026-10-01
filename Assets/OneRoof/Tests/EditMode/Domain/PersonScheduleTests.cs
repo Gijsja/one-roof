@@ -11,19 +11,11 @@ namespace OneRoof.Domain.Tests.EditMode
     {
         // ── ScheduleBlock validation ──────────────────────────────────────────
 
-        [Test]
-        public void ScheduleBlockWithEndEqualToStartThrows()
+        [TestCase(100, 100, TestName = "ScheduleBlockWithEndEqualToStartThrows")]
+        [TestCase(200, 100, TestName = "ScheduleBlockWithEndBeforeStartThrows")]
+        public void ScheduleBlockWithNonIncreasingEndpointsThrows(int start, int end)
         {
-            Assert.That(
-                () => new ScheduleBlock("Sleep", new Tick(100), new Tick(100)),
-                Throws.ArgumentException);
-        }
-
-        [Test]
-        public void ScheduleBlockWithEndBeforeStartThrows()
-        {
-            Assert.That(
-                () => new ScheduleBlock("Sleep", new Tick(200), new Tick(100)),
+            Assert.That(() => new ScheduleBlock("Sleep", new Tick(start), new Tick(end)),
                 Throws.ArgumentException);
         }
 
@@ -74,58 +66,33 @@ namespace OneRoof.Domain.Tests.EditMode
                 Is.EqualTo(DailySchedule.TicksPerDay));
         }
 
-        [Test]
-        public void ActiveLabelAtReturnsCorrectBlockLabel()
-        {
-            // Build a simple 3-block schedule manually to get deterministic boundaries.
-            var blocks = new List<ScheduleBlock>
-            {
-                new ScheduleBlock("Sleep",   new Tick(0),    new Tick(480)),
-                new ScheduleBlock("Work",    new Tick(480),  new Tick(960)),
-                new ScheduleBlock("Leisure", new Tick(960),  new Tick(DailySchedule.TicksPerDay)),
-            };
-            var sched = DailySchedule.FromBlocks(blocks);
-
-            Assert.That(sched.ActiveLabelAt(new Tick(0)),    Is.EqualTo("Sleep"));
-            Assert.That(sched.ActiveLabelAt(new Tick(479)),  Is.EqualTo("Sleep"));
-            Assert.That(sched.ActiveLabelAt(new Tick(480)),  Is.EqualTo("Work"));
-            Assert.That(sched.ActiveLabelAt(new Tick(959)),  Is.EqualTo("Work"));
-            Assert.That(sched.ActiveLabelAt(new Tick(960)),  Is.EqualTo("Leisure"));
-            Assert.That(sched.ActiveLabelAt(new Tick(1439)), Is.EqualTo("Leisure"));
-        }
-
-        [Test]
-        public void ActiveLabelAtWrapsCorrectlyForTicksBeyondOneDay()
+        [TestCase(0, "Sleep")]
+        [TestCase(479, "Sleep")]
+        [TestCase(480, "Work")]
+        [TestCase(959, "Work")]
+        [TestCase(960, "Leisure")]
+        [TestCase(1439, "Leisure")]
+        [TestCase(1440, "Sleep")]
+        [TestCase(1920, "Work")]
+        public void ActiveLabelAtSelectsBlockAcrossBoundariesAndDayWrapping(int tick, string expectedLabel)
         {
             var blocks = new List<ScheduleBlock>
             {
-                new ScheduleBlock("Sleep",   new Tick(0),   new Tick(480)),
-                new ScheduleBlock("Work",    new Tick(480), new Tick(960)),
+                new ScheduleBlock("Sleep", new Tick(0), new Tick(480)),
+                new ScheduleBlock("Work", new Tick(480), new Tick(960)),
                 new ScheduleBlock("Leisure", new Tick(960), new Tick(DailySchedule.TicksPerDay)),
             };
-            var sched = DailySchedule.FromBlocks(blocks);
-
-            // Tick 1440 wraps to tick 0 → Sleep
-            Assert.That(sched.ActiveLabelAt(new Tick(DailySchedule.TicksPerDay)), Is.EqualTo("Sleep"));
-            // Tick 1920 wraps to tick 480 → Work
-            Assert.That(sched.ActiveLabelAt(new Tick(DailySchedule.TicksPerDay + 480)), Is.EqualTo("Work"));
+            var schedule = DailySchedule.FromBlocks(blocks);
+            Assert.That(schedule.ActiveLabelAt(new Tick(tick)), Is.EqualTo(expectedLabel));
         }
 
         // ── NeedState ─────────────────────────────────────────────────────────
 
-        [Test]
-        public void NeedStateSatisfactionBelowZeroThrows()
+        [TestCase(NeedKind.Hunger, -0.01f, TestName = "NeedStateSatisfactionBelowZeroThrows")]
+        [TestCase(NeedKind.Rest, 1.01f, TestName = "NeedStateSatisfactionAboveOneThrows")]
+        public void NeedStateWithOutOfRangeSatisfactionThrows(NeedKind kind, float satisfaction)
         {
-            Assert.That(
-                () => new NeedState(NeedKind.Hunger, -0.01f),
-                Throws.TypeOf<ArgumentOutOfRangeException>());
-        }
-
-        [Test]
-        public void NeedStateSatisfactionAboveOneThrows()
-        {
-            Assert.That(
-                () => new NeedState(NeedKind.Rest, 1.01f),
+            Assert.That(() => new NeedState(kind, satisfaction),
                 Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 

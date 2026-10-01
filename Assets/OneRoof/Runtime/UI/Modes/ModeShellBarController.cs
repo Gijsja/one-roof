@@ -103,7 +103,7 @@ namespace OneRoof.UI.Modes
                 {
                     Session.SwitchMode(InteractionMode.Inspect);
                 }
-                else if (keyboard.dKey.wasPressedThisFrame || keyboard.digit3Key.wasPressedThisFrame)
+                else if (keyboard.digit3Key.wasPressedThisFrame)
                 {
                     Session.SwitchMode(InteractionMode.Data);
                 }
@@ -126,7 +126,7 @@ namespace OneRoof.UI.Modes
             {
                 Session.SwitchMode(InteractionMode.Inspect);
             }
-            else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.Alpha3))
+            else if (Input.GetKeyDown(KeyCode.Alpha3))
             {
                 Session.SwitchMode(InteractionMode.Data);
             }

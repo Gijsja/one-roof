@@ -344,9 +344,9 @@ namespace OneRoof.Presentation.Tower
         {
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null) { if (kb.spaceKey.wasPressedThisFrame) _isPaused = !_isPaused; else if (kb.rKey.wasPressedThisFrame) ResetCommuteSimulation(); else if (kb.wKey.wasPressedThisFrame) CycleWeatherOverride(); else if (kb.tKey.wasPressedThisFrame && _isPaused) _sim.AdvanceOneTick(); }
+            if (kb != null) { if (kb.spaceKey.wasPressedThisFrame) _isPaused = !_isPaused; else if (kb.rKey.wasPressedThisFrame) ResetCommuteSimulation(); else if (kb.f6Key.wasPressedThisFrame) CycleWeatherOverride(); else if (kb.tKey.wasPressedThisFrame && _isPaused) _sim.AdvanceOneTick(); }
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.Space)) _isPaused = !_isPaused; else if (Input.GetKeyDown(KeyCode.R)) ResetCommuteSimulation(); else if (Input.GetKeyDown(KeyCode.W)) CycleWeatherOverride(); else if (Input.GetKeyDown(KeyCode.T) && _isPaused) _sim.AdvanceOneTick();
+            if (Input.GetKeyDown(KeyCode.Space)) _isPaused = !_isPaused; else if (Input.GetKeyDown(KeyCode.R)) ResetCommuteSimulation(); else if (Input.GetKeyDown(KeyCode.F6)) CycleWeatherOverride(); else if (Input.GetKeyDown(KeyCode.T) && _isPaused) _sim.AdvanceOneTick();
 #endif
         }
 
@@ -511,6 +511,8 @@ namespace OneRoof.Presentation.Tower
                     _ => 0f
                 };
                 _currentWeather = new WeatherSample(cond, intensity, wind, WeatherSample.DefaultDescription(cond));
+                // Returning to auto must sample even when no simulation tick elapsed during the override.
+                _lastWeatherSampleTick = -1;
             }
             else if (_sim != null)
             {

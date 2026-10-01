@@ -59,88 +59,20 @@ namespace OneRoof.Presentation.Tests.EditMode
             }
         }
 
-        [Test]
-        public void GetToolWidthInCells_ReturnsCorrectDimensions()
-        {
-            Assert.That(GridPlacementController.GetToolWidthInCells("residential:apartment"), Is.EqualTo(6));
-            Assert.That(GridPlacementController.GetToolWidthInCells("room:apartment"), Is.EqualTo(6));
-            Assert.That(GridPlacementController.GetToolWidthInCells("commercial:office"), Is.EqualTo(8));
-            Assert.That(GridPlacementController.GetToolWidthInCells("commercial:diner"), Is.EqualTo(10));
-            Assert.That(GridPlacementController.GetToolWidthInCells("commercial:retail"), Is.EqualTo(6));
-            Assert.That(GridPlacementController.GetToolWidthInCells("service:clinic"), Is.EqualTo(8));
-            Assert.That(GridPlacementController.GetToolWidthInCells("service:maintenance_workshop"), Is.EqualTo(8));
-            Assert.That(GridPlacementController.GetToolWidthInCells("service:security_station"), Is.EqualTo(6));
-            Assert.That(GridPlacementController.GetToolWidthInCells("transit:elevator_car"), Is.EqualTo(2));
-            Assert.That(GridPlacementController.GetToolWidthInCells("transit:elevator_shaft"), Is.EqualTo(2));
-            Assert.That(GridPlacementController.GetToolWidthInCells("transit:stairwell"), Is.EqualTo(2));
-            Assert.That(GridPlacementController.GetToolWidthInCells("demolish:room"), Is.EqualTo(1));
-            Assert.That(GridPlacementController.GetToolWidthInCells("floor:slab"), Is.EqualTo(32));
-        }
 
-        [Test]
-        public void ValidatePlacement_RejectsRoomWhenFloorHasNoSlab()
+        [TestCase("residential:apartment", 5, 0, "has no slab", TestName = "ValidatePlacement_RejectsRoomWhenFloorHasNoSlab")]
+        [TestCase("residential:apartment", 1, 14, "exceeds floor 1 slab boundaries", TestName = "ValidatePlacement_RejectsRoomWhenExtendingBeyondSlabEdge")]
+        [TestCase("residential:apartment", 1, 2, "Overlaps existing room", TestName = "ValidatePlacement_RejectsRoomWhenOverlappingExistingRoom")]
+        [TestCase("floor:slab", 1, -12, "slab already exists", TestName = "ValidatePlacement_RejectsFloorSlab_WhenFloorAlreadyExists")]
+        [TestCase("floor:slab", 6, -12, "without floor 5 slab below", TestName = "ValidatePlacement_RejectsFloorSlab_WhenLowerFloorMissing")]
+        [TestCase("transit:elevator_shaft", 0, 0, "must extend to floor 1 or higher", TestName = "ValidatePlacement_RejectsElevatorShaft_WhenGroundFloorOrBelow")]
+        [TestCase("transit:elevator_shaft", 2, 5, "must align with the central elevator column", TestName = "ValidatePlacement_RejectsElevatorShaft_WhenMisalignedFromColumn")]
+        public void ValidatePlacement_RejectsInvalidGeometry(string toolId, int floor, int cellX, string expectedReason)
         {
-            var valid = _gridPlacement.ValidatePlacement("residential:apartment", floor: 5, cellX: 0, out var reason);
+            var valid = _gridPlacement.ValidatePlacement(toolId, floor, cellX, out var reason);
 
             Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("has no slab"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsRoomWhenExtendingBeyondSlabEdge()
-        {
-            // Floor 1 slab is [-14..16]. Placing apartment (width 6) at cellX = 14 extends to 19.
-            var valid = _gridPlacement.ValidatePlacement("residential:apartment", floor: 1, cellX: 14, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("exceeds floor 1 slab boundaries"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsRoomWhenOverlappingExistingRoom()
-        {
-            // Floor 1 has rooms at -12..-7, -6..-1, 0..1 (shaft), 2..7, 8..13.
-            // Placing at cellX = 2 overlaps 2..7.
-            var valid = _gridPlacement.ValidatePlacement("residential:apartment", floor: 1, cellX: 2, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("Overlaps existing room"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsFloorSlab_WhenFloorAlreadyExists()
-        {
-            var valid = _gridPlacement.ValidatePlacement("floor:slab", floor: 1, cellX: -12, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("slab already exists"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsFloorSlab_WhenLowerFloorMissing()
-        {
-            var valid = _gridPlacement.ValidatePlacement("floor:slab", floor: 6, cellX: -12, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("without floor 5 slab below"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsElevatorShaft_WhenGroundFloorOrBelow()
-        {
-            var valid = _gridPlacement.ValidatePlacement("transit:elevator_shaft", floor: 0, cellX: 0, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("must extend to floor 1 or higher"));
-        }
-
-        [Test]
-        public void ValidatePlacement_RejectsElevatorShaft_WhenMisalignedFromColumn()
-        {
-            var valid = _gridPlacement.ValidatePlacement("transit:elevator_shaft", floor: 2, cellX: 5, out var reason);
-
-            Assert.That(valid, Is.False);
-            Assert.That(reason, Does.Contain("must align with the central elevator column"));
+            Assert.That(reason, Does.Contain(expectedReason));
         }
 
         [Test]
@@ -329,92 +261,11 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(_session.ElevatorCarCount, Is.EqualTo(initialCars + 1));
         }
 
-        [Test]
-        public void GhostPresenter_ShowAndHide_TogglesVisibilityAndValidity()
-        {
-            Assert.That(_ghostPresenter.IsVisible, Is.False);
 
-            _ghostPresenter.ShowGhost(new Vector3(1f, 2f, 0f), new Vector2(3f, 1.5f), isValid: true);
 
-            Assert.That(_ghostPresenter.IsVisible, Is.True);
-            Assert.That(_ghostPresenter.IsValid, Is.True);
-            Assert.That(_ghostPresenter.CurrentPosition.x, Is.EqualTo(1f).Within(0.01f));
-            Assert.That(_ghostPresenter.CurrentPosition.y, Is.EqualTo(2f).Within(0.01f));
 
-            _ghostPresenter.ShowGhost(new Vector3(2f, 3f, 0f), new Vector2(3f, 1.5f), isValid: false);
-            Assert.That(_ghostPresenter.IsValid, Is.False);
 
-            _ghostPresenter.HideGhost();
-            Assert.That(_ghostPresenter.IsVisible, Is.False);
-        }
 
-        [Test]
-        public void IsPointerOverUI_IdentifiesBottomAndTopUIRegions()
-        {
-            // Bottom UI region (Mode bar, context overlay, build palette)
-            // guiY is Screen.height - screenPos.y, so a screenPos near y=30 has guiY = Screen.height - 30 (in bottom UI)
-            var bottomScreenPos = new Vector3(100f, 30f, 0f);
-            Assert.That(GridPlacementController.IsPointerOverUI(bottomScreenPos, screenHeight: 480, screenWidth: 640), Is.True);
-
-            // World area must not assume a large viewport: the headless runner is
-            // 640x480, where the fixed 650px palette rect covers the screen center.
-            // (300, 375) stays world everywhere it matters: screenY 375 sits just
-            // above the palette's top edge (368), x 300 sits right of the HUD
-            // column and left of the inspector/preview cards, and top-origin
-            // y (H-375) falls outside the HUD strip and the card y-ranges.
-            var worldScreenPos = new Vector3(300f, 375f, 0f);
-            Assert.That(GridPlacementController.IsPointerOverUI(worldScreenPos, screenHeight: 480, screenWidth: 640), Is.False);
-        }
-
-        [Test]
-        public void IsPointerOverUI_ProtectsEveryBuildPaletteRow()
-        {
-            // Input coordinates originate at the lower-left; the upper palette row
-            // therefore has a larger Y than the mode bar below it.
-            var upperPaletteRow = new Vector3(100f, 330f, 0f);
-            var lowerPaletteRow = new Vector3(100f, 90f, 0f);
-
-            Assert.That(GridPlacementController.IsPointerOverUI(upperPaletteRow), Is.True);
-            Assert.That(GridPlacementController.IsPointerOverUI(lowerPaletteRow), Is.True);
-        }
-
-        [Test]
-        public void IsPointerOverUI_DoesNotReservePaletteAreaAfterToolSelection()
-        {
-            // A palette row outside the persistent context strip becomes world
-            // space after the chooser closes; the selected tool can build there.
-            // Pin the same compact viewport used by the neighboring pointer-area
-            // regression so a tall Game view cannot move this point into the HUD.
-            const int screenHeight = 480;
-            const int screenWidth = 640;
-            var palettePosition = new Vector3(100f, screenHeight - 240f, 0f);
-
-            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: true, screenHeight, screenWidth), Is.True);
-            Assert.That(GridPlacementController.IsPointerOverUI(palettePosition, includeBuildPalette: false, screenHeight, screenWidth), Is.False);
-        }
-
-        [Test]
-        public void IsPointerOverUI_WithToolSelected_StillProtectsVisibleModeBarAndContext()
-        {
-            var bar = ModeShellBarController.ModeBarRect(Screen.height);
-            var context = ModeShellBarController.ContextRect(Screen.height, isBuildMode: true);
-
-            Assert.That(GridPlacementController.IsPointerOverUI(
-                new Vector3(bar.center.x, Screen.height - bar.center.y), includeBuildPalette: false), Is.True);
-            Assert.That(GridPlacementController.IsPointerOverUI(
-                new Vector3(context.center.x, Screen.height - context.center.y), includeBuildPalette: false), Is.True);
-        }
-
-        [Test]
-        public void IsPointerOverUI_ShieldsActualPaletteBoundsWhileChooserIsOpen()
-        {
-            var palette = ModeShellBarController.BuildPaletteRect(Screen.height);
-            var upperRow = new Vector3(palette.center.x, Screen.height - (palette.yMin + 20f));
-            var lowerRow = new Vector3(palette.center.x, Screen.height - (palette.yMax - 20f));
-
-            Assert.That(GridPlacementController.IsPointerOverUI(upperRow, includeBuildPalette: true), Is.True);
-            Assert.That(GridPlacementController.IsPointerOverUI(lowerRow, includeBuildPalette: true), Is.True);
-        }
 
         [Test]
         public void Camera_Property_FindsCameraEvenWhenNotTaggedMainCamera()

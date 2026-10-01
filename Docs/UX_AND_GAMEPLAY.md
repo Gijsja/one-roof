@@ -39,6 +39,8 @@ The player interacts through a unified mode shell bar (`ModeShellBarController`)
 | **Manage** | `4` | Treasury, policy decrees (rent caps, commercial tax, transit subsidies, quiet hours), tenant leases, staff roles. |
 
 ### Global View Controls
+- **Camera navigation (`WASD` / arrows)**: Pans the Tower view; `D` does not select Data mode (use `3`).
+- **Weather preview (`F6`)**: Cycles the existing manual weather override and Auto mode without moving the camera.
 - **Facade Envelope Lock (`F`)**: Toggles visible presentation between CUTAWAY interior view and OUTSIDE curtain wall envelope, with manual locks taking precedence over camera-driven semantic zoom.
 - **Overview Frame (`Home`)**: Reframes the camera to view the full tower structure.
 

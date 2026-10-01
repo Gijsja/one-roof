@@ -13,7 +13,7 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class UndercityVisualCapturePlayModeTests
+    public sealed class UndercityVisualCapturePlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator UndercityUtilitiesVisualCapture_RunningAndBrokenFlow()
@@ -82,8 +82,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var cameraObject = GameObject.Find("Tower Camera");
-                if (cameraObject != null) Object.Destroy(cameraObject);
             }
         }
 
@@ -125,8 +123,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
 

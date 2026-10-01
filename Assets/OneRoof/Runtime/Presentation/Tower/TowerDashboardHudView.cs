@@ -106,7 +106,7 @@ namespace OneRoof.Presentation.Tower
             GUILayout.BeginHorizontal();
             GUILayout.Label(_controller.IsPaused ? "● PAUSED  /  SPACE TO RESUME" : "● LIVE  /  SPACE TO PAUSE", StewardTheme.Label(10, _controller.IsPaused ? StewardTheme.Amber : StewardTheme.Mint, true));
             GUILayout.FlexibleSpace();
-            GUILayout.Label($"WEATHER: {(_controller.IsAutoWeather ? $"AUTO M{sim.DayPhase.DayNumber / 30 + 1}" : "MANUAL")} (W)", StewardTheme.Label(10, StewardTheme.Muted, true));
+            GUILayout.Label($"WEATHER: {(_controller.IsAutoWeather ? $"AUTO M{sim.DayPhase.DayNumber / 30 + 1}" : "MANUAL")} (F6)", StewardTheme.Label(10, StewardTheme.Muted, true));
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }

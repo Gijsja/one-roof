@@ -9,7 +9,7 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class GoldenExpansionPlayModeTests
+    public sealed class GoldenExpansionPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator BuildMode_FloorSlabPreviewAndConfirmation_ExtendsTheRenderedTower()
@@ -48,8 +48,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
 
@@ -120,8 +118,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
     }

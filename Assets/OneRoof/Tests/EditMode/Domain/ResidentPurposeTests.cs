@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using OneRoof.Domain.Identity;
 using OneRoof.Domain.Population;
@@ -17,7 +18,7 @@ namespace OneRoof.Domain.Tests.EditMode
             var schedule = DailySchedule.Standard(new PersonTrait(PersonTraitKind.NightOwl),
                 new DeterministicRandomStream(44));
             Assert.That(schedule.Blocks[1].DurationTicks, Is.EqualTo(480));
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var person = new PersonRecord(new EntityId(99100), sample.HouseholdId, sample.HomeRoomId,
                 sample.WorkplaceRoomId, schedule, sample.Needs, sample.Traits);
             var restored = PopulationState.FromSaveData(new PopulationState(new[] { person }, null).ToSaveData()).Persons[0];
@@ -28,7 +29,7 @@ namespace OneRoof.Domain.Tests.EditMode
         public void OutsideWorkerRemainsAwayForEightHoursAfterArrivalAcrossSaveLoad()
         {
             var topology = BuildingTopologyState.CreateWithFixture();
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99001), new EntityId(99002), sample.HomeRoomId,
                 default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
             worker.UpdateLocation(WorldLocation.Outside);
@@ -60,7 +61,7 @@ namespace OneRoof.Domain.Tests.EditMode
         public void CriticalHungerInterruptsCommittedOutsideShiftForFood()
         {
             var topology = BuildingTopologyState.CreateWithFixture();
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99003), new EntityId(99004), sample.HomeRoomId,
                 default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
             worker.UpdateLocation(WorldLocation.Outside);
@@ -82,7 +83,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void OutsideFoodRetryBlockSurvivesPopulationSaveLoad()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99005), new EntityId(99006), sample.HomeRoomId,
                 default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
             worker.BlockOutsideFoodUntil(500);
@@ -97,7 +98,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void ReassignToOutsideWork_PreservesIdentityAndHomeAcrossSaveLoad()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99007), new EntityId(99008), sample.HomeRoomId,
                 sample.WorkplaceRoomId, sample.Schedule, sample.Needs, sample.Traits);
             worker.UpdateLocation(sample.WorkplaceRoomId);
@@ -124,7 +125,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void ReassignToOutsideWork_WaitsForActiveCommute()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99009), new EntityId(99010), sample.HomeRoomId,
                 sample.WorkplaceRoomId, sample.Schedule, sample.Needs, sample.Traits);
             worker.UpdateActivity(ActivityKind.Commuting);
@@ -137,7 +138,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void ReassignToRoomWork_PreservesHomeAndPhysicalLocationAcrossSaveLoad()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99012), new EntityId(99013), sample.HomeRoomId,
                 default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
             worker.UpdateLocation(WorldLocation.Outside);
@@ -161,7 +162,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void ReassignToRoomWork_DoesNotRedirectActiveCommute()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var worker = new PersonRecord(new EntityId(99014), new EntityId(99015), sample.HomeRoomId,
                 default, sample.Schedule, sample.Needs, sample.Traits, worksOutside: true);
             worker.UpdateActivity(ActivityKind.Commuting);
@@ -174,7 +175,7 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void MealAndHomePurposeHoldForMinimumTimeAfterArrival()
         {
-            var sample = FiftyResidentFixture.Create().Persons[0];
+            var sample = CreateSampleWorker();
             var schedule = DailySchedule.Standard(sample.Traits[0], new DeterministicRandomStream(42));
             var person = new PersonRecord(new EntityId(99011), sample.HouseholdId, sample.HomeRoomId,
                 sample.WorkplaceRoomId, schedule, sample.Needs, sample.Traits);
@@ -196,6 +197,24 @@ namespace OneRoof.Domain.Tests.EditMode
             var restored = PopulationState.FromSaveData(new PopulationState(new[] { person }, null).ToSaveData()).Persons[0];
             Assert.That(restored.CurrentPurpose, Is.EqualTo(person.CurrentPurpose));
             Assert.That(restored.PurposeEndsAtTick, Is.EqualTo(260));
+        }
+
+        private static PersonRecord CreateSampleWorker()
+        {
+            var trait = new PersonTrait(PersonTraitKind.EarlyBird);
+            var schedule = DailySchedule.Standard(trait, new DeterministicRandomStream(42));
+            var needs = new[]
+            {
+                new NeedState(NeedKind.Hunger, 1f), new NeedState(NeedKind.Energy, 1f),
+                new NeedState(NeedKind.Social, 1f), new NeedState(NeedKind.Hygiene, 1f),
+                new NeedState(NeedKind.Purpose, 1f)
+            };
+            var topology = BuildingTopologyState.CreateWithFixture();
+            var home = topology.Rooms.Values.First(room => room.ContentType == FiveFloorTopologyFixture.ResidentialContentId);
+            var workplace = topology.Rooms.Values.Single(room => room.ContentType == FiveFloorTopologyFixture.CommercialContentId);
+            return new PersonRecord(new EntityId(2001), new EntityId(1001),
+                home.Id, workplace.Id,
+                schedule, needs, new[] { trait });
         }
 
         private static ScheduleTripGenerator NewGenerator(BuildingTopologyState topology) =>

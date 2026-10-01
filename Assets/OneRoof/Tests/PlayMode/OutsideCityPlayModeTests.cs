@@ -6,7 +6,7 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class OutsideCityPlayModeTests
+    public sealed class OutsideCityPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator TowerControllerCreatesParallaxCityWithoutBlockingInput()
@@ -34,8 +34,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
     }

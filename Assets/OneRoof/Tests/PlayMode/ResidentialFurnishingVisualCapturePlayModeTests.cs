@@ -17,7 +17,7 @@ using UnityEditor.SceneManagement;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class ResidentialFurnishingVisualCapturePlayModeTests
+    public sealed class ResidentialFurnishingVisualCapturePlayModeTests : OwnedPlayModeSceneFixture
     {
         private const string ScenePath = "Assets/Scenes/Tower_GoldStandard30.unity";
         private const string ArtifactDir = "/home/geisha/.gemini/antigravity/brain/209c71ff-acf1-4c4b-8713-320ad2c07a9d";
@@ -26,7 +26,7 @@ namespace OneRoof.Tests.PlayMode
         public IEnumerator GoldStandard30_CaptureResidentialEmptyAndFurnishedCutaways()
         {
 #if UNITY_EDITOR
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+            yield return LoadTestScene(ScenePath);
             yield return null;
 
             var playground = Object.FindFirstObjectByType<GoldStandardPlayground>();
@@ -163,7 +163,6 @@ namespace OneRoof.Tests.PlayMode
             {
                 if (tower != null && tower.gameObject != null) Object.Destroy(tower.gameObject);
                 if (playground != null && playground.gameObject != null) Object.Destroy(playground.gameObject);
-                if (Camera.main != null) Object.Destroy(Camera.main.gameObject);
             }
 #else
             Assert.Ignore("Visual capture runs in Editor PlayMode.");

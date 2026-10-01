@@ -11,19 +11,170 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+#endif
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class CaretakerCrisisPlayModeTests
+    public sealed class CaretakerCrisisPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator GoldenTower_LobbyContactAndPracticeRestoreManagementAndCamera()
         {
+            yield return RunPracticeAcceptance(captureDiagnostics: false);
+        }
+
+        [UnityTest, Explicit("Optional graphical captures and timing diagnostics."), Category("VisualCapture")]
+        public IEnumerator GoldenTower_PracticeCapturesAndPerformanceDiagnostics()
+        {
+            yield return RunPracticeAcceptance(captureDiagnostics: true);
+        }
+
+        [UnityTest]
+        public IEnumerator GoldenTower_NavigationWeatherAndModalInputsStayExclusive()
+        {
+#if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
+            yield return LoadTestScene("Assets/Scenes/Tower_GoldStandard30.unity");
+            yield return null;
+            var playground = UnityEngine.Object.FindFirstObjectByType<GoldStandardPlayground>();
+            var tower = playground.Tower;
+            var presenter = tower.CaretakerPresenter;
+            var camera = Camera.main;
+            Assert.That(camera.GetComponent<TowerCameraController>(), Is.Not.Null);
+            tower.SetPaused(true);
+            playground.FrameStreet();
+            tower.ModeSession.SwitchMode(InteractionMode.Inspect);
+            var inputSettings = InputSystem.settings;
+            var originalEditorInputBehavior = inputSettings.editorInputBehaviorInPlayMode;
+            var originalBackgroundBehavior = inputSettings.backgroundBehavior;
+            // Batch acceptance has no focused GameView; keep synthetic keyboard events in
+            // the game update rather than routing them into the Editor's input state.
+            inputSettings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            inputSettings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            var previousKeyboard = Keyboard.current;
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            try
+            {
+                var weather = tower.WeatherOverride;
+                var position = camera.transform.position;
+                yield return HoldKey(keyboard, Key.W);
+                Assert.That(camera.transform.position.y, Is.GreaterThan(position.y), "W must navigate the Tower.");
+                Assert.That(tower.WeatherOverride, Is.EqualTo(weather), "Navigation must not override weather.");
+                position = camera.transform.position;
+                yield return HoldKey(keyboard, Key.F6);
+                Assert.That(tower.WeatherOverride, Is.EqualTo(weather + 1), "F6 cycles weather once per press.");
+                Assert.That(Vector3.Distance(position, camera.transform.position), Is.LessThan(.001f), "Weather must not pan the camera.");
+                position = camera.transform.position;
+                yield return HoldKey(keyboard, Key.D);
+                Assert.That(camera.transform.position.x, Is.GreaterThan(position.x));
+                Assert.That(tower.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Inspect), "D pans without selecting Data mode.");
+                yield return HoldKey(keyboard, Key.Digit3);
+                Assert.That(tower.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Data), "Data remains available through 3.");
+
+                presenter.ToggleContact();
+                yield return null;
+                Assert.That(tower.CaretakerInputBlocked, Is.True);
+                position = camera.transform.position;
+                weather = tower.WeatherOverride;
+                yield return HoldKey(keyboard, Key.D);
+                yield return HoldKey(keyboard, Key.F6);
+                yield return HoldKey(keyboard, Key.Digit2);
+                yield return HoldKey(keyboard, Key.Digit6);
+                yield return HoldKey(keyboard, Key.Space);
+                Assert.That(Vector3.Distance(position, camera.transform.position), Is.LessThan(.001f));
+                Assert.That(tower.WeatherOverride, Is.EqualTo(weather));
+                Assert.That(tower.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Data));
+                Assert.That(tower.IsPaused, Is.True, "Modal input must not resume management time.");
+
+                presenter.ToggleContact();
+                yield return null;
+                Assert.That(tower.CaretakerInputBlocked, Is.False);
+                position = camera.transform.position;
+                yield return HoldKey(keyboard, Key.D);
+                Assert.That(camera.transform.position.x, Is.GreaterThan(position.x), "Closing contact restores navigation.");
+                yield return HoldKey(keyboard, Key.F6);
+                Assert.That(tower.WeatherOverride, Is.EqualTo(weather + 1), "Closing contact restores weather controls.");
+                yield return HoldKey(keyboard, Key.Digit2);
+                Assert.That(tower.ModeSession.CurrentMode, Is.EqualTo(InteractionMode.Inspect));
+                var managementPosition = camera.transform.position;
+                var managementSize = camera.orthographicSize;
+                var managementTick = tower.SimulationSession.CurrentTick;
+                var timeScale = Time.timeScale;
+                weather = tower.WeatherOverride;
+                Assert.That(presenter.RequestAction(CaretakerCrisisAction.Practice), Is.True);
+                yield return null;
+                Assert.That(presenter.IsArcadeActive, Is.True);
+                Assert.That(tower.CaretakerInputBlocked, Is.True);
+                var caretakerX = tower.SimulationSession.CaretakerProjection().X;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D));
+                InputSystem.Update();
+                position = camera.transform.position;
+                // Isolate the navigation consumer from intentional arcade camera following.
+                camera.GetComponent<TowerCameraController>().SendMessage("Update");
+                Assert.That(Vector3.Distance(position, camera.transform.position), Is.LessThan(.001f), "D cannot pan management camera during practice.");
+                yield return new WaitForSecondsRealtime(.15f);
+                Assert.That(tower.SimulationSession.CaretakerProjection().X, Is.GreaterThan(caretakerX), "D still moves the Caretaker during practice.");
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return null;
+                yield return HoldKey(keyboard, Key.F6);
+                yield return HoldKey(keyboard, Key.R);
+                yield return HoldKey(keyboard, Key.Space);
+                yield return HoldKey(keyboard, Key.Digit6);
+                Assert.That(presenter.IsArcadeActive, Is.True, "Management reset cannot replace active practice.");
+                Assert.That(tower.SimulationSession.CurrentTick, Is.EqualTo(managementTick));
+                Assert.That(tower.WeatherOverride, Is.EqualTo(weather));
+                Assert.That(tower.IsPaused, Is.True);
+                Assert.That(Time.timeScale, Is.EqualTo(timeScale));
+                Assert.That(camera.orthographicSize, Is.LessThan(3f), "Street framing cannot replace the arcade view.");
+                Assert.That(presenter.RequestAction(CaretakerCrisisAction.Exit), Is.True);
+                yield return null;
+                Assert.That(presenter.ContactOpen, Is.True);
+                presenter.ToggleContact();
+                yield return null;
+                Assert.That(tower.CaretakerInputBlocked, Is.False);
+                Assert.That(tower.IsPaused, Is.True);
+                Assert.That(Time.timeScale, Is.EqualTo(timeScale));
+                Assert.That(tower.SimulationSession.CurrentTick, Is.EqualTo(managementTick));
+                Assert.That(Vector3.Distance(camera.transform.position, managementPosition), Is.LessThan(.001f));
+                Assert.That(camera.orthographicSize, Is.EqualTo(managementSize).Within(.001f));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(keyboard);
+                if (previousKeyboard != null && previousKeyboard.added) previousKeyboard.MakeCurrent();
+                inputSettings.editorInputBehaviorInPlayMode = originalEditorInputBehavior;
+                inputSettings.backgroundBehavior = originalBackgroundBehavior;
+            }
+#else
+            Assert.Ignore("Input acceptance requires the Editor and Input System.");
+            yield break;
+#endif
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        private static IEnumerator HoldKey(Keyboard keyboard, Key key)
+        {
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
+            // Hold across frame boundaries so the real Update consumers process the event.
+            for (var frame = 0; frame < 3; frame++) yield return null;
+            Assert.That(Keyboard.current, Is.SameAs(keyboard), "Synthetic keyboard must own the current game input state.");
+            Assert.That(keyboard[key].isPressed, Is.True, "Queued input must reach the game before behavior is asserted.");
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return null;
+            yield return null;
+        }
+#endif
+
+        private IEnumerator RunPracticeAcceptance(bool captureDiagnostics)
+        {
 #if UNITY_EDITOR
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/Tower_GoldStandard30.unity", new LoadSceneParameters(LoadSceneMode.Single));
+            yield return LoadTestScene("Assets/Scenes/Tower_GoldStandard30.unity");
             yield return null;
             var playground = UnityEngine.Object.FindFirstObjectByType<GoldStandardPlayground>();
             var tower = playground.Tower;
@@ -45,8 +196,8 @@ namespace OneRoof.Tests.PlayMode
             tower.ModeSession.SwitchMode(mode == InteractionMode.Build ? InteractionMode.Inspect : InteractionMode.Build);
             Assert.That(tower.ModeSession.CurrentMode, Is.EqualTo(mode), "Modal contact must block mode shortcuts.");
             var output = "/tmp/one-roof-caretaker-validation";
-            Directory.CreateDirectory(output);
-            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
+            if (captureDiagnostics) Directory.CreateDirectory(output);
+            if (captureDiagnostics && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
             {
                 Capture(camera, Path.Combine(output, "lobby-contact-world.png"));
                 yield return null;
@@ -102,7 +253,7 @@ namespace OneRoof.Tests.PlayMode
             yield return null;
             Assert.That(tower.SimulationSession.CurrentTick, Is.EqualTo(tick));
             Assert.That(tower.SimulationSession.ExportSaveData().caretakerCrisis.routeIndex, Is.GreaterThan(0));
-            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
+            if (captureDiagnostics && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
             {
                 for (var step = 0; step < 240; step++)
                 {
@@ -152,19 +303,22 @@ namespace OneRoof.Tests.PlayMode
                     (UnityEngine.Application.isBatchMode ? "\nCameraRenderP95ms=" : "\nFrameP95ms=") + renderTimes[(int)((renderTimes.Count - 1) * .95)] +
                     (UnityEngine.Application.isBatchMode ? "\nGUI=Not captured by explicit Camera.Render" : "\nCameraSubmitTiming=Unavailable; measured native frame timing"));
             }
-            var samples = new List<double>();
-            var timer = new System.Diagnostics.Stopwatch();
-            for (var step = 0; step < 120; step++)
+            if (captureDiagnostics)
             {
-                timer.Restart();
-                var result = tower.SimulationSession.ExecuteCaretaker(CaretakerCrisisAction.Step, new CaretakerCombatInput(0, kick: true, jump: true));
-                timer.Stop();
-                if (!result.Accepted) break;
-                samples.Add(timer.Elapsed.TotalMilliseconds);
+                var samples = new List<double>();
+                var timer = new System.Diagnostics.Stopwatch();
+                for (var step = 0; step < 120; step++)
+                {
+                    timer.Restart();
+                    var result = tower.SimulationSession.ExecuteCaretaker(CaretakerCrisisAction.Step, new CaretakerCombatInput(0, kick: true, jump: true));
+                    timer.Stop();
+                    if (!result.Accepted) break;
+                    samples.Add(timer.Elapsed.TotalMilliseconds);
+                }
+                samples.Sort();
+                if (samples.Count > 0)
+                    File.WriteAllText(Path.Combine(output, "combat-performance.txt"), "Samples=" + samples.Count + "\nP95ms=" + samples[(int)((samples.Count - 1) * .95)]);
             }
-            samples.Sort();
-            if (samples.Count > 0)
-                File.WriteAllText(Path.Combine(output, "combat-performance.txt"), "Samples=" + samples.Count + "\nP95ms=" + samples[(int)((samples.Count - 1) * .95)]);
             Assert.That(tower.SimulationSession.ExecuteCaretaker(CaretakerCrisisAction.Exit).Accepted, Is.True);
             presenter.RefreshPresentation();
             yield return null;

@@ -8,29 +8,15 @@ namespace OneRoof.Domain.Tests.EditMode
     [TestFixture]
     public sealed class MonthlyWeatherCycleTests
     {
-        [Test]
-        public void MonthNumber_And_DayOfMonth_CalculateCorrectly()
+        [TestCase(0L, 1, 1)]
+        [TestCase(1439L, 1, 1)]
+        [TestCase(1440L, 1, 2)]
+        [TestCase(42260L, 1, 30)]
+        [TestCase(43200L, 2, 1)]
+        public void CalendarPosition_FromTick(long tick, int expectedMonth, int expectedDay)
         {
-            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(0), Is.EqualTo(1));
-            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(0), Is.EqualTo(1));
-
-            // End of day 1
-            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(1439), Is.EqualTo(1));
-            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(1439), Is.EqualTo(1));
-
-            // Start of day 2
-            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(1440), Is.EqualTo(1));
-            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(1440), Is.EqualTo(2));
-
-            // Day 30 of month 1
-            var day30Tick = 29 * MonthlyWeatherCycle.TicksPerDay + 500;
-            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(day30Tick), Is.EqualTo(1));
-            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(day30Tick), Is.EqualTo(30));
-
-            // Day 1 of month 2 (tick 43200)
-            var month2Tick = MonthlyWeatherCycle.TicksPerMonth;
-            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(month2Tick), Is.EqualTo(2));
-            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(month2Tick), Is.EqualTo(1));
+            Assert.That(MonthlyWeatherCycle.MonthNumberFromTick(tick), Is.EqualTo(expectedMonth));
+            Assert.That(MonthlyWeatherCycle.DayOfMonthFromTick(tick), Is.EqualTo(expectedDay));
         }
 
         [Test]
@@ -105,16 +91,15 @@ namespace OneRoof.Domain.Tests.EditMode
                 }
             }
 
-            if (transitionIdx >= 0)
-            {
-                var boundaryTick = events[transitionIdx].EndTick;
-                var sampleBefore = cycle.Sample(boundaryTick - 30);
-                var sampleAtBoundary = cycle.Sample(boundaryTick);
-                var sampleAfter = cycle.Sample(boundaryTick + 30);
+            Assert.That(transitionIdx, Is.GreaterThanOrEqualTo(0),
+                "The fixed weather seed must provide a clear-to-front boundary.");
+            var boundaryTick = events[transitionIdx].EndTick;
+            var sampleBefore = cycle.Sample(boundaryTick - 30);
+            var sampleAtBoundary = cycle.Sample(boundaryTick);
+            var sampleAfter = cycle.Sample(boundaryTick + 30);
 
-                Assert.That(sampleBefore.Intensity, Is.LessThanOrEqualTo(sampleAtBoundary.Intensity));
-                Assert.That(sampleAfter.Intensity, Is.GreaterThan(sampleAtBoundary.Intensity));
-            }
+            Assert.That(sampleBefore.Intensity, Is.LessThanOrEqualTo(sampleAtBoundary.Intensity));
+            Assert.That(sampleAfter.Intensity, Is.GreaterThan(sampleAtBoundary.Intensity));
         }
 
         [Test]
@@ -160,18 +145,16 @@ namespace OneRoof.Domain.Tests.EditMode
                     if (cur.Condition == WeatherCondition.Clear &&
                         (next.Condition == WeatherCondition.Rain || next.Condition == WeatherCondition.Storm))
                     {
-                        // Within the 45-tick transition window, no sample should be Clear
-                        // unless the intensity is legitimately near zero
+                        // A clear-to-rain transition must keep the incoming condition,
+                        // including its initially near-zero intensity.
                         var boundary = next.StartTick;
                         for (var t = 1; t <= 44; t++)
                         {
                             var sample = cycle.Sample(boundary + t);
-                            // Once we are 10+ ticks into a Rain/Storm front, condition must not flip back to Clear
-                            if (t >= 10 && sample.Intensity > 0.05f)
-                            {
-                                Assert.That(sample.Condition, Is.Not.EqualTo(WeatherCondition.Clear),
-                                    $"Flicker at tick {boundary + t} (month {month}, event {i}→{i+1})");
-                            }
+                            Assert.That(sample.Condition, Is.EqualTo(next.Condition),
+                                $"Flicker at tick {boundary + t} (month {month}, event {i}→{i+1})");
+                            if (t == 44)
+                                Assert.That(sample.Intensity, Is.GreaterThan(0.05f), "The front must actually intensify.");
                         }
                         foundTransition = true;
                         break;
@@ -180,14 +163,12 @@ namespace OneRoof.Domain.Tests.EditMode
                 if (foundTransition) break;
             }
 
-            if (!foundTransition)
-            {
-                Assert.Ignore("No Clear→Rain/Storm transition found in the tested seed — skip.");
-            }
+            Assert.That(foundTransition, Is.True,
+                "The fixed weather seed must provide a clear-to-rain/storm transition.");
         }
 
         [Test]
-        public void GenerateMonthEvents_CoversFogAndSnow_AsValidStates()
+        public void GenerateMonthEvents_ProducesValidConditionsDurationsAndIntensities()
         {
             // Scan across 12 months; all produced WeatherConditions must be valid enum values
             var cycle = new MonthlyWeatherCycle(0xFAB15EED_C0FEUL);
@@ -207,6 +188,23 @@ namespace OneRoof.Domain.Tests.EditMode
                     Assert.That(evt.DurationTicks, Is.GreaterThan(0), $"Zero-duration event in month {month}");
                     Assert.That(evt.PeakIntensity, Is.InRange(0f, 1f), $"Intensity out of range in month {month}");
                 }
+            }
+        }
+
+        [TestCase(WeatherCondition.Fog)]
+        [TestCase(WeatherCondition.Snow)]
+        public void GeneratedYear_ContainsAndSamplesVisibilityReducingFronts(WeatherCondition condition)
+        {
+            var cycle = new MonthlyWeatherCycle(0xFAB15EED_C0FEUL);
+            var fronts = Enumerable.Range(1, 12)
+                .SelectMany(month => cycle.GetMonthlyEvents(month).ToArray())
+                .Where(front => front.Condition == condition).ToArray();
+            Assert.That(fronts, Is.Not.Empty, $"The fixed yearly fixture must produce {condition}.");
+            foreach (var front in fronts)
+            {
+                var sample = cycle.Sample(front.StartTick + front.DurationTicks / 2);
+                Assert.That(sample.Condition, Is.EqualTo(condition), $"Front at {front.StartTick}");
+                Assert.That(sample.IsReducedVisibility, Is.True);
             }
         }
 
@@ -233,22 +231,51 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void WeatherSample_IsReducedVisibility_ForFogAndSnow()
+        public void ZeroSeed_UsesStableNonZeroFallback()
         {
-            var fogSample = new WeatherSample(WeatherCondition.Fog, 0.5f, 0f);
-            Assert.That(fogSample.IsReducedVisibility, Is.True, "Fog must flag reduced visibility");
+            var cycle = new MonthlyWeatherCycle(0UL);
+            Assert.That(cycle.WorldSeed, Is.Not.EqualTo(0UL));
+            var fallback = new MonthlyWeatherCycle(cycle.WorldSeed);
+            foreach (var tick in new[] { 0L, 10000L, 43200L, 86400L })
+                Assert.That(cycle.Sample(tick), Is.EqualTo(fallback.Sample(tick)), $"Fallback at tick {tick}");
+        }
 
-            var snowSample = new WeatherSample(WeatherCondition.Snow, 0.5f, 0f);
-            Assert.That(snowSample.IsReducedVisibility, Is.True, "Snow must flag reduced visibility");
+        [TestCase(WeatherCondition.Clear)]
+        [TestCase(WeatherCondition.Drizzle)]
+        [TestCase(WeatherCondition.Rain)]
+        [TestCase(WeatherCondition.Storm)]
+        [TestCase(WeatherCondition.Fog)]
+        [TestCase(WeatherCondition.Snow)]
+        public void WeatherSample_DefaultDescriptionIsNonEmpty(WeatherCondition condition)
+        {
+            Assert.That(WeatherSample.DefaultDescription(condition), Is.Not.Null.And.Not.Empty);
+        }
 
-            var clearSample = new WeatherSample(WeatherCondition.Clear, 0f, 0f);
-            Assert.That(clearSample.IsReducedVisibility, Is.False, "Clear must not flag reduced visibility");
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        public void SampledIntensity_IsInUnitRangeAcrossMonth(int month)
+        {
+            var cycle = new MonthlyWeatherCycle(0xCAFE_BABE_1234_5678UL);
+            var firstTick = (month - 1L) * MonthlyWeatherCycle.TicksPerMonth;
+            for (var tick = firstTick; tick < firstTick + MonthlyWeatherCycle.TicksPerMonth; tick += 500)
+                Assert.That(cycle.Sample(tick).Intensity, Is.InRange(0f, 1f), $"Sample at tick {tick}");
+        }
 
-            var mildRainSample = new WeatherSample(WeatherCondition.Rain, 0.5f, -0.5f);
-            Assert.That(mildRainSample.IsReducedVisibility, Is.False, "Rain below 0.7 intensity must not flag reduced visibility");
-
-            var severeStormSample = new WeatherSample(WeatherCondition.Storm, 0.9f, -2f);
-            Assert.That(severeStormSample.IsReducedVisibility, Is.True, "Storm > 0.7 must flag reduced visibility");
+        [TestCase(WeatherCondition.Fog, 0.5f, true)]
+        [TestCase(WeatherCondition.Snow, 0.5f, true)]
+        [TestCase(WeatherCondition.Clear, 0f, false)]
+        [TestCase(WeatherCondition.Rain, 0.5f, false)]
+        [TestCase(WeatherCondition.Storm, 0.7f, false)]
+        [TestCase(WeatherCondition.Storm, 0.9f, true)]
+        public void WeatherSample_VisibilityMatchesConditionAndIntensity(
+            WeatherCondition condition, float intensity, bool expectedReducedVisibility)
+        {
+            var sample = new WeatherSample(condition, intensity, 0f);
+            Assert.That(sample.IsReducedVisibility, Is.EqualTo(expectedReducedVisibility));
         }
     }
 }

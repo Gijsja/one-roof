@@ -49,7 +49,7 @@ A BLOCKED child becomes READY when its concrete input is delivered; parent closu
 
 ## 2. Planned Resident Expansion (M11, After City Status)
 
-Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and [copyable agent prompts](./Prompts/RESIDENT_SYSTEM_AGENT_PROMPTS.md) define package ownership, validation and dispatch gates. OR-1100 is immediate validation of existing resident work; new M11 implementation stays after City Status. These tasks are QUEUED after City Status; none is dispatchable until its declared gate passes. Scope and acceptance scenarios are authoritative in [Roadmap §4](./ROADMAP.md#4-planned-m11--modular-residents-faction-bodywear--limb-health). Existing beta gates remain unchanged.
+Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and [copyable agent prompts](./Prompts/RESIDENT_SYSTEM_AGENT_PROMPTS.md) define package ownership, validation and dispatch gates. OR-1100 is immediate validation of existing resident work; new M11 implementation stays after City Status. These tasks are QUEUED after City Status; none is dispatchable until its declared gate passes. Scope and City Status gates remain in [Roadmap §4](./ROADMAP.md#4-planned-m11--modular-residents-faction-bodywear--limb-health); detailed contracts and acceptance scenarios are authoritative in the [Resident execution plan §§8–9](./RESIDENT_SYSTEM_EXECUTION_PLAN.md#8-system-and-art-contract). Existing beta gates remain unchanged.
 
 | ID | Status | Milestone | Task | Depends on | Acceptance |
 |---|---|---|---|---|---|

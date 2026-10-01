@@ -8,6 +8,9 @@ namespace OneRoof.Content
         QueueWait,
         Ride,
         Sit,
-        Sleep
+        Sleep,
+        Run,
+        WorkDesk,
+        Crawl
     }
 }

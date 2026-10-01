@@ -6,7 +6,8 @@
     "OneRoof.Application",
     "OneRoof.Infrastructure",
     "OneRoof.Presentation",
-    "OneRoof.UI"
+    "OneRoof.UI",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

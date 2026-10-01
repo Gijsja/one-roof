@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class M9ManagementOnboardingPlayModeTests
+    public sealed class M9ManagementOnboardingPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator FirstManagementLessonFollowsActualTowerActions()
@@ -44,8 +44,6 @@ namespace OneRoof.Tests.PlayMode
             Assert.That(lesson.IsComplete, Is.True);
 
             Object.Destroy(holder);
-            var camera = GameObject.Find("Tower Camera");
-            if (camera != null) Object.Destroy(camera);
             yield return null;
         }
     }

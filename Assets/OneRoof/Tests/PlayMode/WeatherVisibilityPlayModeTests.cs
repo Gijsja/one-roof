@@ -9,10 +9,10 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class WeatherVisibilityPlayModeTests
+    public sealed class WeatherVisibilityPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
-        public IEnumerator GroundStart_RainAppearsInCameraCapture()
+        public IEnumerator GroundStart_RainAndFogAppearAgainstMatchedCameraControls()
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
                 Assert.Ignore("A graphics device is required for visual capture.");
@@ -57,13 +57,16 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(rain.RainMeshRenderer, Is.Not.Null,
                     "World geometry creation must leave the rain mesh initialized.");
                 Assert.That(rain.RainMeshRenderer.enabled, Is.True);
+                // Both renders happen without yielding: traffic, residents, lighting and
+                // construction have identical state; only the weather renderer changes.
+                var rainControlPixels = CaptureWithoutWeather(camera, rain, Path.Combine(output, "rain-control.png"));
                 var rainPixels = Capture(camera, Path.Combine(output, "rain.png"));
                 var changedSkyPixels = 0;
                 for (var y = 600; y < 720; y++)
                     for (var x = 0; x < 1280; x++)
                     {
                         var index = y * 1280 + x;
-                        var clear = clearPixels[index];
+                        var clear = rainControlPixels[index];
                         var wet = rainPixels[index];
                         if (Mathf.Abs(clear.r - wet.r) > 35 ||
                             Mathf.Abs(clear.g - wet.g) > 35 ||
@@ -79,11 +82,12 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(rain.ActiveFogPuffCount, Is.GreaterThan(0));
                 Assert.That(rain.ActiveDropCount, Is.EqualTo(0),
                     "Fog must replace rain drops rather than layering rain over the tower.");
+                var fogControlPixels = CaptureWithoutWeather(camera, rain, Path.Combine(output, "fog-control.png"));
                 var fogPixels = Capture(camera, Path.Combine(output, "fog.png"));
                 var changedFogPixels = 0;
                 for (var i = 0; i < clearPixels.Length; i++)
                 {
-                    var clear = clearPixels[i];
+                    var clear = fogControlPixels[i];
                     var fog = fogPixels[i];
                     if (Mathf.Abs(clear.r - fog.r) > 2 ||
                         Mathf.Abs(clear.g - fog.g) > 2 ||
@@ -98,9 +102,19 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
+        }
+
+        private static Color32[] CaptureWithoutWeather(Camera camera, PixelRainPresenter rain, string path)
+        {
+            var renderer = rain.RainMeshRenderer;
+            var wasEnabled = renderer.enabled;
+            try
+            {
+                renderer.enabled = false;
+                return Capture(camera, path);
+            }
+            finally { renderer.enabled = wasEnabled; }
         }
 
         private static Color32[] Capture(Camera camera, string path)

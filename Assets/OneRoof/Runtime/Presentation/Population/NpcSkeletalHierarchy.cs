@@ -907,6 +907,109 @@ namespace OneRoof.Presentation.Population
                 SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 14f);
                 SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 14f);
             }
+            else if (CurrentAnimation == NpcAnimationClip.Run)
+            {
+                // Alan Becker athletic sprint / run cycle:
+                // High-cadence stride (13.5 rad/s) with pronounced forward line of action,
+                // vertical flight oscillation, aggressive elbow pumping, and high rear-heel kick.
+                var phase = t * 13.5f;
+                var stride = Mathf.Sin(phase);
+                var strideVel = Mathf.Cos(phase);
+                var lift = Mathf.Abs(Mathf.Cos(phase));
+
+                var bodyLean = 8f + stride * 3.5f;
+                var runLift = lift * 0.024f;
+                SetWholeBodyPose(1f - lift * 0.01f, 1f + lift * 0.025f, bodyLean);
+                Spine.localRotation = Quaternion.Euler(0f, 0f, 6f + stride * 5f);
+                Head.localRotation = Quaternion.Euler(0f, 0f, -4f - stride * 2.5f - strideVel * 1f);
+                if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, runLift, 0f);
+
+                // Aggressive 90-degree arm pump with whip drag
+                var runShoulderL = stride * 42f;
+                var runShoulderR = -stride * 42f;
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, runShoulderL);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, runShoulderR);
+                var runElbowL = 68f + Mathf.Max(0f, -stride) * 22f - strideVel * 8f;
+                var runElbowR = 68f + Mathf.Max(0f, stride) * 22f + strideVel * 8f;
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, runElbowL);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, runElbowR);
+                SetBoneRotation(NpcRigDefinition.BoneHandL, -12f + strideVel * 10f);
+                SetBoneRotation(NpcRigDefinition.BoneHandR, -12f - strideVel * 10f);
+
+                // High knee drive and heel kick to glute
+                var runThighL = -stride * 36f;
+                var runThighR = stride * 36f;
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, runThighL);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, runThighR);
+                var runShinL = -(Mathf.Max(0f, stride) * 55f + Mathf.Max(0f, -stride) * 14f);
+                var runShinR = -(Mathf.Max(0f, -stride) * 55f + Mathf.Max(0f, stride) * 14f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, runShinL);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, runShinR);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, -(runThighL + runShinL) * 0.45f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, -(runThighR + runShinR) * 0.45f);
+            }
+            else if (CurrentAnimation == NpcAnimationClip.WorkDesk)
+            {
+                // Seated office / desk work posture:
+                // Attentive forward lean, hands elevated to desk surface with rapid
+                // keyboard typing bursts and head focus on monitors.
+                var workBreathe = Mathf.Sin(t * 2.2f);
+                SetWholeBodyPose(1.025f, 0.90f + workBreathe * 0.003f, -5.5f);
+                Spine.localRotation = Quaternion.Euler(0f, 0f, -11f + workBreathe * 0.6f);
+                Head.localRotation = Quaternion.Euler(0f, 0f, 9f - workBreathe * 0.4f);
+
+                // Level seated legs matching office chairs
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, 78f);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, 78f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -72f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, -72f);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, -6f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, -6f);
+
+                // Forearms raised to keyboard height
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, 34f + workBreathe * 1f);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, 34f + workBreathe * 1f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 52f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 52f);
+
+                // Rhythmic typing flutter
+                var burst = Mathf.Sin(t * 2.8f) > -0.25f ? 1f : 0.15f;
+                var typeL = Mathf.Sin(t * 22f) * 12f * burst;
+                var typeR = Mathf.Sin(t * 22f + 1.6f) * 12f * burst;
+                SetBoneRotation(NpcRigDefinition.BoneHandL, -14f + typeL);
+                SetBoneRotation(NpcRigDefinition.BoneHandR, -14f + typeR);
+            }
+            else if (CurrentAnimation == NpcAnimationClip.Crawl)
+            {
+                // Low-profile duct / undercity excavation inspection crawl:
+                // Pelvis lowered to ground, spine arched horizontal, head raised forward,
+                // and alternating hands/knees crawling gait.
+                if (Hip != null) Hip.localPosition = _hipBasePos + new Vector3(0f, -0.13f, 0f);
+                var crawlPhase = t * 5f;
+                var crawlStride = Mathf.Sin(crawlPhase);
+                var crawlBounce = Mathf.Abs(Mathf.Cos(crawlPhase));
+                SetWholeBodyPose(1.08f, 0.70f + crawlBounce * 0.02f, -18f + crawlStride * 3f);
+                Spine.localRotation = Quaternion.Euler(0f, 0f, -22f + crawlStride * 4f);
+                Head.localRotation = Quaternion.Euler(0f, 0f, 32f - crawlStride * 2f);
+
+                var crawlArmL = crawlStride * 28f + 18f;
+                var crawlArmR = -crawlStride * 28f + 18f;
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperL, crawlArmL);
+                SetBoneRotation(NpcRigDefinition.BoneArmUpperR, crawlArmR);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerL, 45f + Mathf.Max(0f, -crawlStride) * 25f);
+                SetBoneRotation(NpcRigDefinition.BoneArmLowerR, 45f + Mathf.Max(0f, crawlStride) * 25f);
+                SetBoneRotation(NpcRigDefinition.BoneHandL, -30f);
+                SetBoneRotation(NpcRigDefinition.BoneHandR, -30f);
+
+                var crawlThighL = -crawlStride * 32f + 55f;
+                var crawlThighR = crawlStride * 32f + 55f;
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperL, crawlThighL);
+                SetBoneRotation(NpcRigDefinition.BoneLegUpperR, crawlThighR);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerL, -80f + Mathf.Max(0f, crawlStride) * 25f);
+                SetBoneRotation(NpcRigDefinition.BoneLegLowerR, -80f + Mathf.Max(0f, -crawlStride) * 25f);
+                SetBoneRotation(NpcRigDefinition.BoneFootL, 25f);
+                SetBoneRotation(NpcRigDefinition.BoneFootR, 25f);
+            }
             else
             {
                 // Alan Becker alert idle:

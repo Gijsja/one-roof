@@ -1,6 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using OneRoof.Application.Tower;
+using OneRoof.Application.Transit;
+using OneRoof.Domain.Identity;
 using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
@@ -8,7 +11,7 @@ namespace OneRoof.Tests.PlayMode
     public sealed class GoldenFirstPlayablePlayModeTests
     {
         [UnityTest]
-        public IEnumerator GoldenFirstPlayable_CapacityIntervention_DeliversAllResidents()
+        public IEnumerator GoldenFirstPlayable_CapacityIntervention_DeliversResidentsToTheirWorkplace()
         {
             var session = new TowerSimulationSession();
 
@@ -27,22 +30,33 @@ namespace OneRoof.Tests.PlayMode
             var midway1 = session.Projection();
             Assert.That(midway1.Tick, Is.EqualTo(25));
 
-            // Player intervention: Add elevator capacity
-            session.AddCapacity();
+            // Steward intervention: Add elevator capacity
+            Assert.That(session.AddCapacity().Accepted, Is.True);
             var postIntervention = session.Projection();
             Assert.That(postIntervention.Elevators.Count, Is.EqualTo(2));
 
-            // Run through commute until delivered or max 120 ticks
+            // Observe real workplace arrivals during the compact first-playable routine.
+            var workplaceArrivals = new HashSet<int>();
+            var deliveredBeforeIntervention = session.DeliveredPassengerCount;
             for (var i = 0; i < 120; i++)
             {
                 session.AdvanceOneTick();
+                foreach (var resident in session.Projection().Residents)
+                {
+                    Assert.That(session.TryGetResidentInspection(new EntityId(resident.ResidentId), out var facts), Is.True);
+                    if (resident.Status == TransitResidentStatus.InRoom && resident.RoomId == facts.WorkplaceRoomId)
+                        workplaceArrivals.Add(resident.ResidentId);
+                }
                 yield return null;
             }
 
             var finalProjection = session.Projection();
-            Assert.That(session.DeliveredPassengerCount, Is.GreaterThan(0),
+            Assert.That(session.DeliveredPassengerCount, Is.GreaterThan(deliveredBeforeIntervention),
                 "Residents must be delivered by the elevator after capacity intervention.");
             Assert.That(finalProjection.Elevators.Count, Is.EqualTo(2));
+            Assert.That(finalProjection.Residents.Count, Is.EqualTo(initial.Residents.Count));
+            Assert.That(workplaceArrivals.Count, Is.GreaterThan(0),
+                "At least one resident must arrive at their assigned workplace, beyond exiting an elevator.");
         }
     }
 }

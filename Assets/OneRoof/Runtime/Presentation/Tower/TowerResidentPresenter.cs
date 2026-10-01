@@ -349,7 +349,8 @@ namespace OneRoof.Presentation.Tower
 
                             skeletal?.SetTransitStatus(TransitResidentStatus.InRoom);
                             skeletal?.SetAnimationClip(resident.Activity == ActivityKind.Sleeping ? NpcAnimationClip.Sleep :
-                                resident.Activity == ActivityKind.Working || resident.Activity == ActivityKind.Leisure ? NpcAnimationClip.Sit : NpcAnimationClip.Idle, "Room activity / interaction dock");
+                                resident.Activity == ActivityKind.Working ? NpcAnimationClip.WorkDesk :
+                                resident.Activity == ActivityKind.Leisure ? NpcAnimationClip.Sit : NpcAnimationClip.Idle, "Room activity / interaction dock");
                             placedInRoom = true;
                         }
 

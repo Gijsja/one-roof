@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class TowerAtmosphereAndElevatorLimitsPlayModeTests
+    public sealed class TowerAtmosphereAndElevatorLimitsPlayModeTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator Facade_FollowsCameraZoom_AndKeepsInteractionModesOpen()
@@ -40,8 +40,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
 
@@ -101,8 +99,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
 
@@ -142,8 +138,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(holder);
-                var camera = GameObject.Find("Tower Camera");
-                if (camera != null) Object.Destroy(camera);
             }
         }
     }

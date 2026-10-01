@@ -1,82 +1,105 @@
 using NUnit.Framework;
 using OneRoof.Domain.Weather;
+using OneRoof.Presentation.Tower;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tests.EditMode
 {
-    /// <summary>
-    /// Integration tests verifying that the weather pipeline is correctly wired:
-    /// world-seed propagation, per-tick (not per-frame) sampling, and
-    /// cross-component consistency.
-    /// </summary>
+    /// <summary>Controller-to-weather-to-rain wiring; domain sampling rules have their own unit fixture.</summary>
     public sealed class WeatherSystemIntegrationTests
     {
-        [Test]
-        public void MonthlyWeatherCycle_DifferentSeeds_ProduceDifferentSamples_AtSameTick()
+        private GameObject _holder;
+        private TowerPlayableController _controller;
+        private GameObject _existingCamera;
+        private bool _existingCameraWasActive;
+        private GameObject _ownedCamera;
+
+        [SetUp]
+        public void SetUp()
         {
-            // Simulates the world-seed wiring: two different towers should see different weather
-            var cycleA = new MonthlyWeatherCycle(0xAAAA_BBBB_CCCC_DDDDL);
-            var cycleB = new MonthlyWeatherCycle(0x1111_2222_3333_4444L);
-
-            var sampleA = cycleA.Sample(5000L);
-            var sampleB = cycleB.Sample(5000L);
-
-            Assert.That(sampleA, Is.Not.EqualTo(sampleB),
-                "Two different world seeds must produce distinct weather at the same tick.");
+            _existingCamera = GameObject.Find("Tower Camera");
+            if (_existingCamera != null)
+            {
+                _existingCameraWasActive = _existingCamera.activeSelf;
+                _existingCamera.SetActive(false);
+            }
+            try
+            {
+                _holder = new GameObject("Weather integration tower");
+                _controller = _holder.AddComponent<TowerPlayableController>();
+                _controller.Initialize();
+                _ownedCamera = GameObject.Find("Tower Camera");
+            }
+            catch
+            {
+                TearDown();
+                throw;
+            }
         }
 
-        [Test]
-        public void MonthlyWeatherCycle_SameSeed_ProducesIdenticalSamples_AcrossInstances()
+        [TearDown]
+        public void TearDown()
         {
-            const ulong WORLD_SEED = 0xDEAD_BEEF_CAFE_F00DUL;
-            var cycleA = new MonthlyWeatherCycle(WORLD_SEED);
-            var cycleB = new MonthlyWeatherCycle(WORLD_SEED);
-
-            // Verify determinism at several tick positions across multiple months
-            long[] ticks = { 0L, 720L, 1440L, 43200L, 86400L, 100000L };
-            foreach (var tick in ticks)
+            try
             {
-                Assert.That(cycleA.Sample(tick), Is.EqualTo(cycleB.Sample(tick)),
-                    $"Determinism violated at tick {tick}");
+                if (_holder != null) Object.DestroyImmediate(_holder);
+                var camera = _ownedCamera != null ? _ownedCamera : GameObject.Find("Tower Camera");
+                if (camera != null && camera != _existingCamera) Object.DestroyImmediate(camera);
+            }
+            finally
+            {
+                if (_existingCamera != null) _existingCamera.SetActive(_existingCameraWasActive);
+                _ownedCamera = null;
+                _holder = null;
             }
         }
 
         [Test]
-        public void WeatherSample_DefaultDescriptions_AreNonEmpty_ForAllConditions()
+        public void AutoWeather_UsesControllerSeedAndSimulationTick_AndFeedsRainPresenter()
         {
-            var allConditions = System.Enum.GetValues(typeof(WeatherCondition));
-            foreach (WeatherCondition condition in allConditions)
-            {
-                var description = WeatherSample.DefaultDescription(condition);
-                Assert.That(description, Is.Not.Null.And.Not.Empty,
-                    $"DefaultDescription for {condition} must be a non-empty string.");
-            }
+            var expectedSeed = (ulong)(uint)_controller.SimulationSession.GetHashCode();
+            if (expectedSeed == 0) expectedSeed = 0xDEADBEEFCAFEUL;
+            Assert.That(_controller.WeatherCycle.WorldSeed, Is.EqualTo(expectedSeed));
+            AssertAutoWeather();
+            var initial = _controller.CurrentWeather;
+            _controller.UpdateActiveWeather();
+            Assert.That(_controller.CurrentWeather, Is.EqualTo(initial), "Repeated presentation refresh at the same tick must be stable.");
+            _controller.SimulationSession.AdvanceOneTick();
+            AssertAutoWeather();
         }
 
-        [Test]
-        public void MonthlyWeatherCycle_ZeroSeed_PromotesToFallback_AndIsStable()
+        [TestCase(WeatherCondition.Clear, 0f)]
+        [TestCase(WeatherCondition.Drizzle, 0.25f)]
+        [TestCase(WeatherCondition.Rain, 0.65f)]
+        [TestCase(WeatherCondition.Storm, 1f)]
+        [TestCase(WeatherCondition.Fog, 0.40f)]
+        [TestCase(WeatherCondition.Snow, 0.50f)]
+        public void ManualOverride_UpdatesControllerAndRain_ThenReturnsToAuto(WeatherCondition condition, float intensity)
         {
-            // Verify seed=0 is not accepted as-is (it promotes to fallback)
-            var cycle = new MonthlyWeatherCycle(0UL);
-            Assert.That(cycle.WorldSeed, Is.Not.EqualTo(0UL), "Seed 0 must be promoted to a non-zero fallback.");
-
-            // And the promoted cycle is still deterministic
-            var sample1 = cycle.Sample(10000L);
-            var sample2 = cycle.Sample(10000L);
-            Assert.That(sample1, Is.EqualTo(sample2), "Zero-seeded cycle must be deterministic after promotion.");
+            _controller.SetWeatherOverride((int)condition);
+            Assert.That(_controller.IsAutoWeather, Is.False);
+            Assert.That(_controller.CurrentWeather.Condition, Is.EqualTo(condition));
+            Assert.That(_controller.CurrentWeather.Intensity, Is.EqualTo(intensity));
+            AssertRainMatchesController();
+            _controller.SetWeatherOverride(-1);
+            Assert.That(_controller.IsAutoWeather, Is.True);
+            AssertAutoWeather();
         }
 
-        [Test]
-        public void MonthlyWeatherCycle_WeatherSample_IntensityAlwaysInUnitRange()
+        private void AssertAutoWeather()
         {
-            var cycle = new MonthlyWeatherCycle(0xCAFE_BABE_1234_5678UL);
-            // Sample at 500-tick intervals across 6 months
-            for (var tick = 0L; tick < MonthlyWeatherCycle.TicksPerMonth * 6; tick += 500L)
-            {
-                var sample = cycle.Sample(tick);
-                Assert.That(sample.Intensity, Is.InRange(0f, 1f),
-                    $"Intensity {sample.Intensity} out of [0,1] at tick {tick}");
-            }
+            _controller.UpdateActiveWeather();
+            var expected = _controller.WeatherCycle.Sample(_controller.SimulationSession.CurrentTick);
+            Assert.That(_controller.CurrentWeather, Is.EqualTo(expected));
+            AssertRainMatchesController();
+        }
+
+        private void AssertRainMatchesController()
+        {
+            Assert.That(_controller.RainPresenter, Is.Not.Null);
+            Assert.That(_controller.RainPresenter.Condition, Is.EqualTo(_controller.CurrentWeather.Condition));
+            Assert.That(_controller.RainPresenter.TargetIntensity, Is.EqualTo(_controller.CurrentWeather.Intensity));
+            Assert.That(_controller.RainPresenter.WindSpeed, Is.EqualTo(_controller.CurrentWeather.WindSpeed));
         }
     }
 }

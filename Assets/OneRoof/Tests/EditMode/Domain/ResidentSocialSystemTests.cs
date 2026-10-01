@@ -25,13 +25,11 @@ namespace OneRoof.Domain.Tests.EditMode
             _social = new ResidentSocialSystem();
         }
 
-        [Test]
-        public void EveryTraitPair_HasFiniteBoundedSynergyIncludingUnmatchedPairs()
+        [TestCaseSource(nameof(TraitPairs))]
+        public void EveryTraitPair_HasFiniteBoundedSynergyIncludingUnmatchedPairs(
+            SocialTraitKind first, SocialTraitKind second)
         {
-            foreach (SocialTraitKind first in System.Enum.GetValues(typeof(SocialTraitKind)))
-                foreach (SocialTraitKind second in System.Enum.GetValues(typeof(SocialTraitKind)))
-                    Assert.That(ResidentSocialSystem.TraitPairSynergy(first, second), Is.InRange(-1f, 1f),
-                        $"Trait pair {first}/{second} must terminate with finite synergy.");
+            Assert.That(ResidentSocialSystem.TraitPairSynergy(first, second), Is.InRange(-1f, 1f));
         }
 
         [Test]
@@ -146,46 +144,42 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void EvaluateInteraction_RomanticFlirtation_InitiatesCrushAndGeneratesThoughts()
         {
-            var personA = CreatePerson(1, SocialTraitKind.Flirt);
+            var personA = CreatePerson(1, SocialTraitKind.Charismatic);
             var personB = CreatePerson(2, SocialTraitKind.HopelessRomantic);
 
             var factions = new FactionState();
-            // Seed a positive roll tick
-            var tick = new Tick(60);
+            // Compatible traits and a fixed favorable encounter exercise romance directly.
+            var tick = new Tick(28);
             var outcome = _social.EvaluateInteraction(personA, personB, factions, tick, "cocktail bar");
 
-            if (outcome.Kind == SocialInteractionKind.RomanticFlirtation)
-            {
-                Assert.That(outcome.NewStage, Is.EqualTo(RelationshipStage.Crush));
-                Assert.That(factions.Edges[0].Stage, Is.EqualTo(RelationshipStage.Crush));
-                Assert.That(personA.Wellbeing.ActiveThoughts.Count, Is.GreaterThan(0));
-                Assert.That(personB.Wellbeing.ActiveThoughts.Count, Is.GreaterThan(0));
-                Assert.That(personB.Wellbeing.TotalThoughtMoodDelta, Is.EqualTo(12f), "HopelessRomantic receives +12 mood boost on flirt.");
-            }
+            Assert.That(outcome.Kind, Is.EqualTo(SocialInteractionKind.RomanticFlirtation));
+            Assert.That(outcome.NewStage, Is.EqualTo(RelationshipStage.Crush));
+            Assert.That(factions.Edges[0].Stage, Is.EqualTo(RelationshipStage.Crush));
+            Assert.That(personA.Wellbeing.ActiveThoughts.Count, Is.GreaterThan(0));
+            Assert.That(personB.Wellbeing.ActiveThoughts.Count, Is.GreaterThan(0));
+            Assert.That(personB.Wellbeing.TotalThoughtMoodDelta, Is.EqualTo(12f), "HopelessRomantic receives +12 mood boost on flirt.");
         }
 
-        [Test]
-        public void RelationshipMilestones_ProgressThroughRomanticHierarchy()
+        [TestCase(0.10f, RelationshipStage.Stranger, RelationshipStage.Acquaintance)]
+        [TestCase(0.35f, RelationshipStage.Crush, RelationshipStage.Crush)]
+        [TestCase(0.55f, RelationshipStage.Crush, RelationshipStage.Dating)]
+        [TestCase(0.80f, RelationshipStage.Dating, RelationshipStage.Partnered)]
+        [TestCase(0.90f, RelationshipStage.Partnered, RelationshipStage.Married)]
+        [TestCase(0.25f, RelationshipStage.Partnered, RelationshipStage.Dating)]
+        [TestCase(-0.15f, RelationshipStage.Dating, RelationshipStage.Disliked)]
+        public void RelationshipMilestones_RomanticProgressionAndRegression(
+            float affinity, RelationshipStage priorStage, RelationshipStage expectedStage)
         {
-            Assert.That(RelationshipMilestones.DeriveStage(0.10f), Is.EqualTo(RelationshipStage.Acquaintance));
-            Assert.That(RelationshipMilestones.DeriveStage(0.35f, RelationshipStage.Crush), Is.EqualTo(RelationshipStage.Crush));
-            Assert.That(RelationshipMilestones.DeriveStage(0.55f, RelationshipStage.Crush), Is.EqualTo(RelationshipStage.Dating));
-            Assert.That(RelationshipMilestones.DeriveStage(0.80f, RelationshipStage.Dating), Is.EqualTo(RelationshipStage.Partnered));
-            Assert.That(RelationshipMilestones.DeriveStage(0.90f, RelationshipStage.Partnered), Is.EqualTo(RelationshipStage.Married));
-
-            // Lover's quarrel / strain regression
-            Assert.That(RelationshipMilestones.DeriveStage(0.25f, RelationshipStage.Partnered), Is.EqualTo(RelationshipStage.Dating));
-            // Breakup regression
-            Assert.That(RelationshipMilestones.DeriveStage(-0.15f, RelationshipStage.Dating), Is.EqualTo(RelationshipStage.Disliked));
+            Assert.That(RelationshipMilestones.DeriveStage(affinity, priorStage), Is.EqualTo(expectedStage));
         }
 
-        [Test]
-        public void RelationshipMilestones_ProgressThroughAdversarialHierarchy()
+        [TestCase(-0.20f, RelationshipStage.Disliked)]
+        [TestCase(-0.45f, RelationshipStage.Rival)]
+        [TestCase(-0.70f, RelationshipStage.Enemy)]
+        [TestCase(-0.90f, RelationshipStage.Nemesis)]
+        public void RelationshipMilestones_AdversarialProgression(float affinity, RelationshipStage expectedStage)
         {
-            Assert.That(RelationshipMilestones.DeriveStage(-0.20f), Is.EqualTo(RelationshipStage.Disliked));
-            Assert.That(RelationshipMilestones.DeriveStage(-0.45f), Is.EqualTo(RelationshipStage.Rival));
-            Assert.That(RelationshipMilestones.DeriveStage(-0.70f), Is.EqualTo(RelationshipStage.Enemy));
-            Assert.That(RelationshipMilestones.DeriveStage(-0.90f), Is.EqualTo(RelationshipStage.Nemesis));
+            Assert.That(RelationshipMilestones.DeriveStage(affinity), Is.EqualTo(expectedStage));
         }
 
         [Test]
@@ -201,13 +195,11 @@ namespace OneRoof.Domain.Tests.EditMode
             var factions = new FactionState();
             var outcome = _social.EvaluateInteraction(grudgeHolder, abrasive, factions, new Tick(180), "elevator argument");
 
-            if (outcome.Kind == SocialInteractionKind.InsultSpat)
-            {
-                Assert.That(outcome.AffinityDelta, Is.LessThan(0f));
-                Assert.That(grudgeHolder.Wellbeing.ActiveThoughts.Count, Is.EqualTo(1));
-                Assert.That(grudgeHolder.Wellbeing.ActiveThoughts[0].MoodDelta, Is.EqualTo(-12f), "GrudgeHolder suffers -12 mood penalty.");
-                Assert.That(grudgeHolder.Wellbeing.ActiveThoughts[0].ExpiresAtTick, Is.EqualTo(180 + ResidentSocialSystem.ThoughtDurationGrudge));
-            }
+            Assert.That(outcome.Kind, Is.EqualTo(SocialInteractionKind.InsultSpat));
+            Assert.That(outcome.AffinityDelta, Is.LessThan(0f));
+            Assert.That(grudgeHolder.Wellbeing.ActiveThoughts.Count, Is.EqualTo(1));
+            Assert.That(grudgeHolder.Wellbeing.ActiveThoughts[0].MoodDelta, Is.EqualTo(-12f), "GrudgeHolder suffers -12 mood penalty.");
+            Assert.That(grudgeHolder.Wellbeing.ActiveThoughts[0].ExpiresAtTick, Is.EqualTo(180 + ResidentSocialSystem.ThoughtDurationGrudge));
         }
 
         [Test]
@@ -299,19 +291,18 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(centerDegree, Is.EqualTo(FactionState.MaxEdgesPerResident));
         }
 
-        [Test]
-        public void TraitChemistry_IsSymmetric_ForEveryTraitPair()
+        [TestCaseSource(nameof(TraitPairs))]
+        public void TraitChemistry_IsSymmetric_ForEveryTraitPair(SocialTraitKind first, SocialTraitKind second)
         {
-            foreach (SocialTraitKind tA in System.Enum.GetValues(typeof(SocialTraitKind)))
-            {
-                foreach (SocialTraitKind tB in System.Enum.GetValues(typeof(SocialTraitKind)))
-                {
-                    var synAB = ResidentSocialSystem.TraitPairSynergy(tA, tB);
-                    var synBA = ResidentSocialSystem.TraitPairSynergy(tB, tA);
-                    Assert.That(synAB, Is.EqualTo(synBA).Within(0.0001f),
-                        $"Synergy({tA}, {tB}) = {synAB} must equal Synergy({tB}, {tA}) = {synBA}");
-                }
-            }
+            Assert.That(ResidentSocialSystem.TraitPairSynergy(first, second),
+                Is.EqualTo(ResidentSocialSystem.TraitPairSynergy(second, first)).Within(0.0001f));
+        }
+
+        private static IEnumerable<TestCaseData> TraitPairs()
+        {
+            foreach (SocialTraitKind first in System.Enum.GetValues(typeof(SocialTraitKind)))
+                foreach (SocialTraitKind second in System.Enum.GetValues(typeof(SocialTraitKind)))
+                    yield return new TestCaseData(first, second);
         }
 
         [Test]

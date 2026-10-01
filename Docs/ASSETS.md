@@ -40,7 +40,10 @@ Request → Asset Spec → Source Art → Normalize → Validate → Preview →
 ## 3. Character Assembly & Inspectable Animation Contract
 
 ### Shared 17-Bone Procedural Rig
-Current resident locomotion is evaluated by `NpcSkeletalHierarchy.ApplyProceduralAnimation(sampleTime)` using explicit bone transforms. The actual current poses are Idle, Walk, QueueWait, Ride, Sit and Sleep. Work/Gesture animation expansion remains planned, not delivered. The hierarchy/attachment vocabulary does not imply an opaque Spine runtime or Animator state machine.
+Current resident locomotion is evaluated by `NpcSkeletalHierarchy.ApplyProceduralAnimation(sampleTime)` using explicit bone transforms. All 9 standard states are fully animated procedurally following Alan Becker stick figure principles (overlapping multi-joint drag, dynamic line of action, elastic whip, squash & stretch, and living breathing/weight shifts):
+- **Locomotion**: `Walk` (energetic stride with forearm whip, wrist drag, foot roll, and passing knee clearance), `Run` (high-cadence athletic sprint with 90° arm pumps and glute heel kick), `Crawl` (low-profile duct/tunnel horizontal crawl with alternating 4-point gait).
+- **Settled & Transit**: `Idle` (respiratory ease-in with ready stance and strict $t=0$ bind restoration), `QueueWait` (impatient hip-cocked weight shifts with restless foot taps), `Ride` (shock-absorbing elevator stance with micro-squash and balance hands).
+- **Rest & Industry**: `Sit` (relaxed seated fold with gentle chest breathing), `Sleep` (restful fetal curl with deep-sleep breathing cadence), `WorkDesk` (attentive forward lean with desk-height forearms and burst typing flutter).
 
 The central presenter selects the pose from transit state and room activity. `AnimationSelectionReason`, `LastAnimationSampleTime` and `AnimationPhaseOffset` expose the selection and evaluator inputs. Root facing/stature and bone-local transforms remain inspectable. No resident owns an Update loop.
 

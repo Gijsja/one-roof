@@ -14,13 +14,13 @@ using UnityEditor.SceneManagement;
 
 namespace OneRoof.Tests.PlayMode
 {
-    public sealed class GoldStandardPlaygroundTests
+    public sealed class GoldStandardPlaygroundTests : OwnedPlayModeSceneFixture
     {
         [UnityTest]
         public IEnumerator AuthoredScene_FacadeToggleAndLodRemainConnectedAcrossZoomLevels()
         {
 #if UNITY_EDITOR
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/Tower_GoldStandard30.unity", new LoadSceneParameters(LoadSceneMode.Single));
+            yield return LoadTestScene("Assets/Scenes/Tower_GoldStandard30.unity");
             yield return null;
             var playground = Object.FindFirstObjectByType<GoldStandardPlayground>();
             var tower = playground.Tower;
@@ -112,7 +112,6 @@ namespace OneRoof.Tests.PlayMode
             finally
             {
                 Object.Destroy(tower.gameObject); Object.Destroy(playground.gameObject);
-                if (camera != null) Object.Destroy(camera.gameObject);
             }
 #else
             Assert.Ignore("Editor scene validation only.");
@@ -124,7 +123,7 @@ namespace OneRoof.Tests.PlayMode
         public IEnumerator AuthoredScene_StartsFilledResetsAndRendersTheLivingCity()
         {
 #if UNITY_EDITOR
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/Tower_GoldStandard30.unity", new LoadSceneParameters(LoadSceneMode.Single));
+            yield return LoadTestScene("Assets/Scenes/Tower_GoldStandard30.unity");
             yield return null;
             var playground = Object.FindFirstObjectByType<GoldStandardPlayground>();
             Assert.That(playground, Is.Not.Null);
@@ -170,7 +169,6 @@ namespace OneRoof.Tests.PlayMode
             {
                 Object.Destroy(tower.gameObject);
                 Object.Destroy(playground.gameObject);
-                if (Camera.main != null) Object.Destroy(Camera.main.gameObject);
             }
 #else
             Assert.Ignore("Editor scene validation only.");

@@ -13,6 +13,9 @@ namespace OneRoof.Presentation.Tests.EditMode
         [TestCase(NpcAnimationClip.Ride)]
         [TestCase(NpcAnimationClip.Sit)]
         [TestCase(NpcAnimationClip.Sleep)]
+        [TestCase(NpcAnimationClip.Run)]
+        [TestCase(NpcAnimationClip.WorkDesk)]
+        [TestCase(NpcAnimationClip.Crawl)]
         public void ScrubbingBackToSampleReplaysPoseAfterDifferentAnimation(NpcAnimationClip clip)
         {
             var go = new GameObject("Replay resident");

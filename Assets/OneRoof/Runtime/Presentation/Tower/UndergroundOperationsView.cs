@@ -118,7 +118,7 @@ namespace OneRoof.Presentation.Tower
                 target, 2.4f * Time.deltaTime);
             _investigator.SetFacing(targetX < _investigator.transform.position.x ? -1f : 1f);
             _investigator.SetAnimationClip(state.Phase == InvestigatorPhase.Inspect ?
-                OneRoof.Content.NpcAnimationClip.QueueWait : OneRoof.Content.NpcAnimationClip.Walk);
+                OneRoof.Content.NpcAnimationClip.Crawl : OneRoof.Content.NpcAnimationClip.Walk);
             _investigator.ApplyProceduralAnimation(Time.time);
         }
 

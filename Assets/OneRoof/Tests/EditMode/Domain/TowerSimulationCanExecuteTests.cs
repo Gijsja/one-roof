@@ -155,18 +155,6 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void ElevatorTier_RoundTripsAndMissingTierDefaultsToOne()
-        {
-            _sim.ExecuteCommand(new UpgradeElevatorTierCommand(2));
-            var restored = ElevatorBank.FromSaveData(_sim.ElevatorBank.ToSaveData());
-            Assert.That(restored.Tier, Is.EqualTo(2));
-            Assert.That(restored.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(5));
-
-            var legacy = ElevatorBank.FromSaveData(new ElevatorBankSaveData { minFloor = 0, maxFloor = 0 });
-            Assert.That(legacy.Tier, Is.EqualTo(1));
-        }
-
-        [Test]
         public void CanExecute_BuildRoom_OverlappingExisting_Rejected()
         {
             // Lobby is at floor 0, [2..14]

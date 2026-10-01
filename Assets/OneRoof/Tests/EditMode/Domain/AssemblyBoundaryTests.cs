@@ -12,7 +12,8 @@ namespace OneRoof.Domain.Tests.EditMode
                 .GetReferencedAssemblies()
                 .Select(reference => reference.Name);
 
-            Assert.That(references, Does.Not.Contain("UnityEngine"));
+            Assert.That(references.Where(name => name == "UnityEngine" || name.StartsWith("UnityEngine.")),
+                Is.Empty, "Domain must not reference any Unity engine module.");
         }
     }
 }

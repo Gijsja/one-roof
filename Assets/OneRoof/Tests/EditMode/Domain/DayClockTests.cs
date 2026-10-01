@@ -19,12 +19,12 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(phase.ClockLabel, Is.EqualTo("00:00"));
         }
 
-        [Test]
-        public void Ticks_MapToHours_AtSixtyTicksPerHour()
+        [TestCase(360, "06:00")]
+        [TestCase(755, "12:35")]
+        [TestCase(1439, "23:59")]
+        public void Ticks_MapToHours_AtSixtyTicksPerHour(int tick, string expectedLabel)
         {
-            Assert.That(DayClock.FromTick(360).ClockLabel, Is.EqualTo("06:00"));
-            Assert.That(DayClock.FromTick(755).ClockLabel, Is.EqualTo("12:35"));
-            Assert.That(DayClock.FromTick(1439).ClockLabel, Is.EqualTo("23:59"));
+            Assert.That(DayClock.FromTick(tick).ClockLabel, Is.EqualTo(expectedLabel));
         }
 
         [Test]
@@ -37,14 +37,14 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(phase.IsNight, Is.True);
         }
 
-        [Test]
-        public void NightWindow_IsEightPmToSixAm()
+        [TestCase(359, true)]
+        [TestCase(360, false)]
+        [TestCase(720, false)]
+        [TestCase(1199, false)]
+        [TestCase(1200, true)]
+        public void NightWindow_IsEightPmToSixAm(int tick, bool expectedNight)
         {
-            Assert.That(DayClock.FromTick(6 * 60 - 1).IsNight, Is.True);
-            Assert.That(DayClock.FromTick(6 * 60).IsNight, Is.False);
-            Assert.That(DayClock.FromTick(12 * 60).IsNight, Is.False);
-            Assert.That(DayClock.FromTick(19 * 60 + 59).IsNight, Is.False);
-            Assert.That(DayClock.FromTick(20 * 60).IsNight, Is.True);
+            Assert.That(DayClock.FromTick(tick).IsNight, Is.EqualTo(expectedNight));
         }
 
         [Test]

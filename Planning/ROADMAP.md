@@ -78,26 +78,7 @@ The [execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) reconciles this conver
 | **M11.6** | OR-1106: Injury presentation and cause-chain UI | OR-1102, OR-1103, OR-1105 | Garment-aware bandages/scars/prosthetics, gait and posture, bounded emotion/thought bubbles, and inspectable injury causes and recovery. |
 | **M11.7** | OR-1107: Content, persistence and scale acceptance | OR-1106, OR-1007 | Integrated 30-floor / 300-resident acceptance, save migration, content validation, pool reuse, LOD fidelity and measured performance. |
 
-### System & Art Contract
-
-- **Independent state**: identity, wardrobe, faction influence, limb health and transient emotion remain separate. Save content IDs and aggregate state, never sprites, rig objects or scene references. Stable parts initially cover head, torso, left/right arms and legs; finer anatomy is an extension point, not first-slice scope.
-- **Inspectable animation**: keep pose selection, reason, sample time/phase and evaluated bone transforms visible. Maintain isolated scrub/replay preview and pose-transition regression tests. OR-1102 should move timing, amplitudes and joint constraints into inspectable pose definitions with explicit transition rules, so tuning does not require opaque animation assets. New modular attachments cannot drive animation implicitly; archived predefined representations stay outside runtime setup until intentionally validated under OR-1102.
-- **Visual composition**: warm flat illustrated residents with readable silhouettes and restrained outlines. Garments declare slot, compatible body/rig, palette channels, attachment anchors and covered parts/layers. Coats occlude underlying garments; sleeves can conceal injuries. Missing art has a validated fallback. Replacement limbs use the same attachment contract.
-- **Content expansion**: body and garment variants cover every delivered pose (currently Idle, Walk, QueueWait, Ride, Sit and Sleep); Work/Gesture are deliberate future extensions. Author new items through the existing asset compiler and registry; avoid bespoke renderer branches for individual factions or outfits. Cosmetic items confer no mechanical benefit unless a validated equipment rule defines one.
-- **Faction expression**: wardrobe preference does not create membership or infer hostility. Preserve the existing faction model; support combining applicable influences without introducing multiple memberships as an unplanned simulation change.
-- **Health mechanics**: model injury cause, severity, pain, functional capacity, healing and replacement separately. Deterministic fixed-tick rules bound stacked effects and injury history. Integrate real hazards and crisis events; no random cosmetic wounds or faction-derived injuries. Specify exact rates, caps and care costs during OR-1104/1105 design review before implementation.
-- **Steward agency**: responses are safer workplaces/infrastructure, healthcare capacity, accessibility and service policy. Residents decide care and routines autonomously; no direct individual treatment/equipment orders or combat subsystem is introduced.
-- **Cause-chain**: visible limp or distress → relevant existing overlay → inspector injury and incident → systems response → measured recovery and incident reduction. Link the appropriate overlay to the cause; do not add a ninth overlay implicitly. Critical information uses text/glyphs as well as colour. Bubbles prioritize meaningful symptoms and recovery over repetitive medical status.
-- **Scale**: nearby views show layers and expressions; sprite and macro LOD preserve identity through dominant outfit colours and key accessories within measured budgets. Reuse bounded views/buffers; no per-resident Update loops. Clothing combinations must not create unbounded materials or per-frame sprite baking.
-
-### Acceptance Scenarios
-
-1. Several body types wear the same compatible items; a coat covers underlying clothing; headwear masks hair correctly in every supported pose and facing.
-2. Faction preferences combine with occupation workwear and personal variation; appearance changes do not alter faction membership or social outcomes.
-3. A recorded incident injures one leg, changes relevant travel capacity, generates attributable distress, and improves after autonomous care; a matching arm injury affects relevant work rather than all activities indiscriminately.
-4. Clothing conceals a bandage without hiding inspector information; missing/replaced limbs remain aligned while walking, sitting and sleeping, and display correctly across view reuse and zoom changes.
-5. Old and new saves round-trip identity, worn items, injury causes, healing, care and replacement state; absent content resolves safely without deleting authoritative injury state.
-6. The reference Tower retains deterministic behaviour, <4.0 ms p95 tick, 60 FPS presentation and <180 draw calls under the agreed reference view. Record baseline and post-change measurements rather than claiming the budgets from tests alone.
+Detailed [system and art contracts](./RESIDENT_SYSTEM_EXECUTION_PLAN.md#8-system-and-art-contract) and [acceptance scenarios](./RESIDENT_SYSTEM_EXECUTION_PLAN.md#9-acceptance-scenarios) are owned by the resident execution plan.
 
 The initial implementation target is OR-1101, followed by a small representative wardrobe in OR-1102. Broad faction outfit production and severe-injury/prosthetic content follow only after these contracts are validated.
 
