@@ -1,62 +1,58 @@
-# One Roof Roadmap — Milestone v0.10+ to Beta Boundary
+# One Roof — Forward Roadmap to City Status
 
-This document tracks active development milestones toward the **Beta Boundary (City Status)** and the planned resident expansion that follows it.
-For historical delivery details (Milestones M0 through M9, ARCH prompts, and early audit logs), see [`Planning/Archive/ROADMAP_HISTORICAL_ARCHIVE.md`](./Archive/ROADMAP_HISTORICAL_ARCHIVE.md).
+Updated 2026-10-01. Organize work by complete, reviewable outcomes and shared hardening needs. Existing OR IDs remain traceable; grouped packages below replace the old milestone order as the execution schedule. No delivery dates or agents are assigned by this document.
 
----
+Use [BACKLOG](./BACKLOG.md) for eligibility and status, [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) for contracts, ownership and agent assignments, and the single [active handoff](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md) for current evidence. Earlier milestones remain in the [historical archive](./Archive/ROADMAP_HISTORICAL_ARCHIVE.md).
 
-## 1. Project North Star & Beta Boundary Contract
+## 1. Destination and non-negotiable beta boundary
 
-**Beta Boundary (City Status)**:
-- 30 floors and 300 persistent residents running deterministically.
-- Full mixed-use zoning: residential, office, retail, diner, clinic, workshop, security, and utilities.
-- Physical infrastructure networks: electrical grid, plumbing & gravity waste, technician wear.
-- Social dynamics: autonomous needs, satisfaction, grievances, strain, 4 faction archetypes, policy decrees, 12-tier relationship progression spectrum.
-- 8 data overlays and 6 adaptive crisis event chains.
-- Sustaining **City Status for 30 consecutive in-game days** under strict performance budgets:
-  - Simulation tick: **<4.0 ms p95** on reference hardware.
-  - Presentation frame rate: **60 FPS** (<16.6 ms main thread time; reference overview achieves ~10.0 ms / ~100 FPS).
-  - Draw calls: **<180** (reference overview achieves 83 draw calls via SRP Batcher, GPU instancing, and LOD).
+City Status requires a deterministic 30-floor / 300-Resident mixed-use Tower, physical utilities, autonomous social/economic systems, all eight diagnostic overlays and six adaptive crisis chains. Sustain the published eligibility gates for **30 consecutive in-game days** with **<4.0 ms p95 simulation tick**, **60 FPS presentation** and **<180 draw calls** on the agreed reference hardware/view.
 
----
+The six chains remain Power Cascade, Water Contamination, Transit Collapse, Rent Boycott, Labor Strike and Building Crackdown. Every chain must connect **symptom → overlay → inspector cause → systems response → measured feedback**, and preserve its attributable consequences across saves. Contract work must define the exact City Status metric thresholds; an unspecified gate cannot count as passing.
 
-## 2. Delivered Foundation (v0.10+ Baseline)
+Domain/Application stay pure C#; fixed ticks, stable IDs, immutable projections, validated commands, aggregate persistence, bounded history and centralized pooled presentation remain required. M11 limb health and wardrobe expansion stay after City Status; they are not new beta prerequisites.
 
-All core architectural tiers and simulation systems are verified operational with **832 EditMode passing tests** and **15 PlayMode passing tests**:
-- **Pure-C# Simulation Engine**: Zero `UnityEngine` references in Domain and Application; discrete 1440-tick daily cycle; aggregate push persistence (`ToSaveData()` / `FromSaveData()`).
-- **Closed-Loop Unit Economics**: Integer currency conservation across households, commercial tenants, tower treasury, and outside markets (ECON-001..008).
-- **Physical Utilities & Secret Undercity**: Ground substation, pumps, vertical risers, technician wear, and 32×12 subterranean excavation grid with 14 specialized room types connected via lobby bridge.
-- **Social Fabric & Management**: 4 factions (Tenant Union, Corporate Coalition, Merchant Guild, Civic & Eco Council), policy decree panel, civil actions, decision records, onboarding lesson, and Sims-style emotional social dynamics (OR-906A / ADR-087).
-- **Presentation & LOD**: 30-floor scale proven in `Tower_GoldStandard30.unity`, 3-tier resident LOD, semantic zoom facade crossfades (orthographic size 8–18), inspector-authored `ResidentPresentationSettings`, zero-allocation view pooling, single `SRPDefaultUnlit` pass, 12-month procedural weather VFX.
+## 2. Starting evidence and what needs hardening
 
----
+Dated test-remediation snapshot (2026-10-01): **1,131 EditMode passed / 0 failed / 3 skipped** and **17 graphical PlayMode passed / 0 failed / 1 optional diagnostic skipped**. These results establish regression evidence, not six-chain completion or performance certification. Counts increased partly through independent parameter cases. Artifacts and scope are recorded in the active handoff; rebaseline the current tree before implementation.
 
-## 3. Active Beta Boundary Gates
+Delivered foundations include elevator widening/tier upgrades (OR-204), social influence and local organizing (OR-906B/C), connected undercity utilities (OR-1001 Slice C), civil-action phases and persistence, decision history, utility wear/repair and diagnostic overlays. Reuse these owners; do not create a second simulation framework.
 
-| Milestone | Scope | Status | Deliverable & Acceptance |
-|---|---|---|---|
-| **Transit Scaling** | Dynamic 2-cell shaft widening & elevator tier upgrades | **DONE** | OR-204: Tiers 1–5, ETA-based car dispatch, upgrade commands, save round-trip. |
-| **M9.5** | Social ties deepening: issue influence & local organizing | **DONE** | OR-906B (issue-specific social influence) & OR-906C (local faction organizing). |
-| **M10.1** | Undercity utility reverse-feed & production integration | **DONE** | OR-1001 Slice C: generator reverse-feed and utility-dependent subterranean production. |
-| **M10.2** | Adaptive crisis pressure chains & personal consequences | **IN PROGRESS** | OR-1002: 6 condition-driven crisis chains with warning phases, propagation, and aftermath. |
-| **M10.3** | Beta boundary golden acceptance test (City Status 30-day streak) | **READY** | OR-1003: 30 floors / 300 residents deterministic run sustaining City Status for 30 consecutive days under <4 ms tick and 60 FPS budgets. |
-| **M10.5** | Campaign board, pacing & end states | **READY** | OR-1005: streak tracking, daily trends, threatened gates, failure explanations, sandbox continuation. |
-| **M10.6** | Spatial overlay & accessibility beta pass | **IN PROGRESS** | OR-1006: non-colour equivalents across all 8 overlays, UI scale, remappable controls, pause/speed review. |
-| **M10.7** | Save, recovery & content QA | **READY** | OR-1007: crisis/campaign save survival, migrations, corrupt save recovery, partial demolition QA. |
+| Area | Existing foundation | Closure gap |
+|---|---|---|
+| Rent Boycott / Labor Strike | Saved RentStrike/WorkSlowdown phases, economic effects, organizing and decision records | Define participation/propagation and attributable aftermath; distinguish timed containment from cause-driven recovery; expose and prove the full cause-chain. |
+| Power Cascade / Transit Collapse | Brownouts, wear/repair, connectivity, congestion and capacity interventions | Add sustained-condition warning/escalation and bounded propagation with saved consequences and measured recovery. |
+| Water Contamination | Pump pressure, water/waste connectivity and equipment wear | Supply failure is not contamination. Define contamination source, network exposure, safe containment and recovery using existing systems. |
+| Building Crackdown | Scrutiny signals and saved exposure-driven undercity investigators/disruptions | Specify their relationship; connect event pressure to an explicit scoped event, validated systems responses and expiry/aftermath. No instant scrutiny veto on construction. |
+| Caretaker Slice A | Playable lobby contact, organized warnings, fixed-step combat and saved household eviction consequences | Preserve as a delivered separate slice; finish input/accessibility/performance hardening. It does not replace any of the six named chains. |
+| Presentation performance | Historical overview measurements were within budget | Native 1080p Caretaker measurement was ~36 FPS on GT 755M; staged draws were ~181.6 at 720p. Reproduce comparable views and close measured bottlenecks. This blocker remains real. |
 
----
+## 3. Grouped delivery and parallel preparation
 
-## 3a. Requested Direction — Playable Lobby Caretaker and Opening Arcade Crisis
+| Wave | Packages | Reviewable outcome / exit gate |
+|---|---|---|
+| **W0 — Establish truthful contracts and baseline** | OR-1002-C0; begin OR-1003-P, OR-1005-A, OR-1006-A, OR-1007-A | Six chain specifications, exact City Status gates, regression/measurement baseline, exclusive integration ownership and concrete closure matrix. |
+| **W1 — Finish the closest complete experiences** | OR-1002-C1 (Rent Boycott), OR-1002-C2 (Labor Strike), OR-1002-U per delivered chain | Two systems-driven chains with saved phases/consequences, actionable cause-chain UI and demonstrated response feedback. Share machinery, retain distinct contracts and tests. |
+| **W2 — Close infrastructure and external-event gaps** | OR-1002-I1 (Power), I2 (Transit), I3 (Water); OR-1002-E1 (Crackdown) | Four remaining chains satisfy the same end-to-end gate. Power/transit can progress on separate files; water and crackdown specify their novel rules before broad implementation. |
+| **Continuous — Make each slice durable and usable** | OR-1007-A/R; OR-1006-A; OR-1003-P; OR-1005-A/B | Persistence, explanation, accessibility, input and measured performance ship with each slice rather than being deferred to a final cleanup milestone. |
+| **W3 — Prove composition and City Status** | OR-1002-X, OR-1005-B, OR-1007-R, OR-1003-G | Cross-chain interaction/replay tests, completed campaign board and recovery QA, followed by the actual 30-day / 300-Resident acceptance under all budgets. |
 
-Requested 2026-09-30. **OR-1002 Slice A implemented and validated 2026-10-01.** The Steward requested a crisis feature connecting factions and consequences to Kungfu eviction, with coordinated subagent implementation and validation. This slice does not complete the six-chain beta acceptance contract.
+Waves express priority, not blanket barriers. A READY package can start when its own inputs exist; a later-wave read-only investigation or harness can proceed earlier. Shared aggregate/save/projection edits remain serialized through one integration owner. Parallel execution requires explicit authorization and non-overlapping file ownership.
 
-- **Permanent lobby presence**: The Caretaker stands in the lobby between playable sequences, ready to be selected and serving as a point of contact for residents. The contact panel exposes organized grievance pressure, its cause-chain, rehearsal, enforcement and a link to the faction overlay.
-- **Gameplay reference**: [Caretaker arcade extraction](./CARETAKER_ARCADE_GAMEPLAY.md) records the supplied C64 Kung Fu Master longplay, observed mechanics, proposed real-Tower adaptation and implementation acceptance.
-- **Opening crisis**: A Kungfu Master-inspired arcade walkthrough of the actual constructed Tower, floor by floor. The requested action references are Street Fighter and Oldboy; Fisher Dave is the minigame inspiration. Use the Tower's real floor layout, corridors and vertical connections rather than a separate generic arena.
-- **Direct control**: The Steward can take control of the Caretaker during the arcade sequence. This is an explicitly requested exception to systems-only control for this character; residents otherwise remain autonomous.
-- **Implemented integration**: Three settlement warnings from sustained connected faction evidence unlock entry; management relief can clear warnings. Combat uses centralized fixed steps, actual stair routes, bounded successive fighter waves and a final floor boss. Background management pauses while the Caretaker owns input; saved encounters recover paused.
-- **Consequences**: Winning creates persistent eviction notices for participating residents' whole households, autonomous departure, witness thoughts, scrutiny and a decision record. Rehearsal restores prior crisis state without consequences. Existing faction systems supply the organized evidence; other six-chain beta acceptance remains outstanding.
-- **Current boundary**: Traversal is an arcade lane constrained to actual slabs and stair connectivity. Internal walls, doors and furnishing collision are not modeled. Contact and HUD are visually verified. Full-resolution presentation performance remains open (36 FPS native 1080p Editor on GT 755M); accessibility/remapping polish remains separate acceptance work.
+### Blocker reassessment
+
+- **Retired as blanket blockers:** waiting for all six chains before writing campaign eligibility logic, save/recovery fixtures, accessibility improvements or profiling. Each has an independently startable preparation package.
+- **Still blocking closure:** incomplete six-chain behavior/explanation; unspecified City Status thresholds; current full-resolution presentation budget; unfinished input/accessibility; missing combined save/replay and 30-day acceptance evidence.
+- **Corrected status:** old READY labels on OR-1003/1005/1007 and M11 meant queued despite unmet dependencies. The backlog now separates READY preparation from BLOCKED final gates and QUEUED expansion.
+- **Historical evidence:** 832/15 and later 920/15 totals, 83-draw/~100-FPS overview numbers, previous live-Editor outages and individual historical failures are dated snapshots. Recheck the relevant current condition; neither assume they still block nor claim they certify this tree.
+
+A blocker record needs the affected package, current evidence, precise missing input, next discriminating check and exit condition. Missing test evidence is validation debt; broken tooling is an environment blocker; a deliberate beta/M11 boundary is a scope gate. Do not conflate them.
+
+## 3a. Preserve the delivered Caretaker slice
+
+OR-1002 Slice A remains delivered. See [Caretaker extraction and acceptance](./CARETAKER_ARCADE_GAMEPLAY.md) for provenance. The permanent lobby contact supports rehearsal/enforcement from connected faction evidence; real slabs/stairs define fixed-step, bounded-wave encounters. Saved encounters resume paused. Winning records whole-household eviction, autonomous departure, witness thoughts, scrutiny and decision history; rehearsal restores prior crisis state.
+
+Direct Caretaker control is the existing explicit exception to systems-only control; other Residents remain autonomous. Internal walls, doors and furnishing collisions are outside the delivered arcade-lane model. Existing test isolation, matched weather controls and opt-in capture diagnostics must be preserved. The remaining HUD/input/accessibility/performance work belongs to the shared hardening lanes, not a seventh required beta chain.
 
 ---
 
@@ -107,8 +103,10 @@ The initial implementation target is OR-1101, followed by a small representative
 
 ---
 
-## 5. Performance & Validation Tooling
+## 5. Evidence required to close the roadmap
 
-- **Test Suite Status**: **832 EditMode passing**, **15 PlayMode passing**, 0 failures.
-- **Reference Overview Performance**: In `Tower_GoldStandard30` (30 floors, 300 residents), overview presentation achieves **83 draw calls**, **86 batches**, **10.0 ms CPU frame time (~100 FPS)**, and **1.7 ms average tick**.
-- **Executable Validation & Pipeline Probes**: For exact headless batchmode test commands (`Unity -batchmode ...`) and live Editor pipeline probes (`pipeline_client.py`), see [`Docs/WORKFLOW_AND_TESTING.md`](../Docs/WORKFLOW_AND_TESTING.md).
+A green unit suite alone cannot close a chain. Every chain requires the contract matrix, immutable explanation, validated systems intervention, attributable saved aftermath, deterministic continuation and observed feedback defined in the [execution plan](./BETA_HARDENING_EXECUTION_PLAN.md#2-common-definition-of-done).
+
+OR-1003-G closes only after all six chain packages plus explanation, campaign, recovery, accessibility and performance acceptance pass. Publish the actual 30-day streak, gate values/failure reasons, replay comparison and native reference-view measurements. Report skipped or unavailable evidence explicitly; do not substitute explicit Camera.Render timing for full presentation with HUD.
+
+Use [WORKFLOW_AND_TESTING](../Docs/WORKFLOW_AND_TESTING.md) for exact commands and `unity-cli` Editor probes. Recheck the lock/active Editor, coordinate one Unity runner, preserve unrelated changes, and retain one concise active handoff. Archived delivery detail is context, not a reason to reopen completed foundations without regression evidence.

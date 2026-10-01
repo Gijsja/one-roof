@@ -1,58 +1,73 @@
 # One Roof — Active Backlog
 
-Status values: `READY`, `IN PROGRESS`, `BLOCKED`, `DONE`. One agent owns one task at a time. A `READY` task is eligible for execution only after its prerequisites are complete.
-Current 2026-09-30 pass: **920 EditMode passed, zero failed, one explicit benchmark skipped**. See [validation report](../Docs/Validation/BACKLOG_REVIEW_2026-09-30.md) for current evidence and open gaps. **15/15 graphical PlayMode passed**; the explicit scale benchmark passed at **1.073 ms p95**, and overview measured **12.235 ms frame / 84 draw calls**. Historical totals below describe the delivered baseline.
+Updated 2026-10-01. [ROADMAP](./ROADMAP.md) defines direction; [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) defines package contracts, ownership and acceptance. One owner per package; only the coordinator updates status during parallel work.
 
-For all completed foundation tasks and historical validation logs (Milestones M0 through M10 scale foundation, OR-001 through OR-906A, LOD, and Pooling), see [`Planning/Archive/BACKLOG_HISTORICAL_ARCHIVE.md`](./Archive/BACKLOG_HISTORICAL_ARCHIVE.md).
+**Statuses:** READY = inputs exist and work can start; IN PROGRESS = active work under an assigned owner (parent rollups may contain delivered slices); BLOCKED = a named missing dependency prevents completion; QUEUED = intentionally deferred scope; DONE = stated acceptance has evidence. Delivered Slice A remains a distinct historical delivery. Planning does not dispatch agents.
 
----
+Latest evidence imported from the 2026-10-01 test-remediation snapshot: **1,131 EditMode passed / 0 failed / 3 skipped; 17 graphical PlayMode passed / 0 failed / 1 optional diagnostic skipped**. Current performance and six-chain acceptance remain open. Rebaseline before code changes. Older counts and performance are historical, not current certification.
 
-## 1. Active & Upcoming Tasks (Beta Boundary / City Status)
+## 1. Parent outcomes and delivered foundations
 
-| ID | Status | Milestone | Task | Depends on | Acceptance |
-|---|---|---|---|---|---|
-| **OR-204** | **DONE** | Transit | **Elevator shaft widening & tier upgrades** | OR-705 | Dynamic 2-cell shaft widening, tier profiles (Tier 1–5), ETA-based car dispatch, commands (`UpgradeElevatorTierCommand`, `WidenElevatorShaftCommand`), save round-trip. |
-| **OR-906B** | **DONE** | M9.5 | **Issue-specific social influence** | OR-906A, OR-602 | Strong recent ties share named grievances using prior-settlement state; capped influence inspectable separately from direct exposure; reverses with relief. |
-| **OR-906C** | **DONE** | M9.5 | **Local faction organizing** | OR-906B, OR-903 | Require sustained grievance pressure and connected local membership for civil action readiness; recover on measured cause improvement. |
-| **OR-1001 Slice C** | **DONE** | M10.1 | **Undercity utility integration & reverse feed** | OR-801, OR-802, UNDERCITY-001 | Generator reverse-feed to surface electrical grid and utility-dependent subterranean production. |
-| **OR-1002** | **IN PROGRESS** | M10.2 | **Adaptive crisis pressure & personal consequences** | OR-903, OR-803, OR-604, ECON-004 | 6 condition-driven chains (Power Cascade, Water Contamination, Transit Collapse, Rent Boycott, Labor Strike, Building Crackdown) with warning phases, propagation, management levers, and saved resident consequences. |
-| **OR-1002 Slice A** | **DELIVERED** | M10.2 | **Lobby Caretaker & faction-driven Kungfu eviction crisis** | OR-906C | Sustained organized grievances produce warning/escalation; real-Tower floor-by-floor arcade fight; permanent lobby contact/rehearsal; saved participant household departures, witness reactions and scrutiny; input isolation and runtime validation. Does not complete the other six-chain beta requirements. |
-| **OR-1003** | **READY** | M10.3 | **Beta boundary golden acceptance test (City Status)** | OR-1001, OR-1002, OR-1005, OR-1006, OR-1007 | 30 floors and 300 residents run deterministically, sustaining all published City Status gates for 30 consecutive days under <4.0 ms tick and 60 FPS presentation budgets. |
-| **OR-1005** | **READY** | M10.3 | **Campaign board, pacing, and end states** | OR-1002, OR-904 | Eligibility, daily trends, threatened gates, and 30-day streak are inspectable; failed streak gives reasons; sandbox continuation. |
-| **OR-1006** | **IN PROGRESS** | M10.3 | **Spatial overlay and accessibility beta pass** | OR-903, OR-905 | Text selection markers delivered. Remaining: spatial channels on all 8 overlays, UI scale, remappable controls, pause/speed and W/D shortcut conflicts; see validation report. |
-| **OR-1007** | **READY** | M10.3 | **Save, recovery, and content QA** | OR-1002, OR-1005 | Crisis and campaign state survive save/load; migrations, corrupt saves, partial tower demolition, and content review pass. |
+| ID | Status | Outcome / remaining gate |
+|---|---|---|
+| OR-204 | DONE | Elevator widening/tier upgrades; retain regression coverage. |
+| OR-906B / OR-906C | DONE | Issue influence and connected local organizing; reuse for civil chains. |
+| OR-1001 Slice C | DONE | Connected undercity utility reverse-feed and production; reuse for infrastructure chains. |
+| OR-1002 | IN PROGRESS | Six complete adaptive chains; child packages below define remaining work. Slice A alone cannot close parent. |
+| OR-1002 Slice A | DELIVERED | Lobby Caretaker and faction-driven arcade eviction; preserve saved consequences. Shared input/performance hardening remains open. |
+| OR-1005 | BLOCKED | Final campaign acceptance needs real chain inputs; A preparation is READY independently. |
+| OR-1006 | IN PROGRESS | Spatial overlays/accessibility; finish non-colour channels, scale/remapping, input conflicts and modal behavior. |
+| OR-1007 | BLOCKED | Final recovery acceptance needs all saved chain/campaign owners; A fixtures/contracts are READY now. |
+| OR-1003 | BLOCKED | Final City Status acceptance needs six chains, campaign, accessibility, recovery and performance. Harness/profiling work is READY separately. |
+
+Parent BLOCKED statuses describe final closure, not a prohibition on READY child work. Child rows are the dispatch source of truth; no implementation owner is assigned by this update.
+
+### Dispatchable packages and concrete blockers
+
+| Package | Status | Requires | Acceptance / blocker exit |
+|---|---|---|---|
+| OR-1002-C0 | READY | Existing system evidence | Specify six chains and exact City Status metrics; shared IDs/timing/scope/effect/save/explanation contracts and fixture matrix. |
+| OR-1003-P | READY | Existing reference scene | Reproduce native overview/close/Caretaker views with HUD, resolution/hardware and tick/allocation/draw data; close measured budget failures. |
+| OR-1005-A | READY | Existing metrics; reconcile with C0 | Define and implement eligibility, finalized-day trends, streak/failure reasons; use explicit adapters for unavailable chain inputs, never placeholder-green gates. |
+| OR-1006-A | READY | Existing UI/input/overlays | Inventory and repair text/glyph/spatial equivalence, UI scale, remapping, W/D conflicts and exclusive modal/pause/speed behavior. |
+| OR-1007-A | READY | Existing save owners; reconcile with C0 | Baseline old/corrupt saves and deterministic replay fixtures; define bounded migrations and deletion recovery for new state. |
+| OR-1002-C1 | BLOCKED | C0 | Complete Rent Boycott lifecycle, scope/propagation, response, saved aftermath and integrated cause-chain evidence. |
+| OR-1002-C2 | BLOCKED | C0; agreed civil APIs | Complete Labor Strike; explicit relationship to WorkSlowdown; distinct scoped effects and recovery evidence. |
+| OR-1002-I1 | BLOCKED | C0 | Complete Power Cascade over existing physical grid/wear/backup systems. |
+| OR-1002-I2 | BLOCKED | C0 | Complete Transit Collapse over existing routing/congestion/capacity systems. |
+| OR-1002-I3 | BLOCKED | C0 | Complete Water Contamination, including a real source/exposure/containment contract distinct from low pressure. |
+| OR-1002-E1 | BLOCKED | C0 | Complete Building Crackdown with explicit scrutiny/exposure/event relationship, scope, expiry and saved aftermath. |
+| OR-1002-U | BLOCKED | First C0 chain projection | Integrate explanation per delivered chain; final closure requires all six. No extra overlay implicit. |
+| OR-1005-B | BLOCKED | A; six accepted chain projections | Complete campaign pacing/end states/board and inspectable streak; sandbox continuation. |
+| OR-1007-R | BLOCKED | A; six saved chain owners; campaign save contract | Old/new/corrupt saves, every phase, replay, overlapping crises and partial demolition pass integrated recovery QA. |
+| OR-1002-X | BLOCKED | C1/C2/I1/I2/I3/E1/U | All six close individually and together; overlap/order/non-stacking/propagation/replay/response tests pass. |
+| OR-1003-G | BLOCKED | X; 1005-B; 1006-A; 1007-R; 1003-P | Actual deterministic 30-day streak at 30 floors/300 Residents with published gates and all performance budgets. |
+
+A BLOCKED child becomes READY when its concrete input is delivered; parent closure is not an extra blanket dependency. Within U/R, each available chain can be integrated/tested before the final all-six gate. Use the execution plan for safe parallel boundaries.
 
 ---
 
 ## 2. Planned Resident Expansion (M11, After City Status)
 
-Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and [copyable agent prompts](./Prompts/RESIDENT_SYSTEM_AGENT_PROMPTS.md) define package ownership, validation and dispatch gates. OR-1100 is immediate validation of existing resident work; new M11 implementation stays after City Status. These tasks are queued in dependency order; `READY` records planned work, not permission to bypass prerequisites. Scope and acceptance scenarios are authoritative in [Roadmap §4](./ROADMAP.md#4-planned-m11--modular-residents-faction-bodywear--limb-health). Existing beta gates remain unchanged.
+Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and [copyable agent prompts](./Prompts/RESIDENT_SYSTEM_AGENT_PROMPTS.md) define package ownership, validation and dispatch gates. OR-1100 is immediate validation of existing resident work; new M11 implementation stays after City Status. These tasks are QUEUED after City Status; none is dispatchable until its declared gate passes. Scope and acceptance scenarios are authoritative in [Roadmap §4](./ROADMAP.md#4-planned-m11--modular-residents-faction-bodywear--limb-health). Existing beta gates remain unchanged.
 
 | ID | Status | Milestone | Task | Depends on | Acceptance |
 |---|---|---|---|---|---|
 | **OR-1100** | **DONE** | Resident follow-up | **Verify current resident presentation and enforce artwork archive** | Existing resident working tree | Current Unity tests/render/preview/pool/LOD evidence; executable Resources/Addressables/serialized-reference archive guard; preserve unrelated changes and attribute baseline failures. |
-| **OR-1101** | **READY** | M11.1 | **Resident body, appearance and health contracts** | OR-1003, OR-1100 | Stable body-part/content IDs; separate identity, worn items and health aggregates; immutable projections; old-save healthy/default-outfit migration; no engine references in Domain/Application. |
-| **OR-1102** | **READY** | M11.2 | **Modular resident art, rig and bodywear** | OR-1101 | Shared pose/anchor contract, explicit animation selection/time and scrub/replay preview, approved modular attachments only, body compatibility, tint/coverage/occlusion, pooled views and LOD. |
-| **OR-1103** | **READY** | M11.3 | **Faction and occupation wardrobe preferences** | OR-1102, OR-906C | Actual faction/occupation/personality state deterministically influences palettes, badges and outfits; individual variation; appearance never changes membership or social outcomes. |
-| **OR-1104** | **READY** | M11.4 | **Limb injury simulation and equipment effects** | OR-1101, OR-1002 | Attributable incident injuries, bounded pain/healing/function rules, relevant mobility/work effects, explicit protective-item mechanics, deterministic saves. |
-| **OR-1105** | **READY** | M11.5 | **Autonomous care, accessibility and limb replacement** | OR-1104 | Clinic capacity and accessible transit influence autonomous care/recovery; scars, missing limbs and prosthetics persist; Steward acts through systems. |
-| **OR-1106** | **READY** | M11.6 | **Health-aware wardrobe, animation and cause-chain UI** | OR-1102, OR-1103, OR-1105 | Covered injury visuals, replacement attachments, meaningful gait/posture and emotion bubbles; inspector exposes incident, impairment, systems levers and measured recovery. |
-| **OR-1107** | **READY** | M11.7 | **Modular resident content and scale acceptance** | OR-1106, OR-1007 | Pose/coverage/content validation, save migrations, pool/LOD reuse, deterministic 30-floor/300-resident run and measured <4 ms p95 tick / 60 FPS / <180 draw calls. |
+| **OR-1101** | **QUEUED** | M11.1 | **Resident body, appearance and health contracts** | OR-1003, OR-1100 | Stable body-part/content IDs; separate identity, worn items and health aggregates; immutable projections; old-save healthy/default-outfit migration; no engine references in Domain/Application. |
+| **OR-1102** | **QUEUED** | M11.2 | **Modular resident art, rig and bodywear** | OR-1101 | Shared pose/anchor contract, explicit animation selection/time and scrub/replay preview, approved modular attachments only, body compatibility, tint/coverage/occlusion, pooled views and LOD. |
+| **OR-1103** | **QUEUED** | M11.3 | **Faction and occupation wardrobe preferences** | OR-1102, OR-906C | Actual faction/occupation/personality state deterministically influences palettes, badges and outfits; individual variation; appearance never changes membership or social outcomes. |
+| **OR-1104** | **QUEUED** | M11.4 | **Limb injury simulation and equipment effects** | OR-1101, OR-1002 | Attributable incident injuries, bounded pain/healing/function rules, relevant mobility/work effects, explicit protective-item mechanics, deterministic saves. |
+| **OR-1105** | **QUEUED** | M11.5 | **Autonomous care, accessibility and limb replacement** | OR-1104 | Clinic capacity and accessible transit influence autonomous care/recovery; scars, missing limbs and prosthetics persist; Steward acts through systems. |
+| **OR-1106** | **QUEUED** | M11.6 | **Health-aware wardrobe, animation and cause-chain UI** | OR-1102, OR-1103, OR-1105 | Covered injury visuals, replacement attachments, meaningful gait/posture and emotion bubbles; inspector exposes incident, impairment, systems levers and measured recovery. |
+| **OR-1107** | **QUEUED** | M11.7 | **Modular resident content and scale acceptance** | OR-1106, OR-1007 | Pose/coverage/content validation, save migrations, pool/LOD reuse, deterministic 30-floor/300-resident run and measured <4 ms p95 tick / 60 FPS / <180 draw calls. |
 
 ---
 
-## 3. Current Delivered Baseline (v0.10+)
+## 3. Preserved foundations and evidence
 
-- **Automated Test Suite**: **832 EditMode passing**, **15 PlayMode passing**, 0 failures, 1 explicit opt-in benchmark skipped.
-- **Reference Scale Verified**: In `Tower_GoldStandard30.unity` (30 floors, 300 residents), overview presentation achieves **83 draw calls** (-99.4% vs unbatched), **10.0 ms CPU frame time (~100 FPS)**, and **1.7 ms average simulation tick**.
-- **Domain Purity**: Zero `UnityEngine` references in `OneRoof.Domain` and `OneRoof.Application`.
-- **Delivered Systems**:
-  - Closed-loop integer unit economics across households, businesses, treasury, and outside market (ECON-001..008).
-  - 3-tier resident LOD (skeletal -> sprite -> combined silhouette mesh) and semantic zoom facade crossfades (orthographic sizes 8–18).
-  - Configurable `ResidentPresentationSettings` and zero-allocation view pooling across population turnover.
-  - Emotional resident social sandbox: traits, thoughts with mood deltas, and 12-tier relationship spectrum (ADR-087 / OR-906A).
-  - Physical utilities (electrical & plumbing) connecting tower risers to subterranean undercity ports.
-  - Secret undercity (32×12 grid, 14 specialized room types, autonomous staffing).
-  - 12-month climate cycle with single-draw-call procedural weather VFX.
-  - 8 data overlays and Steward policy decrees with immutable decision records.
-- **Active Handoff**: Strictly 1 active handoff at [`Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md`](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md).
+Closed-loop integer economy, physical utility networks, autonomous social/faction systems, eight diagnostic overlays, pooled three-tier Resident LOD, semantic zoom and weather remain delivered foundations. Historical 832/15 and overview 83 draws/~100 FPS describe earlier snapshots; archive references are in [historical backlog](./Archive/BACKLOG_HISTORICAL_ARCHIVE.md) and [2026-09-30 validation](../Docs/Validation/BACKLOG_REVIEW_2026-09-30.md).
+
+Native 1080p Caretaker performance (~36 FPS on GT 755M) remains an unresolved measurement, not a stale blocker to silently delete. Reproduction and comparable before/after evidence belong to OR-1003-P. Passing functional tests does not certify the frame budget.
+
+Strictly one [active handoff](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md). Previous detail was preserved in [the pre-hardening snapshot](../Handoffs/Archive/HANDOFF_2026-10-01_before-beta-hardening-roadmap.md). This planning update changes documentation only; Unity validation was not run.
