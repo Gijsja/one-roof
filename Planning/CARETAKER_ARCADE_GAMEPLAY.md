@@ -83,3 +83,18 @@ Recommended synthesis: Kung-Fu Master's floor progression, Sifu's readable group
 Suggested first three encounter beats: teach facing and strike range on the first affected floor; introduce a telegraphed ranged threat and duck/jump responses on the next; then combine threats with a stronger opponent. Assign these beats to eligible connected floors rather than hard-coded floor numbers. Keep opponent identity and crisis cause as explicit unresolved narrative design.
 
 Research scope: original-manual transcription, direct developer interviews and official manual search excerpt. Capcom's full practice page failed to open through the web fetcher; only the returned official search excerpt was available. No exact C64 damage values or Street Fighter frame data were verified. No Unity validation was run for these documentation changes.
+
+## Implemented slice and commit boundary — 2026-10-01
+
+The complete first playable crisis is already included in commit `14bc70d` (alongside concurrent furniture work). It provides permanent lobby contact, safe rehearsal, sustained faction warnings, actual slab/stair traversal, successive bounded fighter waves, saved whole-household eviction consequences, and management input/camera restoration. Press **C** to open contact; combat controls appear in the HUD.
+
+Validation of that implementation, before subsequent body/ragdoll changes:
+
+- Crisis EditMode: 20/20 passing; resident presentation EditMode: 37/37 passing; full graphical PlayMode: 16/16 passing.
+- Real 1920×1080 contact and combat HUD captures inspected; an initial targeted HUD run passed 1/1.
+- Staged fight at explicit 1280×720: 94.5 FPS / 181.6 draws. Native 1920×1080 Editor GameView plus HUD: 36.1 FPS / 126 draws on GT 755M. The full 60 FPS presentation gate remains open.
+- A later HUD capture run reached gameplay assertions but failed on an asynchronous Unity AI package `NoSubscription` log; this is separate from crisis assertions.
+
+Evidence remains in `/tmp/one-roof-caretaker-validation/`; frozen validation source and manifests were retained, while isolated generated caches were removed. Internal room wall, door and furnishing collisions, accessibility/remapping polish, and the remaining six-chain beta contract are outside this delivered slice.
+
+The subsequent resident-body and ragdoll edits remain separate work. This closeout records the validated crisis boundary without including those uncommitted changes.
