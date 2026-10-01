@@ -15,6 +15,9 @@ namespace OneRoof.Editor.AssetLab
         private float _sampleTime;
         private bool _facingLeft;
         private Vector2 _boneScroll;
+        private bool _isPlaying;
+        private float _playbackSpeed = 1f;
+        private double _lastTime;
 
         [MenuItem("One Roof/Residents/Animation Preview")]
         public static void Open() => GetWindow<ResidentAnimationPreviewWindow>("Resident Animation");
@@ -33,13 +36,28 @@ namespace OneRoof.Editor.AssetLab
             _rig = root.AddComponent<NpcSkeletalHierarchy>();
             _rig.Initialize(_variant);
             _preview.AddSingleGO(root);
+            _lastTime = EditorApplication.timeSinceStartup;
+            EditorApplication.update += OnEditorUpdate;
         }
 
         private void OnDisable()
         {
+            EditorApplication.update -= OnEditorUpdate;
             _preview?.Cleanup();
             _preview = null;
             _rig = null;
+        }
+
+        private void OnEditorUpdate()
+        {
+            var now = EditorApplication.timeSinceStartup;
+            var dt = (float)(now - _lastTime);
+            _lastTime = now;
+            if (_isPlaying)
+            {
+                _sampleTime = (_sampleTime + dt * _playbackSpeed) % 10f;
+                Repaint();
+            }
         }
 
         private void OnGUI()
@@ -61,6 +79,20 @@ namespace OneRoof.Editor.AssetLab
             _variant = EditorGUILayout.IntSlider("Palette / proportions", _variant, 0, NpcWardrobeVariantCatalog.Count - 1);
             _facingLeft = EditorGUILayout.Toggle("Face left", _facingLeft);
             _sampleTime = EditorGUILayout.Slider("Sample time (seconds)", _sampleTime, 0f, 10f);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(_isPlaying ? "Pause" : "Play", GUILayout.Width(70)))
+            {
+                _isPlaying = !_isPlaying;
+                _lastTime = EditorApplication.timeSinceStartup;
+            }
+            if (GUILayout.Button("Reset", GUILayout.Width(55)))
+            {
+                _sampleTime = 0f;
+                Repaint();
+            }
+            _playbackSpeed = EditorGUILayout.Slider("Speed", _playbackSpeed, 0.1f, 2.0f);
+            EditorGUILayout.EndHorizontal();
             if (EditorGUI.EndChangeCheck()) _rig.Initialize(_variant);
             _rig.SetFacing(_facingLeft ? -1f : 1f);
             _rig.SetAnimationClip(_clip, "Isolated editor preview");

@@ -275,6 +275,7 @@ namespace OneRoof.Presentation.Tests.EditMode
 
                 var coatrack = presenter.PlacedProps[0];
                 Assert.That(coatrack.transform.localPosition.x, Is.EqualTo(width * 0.5f - 0.25f).Within(0.001f));
+                Assert.That(coatrack.transform.localPosition.y, Is.EqualTo(baselineY).Within(0.001f));
                 Assert.That(coatrack.transform.localPosition.z, Is.EqualTo(0.42f).Within(0.001f));
 
                 var bed = presenter.PlacedProps[1];

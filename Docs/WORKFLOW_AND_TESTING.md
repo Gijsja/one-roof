@@ -40,7 +40,15 @@ Validation runs headlessly via batchmode. When no interactive Editor is locking 
   Apply scoped changes, validate, and remove the worktree when finished (`git worktree remove ../one-roof-<task>-validation`).
 
 ### 2.2 Fast Compilation Check
-Verify C# compilation without running tests (exit code `0` required):
+Verify C# compilation without running tests (exit code `0` required).
+
+**Preferred (Concurrent with live Editor / No lockfile clash)**:
+```bash
+/home/geisha/.local/bin/dotnet build OneRoof.Presentation.csproj
+/home/geisha/.local/bin/dotnet build OneRoof.Presentation.Tests.EditMode.csproj
+```
+
+**Alternative (Headless Unity Batchmode - Requires Editor closed / no `Temp/UnityLockfile`)**:
 ```bash
 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity \
   -batchmode -nographics -quit \
@@ -85,25 +93,38 @@ timeout 1500 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity \
 
 ---
 
-## 3. Live Pipeline & Editor Probing (`pipeline_client.py`)
+## 3. Live Pipeline & Editor Probing (`unity-cli` via `com.unity.pipeline`)
 
-When an Editor session runs with `com.unity.pipeline` active (port 7800 or 7801, defined in `Library/Pipeline/.unity-pipeline-port`):
+When an Editor session runs with `com.unity.pipeline` active (port 7800 or 7801, defined in `Library/Pipeline/.unity-pipeline-port`), agents can drive, probe, and run tests directly against the running Editor via the `unity` CLI:
 
-- **Performance Telemetry**:
+- **Editor Connection Status**:
   ```bash
-  python3 pipeline_client.py cmd get_performance_stats
+  unity status
   ```
-  Returns live draw calls, batches, SetPass calls, and CPU frame times. Used to certify presentation budgets at scale (e.g. `Tower_GoldStandard30` at 83 overview draw calls and ~10.0 ms frame time).
+  Confirms the connected live Editor and port (e.g. port 7800).
 
 - **Console Status**:
   ```bash
-  python3 pipeline_client.py cmd console_status
+  unity command console_status
   ```
   Verifies zero console errors or unhandled exceptions during live simulation ticks.
 
+- **Run Tests in Live Editor (Instant execution, no restart needed)**:
+  ```bash
+  unity command run_tests --mode EditMode --filter <TestPattern>
+  ```
+  Executes EditMode or PlayMode suites directly in the running Editor without closing the project or colliding with `Temp/UnityLockfile`.
+
+- **Trigger Asset Refresh & Recompile**:
+  ```bash
+  unity command eval "UnityEditor.AssetDatabase.Refresh();"
+  unity command recompile
+  ```
+  Forces the live Editor to ingest newly created C# scripts or assets and reload domain assemblies.
+
 - **Dynamic Expression Evaluation**:
   ```bash
-  python3 pipeline_client.py eval "TowerPlayableController.Instance.CurrentTick"
+  unity command eval "OneRoof.Presentation.Tower.TowerPlayableController.FloorY(0)"
   ```
   Evaluates C# expressions in the running scene without halting simulation.
 
