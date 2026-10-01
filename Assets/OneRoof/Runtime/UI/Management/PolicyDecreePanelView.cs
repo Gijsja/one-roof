@@ -30,6 +30,7 @@ namespace OneRoof.UI.Management
 
         private void Update()
         {
+            if (_modes != null && _modes.IsInputBlocked) return;
             if (_draft == null || _modes == null || _modes.CurrentMode != InteractionMode.Manage) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
@@ -77,6 +78,7 @@ namespace OneRoof.UI.Management
 
         private void OnGUI()
         {
+            if (_modes != null && _modes.IsInputBlocked) return;
             if (_draft == null || _modes == null || _modes.CurrentMode != InteractionMode.Manage) return;
             var rect = PanelRect(Screen.width, Screen.height);
             GUILayout.BeginArea(rect, StewardTheme.Panel);

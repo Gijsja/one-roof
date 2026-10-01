@@ -62,6 +62,12 @@ namespace OneRoof.Application.Inspectors
                 if (housing.Value.HasNotice)
                     details.Add($"Move-out notice started on day {housing.Value.NoticeStartedDay}; eligible: {(housing.Value.IsMoveOutEligible ? "yes" : "no")}");
             }
+            if (_session.Simulation.HousingLifecycle.HasCrisisEviction(household.Id))
+            {
+                var crisis = _session.CaretakerProjection();
+                details.Add($"Kungfu eviction: household departure after {crisis.FactionId} organizing over {crisis.Cause}; ordinary rent recovery does not cancel this outcome.");
+                details.Add("Witness memories and increased scrutiny persist; use service, transit and lease policy to address the original cause.");
+            }
             foreach (var need in person.Needs) details.Add($"{need.Kind}: {need.Satisfaction:P0}");
             foreach (var trait in person.Traits) details.Add($"Trait: {trait.Kind}");
             if (person.SocialTraits != null)

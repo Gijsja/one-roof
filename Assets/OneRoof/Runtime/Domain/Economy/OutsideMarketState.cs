@@ -51,6 +51,13 @@ namespace OneRoof.Domain.Economy
             CashBalance = SaturatingAdd(CashBalance, -amount);
         }
 
+        /// <summary>Departing households retain cash in the outside world; transfer before removing their Tower ledger.</summary>
+        public void RecordHouseholdDeparture(HouseholdRecord household)
+        {
+            if (household == null) throw new ArgumentNullException(nameof(household));
+            CashBalance = SaturatingAdd(CashBalance, household.CashBalance);
+        }
+
         /// <summary>Records a tower purchase from an outside supplier after the treasury paid it.</summary>
         public void RecordTowerPurchase(long amount)
         {

@@ -27,12 +27,14 @@ namespace OneRoof.Domain.Population
 
     /// <summary>
     /// Serializable, household-keyed state for an eviction notice. Notice timing is
-    /// persisted separately from topology and can be cancelled after financial recovery.
+    /// persisted separately from topology. Ordinary notices cancel after financial recovery;
+    /// confirmed crisis evictions remain effective.
     /// </summary>
     public sealed class HouseholdLeaseLifecycleState
     {
         public const int MaxDepartureHistory = 64;
         private readonly Dictionary<EntityId, long> _noticeStartedDays = new Dictionary<EntityId, long>();
+        private readonly HashSet<EntityId> _crisisEvictions = new HashSet<EntityId>();
         private readonly List<HouseholdDepartureRecord> _departureHistory = new List<HouseholdDepartureRecord>(MaxDepartureHistory);
         private readonly ReadOnlyCollection<HouseholdDepartureRecord> _departureHistoryView;
 
@@ -60,15 +62,28 @@ namespace OneRoof.Domain.Population
         }
 
         /// <summary>Cancels a pending notice, normally after rent arrears are fully cleared.</summary>
-        public bool CancelNotice(EntityId householdId) => _noticeStartedDays.Remove(householdId);
+        public bool CancelNotice(EntityId householdId) => !_crisisEvictions.Contains(householdId) && _noticeStartedDays.Remove(householdId);
+
+        /// <summary>Confirmed arcade eviction uses the existing autonomous departure route, with a saved cause-specific notice.</summary>
+        public bool MarkCrisisEviction(EntityId householdId, long simulationDay)
+        {
+            householdId.EnsureValid();
+            if (simulationDay < 0) throw new ArgumentOutOfRangeException(nameof(simulationDay));
+            if (!_crisisEvictions.Add(householdId)) return false;
+            _noticeStartedDays[householdId] = simulationDay;
+            return true;
+        }
+
+        public bool HasCrisisEviction(EntityId householdId) => _crisisEvictions.Contains(householdId);
 
         public bool IsMoveOutEligible(EntityId householdId, long simulationDay)
         {
             if (!_noticeStartedDays.TryGetValue(householdId, out var noticeStartedDay)) return false;
+            if (_crisisEvictions.Contains(householdId)) return simulationDay >= noticeStartedDay;
             return simulationDay >= noticeStartedDay && simulationDay - noticeStartedDay >= HouseholdHousingLifecycleSystem.NoticeDurationDays;
         }
 
-        public void RemoveHousehold(EntityId householdId) => _noticeStartedDays.Remove(householdId);
+        public void RemoveHousehold(EntityId householdId) { _noticeStartedDays.Remove(householdId); _crisisEvictions.Remove(householdId); }
 
         /// <summary>Records a completed household departure once, retaining the newest bounded history.</summary>
         public bool RecordDeparture(EntityId householdId, long simulationDay, long finalCashBalance, long finalRentArrears)
@@ -108,7 +123,7 @@ namespace OneRoof.Domain.Population
         {
             var records = new List<HouseholdLeaseNoticeSaveData>(_noticeStartedDays.Count);
             foreach (var pair in _noticeStartedDays)
-                records.Add(new HouseholdLeaseNoticeSaveData { householdId = pair.Key.Value, noticeStartedDay = pair.Value });
+                records.Add(new HouseholdLeaseNoticeSaveData { householdId = pair.Key.Value, noticeStartedDay = pair.Value, crisisEviction = _crisisEvictions.Contains(pair.Key) });
             records.Sort((left, right) => left.householdId.CompareTo(right.householdId));
             var departures = new HouseholdDepartureSaveData[_departureHistory.Count];
             for (var i = 0; i < _departureHistory.Count; i++)
@@ -136,7 +151,7 @@ namespace OneRoof.Domain.Population
                 {
                     if (notice == null || notice.householdId <= 0 || notice.noticeStartedDay < 0) continue;
                     var id = new EntityId(notice.householdId);
-                    if (!state._noticeStartedDays.ContainsKey(id)) state._noticeStartedDays.Add(id, notice.noticeStartedDay);
+                    if (!state._noticeStartedDays.ContainsKey(id)) { state._noticeStartedDays.Add(id, notice.noticeStartedDay); if (notice.crisisEviction) state._crisisEvictions.Add(id); }
                 }
             }
             if (data.departures != null)
@@ -188,6 +203,7 @@ namespace OneRoof.Domain.Population
     {
         public int householdId;
         public long noticeStartedDay;
+        public bool crisisEviction;
     }
 
     [Serializable]
@@ -228,8 +244,17 @@ namespace OneRoof.Domain.Population
             {
                 foreach (var f in furnishings)
                 {
-                    if (!string.IsNullOrEmpty(f) && !list.Contains(f))
-                        list.Add(f);
+                    if (string.IsNullOrEmpty(f)) continue;
+                    var exists = false;
+                    for (var j = 0; j < list.Count; j++)
+                    {
+                        if (string.Equals(list[j], f, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) list.Add(f);
                 }
             }
             if (list.Count == 0)
@@ -334,44 +359,82 @@ namespace OneRoof.Domain.Population
 
             foreach (var household in population.Households)
             {
-                if (household.RentArrearsDays > 0 || household.CashBalance < 100) continue;
+                if (household.RentArrearsDays > 0) continue;
                 if (!topology.TryGetRoom(household.HomeRoomId, out var room)) continue;
 
+                var minBuffer = Math.Max(60L, household.RentReserveTarget / 4);
                 float roomWidth = room.Bounds.Width * 0.5f;
 
                 string id = null;
                 long cost = 0;
 
-                if (!household.AcquiredProps.Contains("prop.decor.planter.v1"))
+                var props = household.AcquiredProps;
+                if (!HasProp(props, "prop.civic.coatrack.v1"))
+                {
+                    id = "prop.civic.coatrack.v1";
+                    cost = 10;
+                }
+                else if (!HasProp(props, "prop.decor.planter.v1"))
                 {
                     id = "prop.decor.planter.v1";
                     cost = 15;
                 }
-                else if (roomWidth >= 2.0f && !household.AcquiredProps.Contains("prop.furniture.sofa.v1"))
+                else if (roomWidth >= 2.0f && !HasProp(props, "prop.furniture.sofa.v1"))
                 {
                     id = "prop.furniture.sofa.v1";
                     cost = 45;
                 }
-                else if (roomWidth >= 2.5f && !household.AcquiredProps.Contains("prop.furniture.bookcase.v1"))
+                else if (HasProp(props, "prop.furniture.sofa.v1") && !HasProp(props, "prop.furniture.table.v1"))
+                {
+                    id = "prop.furniture.table.v1";
+                    cost = 25;
+                }
+                else if (roomWidth >= 2.5f && !HasProp(props, "prop.workplace.desk.v1"))
+                {
+                    id = "prop.workplace.desk.v1";
+                    cost = 40;
+                }
+                else if (roomWidth >= 2.5f && !HasProp(props, "prop.furniture.bookcase.v1"))
                 {
                     id = "prop.furniture.bookcase.v1";
                     cost = 30;
                 }
-                else if (roomWidth >= 3.0f && !household.AcquiredProps.Contains("prop.furniture.vanitydresser.v1"))
+                else if (roomWidth >= 3.0f && !HasProp(props, "prop.domestic.kitchenette.v1"))
+                {
+                    id = "prop.domestic.kitchenette.v1";
+                    cost = 50;
+                }
+                else if (roomWidth >= 3.0f && !HasProp(props, "prop.furniture.gametable.v1"))
+                {
+                    id = "prop.furniture.gametable.v1";
+                    cost = 65;
+                }
+                else if (roomWidth >= 3.0f && !HasProp(props, "prop.furniture.vanitydresser.v1"))
                 {
                     id = "prop.furniture.vanitydresser.v1";
                     cost = 60;
                 }
 
-                if (id != null)
+                if (id == null) continue;
+                if (household.RentArrearsDays > 0 || household.CashBalance - cost < minBuffer) continue;
+
+                var res = outsideMarket.TryPurchase(household, cost, 0, OutsideServiceCategory.QualityService);
+                if (res.IsSuccess)
                 {
-                    var res = outsideMarket.TryPurchase(household, cost, 0, OutsideServiceCategory.QualityService);
-                    if (res.IsSuccess)
-                    {
-                        household.TryAddAcquiredProp(id);
-                    }
+                    household.TryAddAcquiredProp(id);
                 }
             }
+        }
+
+        private static bool HasProp(IReadOnlyList<string> props, string id)
+        {
+            if (props == null) return false;
+            for (var i = 0; i < props.Count; i++)
+            {
+                if (string.Equals(props[i], id, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         public static bool HasPersistentNegativeBudget(HouseholdRecord household) =>

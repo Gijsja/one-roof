@@ -11,23 +11,36 @@ namespace OneRoof.Presentation.Furnishings
     /// </summary>
     public class RoomFurnishingPresenter : MonoBehaviour
     {
+        private static readonly string[] SleepMatches = { "bed" };
+        private static readonly string[] WorkMatches = { "desk", "bench", "monitor", "vanity" };
+        private static readonly string[] SeatMatches = { "sofa", "booth", "chair", "conversation", "gametable", "table" };
+        private static readonly string[] CookMatches = { "kitchenette" };
+        private static readonly string[] BrowseMatches = { "coatrack", "shelf", "rack", "bookcase" };
+        private static readonly string[] ServiceMatches = { "counter", "reception", "coatrack", "checkout" };
+        private static readonly string[] RestMatches = { "sofa", "table", "coatrack" };
+        private static readonly string[] DefaultMatches = { "booth", "table", "coatrack", "kitchenette", "desk" };
+
         private readonly List<GameObject> _placedProps = new List<GameObject>();
+        private readonly List<SpriteRenderer> _placedRenderers = new List<SpriteRenderer>();
+        private readonly List<string> _currentPropIds = new List<string>();
         private Material _sharedMaterial;
 
         private float _clutterAlpha = -1f;
         public float ClutterAlpha => Mathf.Max(0f, _clutterAlpha);
+        public int PlacedCount => _placedProps.Count;
 
         public void SetClutterAlpha(float alpha)
         {
             alpha = Mathf.Clamp01(alpha);
             if (Mathf.Approximately(_clutterAlpha, alpha)) return;
             _clutterAlpha = alpha;
-            foreach (var prop in _placedProps)
+            for (var i = 0; i < _placedRenderers.Count; i++)
             {
-                if (prop == null) continue;
-                var renderer = prop.GetComponent<SpriteRenderer>();
+                var renderer = _placedRenderers[i];
                 if (renderer == null) continue;
-                var color = renderer.color; color.a = alpha; renderer.color = color;
+                var color = renderer.color;
+                color.a = alpha;
+                renderer.color = color;
                 renderer.enabled = alpha > 0.001f;
             }
         }
@@ -36,9 +49,17 @@ namespace OneRoof.Presentation.Furnishings
 
         public bool TryGetDockPosition(InteractionPointKind kind, int slot, out Vector3 worldPosition)
         {
-            var matches = kind == InteractionPointKind.Sleep ? new[] { "bed" } :
-                kind == InteractionPointKind.Work ? new[] { "desk", "bench", "monitor", "vanity" } :
-                kind == InteractionPointKind.Seat ? new[] { "sofa", "booth", "chair", "conversation", "gametable" } : new[] { "booth" };
+            var matches = kind switch
+            {
+                InteractionPointKind.Sleep => SleepMatches,
+                InteractionPointKind.Work => WorkMatches,
+                InteractionPointKind.Seat => SeatMatches,
+                InteractionPointKind.Cook => CookMatches,
+                InteractionPointKind.Browse => BrowseMatches,
+                InteractionPointKind.Service => ServiceMatches,
+                InteractionPointKind.Rest => RestMatches,
+                _ => DefaultMatches
+            };
             var matchCount = 0;
             for (var i = 0; i < _placedProps.Count; i++)
             {
@@ -144,8 +165,8 @@ namespace OneRoof.Presentation.Furnishings
             // Bookcase near wall
             if (width >= 2.5f)
             {
-                var bookcaseX = 0f;
-                SpawnProp("prop.furniture.bookcase.v1", new Vector3(bookcaseX, baselineY, 0.45f));
+                var bookcaseX = isWestSide ? 0.42f : -0.42f;
+                SpawnProp("prop.furniture.bookcase.v1", new Vector3(bookcaseX, baselineY, 0.46f));
             }
 
             // Wide apartments get either a lounge conversation set or a vanity dresser
@@ -296,7 +317,102 @@ namespace OneRoof.Presentation.Furnishings
             }
         }
 
-        private GameObject SpawnProp(string contentId, Vector3 localPosition)
+        public bool NeedsFurnishingSync(IReadOnlyList<string> newPropIds)
+        {
+            if (newPropIds == null || newPropIds.Count == 0)
+                return _currentPropIds.Count != 0;
+            if (newPropIds.Count != _currentPropIds.Count)
+                return true;
+            for (var i = 0; i < newPropIds.Count; i++)
+            {
+                if (!string.Equals(newPropIds[i], _currentPropIds[i], System.StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        public void SyncFurnishings(IReadOnlyList<string> propContentIds, float width, float height, bool isWestSide, Material sharedMaterial = null)
+        {
+            if (sharedMaterial != null) _sharedMaterial = sharedMaterial;
+            if (!NeedsFurnishingSync(propContentIds)) return;
+
+            ClearProps();
+            if (propContentIds == null || propContentIds.Count == 0) return;
+
+            var baselineY = -height * 0.5f;
+            for (var i = 0; i < propContentIds.Count; i++)
+            {
+                var id = propContentIds[i];
+                if (string.Equals(id, "prop.civic.coatrack.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var coatX = isWestSide ? (width * 0.5f - 0.25f) : (-width * 0.5f + 0.25f);
+                    SpawnProp(id, new Vector3(coatX, baselineY, 0.42f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.bed.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var bedX = isWestSide ? (-width * 0.5f + 0.65f) : (width * 0.5f - 0.65f);
+                    SpawnProp(id, new Vector3(bedX, baselineY, 0.40f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.decor.planter.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var planterX = isWestSide ? (-width * 0.5f + 0.20f) : (width * 0.5f - 0.20f);
+                    SpawnProp(id, new Vector3(planterX, baselineY, 0.42f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.sofa.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var sofaX = isWestSide ? (width * 0.5f - 0.95f) : (-width * 0.5f + 0.95f);
+                    SpawnProp(id, new Vector3(sofaX, baselineY, 0.35f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.table.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var tableX = isWestSide ? (width * 0.5f - 0.95f) : (-width * 0.5f + 0.95f);
+                    SpawnProp(id, new Vector3(tableX, baselineY, 0.28f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.workplace.desk.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var deskX = isWestSide ? -0.05f : 0.05f;
+                    SpawnProp(id, new Vector3(deskX, baselineY, 0.42f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.bookcase.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var bookcaseX = isWestSide ? 0.42f : -0.42f;
+                    SpawnProp(id, new Vector3(bookcaseX, baselineY, 0.46f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.domestic.kitchenette.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var kitchenX = isWestSide ? -0.15f : 0.15f;
+                    SpawnProp(id, new Vector3(kitchenX, baselineY, 0.44f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.gametable.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var gameTableX = isWestSide ? 0.15f : -0.15f;
+                    SpawnProp(id, new Vector3(gameTableX, baselineY, 0.36f));
+                    _currentPropIds.Add(id);
+                }
+                else if (string.Equals(id, "prop.furniture.conversationset.v1", System.StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(id, "prop.furniture.vanitydresser.v1", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var extraX = isWestSide ? (width * 0.5f - 1.45f) : (-width * 0.5f + 1.45f);
+                    SpawnProp(id, new Vector3(extraX, baselineY, 0.38f));
+                    _currentPropIds.Add(id);
+                }
+                else
+                {
+                    SpawnProp(id, new Vector3(0f, baselineY, 0.38f));
+                    _currentPropIds.Add(id);
+                }
+            }
+        }
+
+        public GameObject SpawnProp(string contentId, Vector3 localPosition)
         {
             var propObj = new GameObject("Prop_" + contentId);
             propObj.transform.SetParent(transform, false);
@@ -306,8 +422,16 @@ namespace OneRoof.Presentation.Furnishings
             sr.sprite = PropCatalog.GetPropSprite(contentId);
             sr.sortingOrder = -2;
             sr.sharedMaterial = _sharedMaterial ?? GetOrCreateDefaultPropMaterial();
+            if (_clutterAlpha >= 0f)
+            {
+                var color = sr.color;
+                color.a = _clutterAlpha;
+                sr.color = color;
+                sr.enabled = _clutterAlpha > 0.001f;
+            }
 
             _placedProps.Add(propObj);
+            _placedRenderers.Add(sr);
             return propObj;
         }
 
@@ -354,6 +478,8 @@ namespace OneRoof.Presentation.Furnishings
                 }
             }
             _placedProps.Clear();
+            _placedRenderers.Clear();
+            _currentPropIds.Clear();
             _clutterAlpha = -1f;
         }
 

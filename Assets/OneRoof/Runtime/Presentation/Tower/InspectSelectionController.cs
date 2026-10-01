@@ -155,6 +155,7 @@ namespace OneRoof.Presentation.Tower
 
         private void Update()
         {
+            if (_modeSession != null && _modeSession.IsInputBlocked) return;
             if (_modeSession == null) return;
 
             var projection = _modeSession.Projection();

@@ -81,6 +81,20 @@ namespace OneRoof.Domain.Decisions
             }
         }
 
+        public void RecordCaretakerResolution(TowerSimulation sim, IEnumerable<int> householdIds)
+        {
+            var crisis = sim.CaretakerCrisis;
+            var entry = New(sim, "caretaker_crisis", "Kungfu eviction", crisis.Cause);
+            if (entry == null) return;
+            entry.factionId = crisis.FactionId;
+            entry.phase = "Resolved";
+            entry.householdIds = new List<int>(householdIds).ToArray();
+            entry.residentIds = Copy(crisis.AffectedResidentIds);
+            entry.floorIds = Copy(crisis.AffectedFloors);
+            entry.immediateEffect = $"{entry.householdIds.Length} household(s) departing; witnesses retain distress and scrutiny rises. The original grievance still requires systems relief.";
+            entry.observations = new[] { Capture(sim, entry) };
+        }
+
         private DecisionEntrySaveData New(TowerSimulation sim, string kind, string title, string cause)
         {
             if (_entries.Count >= MaxEntries)

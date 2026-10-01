@@ -28,6 +28,7 @@ namespace OneRoof.Presentation.Tower
         private readonly Dictionary<EntityId, RoomFurnishingPresenter> _furnishings = new Dictionary<EntityId, RoomFurnishingPresenter>();
         private readonly Dictionary<EntityId, RoomBackdropPresenter> _backdrops = new Dictionary<EntityId, RoomBackdropPresenter>();
         private readonly HashSet<EntityId> _authoredRoomIds = new HashSet<EntityId>();
+        private readonly HashSet<EntityId> _activeHomeBuffer = new HashSet<EntityId>();
 
         public float ClutterAlpha { get; private set; } = 1f;
         public void SetClutterAlpha(float alpha)
@@ -119,6 +120,7 @@ namespace OneRoof.Presentation.Tower
             _roomRoots.Clear();
             _backdrops.Clear();
             _authoredRoomIds.Clear();
+            _activeHomeBuffer.Clear();
         }
 
         public void EnsureRoomViews(TowerTopologyProjection topology)
@@ -246,7 +248,10 @@ namespace OneRoof.Presentation.Tower
                     _backdrops[room.Id] = backdropPresenter;
 
                     var furnishingPresenter = roomRoot.AddComponent<RoomFurnishingPresenter>();
-                    furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide);
+                    if (!isResidential)
+                    {
+                        furnishingPresenter.FurnishRoom(contentTypeStr, width, 1.42f, isWestSide, _worldMaterial);
+                    }
                     _furnishings[room.Id] = furnishingPresenter;
                 }
 
@@ -351,6 +356,7 @@ namespace OneRoof.Presentation.Tower
             _backdrops.Clear();
             _renderedRoomIds.Clear();
             _authoredRoomIds.Clear();
+            _activeHomeBuffer.Clear();
         }
 
         private static EntityId GetRoomId(string name)
@@ -384,13 +390,47 @@ namespace OneRoof.Presentation.Tower
         {
             foreach (var backdrop in _backdrops.Values)
                 if (backdrop != null) backdrop.SetHousingCondition(HousingConditionStage.Maintained);
-            if (housing == null) return;
-            for (var i = 0; i < housing.Count; i++)
+
+            _activeHomeBuffer.Clear();
+
+            if (housing != null)
             {
-                var projection = housing[i];
-                if (_backdrops.TryGetValue(projection.HomeRoomId, out var backdrop) && backdrop != null)
-                    backdrop.SetHousingCondition(projection.RoomCondition);
+                for (var i = 0; i < housing.Count; i++)
+                {
+                    var projection = housing[i];
+                    _activeHomeBuffer.Add(projection.HomeRoomId);
+
+                    if (_backdrops.TryGetValue(projection.HomeRoomId, out var backdrop) && backdrop != null)
+                    {
+                        backdrop.SetHousingCondition(projection.RoomCondition);
+
+                        if (_furnishings.TryGetValue(projection.HomeRoomId, out var furnishing) && furnishing != null)
+                        {
+                            var isWestSide = backdrop.transform.position.x < -1.9f;
+                            furnishing.SyncFurnishings(projection.Furnishings, backdrop.Width, backdrop.Height, isWestSide, _worldMaterial);
+                        }
+                    }
+                }
             }
+
+            foreach (var pair in _furnishings)
+            {
+                var roomId = pair.Key;
+                var furnishing = pair.Value;
+                if (!_activeHomeBuffer.Contains(roomId) && _backdrops.TryGetValue(roomId, out var backdrop) && backdrop != null)
+                {
+                    var lowerTheme = (backdrop.RoomTheme ?? "").ToLowerInvariant();
+                    if (lowerTheme.Contains("residential") || lowerTheme.Contains("apartment"))
+                    {
+                        furnishing.ClearProps();
+                    }
+                }
+            }
+        }
+
+        public bool TryGetFurnishingPresenter(EntityId roomId, out RoomFurnishingPresenter presenter)
+        {
+            return _furnishings.TryGetValue(roomId, out presenter);
         }
 
         private void CreateExitSign(EntityId roomId, float centerX, float y, Transform parent)

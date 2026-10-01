@@ -181,7 +181,7 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
-        public void EnsureRoomViews_UsesWorldMaterialForBackdropsAndTransparentMaterialForFurnishings()
+        public void EnsureRoomViews_UsesSharedWorldMaterialForBackdropsAndFurnishings()
         {
             var session = new TowerSimulationSession();
             _presenter.EnsureRoomViews(session.TopologyProjection());
@@ -213,14 +213,86 @@ namespace OneRoof.Presentation.Tests.EditMode
                     var sr = prop.GetComponent<SpriteRenderer>();
                     if (sr != null)
                     {
-                        Assert.That(sr.sharedMaterial, Is.Not.Null);
-                        Assert.That(sr.sharedMaterial.renderQueue, Is.EqualTo((int)UnityEngine.Rendering.RenderQueue.Transparent));
-                        Assert.That(sr.sharedMaterial.GetInt("_SrcBlend"), Is.EqualTo((int)UnityEngine.Rendering.BlendMode.SrcAlpha));
-                        Assert.That(sr.sharedMaterial.GetInt("_DstBlend"), Is.EqualTo((int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
-                        Assert.That(sr.sharedMaterial.GetInt("_ZWrite"), Is.EqualTo(0));
+                        Assert.That(sr.sharedMaterial, Is.EqualTo(_material),
+                            "Furnishing props must share _worldMaterial for standard batching.");
                     }
                 }
             }
+        }
+
+        [Test]
+        public void EnsureRoomViews_ResidentialRoomsStartEmpty_WithoutAutoFurnishing()
+        {
+            var session = new TowerSimulationSession();
+            var topo = session.TopologyProjection();
+            _presenter.EnsureRoomViews(topo);
+
+            // Find residential rooms
+            var foundResidential = false;
+            foreach (var room in topo.Rooms.Values)
+            {
+                var ct = (room.ContentType.Value ?? "").ToLowerInvariant();
+                if (ct.Contains("residential") || ct.Contains("apartment"))
+                {
+                    foundResidential = true;
+                    var roomRoot = _holder.transform.Find($"RoomView_{room.Id}");
+                    Assert.That(roomRoot, Is.Not.Null);
+
+                    var furnishing = roomRoot.GetComponent<OneRoof.Presentation.Furnishings.RoomFurnishingPresenter>();
+                    Assert.That(furnishing, Is.Not.Null);
+                    Assert.That(furnishing.PlacedProps.Count, Is.EqualTo(0),
+                        $"Residential room {room.Id} should start empty with 0 props before tenant move-in");
+                }
+            }
+            Assert.That(foundResidential, Is.True);
+        }
+
+        [Test]
+        public void UpdateHousingConditions_SyncsOccupiedRoomFurnishingsAndClearsOnDeparture()
+        {
+            var session = new TowerSimulationSession();
+            var topo = session.TopologyProjection();
+            _presenter.EnsureRoomViews(topo);
+
+            // Find a residential room
+            Room resRoom = null;
+            foreach (var room in topo.Rooms.Values)
+            {
+                var ct = (room.ContentType.Value ?? "").ToLowerInvariant();
+                if (ct.Contains("residential") || ct.Contains("apartment"))
+                {
+                    resRoom = room;
+                    break;
+                }
+            }
+            Assert.That(resRoom, Is.Not.Null);
+
+            var roomRoot = _holder.transform.Find($"RoomView_{resRoom.Id}");
+            var furnishing = roomRoot.GetComponent<OneRoof.Presentation.Furnishings.RoomFurnishingPresenter>();
+            Assert.That(furnishing.PlacedProps.Count, Is.EqualTo(0));
+
+            // Move-in: household occupies room with bed and planter
+            var projection = new OneRoof.Domain.Population.HouseholdHousingLifecycleProjection(
+                new EntityId(999),
+                resRoom.Id,
+                rentArrearsDays: 0,
+                roomCondition: OneRoof.Domain.Population.HousingConditionStage.Maintained,
+                leasePhase: OneRoof.Domain.Population.HouseholdLeasePhase.Current,
+                hasNotice: false,
+                noticeStartedDay: -1,
+                furnishings: new[] { "prop.furniture.bed.v1", "prop.decor.planter.v1" });
+
+            _presenter.UpdateHousingConditions(new[] { projection });
+            Assert.That(furnishing.PlacedProps.Count, Is.EqualTo(2));
+            foreach (var prop in furnishing.PlacedProps)
+            {
+                var sr = prop.GetComponent<SpriteRenderer>();
+                Assert.That(sr.sharedMaterial, Is.EqualTo(_material), "Residential furnishings should also use shared _worldMaterial.");
+            }
+
+            // Move-out: room becomes vacant
+            _presenter.UpdateHousingConditions(System.Array.Empty<OneRoof.Domain.Population.HouseholdHousingLifecycleProjection>());
+            Assert.That(furnishing.PlacedProps.Count, Is.EqualTo(0));
         }
     }
 }

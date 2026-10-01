@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Application.Economy;
+using OneRoof.Application.Crisis;
+using OneRoof.Domain.Crisis;
+using OneRoof.Domain.Persistence;
 using OneRoof.Application.Decisions;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Transit;
@@ -24,6 +27,10 @@ namespace OneRoof.Application.Tower
     public sealed class TowerSimulationSession
     {
         private TowerSimulation _simulation;
+        private CaretakerCrisisProjection _cachedCaretakerProjection;
+        private long _caretakerVersion;
+        private long _cachedCaretakerVersion = -1;
+        private long _cachedCaretakerWorldVersion = -1;
         private TowerProjection _cachedTransitProjection;
         // Scratch indexes never escape into a published projection. Retain capacity across rebuilds.
         private readonly Dictionary<EntityId, ElevatorPassenger> _ridingByPerson = new Dictionary<EntityId, ElevatorPassenger>();
@@ -81,6 +88,34 @@ namespace OneRoof.Application.Tower
             InvalidateUndergroundUtilityPathCache();
             BumpVersion(topologyChanged: true);
         }
+
+        public bool CaretakerOwnsInput => _simulation.CaretakerOwnsInput;
+
+        public CaretakerCrisisProjection CaretakerProjection()
+        {
+            if (_cachedCaretakerProjection == null || _cachedCaretakerVersion != _caretakerVersion || _cachedCaretakerWorldVersion != _version)
+            {
+                _cachedCaretakerProjection = new CaretakerCrisisProjection(_simulation.CaretakerCrisis, _cachedCaretakerProjection);
+                _cachedCaretakerVersion = _caretakerVersion;
+                _cachedCaretakerWorldVersion = _version;
+            }
+            return _cachedCaretakerProjection;
+        }
+
+        public CommandResult ExecuteCaretaker(CaretakerCrisisAction action, CaretakerCombatInput input = default)
+        {
+            var hadConsequences = _simulation.CaretakerCrisis.ConsequencesApplied;
+            var result = _simulation.ExecuteCommand(new CaretakerCrisisCommand(action, input));
+            if (result.Accepted)
+            {
+                _caretakerVersion++;
+                if (!hadConsequences && _simulation.CaretakerCrisis.ConsequencesApplied) BumpVersion();
+            }
+            return result;
+        }
+
+        public TowerSaveData ExportSaveData() => _simulation.ExportSaveData();
+        public static TowerSimulationSession FromSaveData(TowerSaveData data) => new TowerSimulationSession(TowerSimulation.RestoreFromSaveData(data));
 
         public long CurrentTick => _simulation.CurrentTick;
 
@@ -255,6 +290,7 @@ namespace OneRoof.Application.Tower
 
         public void AdvanceOneTick()
         {
+            if (CaretakerOwnsInput) return;
             _simulation.AdvanceOneTick();
             BumpVersion();
         }
@@ -273,6 +309,7 @@ namespace OneRoof.Application.Tower
 
         public CommandResult ExecuteCommand(ICommand command)
         {
+            if (command is CaretakerCrisisCommand caretaker) return ExecuteCaretaker(caretaker.Action, caretaker.Input);
             var result = _simulation.ExecuteCommand(command);
             if (result.Accepted)
             {

@@ -19,6 +19,7 @@ namespace OneRoof.Domain.Population
         private int _dailyBudgetHistoryCount;
         private int _dailyBudgetHistoryNext;
         private readonly List<string> _acquiredProps;
+        private readonly ReadOnlyCollection<string> _acquiredPropsView;
 
         public HouseholdRecord(
             EntityId id,
@@ -85,11 +86,12 @@ namespace OneRoof.Domain.Population
             RestoreDailyBudgetHistory(recentDailyBudgetNetFlows);
 
             _acquiredProps = new List<string>();
+            _acquiredPropsView = new ReadOnlyCollection<string>(_acquiredProps);
             if (acquiredProps != null)
             {
                 foreach (var prop in acquiredProps)
                 {
-                    if (!string.IsNullOrEmpty(prop) && !_acquiredProps.Contains(prop))
+                    if (!string.IsNullOrEmpty(prop) && !ContainsProp(prop))
                     {
                         _acquiredProps.Add(prop);
                     }
@@ -109,7 +111,7 @@ namespace OneRoof.Domain.Population
 
         public IReadOnlyList<EntityId> MemberIds { get; }
 
-        public IReadOnlyList<string> AcquiredProps => _acquiredProps;
+        public IReadOnlyList<string> AcquiredProps => _acquiredPropsView;
 
         // ── Economy & wellbeing ───────────────────────────────────────────────
 
@@ -186,9 +188,19 @@ namespace OneRoof.Domain.Population
         public bool TryAddAcquiredProp(string propContentId)
         {
             if (string.IsNullOrEmpty(propContentId)) return false;
-            if (_acquiredProps.Contains(propContentId)) return false;
+            if (ContainsProp(propContentId)) return false;
             _acquiredProps.Add(propContentId);
             return true;
+        }
+
+        private bool ContainsProp(string propContentId)
+        {
+            for (var i = 0; i < _acquiredProps.Count; i++)
+            {
+                if (string.Equals(_acquiredProps[i], propContentId, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>Compatibility adapter that converts a normalized budget delta into cash.</summary>

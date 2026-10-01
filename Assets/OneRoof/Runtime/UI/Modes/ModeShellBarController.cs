@@ -35,7 +35,7 @@ namespace OneRoof.UI.Modes
         public bool IsFacadeVisible { get; set; }
         public void OnFacadeToggleRequested()
         {
-            if (_session == null) return;
+            if (_session == null || _session.IsInputBlocked) return;
             var mode = _session.Projection().FacadeMode;
             var visible = mode == FacadeDisplayMode.LockedFacade || (mode == FacadeDisplayMode.Auto && IsFacadeVisible);
             _session.SetFacadeMode(visible ? FacadeDisplayMode.LockedCutaway : FacadeDisplayMode.LockedFacade);
@@ -89,7 +89,7 @@ namespace OneRoof.UI.Modes
 
         public void HandleKeyboardShortcuts()
         {
-            if (_session == null) return;
+            if (_session == null || _session.IsInputBlocked) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard != null)
@@ -143,7 +143,7 @@ namespace OneRoof.UI.Modes
 
         public void OnBuildModeRequested()
         {
-            if (_session == null) return;
+            if (_session == null || _session.IsInputBlocked) return;
             if (Session.CurrentMode == InteractionMode.Build)
             {
                 if (string.IsNullOrEmpty(Session.Projection().SelectedBuildTool))
@@ -168,7 +168,7 @@ namespace OneRoof.UI.Modes
 
         private void OnGUI()
         {
-            if (_session == null) return;
+            if (_session == null || _session.IsInputBlocked) return;
             EnsureStyles();
 
             var projection = CurrentProjection;

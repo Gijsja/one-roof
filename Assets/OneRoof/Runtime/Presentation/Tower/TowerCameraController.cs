@@ -25,6 +25,8 @@ namespace OneRoof.Presentation.Tower
         private Vector3 _defaultPosition = new Vector3(0.2f, 3.5f, -10f);
         private float _defaultOrthoSize = 6.8f;
 
+        public System.Func<bool> InputBlocker { private get; set; }
+
         public Camera Camera
         {
             get => _camera;
@@ -158,7 +160,7 @@ namespace OneRoof.Presentation.Tower
 
         private void Update()
         {
-            if (_camera == null) return;
+            if (_camera == null || (InputBlocker != null && InputBlocker())) return;
 
             HandleKeyboardPan();
             HandleMouseDragPan();

@@ -33,6 +33,7 @@ namespace OneRoof.UI.Management
 
         private void OnGUI()
         {
+            if (_modes != null && _modes.IsInputBlocked) return;
             if (_simulation == null || _modes?.CurrentMode != InteractionMode.Manage) return;
             var rect = PanelRect(Screen.width, Screen.height);
             if (rect.width <= 0) return;

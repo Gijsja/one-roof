@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.Crisis;
 using OneRoof.Domain.CivilAction;
 using OneRoof.Domain.Decisions;
 using OneRoof.Domain.Economy;
@@ -69,6 +70,7 @@ namespace OneRoof.Domain
             Scrutiny = scrutiny ?? new ScrutinyState();
             Factions = new FactionState();
             CivilActions = new CivilActionState();
+            CaretakerCrisis = new CaretakerCrisisState();
             Decisions = new DecisionRecordState();
             HousingLifecycle = new HouseholdLeaseLifecycleState();
             HousingLifecycleSystem = new HouseholdHousingLifecycleSystem();
@@ -112,6 +114,8 @@ namespace OneRoof.Domain
         public ScrutinyState Scrutiny { get; }
         public FactionState Factions { get; private set; }
         public CivilActionState CivilActions { get; private set; }
+        public CaretakerCrisisState CaretakerCrisis { get; private set; }
+        public bool CaretakerOwnsInput => CaretakerCrisis.Phase == CaretakerCrisisPhase.Active || CaretakerCrisis.Phase == CaretakerCrisisPhase.Failed;
         public DecisionRecordState Decisions { get; private set; }
         public HouseholdLeaseLifecycleState HousingLifecycle { get; private set; }
         public HouseholdHousingLifecycleSystem HousingLifecycleSystem { get; }
@@ -153,6 +157,7 @@ namespace OneRoof.Domain
 
         public void AdvanceOneTick()
         {
+            if (CaretakerOwnsInput) return;
             var previousTick = Clock.CurrentTick;
             Clock.Advance();
             var currentTick = Clock.CurrentTick;
@@ -228,7 +233,9 @@ namespace OneRoof.Domain
                 Economy.CompleteDailySettlement(currentTick.Value);
                 _socialInfluence.AdvanceSettlement(Population, Factions, currentTick.Value);
                 Factions.Evaluate(Population, Topology, Businesses, Economy.Policy, currentTick.Value);
-                CivilActions.Evaluate(currentTick.Value, BuildCivilActionSignals(), Scrutiny.Value);
+                var organizedSignals = BuildCivilActionSignals();
+                CivilActions.Evaluate(currentTick.Value, organizedSignals, Scrutiny.Value);
+                CaretakerCrisis.Evaluate(currentTick.Value, organizedSignals, Population, Topology);
                 Decisions.ObserveSettlement(this);
                 Decisions.RecordCivilPhases(this);
             }
@@ -376,6 +383,7 @@ namespace OneRoof.Domain
 
                 HousingLifecycle.RecordDeparture(household.Id, simulationDay, household.CashBalance,
                     household.RentArrearsBalance, household.OutsideCreditBalance);
+                OutsideMarket.RecordHouseholdDeparture(household);
                 if (Population.RemoveHouseholdAndMembers(household.Id, out _))
                     HousingLifecycle.RemoveHousehold(household.Id);
             }
@@ -420,6 +428,9 @@ namespace OneRoof.Domain
         public CommandResult CanExecute(ICommand command)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+
+            if (command is CaretakerCrisisCommand caretaker) return CanExecuteCaretaker(caretaker);
+            if (CaretakerOwnsInput) return CommandResult.Fail("Return the Caretaker to the lobby before changing Tower systems.", "crisis:controls_owned");
 
             // Scrutiny is an event-pressure mechanic, never an instant build
             // blocker: high scrutiny raises inspection-event likelihood
@@ -658,6 +669,84 @@ namespace OneRoof.Domain
             }
         }
 
+        private CommandResult CanExecuteCaretaker(CaretakerCrisisCommand command)
+        {
+            if (!Enum.IsDefined(typeof(CaretakerCrisisAction), command.Action)) return CommandResult.Fail("Unknown Caretaker action.");
+            switch (command.Action)
+            {
+                case CaretakerCrisisAction.Practice:
+                    return CaretakerCrisis.CanPractice(Topology, out var practiceReason) ? CommandResult.Success() : CommandResult.Fail(practiceReason, "crisis:practice_unavailable");
+                case CaretakerCrisisAction.Start:
+                case CaretakerCrisisAction.Retry:
+                    if (command.Action == CaretakerCrisisAction.Start && CaretakerCrisis.Phase != CaretakerCrisisPhase.Ready)
+                        return CommandResult.Fail("The crisis is not ready to enter.", "crisis:not_ready");
+                    if (command.Action == CaretakerCrisisAction.Retry && CaretakerCrisis.Phase != CaretakerCrisisPhase.Failed)
+                        return CommandResult.Fail("Only a failed encounter can be retried.", "crisis:not_failed");
+                    return CaretakerCrisis.CanStart(Topology, out var reason) ? CommandResult.Success() : CommandResult.Fail(reason, "crisis:route_unavailable");
+                case CaretakerCrisisAction.Advance:
+                    return CaretakerCrisis.CanAdvance(Topology, out var advanceReason) ? CommandResult.Success() : CommandResult.Fail(advanceReason, "crisis:floor_not_ready");
+                case CaretakerCrisisAction.Step:
+                    return CaretakerCrisis.Phase == CaretakerCrisisPhase.Active && !CaretakerCrisis.Paused
+                        ? CommandResult.Success() : CommandResult.Fail("Resume an active encounter before combat input.", "crisis:not_active");
+                case CaretakerCrisisAction.Resume:
+                    if (CaretakerCrisis.Phase != CaretakerCrisisPhase.Active) return CommandResult.Fail("There is no active encounter.");
+                    return CaretakerCrisis.ValidateRoute(Topology, out var resumeReason) ? CommandResult.Success() : CommandResult.Fail(resumeReason, "crisis:route_unavailable");
+                case CaretakerCrisisAction.Pause:
+                    return CaretakerCrisis.Phase == CaretakerCrisisPhase.Active ? CommandResult.Success() : CommandResult.Fail("There is no active encounter.");
+                case CaretakerCrisisAction.Exit:
+                    return CaretakerOwnsInput ? CommandResult.Success() : CommandResult.Fail("The Caretaker is already in the lobby.");
+                default: return CommandResult.Fail("Unknown Caretaker action.");
+            }
+        }
+
+        private CommandResult ExecuteCaretaker(CaretakerCrisisCommand command)
+        {
+            var result = CanExecuteCaretaker(command);
+            if (!result.Accepted) return result;
+            switch (command.Action)
+            {
+                case CaretakerCrisisAction.Practice: CaretakerCrisis.StartPractice(Topology); break;
+                case CaretakerCrisisAction.Start: CaretakerCrisis.Start(Topology); break;
+                case CaretakerCrisisAction.Retry: CaretakerCrisis.Retry(Topology); break;
+                case CaretakerCrisisAction.Step: CaretakerCrisis.Step(command.Input); break;
+                case CaretakerCrisisAction.Advance: CaretakerCrisis.Advance(Topology); break;
+                case CaretakerCrisisAction.Exit: CaretakerCrisis.Exit(); break;
+                case CaretakerCrisisAction.Pause: CaretakerCrisis.SetPaused(true); break;
+                case CaretakerCrisisAction.Resume: CaretakerCrisis.SetPaused(false); break;
+            }
+            ApplyCaretakerConsequences();
+            return result;
+        }
+
+        private void ApplyCaretakerConsequences()
+        {
+            if (CaretakerCrisis.Phase != CaretakerCrisisPhase.Resolved || CaretakerCrisis.ConsequencesApplied) return;
+            var households = new SortedSet<int>();
+            foreach (var eviction in CaretakerCrisis.Evictions)
+                if (eviction.ResidentId > 0 && Population.TryGetPerson(new EntityId(eviction.ResidentId), out var person)) households.Add(person.HouseholdId.Value);
+            foreach (var id in households) HousingLifecycle.MarkCrisisEviction(new EntityId(id), CurrentSimulationDay);
+            foreach (var person in Population.Persons)
+            {
+                var evicted = households.Contains(person.HouseholdId.Value);
+                var witness = false;
+                if (Topology.TryGetRoom(person.HomeRoomId, out var room))
+                    foreach (var floor in CaretakerCrisis.AffectedFloors) if (floor == room.Floor) { witness = true; break; }
+                if (evicted || witness)
+                    person.Wellbeing.AddThought(new ThoughtMemory(evicted ? "Caretaker eviction: leaving our home" : "Witnessed a Kungfu eviction", evicted ? -.35f : -.12f,
+                        CurrentTick, CurrentTick + 3 * DailySchedule.TicksPerDay));
+            }
+            if (households.Count > 0) Scrutiny.RecordAggressivePolicy(Math.Min(1f, .25f + households.Count * .05f));
+            Decisions.RecordCaretakerResolution(this, households);
+            CaretakerCrisis.MarkConsequencesApplied();
+            // Existing departure routing and completion release homes and preserve resident autonomy.
+            var projections = new List<HouseholdHousingLifecycleProjection>();
+            foreach (var id in households)
+                if (Population.TryGetHousehold(new EntityId(id), out var household))
+                    projections.Add(HousingLifecycleSystem.Evaluate(household, HousingLifecycle, CurrentSimulationDay));
+            StartEligibleMoveOuts(projections, Clock.CurrentTick);
+            CompleteDepartedHouseholds(CurrentSimulationDay);
+        }
+
         private static CommandResult InvalidBoundsRejection() => CommandResult.Reject(new[]
         {
             new CommandRejectionReason(new ContentId("topology:invalid_bounds"), "MinX cannot exceed MaxX.")
@@ -666,6 +755,8 @@ namespace OneRoof.Domain
         public CommandResult ExecuteCommand(ICommand command)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+            if (command is CaretakerCrisisCommand caretaker) return ExecuteCaretaker(caretaker);
+            if (CaretakerOwnsInput) return CanExecute(command);
 
             switch (command)
             {
@@ -1294,6 +1385,7 @@ namespace OneRoof.Domain
             data.utilityOperations = UtilityOperations.ToSaveData();
             data.factions = Factions.ToSaveData();
             data.civilActions = CivilActions.ToSaveData();
+            data.caretakerCrisis = CaretakerCrisis.ToSaveData();
             data.decisions = Decisions.ToSaveData();
 
             return data;
@@ -1326,6 +1418,7 @@ namespace OneRoof.Domain
             sim.HousingLifecycle = HouseholdLeaseLifecycleState.FromSaveData(data.GetHouseholdLeaseLifecycleSaveData());
             sim.Factions = FactionState.FromSaveData(data.factions, population);
             sim.CivilActions = CivilActionState.FromSaveData(data.civilActions);
+            sim.CaretakerCrisis = CaretakerCrisisState.FromSaveData(data.caretakerCrisis);
             sim.Decisions = DecisionRecordState.FromSaveData(data.decisions);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;

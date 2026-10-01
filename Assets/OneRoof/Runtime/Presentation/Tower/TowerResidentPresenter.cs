@@ -51,6 +51,21 @@ namespace OneRoof.Presentation.Tower
         private int[] _arrivalSlots = Array.Empty<int>();
         private const float WalkPresentationSpeed = 2.4f;
 
+        public bool ArcadeSuppressed { get; private set; }
+
+        /// <summary>Hold ambient views while centralized arcade rigs represent the encounter.</summary>
+        public void SetArcadeSuppressed(bool suppressed)
+        {
+            if (ArcadeSuppressed == suppressed) return;
+            ArcadeSuppressed = suppressed;
+            if (!suppressed) return; // The next presentation pass restores views from projections.
+            _viewPool?.ReleaseAll();
+            foreach (var renderer in _lodViews.Values) if (renderer != null) renderer.enabled = false;
+            if (_macroObject != null) _macroObject.SetActive(false);
+            if (_viewPool == null)
+                foreach (var view in _residentObjects) if (view != null) view.SetActive(false);
+        }
+
         public IReadOnlyList<Renderer> ResidentViews => _residentViews;
         public IReadOnlyList<NpcSkeletalHierarchy> ResidentSkeletons => _residentSkeletons;
         public int ResidentCount => _viewPool != null ? _targetResidentCount : _residentViews.Count;
@@ -232,7 +247,7 @@ namespace OneRoof.Presentation.Tower
 
         public void UpdateResidentPositions(TowerProjection snapshot, TowerTopologyProjection topology, float time, RoomPresenter roomPresenter = null, ElevatorBankPresenter elevatorPresenter = null, IReadOnlyCollection<int> undergroundCrewResidentIds = null)
         {
-            if (snapshot == null) return;
+            if (snapshot == null || ArcadeSuppressed) return;
 
             if (_viewPool != null)
             {

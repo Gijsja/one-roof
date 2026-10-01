@@ -38,11 +38,25 @@ All core architectural tiers and simulation systems are verified operational wit
 | **Transit Scaling** | Dynamic 2-cell shaft widening & elevator tier upgrades | **DONE** | OR-204: Tiers 1–5, ETA-based car dispatch, upgrade commands, save round-trip. |
 | **M9.5** | Social ties deepening: issue influence & local organizing | **DONE** | OR-906B (issue-specific social influence) & OR-906C (local faction organizing). |
 | **M10.1** | Undercity utility reverse-feed & production integration | **DONE** | OR-1001 Slice C: generator reverse-feed and utility-dependent subterranean production. |
-| **M10.2** | Adaptive crisis pressure chains & personal consequences | **READY** | OR-1002: 6 condition-driven crisis chains with warning phases, propagation, and aftermath. |
+| **M10.2** | Adaptive crisis pressure chains & personal consequences | **IN PROGRESS** | OR-1002: 6 condition-driven crisis chains with warning phases, propagation, and aftermath. |
 | **M10.3** | Beta boundary golden acceptance test (City Status 30-day streak) | **READY** | OR-1003: 30 floors / 300 residents deterministic run sustaining City Status for 30 consecutive days under <4 ms tick and 60 FPS budgets. |
 | **M10.5** | Campaign board, pacing & end states | **READY** | OR-1005: streak tracking, daily trends, threatened gates, failure explanations, sandbox continuation. |
 | **M10.6** | Spatial overlay & accessibility beta pass | **IN PROGRESS** | OR-1006: non-colour equivalents across all 8 overlays, UI scale, remappable controls, pause/speed review. |
 | **M10.7** | Save, recovery & content QA | **READY** | OR-1007: crisis/campaign save survival, migrations, corrupt save recovery, partial demolition QA. |
+
+---
+
+## 3a. Requested Direction — Playable Lobby Caretaker and Opening Arcade Crisis
+
+Requested 2026-09-30. **OR-1002 Slice A implemented and validated 2026-10-01.** The Steward requested a crisis feature connecting factions and consequences to Kungfu eviction, with coordinated subagent implementation and validation. This slice does not complete the six-chain beta acceptance contract.
+
+- **Permanent lobby presence**: The Caretaker stands in the lobby between playable sequences, ready to be selected and serving as a point of contact for residents. The contact panel exposes organized grievance pressure, its cause-chain, rehearsal, enforcement and a link to the faction overlay.
+- **Gameplay reference**: [Caretaker arcade extraction](./CARETAKER_ARCADE_GAMEPLAY.md) records the supplied C64 Kung Fu Master longplay, observed mechanics, proposed real-Tower adaptation and implementation acceptance.
+- **Opening crisis**: A Kungfu Master-inspired arcade walkthrough of the actual constructed Tower, floor by floor. The requested action references are Street Fighter and Oldboy; Fisher Dave is the minigame inspiration. Use the Tower's real floor layout, corridors and vertical connections rather than a separate generic arena.
+- **Direct control**: The Steward can take control of the Caretaker during the arcade sequence. This is an explicitly requested exception to systems-only control for this character; residents otherwise remain autonomous.
+- **Implemented integration**: Three settlement warnings from sustained connected faction evidence unlock entry; management relief can clear warnings. Combat uses centralized fixed steps, actual stair routes, bounded successive fighter waves and a final floor boss. Background management pauses while the Caretaker owns input; saved encounters recover paused.
+- **Consequences**: Winning creates persistent eviction notices for participating residents' whole households, autonomous departure, witness thoughts, scrutiny and a decision record. Rehearsal restores prior crisis state without consequences. Existing faction systems supply the organized evidence; other six-chain beta acceptance remains outstanding.
+- **Current boundary**: Traversal is an arcade lane constrained to actual slabs and stair connectivity. Internal walls, doors and furnishing collision are not modeled. Contact and HUD are visually verified. Full-resolution presentation performance remains open (36 FPS native 1080p Editor on GT 755M); accessibility/remapping polish remains separate acceptance work.
 
 ---
 

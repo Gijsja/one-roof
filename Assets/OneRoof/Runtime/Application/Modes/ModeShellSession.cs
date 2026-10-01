@@ -14,6 +14,9 @@ namespace OneRoof.Application.Modes
         public event Action<ModeShellProjection> ModeChanged;
 
         public InteractionMode CurrentMode => _state.CurrentMode;
+        private Func<bool> _inputBlocker;
+        public bool IsInputBlocked => _inputBlocker != null && _inputBlocker();
+        public void ConfigureInputBlocker(Func<bool> blocker) => _inputBlocker = blocker;
 
         public ModeShellProjection Projection()
         {
@@ -35,6 +38,7 @@ namespace OneRoof.Application.Modes
                 throw new ArgumentNullException(nameof(command));
             }
 
+            if (IsInputBlocked) return false;
             var changed = false;
             if (_state.CurrentMode != command.TargetMode)
             {
@@ -76,6 +80,7 @@ namespace OneRoof.Application.Modes
 
         public void SetFacadeMode(FacadeDisplayMode mode)
         {
+            if (IsInputBlocked) return;
             if (_state.FacadeMode == mode) return;
             _state.SetFacadeMode(mode);
             ModeChanged?.Invoke(Projection());
@@ -98,6 +103,7 @@ namespace OneRoof.Application.Modes
 
         public void ClearSelection()
         {
+            if (IsInputBlocked) return;
             _state.ClearSelection();
             ModeChanged?.Invoke(Projection());
         }
@@ -109,6 +115,7 @@ namespace OneRoof.Application.Modes
 
         public void SetPlacementTarget(int? floor, int? cellX)
         {
+            if (IsInputBlocked) return;
             if (_state.TargetFloor == floor && _state.TargetCellX == cellX) return;
             _state.SetPlacementTarget(floor, cellX);
             ModeChanged?.Invoke(Projection());
@@ -116,6 +123,7 @@ namespace OneRoof.Application.Modes
 
         public void CancelOrEscape()
         {
+            if (IsInputBlocked) return;
             if (_state.CurrentMode == InteractionMode.Build && _state.SelectedBuildTool != null)
             {
                 _state.SelectBuildTool(null);

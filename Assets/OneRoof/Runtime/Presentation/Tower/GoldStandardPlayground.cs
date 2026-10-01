@@ -42,6 +42,7 @@ namespace OneRoof.Presentation.Tower
 
         private void Update()
         {
+            if (_tower != null && _tower.CaretakerInputBlocked) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
@@ -57,6 +58,7 @@ namespace OneRoof.Presentation.Tower
 
         private void OnGUI()
         {
+            if (_tower != null && _tower.CaretakerInputBlocked) return;
             if (_dashboard != null && _dashboard.IsCollapsed) return;
             GUILayout.BeginArea(new Rect(Mathf.Max(650, Screen.width-348), Screen.height-98, 332, 82), StewardTheme.Panel);
             GUILayout.Label("GOLD STANDARD  /  CITY PLAYGROUND", StewardTheme.Label(12, StewardTheme.Amber, true));

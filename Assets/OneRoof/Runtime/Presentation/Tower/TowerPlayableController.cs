@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using OneRoof.Presentation.Crisis;
 using OneRoof.Application.Inspectors;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Overlays;
@@ -38,6 +40,10 @@ namespace OneRoof.Presentation.Tower
         public ResidentPresentationSettings ResidentPresentation => _residentPresentation;
 
         private TowerSimulationSession _sim; private ModeShellSession _mode;
+        private CaretakerCrisisPresenter _caretakerPresenter;
+        private readonly Dictionary<Behaviour, bool> _caretakerSuspended = new Dictionary<Behaviour, bool>();
+        public CaretakerCrisisPresenter CaretakerPresenter => _caretakerPresenter;
+        public bool CaretakerInputBlocked => (_sim != null && _sim.CaretakerOwnsInput) || (_caretakerPresenter != null && _caretakerPresenter.ContactOpen);
         private long _lastVisualVersion = -1;
         private TowerDataOverlays _dataOverlays; private ElevatorPlacementPredictor _predictor;
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
@@ -116,6 +122,7 @@ namespace OneRoof.Presentation.Tower
             _lastWeatherSampleTick = -1; // force re-sample on first frame
             if (!IsGroundStart && !IsGoldStandardCity) SeedMorningRush();
             _mode = new ModeShellSession();
+            _mode.ConfigureInputBlocker(() => CaretakerInputBlocked);
             _dataOverlays = new TowerDataOverlays(_sim); _predictor = new ElevatorPlacementPredictor();
             _colorBlock = new MaterialPropertyBlock(); _worldMat = CreateWorldMaterial();
 
@@ -140,7 +147,7 @@ namespace OneRoof.Presentation.Tower
             SubscribeEvents();
         }
 
-        private void OnDisable() => UnsubscribeEvents();
+        private void OnDisable() { UnsubscribeEvents(); RestoreCaretakerControls(); }
 
         private void SubscribeEvents()
         {
@@ -197,9 +204,10 @@ namespace OneRoof.Presentation.Tower
         {
             if (!UnityEngine.Application.isPlaying) return;
             if (_sim == null) Initialize();
-            HandleKeyboard();
+            RefreshCaretakerInputLock();
+            if (!CaretakerInputBlocked) HandleKeyboard();
             var tickAdvanced = false;
-            if (!_isPaused && (_tickAcc += Time.deltaTime) >= _tickInterval)
+            if (!_isPaused && !CaretakerInputBlocked && (_tickAcc += Time.deltaTime) >= _tickInterval)
             {
                 _tickAcc -= _tickInterval;
                 _sim.AdvanceOneTick();
@@ -246,7 +254,32 @@ namespace OneRoof.Presentation.Tower
             var camera = TowerCameraController.EnsureTowerCamera(_sim.FloorCount, _gridPlacement, resetView: true);
             _outside = Ensure<OutsideCityPresenter>(); _outside.Initialize(camera, _worldMat);
             _pixelRain = Ensure<PixelRainPresenter>();
+            (_caretakerPresenter = Ensure<CaretakerCrisisPresenter>()).Initialize(this, _sim, _worldMat);
+            var cameraControls = camera.GetComponent<TowerCameraController>();
+            if (cameraControls != null) cameraControls.InputBlocker = () => CaretakerInputBlocked;
             if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
+        }
+
+        /// <summary>Called immediately on modal entry/exit as well as before world input each frame.</summary>
+        public void RefreshCaretakerInputLock()
+        {
+            if (!isActiveAndEnabled || !CaretakerInputBlocked) { RestoreCaretakerControls(); return; }
+            if (_caretakerSuspended.Count > 0) return;
+            foreach (var component in GetComponents<MonoBehaviour>())
+            {
+                var ns = component.GetType().Namespace ?? string.Empty;
+                if (!ns.StartsWith("OneRoof.UI", StringComparison.Ordinal) && !(component is TowerDashboardHudView) &&
+                    !(component is UndergroundOperationsView) && !(component is GridPlacementController) && !(component is InspectSelectionController)) continue;
+                _caretakerSuspended[component] = component.enabled;
+                component.enabled = false;
+            }
+            _ghostPresenter?.HideGhost();
+        }
+
+        private void RestoreCaretakerControls()
+        {
+            foreach (var pair in _caretakerSuspended) if (pair.Key != null) pair.Key.enabled = pair.Value;
+            _caretakerSuspended.Clear();
         }
 
         private T Ensure<T>() where T : Component => GetComponent<T>() ?? gameObject.AddComponent<T>();
@@ -412,6 +445,7 @@ namespace OneRoof.Presentation.Tower
 
         public void ResetCommuteSimulation()
         {
+            if (CaretakerInputBlocked) return;
             if (IsGoldStandardCity) _sim.ResetToGoldStandardCity(); else if (IsGroundStart) _sim.ResetToGroundFloorStart(); else { _sim.Reset(); SeedMorningRush(); }
             _dataOverlays = new TowerDataOverlays(_sim);
             _lastUtilityNetworkOverlay = null;
@@ -421,6 +455,7 @@ namespace OneRoof.Presentation.Tower
             if (_inspectSelection != null) _inspectSelection.SimulationSession = _sim;
             _inspectorCard.Close(); _placementCard.Close(); _overlayPresenter.SetVisible(_mode.CurrentMode == InteractionMode.Data);
             ClearWorldGeometry(); CreateWorldGeometry();
+            _caretakerPresenter?.RefreshPresentation();
         }
 
         private void SeedMorningRush() => _sim?.SeedMorningRush();
@@ -502,7 +537,7 @@ namespace OneRoof.Presentation.Tower
             else if (mode.FacadeMode == FacadeDisplayMode.LockedCutaway) facadeAlpha = 0f;
             var needsInterior = mode.FacadeMode == FacadeDisplayMode.Auto &&
                 (mode.IsBuildMode || mode.IsDataMode || (mode.IsInspectMode && mode.SelectedEntityId.HasValue));
-            _exterior.SetFacadeEnvelopeAlpha(needsInterior ? 0f : facadeAlpha);
+            _exterior.SetFacadeEnvelopeAlpha(_sim.CaretakerOwnsInput || needsInterior ? 0f : facadeAlpha);
             if (_modeBar != null) _modeBar.IsFacadeVisible = _exterior.FacadeEnvelopeAlpha >= 0.5f;
             _room.SetClutterAlpha(1f - _exterior.FacadeEnvelopeAlpha);
             _floorDecks.SetInteriorDecksVisible(_exterior.FacadeEnvelopeAlpha < 0.999f);
@@ -524,6 +559,7 @@ namespace OneRoof.Presentation.Tower
             }
             _atmosphere?.SetInteriorAlpha(1f - _exterior.FacadeEnvelopeAlpha);
             _elevator.UpdateElevatorPositions(projection);
+            _resident.SetArcadeSuppressed(_sim.CaretakerOwnsInput);
             _resident.UpdateResidentPositions(projection, _sim.TopologyProjection(), Time.time, _room, _elevator,
                 _exterior.VisibleUndergroundCrewResidentIds);
             _pixelRain?.UpdateWeather(Time.deltaTime);
