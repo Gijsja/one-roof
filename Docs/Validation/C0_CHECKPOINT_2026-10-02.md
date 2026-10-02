@@ -4,7 +4,7 @@
 
 ## Behavior
 
-- Routine demand is observed before destination/route planning, including local arrival, missing destinations, route rejection, suppressed required schedule transitions, outside-food retry and move-in Home demand. Stable Resident/purpose/episode IDs deduplicate retries. A failed attempt cannot become a second successful denominator entry just by retrying.
+- Routine demand is observed before destination/route planning, including local arrival, missing destinations, route rejection, suppressed required schedule transitions, outside-food retry and move-in Home demand. Stable Resident/purpose/episode IDs deduplicate retries. A failed attempt cannot become a second successful denominator entry just by retrying. A trip already serving the required purpose stays pending; a committed Resident already at its destination counts as local success.
 - The bounded observer retains current and one prior pending day, saved monotonic IDs and inclusive 360-tick completion deadlines. Completion precedes timeout. Partial initial intervals stay unavailable. Explicit missing observation remains unavailable; zero observed demand is healthy only with complete coverage and no outstanding unreachable demand.
 - Required unreachable demand stays visible across midnight/inactivity until actual reachability is observed. Live wait is sampled before boarding/removal and afterward, including passengers whose demand already timed out. Nearest-rank terminal wait percentiles include zero-wait/local demand; historical positive-wait polling diagnostics are separately labelled.
 - Saves preserve valid zero needs with a versioned legacy fallback, original and executed rerouted paths, leg progress, pickup targets, trip-generator IDs/retry deadlines and the production deterministic random stream. Queue reconstruction no longer replaces saved dispatch targets/phases. Invalid observer/routes/progress/random checkpoints are rejected by the existing safe loading boundary.
@@ -12,15 +12,26 @@
 
 ## Validation and limitations
 
-The first available Unity EditMode run passed **1,235 / 0 failed / 3 skipped**, including early checkpoint changes, before final integration. A later engine run was stopped by temporary Caretaker projection/domain compilation mismatch while another chat edited that feature; those files were left to that chat. Final regression evidence follows when available.
+The first available Unity EditMode run passed **1,235 / 0 failed / 3 skipped**, including early checkpoint changes, before final integration. A later engine run was stopped by temporary Caretaker projection/domain compilation mismatch while another chat edited that feature; those files were left to that chat. The C0 JSON failures were fixed with explicit pending/last-day presence flags. The isolated first recheck passed C0 but failed two artwork archive guards because the snapshot lacked Art; adding the unchanged archive corrected the validation environment.
 
-The portable runner uses the project's actual NUnit assembly and production Domain sources, not a replacement assertion implementation. **37 scoped NUnit cases passed / 0 failed / 0 skipped**, covering population boundary values/migration, exact executed routes, corrupt payload rejection, pickup continuation, generator/retry/random restoration, local/suppressed/unreachable demand, pending deadlines and observer save independence. [Durable results](./C0_CHECKPOINT_2026-10-02/standalone-tests.xml).
+**Final full Unity EditMode: 1,265 passed / 0 failed / 3 skipped**, from `/tmp/one-roof-c0-validation`, including the final observer changes and production `CrisisCheckpointJsonTests` at tick7,650 plus30 future ticks. [Durable XML](./C0_CHECKPOINT_2026-10-02/final-editmode.xml), [isolated Domain SHA256 manifest](./C0_CHECKPOINT_2026-10-02/domain-source-sha256.json). Root C0 runtime sources matched this snapshot; concurrent Caretaker source beyond this snapshot is not certified by this run. No new compile errors; `git diff --check` passed.
+
+The portable runner uses the project's actual NUnit assembly and production Domain sources, not a replacement assertion implementation. **39 scoped NUnit cases passed / 0 failed / 0 skipped**, covering population boundary values/migration, exact executed routes, corrupt payload rejection, pickup continuation, generator/retry/random restoration, local/suppressed/unreachable demand, pending deadlines and observer save independence. [Durable results](./C0_CHECKPOINT_2026-10-02/standalone-tests.xml).
 
 The production probe compares causal save state each tick after save at 7,650. It canonicalizes only faction-support ordering and the stale `currentRoomId` retained while the authoritative location is Outside. Uninterrupted and restored tier1/tier5 runs matched for **1,500 subsequent ticks**, including the next daily settlement, after the pickup-target repair. This is reference continuation evidence, not all aggregate/phase/deletion recovery certification.
 
-Native Unity presentation, player builds, six-chain acceptance and the 30-day City Status streak are NOT RUN. Observer storage is bounded; native runtime cost is not certified. Old payloads missing temporal observation do not receive invented history. Custom random-stream implementations without checkpoint support remain outside the demonstrated deterministic continuation guarantee.
+Graphical PlayMode, native presentation performance, player builds, six-chain acceptance and the 30-day City Status streak are NOT RUN. Observer storage is bounded; native runtime cost is not certified. Old payloads missing temporal observation do not receive invented history. Custom random-stream implementations without checkpoint support remain outside the demonstrated deterministic continuation guarantee.
 
 ## Calibration and next work
+
+The final production all-demand observer finalized day5 (tick7200–8639; deadlines settled before8999) in the 300-Resident reference. These include local success and suppressed/missing-route/timeout failures; they are not captured-trip percentages.
+
+| Configuration | Required episodes | Success by360 | Failed | Terminal wait p95 | Live queue maximum | Transit gate |
+|---|---:|---:|---:|---:|---:|---|
+| Tier1 |1966|757|1209|340|4171|FAIL|
+| Tier5, real upgrade commands |2094|950|1144|248|1273|FAIL|
+
+Both observations were complete, finite and had zero currently required unreachable episodes. Neither meets99% success / p95<=60 / max<=240. [Production results, exact daily counters and histogram](./C0_CHECKPOINT_2026-10-02/production-probe.json). Both saves matched causal state for1,500 future ticks; byte differences remain the explicitly canonicalized fields/order.
 
 Isolated broad stair preference removed all elevator queues but only 5,989/6,993 captured completions met360 ticks. A cost<=300 stair preference combined with the prior deadline/live-wait hypothesis achieved tier5 7,805/7,827 captured completions within360, positive-wait p95=112 and live maximum=328. These fail selected60/240 limits and use captured-trip diagnostics, not complete daily acceptance. [Isolated numerical evidence](./C0_CHECKPOINT_2026-10-02/isolated-deadline-hybrid.json). The hypothesis was not copied into production; no chosen gate was relaxed.
 

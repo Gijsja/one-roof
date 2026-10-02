@@ -25,6 +25,21 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
+        public void ExistingTripServingTheNewScheduledPurposeRemainsPending()
+        {
+            var sim = TowerSimulation.CreateStandardFiveFloor();
+            var resident = Resident(sim, false);
+            var observer = sim.TransitDemand;
+            var sequence = observer.ObserveAttempt(resident.Id, TripPurpose.Work, 9, 9);
+            observer.AcceptTrip(sequence, 12345);
+            resident.UpdateActivity(ActivityKind.Commuting);
+            sim.TripGenerator.GenerateTripsForTick(new Tick(9), new Tick(10), new PopulationState(new[] { resident }, null));
+            Assert.That(observer.Current.attempted, Is.EqualTo(1));
+            Assert.That(observer.Current.failed, Is.Zero);
+            Assert.That(observer.FindSequenceForTrip(12345), Is.EqualTo(sequence));
+        }
+
+        [Test]
         public void CorruptUnreachableCounterCannotManufactureHealthyNoDemand()
         {
             var observer = new TransitDemandObserver(32);

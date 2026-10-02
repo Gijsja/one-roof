@@ -137,7 +137,12 @@ namespace OneRoof.Domain.Trips
                      person.HasCommittedPurposeAt(currentTick) && !CanInterruptOutsideWork(person, currentTick)))
                 {
                     var suppressed = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, scheduledEpisode, currentTick.Value) ?? 0;
-                    DemandObserver?.Reject(suppressed, currentTick.Value);
+                    var requiredDestination = ResolveDestination(person, scheduledPurpose.Value);
+                    if (requiredDestination.HasValue && person.CurrentLocation.Equals(requiredDestination.Value) &&
+                        person.CurrentActivity != ActivityKind.Commuting)
+                        DemandObserver?.Complete(suppressed, currentTick.Value);
+                    else if (DemandObserver == null || !DemandObserver.HasOutstandingTrip(person.Id, scheduledPurpose.Value))
+                        DemandObserver?.Reject(suppressed, currentTick.Value);
                 }
                 if (canGenerateTrip != null && !canGenerateTrip(person)) continue;
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
