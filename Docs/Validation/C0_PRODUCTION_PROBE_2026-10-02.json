@@ -1,0 +1,252 @@
+{
+  "evidence": "Actual current Domain source, standalone net10; not Unity, City daily sampling, new-chain acceptance or performance certification",
+  "limitations": "Polling misses same-tick local/outside trips and rejected routing demand; completed-trip diagnostics are not a complete demand denominator. Starts at tick450: first day is partial. Snapshot byte comparison is diagnostic; difference details must be inspected.",
+  "scenarios": [
+    {
+      "tier": 1,
+      "initialTick": 450,
+      "observedTicks": 7200,
+      "finalTickBeforeReplay": 7650,
+      "minResidents": 300,
+      "maxQueue": 78,
+      "maxLandingWait": 3289,
+      "powerFailedFloorTicks": 6870,
+      "waterFailedFloorTicks": 6870,
+      "meanSatisfaction": 0.6932735946194993,
+      "observedTerminalTrips": 5936,
+      "observedSuccessfulTrips": 5936,
+      "observedSuccessfulWithin360": 4513,
+      "observedPositiveWaitSamples": 1657,
+      "observedP95Wait": 842,
+      "observedUnfinishedTrips": 213,
+      "snapshotEqual": false,
+      "firstFutureDivergenceStep": 1,
+      "daily": [
+        {
+          "tick": 1440,
+          "residents": 300,
+          "treasury": 254084,
+          "satisfaction": 0.70182836,
+          "strain": 0.0025103898,
+          "scrutiny": 0,
+          "queued": 49,
+          "bankCumulativeMeanWait": 118.63492
+        },
+        {
+          "tick": 2880,
+          "residents": 300,
+          "treasury": 258168,
+          "satisfaction": 0.68318635,
+          "strain": 0.007743797,
+          "scrutiny": 0,
+          "queued": 56,
+          "bankCumulativeMeanWait": 161.86998
+        },
+        {
+          "tick": 4320,
+          "residents": 300,
+          "treasury": 262252,
+          "satisfaction": 0.68723637,
+          "strain": 0.012928374,
+          "scrutiny": 0,
+          "queued": 48,
+          "bankCumulativeMeanWait": 187.68318
+        },
+        {
+          "tick": 5760,
+          "residents": 300,
+          "treasury": 266336,
+          "satisfaction": 0.68692863,
+          "strain": 0.018102922,
+          "scrutiny": 0,
+          "queued": 42,
+          "bankCumulativeMeanWait": 204.48454
+        },
+        {
+          "tick": 7200,
+          "residents": 300,
+          "treasury": 270420,
+          "satisfaction": 0.68444186,
+          "strain": 0.023296868,
+          "scrutiny": 0,
+          "queued": 59,
+          "bankCumulativeMeanWait": 214.7096
+        }
+      ]
+    },
+    {
+      "tier": 5,
+      "initialTick": 450,
+      "observedTicks": 7200,
+      "finalTickBeforeReplay": 7650,
+      "minResidents": 300,
+      "maxQueue": 79,
+      "maxLandingWait": 2369,
+      "powerFailedFloorTicks": 6870,
+      "waterFailedFloorTicks": 6870,
+      "meanSatisfaction": 0.6982719574868679,
+      "observedTerminalTrips": 6669,
+      "observedSuccessfulTrips": 6669,
+      "observedSuccessfulWithin360": 5722,
+      "observedPositiveWaitSamples": 2295,
+      "observedP95Wait": 391,
+      "observedUnfinishedTrips": 215,
+      "snapshotEqual": false,
+      "firstFutureDivergenceStep": 1,
+      "daily": [
+        {
+          "tick": 1440,
+          "residents": 300,
+          "treasury": 234084,
+          "satisfaction": 0.7296722,
+          "strain": 0.002343001,
+          "scrutiny": 0,
+          "queued": 36,
+          "bankCumulativeMeanWait": 74.405205
+        },
+        {
+          "tick": 2880,
+          "residents": 300,
+          "treasury": 238168,
+          "satisfaction": 0.70282906,
+          "strain": 0.0073896693,
+          "scrutiny": 0,
+          "queued": 40,
+          "bankCumulativeMeanWait": 80.92553
+        },
+        {
+          "tick": 4320,
+          "residents": 300,
+          "treasury": 242252,
+          "satisfaction": 0.68714935,
+          "strain": 0.012504432,
+          "scrutiny": 0,
+          "queued": 45,
+          "bankCumulativeMeanWait": 99.436455
+        },
+        {
+          "tick": 5760,
+          "residents": 300,
+          "treasury": 246336,
+          "satisfaction": 0.6859953,
+          "strain": 0.017645108,
+          "scrutiny": 0,
+          "queued": 59,
+          "bankCumulativeMeanWait": 110.119514
+        },
+        {
+          "tick": 7200,
+          "residents": 300,
+          "treasury": 250420,
+          "satisfaction": 0.69057524,
+          "strain": 0.022790449,
+          "scrutiny": 0,
+          "queued": 45,
+          "bankCumulativeMeanWait": 120.95332
+        }
+      ]
+    }
+  ],
+  "physicalFixture": {
+    "commandReceipts": [
+      {
+        "command": "BuildFloorSlab (Floor 0: [-20..17])",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildFloorSlab (Floor 1: [-20..17])",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildFloorSlab (Floor 2: [-20..17])",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:water_riser) at Floor 0: [-20..-19] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:waste_chute) at Floor 0: [-18..-17] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (residential:studio) at Floor 0: [2..7] (Cap: 1)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:water_riser) at Floor 1: [-20..-19] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:waste_chute) at Floor 1: [-18..-17] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (residential:studio) at Floor 1: [2..7] (Cap: 1)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:water_riser) at Floor 2: [-20..-19] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:waste_chute) at Floor 2: [-18..-17] (Cap: 0)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (residential:studio) at Floor 2: [2..7] (Cap: 1)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:water_pump) at Floor 0: [10..13] (Cap: 120)",
+        "preview": true,
+        "actual": true
+      },
+      {
+        "command": "BuildRoom (utility:waste_collection) at Floor 0: [14..17] (Cap: 120)",
+        "preview": true,
+        "actual": true
+      }
+    ],
+    "networkCases": [
+      {
+        "sourceCondition": 0.2,
+        "sourceRoom": 1012,
+        "adjacentWasteRoom": 1015,
+        "sourceFloorAvailable": false,
+        "sourcePressure": 0,
+        "wasteAvailable": false
+      },
+      {
+        "sourceCondition": 0.6,
+        "sourceRoom": 1012,
+        "adjacentWasteRoom": 1015,
+        "sourceFloorAvailable": true,
+        "sourcePressure": 0.88,
+        "wasteAvailable": false
+      },
+      {
+        "sourceCondition": 1,
+        "sourceRoom": 1012,
+        "adjacentWasteRoom": 1015,
+        "sourceFloorAvailable": true,
+        "sourcePressure": 0.88,
+        "wasteAvailable": false
+      }
+    ]
+  },
+  "domainSourceSha256": "e880ec9cab3891a29f024cbefd861314b45ea6eee5712031896dc45cfb924b85",
+  "sourceCommit": "4760dd60ce766abe021f44c2078450acd5d02551"
+}

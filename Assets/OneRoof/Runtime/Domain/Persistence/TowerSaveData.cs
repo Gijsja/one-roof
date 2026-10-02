@@ -16,6 +16,7 @@ namespace OneRoof.Domain.Persistence
         public long totalRevenue;
         public long totalExpenses;
         public int householdLedgerVersion;
+        public int residentNeedsVersion;
         public OutsideMarketSaveData outsideMarket;
         public HouseholdLeaseLifecycleSaveData householdLeaseLifecycle;
         public int policyVersion;
@@ -38,6 +39,11 @@ namespace OneRoof.Domain.Persistence
         public long lastDailyConstructionSalvage;
         public int nextElevatorCarId;
         public int nextEntityId;
+        public OneRoof.Domain.Trips.TransitDemandSaveData transitDemand;
+        public OneRoof.Domain.Trips.DemandDayData lastTransitDemandDay;
+        public bool hasLastTransitDemandDay;
+        public TripGeneratorSaveData tripGenerator;
+        public SimulationRandomSaveData simulationRandom;
 
         public FloorSlabSaveData[] floorSlabs;
         public RoomSaveData[] rooms;
@@ -84,6 +90,7 @@ namespace OneRoof.Domain.Persistence
         public PopulationSaveData GetPopulationSaveData() => new PopulationSaveData
         {
             householdLedgerVersion = householdLedgerVersion,
+            residentNeedsVersion = residentNeedsVersion,
             households = households,
             persons = persons
         };
@@ -105,6 +112,7 @@ namespace OneRoof.Domain.Persistence
         public void SetPopulationSaveData(PopulationSaveData pop)
         {
             householdLedgerVersion = pop?.householdLedgerVersion ?? 0;
+            residentNeedsVersion = pop?.residentNeedsVersion ?? 0;
             households = pop?.households;
             persons = pop?.persons;
         }
@@ -356,6 +364,7 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class ElevatorCarSaveData
     {
+        public int[] targetFloors;
         public int id;
         public int currentFloor;
         public int capacity;
@@ -378,6 +387,9 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class ActiveTripSaveData
     {
+        public int routeDataVersion;
+        public TransitRouteSaveData plannedRoute;
+        public TransitRouteSaveData executionRoute;
         public int tripId;
         public int personId;
         public int originRoomId;

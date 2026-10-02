@@ -60,6 +60,9 @@ namespace OneRoof.Domain
             Planner = new TransitRoutePlanner(Topology.TransitGraph);
             TripGenerator = new ScheduleTripGenerator(Topology.ToSnapshot(), Topology.TransitGraph, Planner);
             Transit = new TransitExecutionSystem();
+            TransitDemand = new TransitDemandObserver(8192, clock.CurrentTick.Value / DailySchedule.TicksPerDay);
+            TripGenerator.DemandObserver = TransitDemand;
+            ElevatorBank.ObservePreboardingWait = wait => TransitDemand.ObserveLiveWait((int)Math.Min(int.MaxValue, wait));
             Leasing = new LeasingDemandSystem();
             Needs = new ResidentNeedsSystem();
             Specialists = new SpecialistRoleSystem();
@@ -104,6 +107,10 @@ namespace OneRoof.Domain
         public ScheduleTripGenerator TripGenerator { get; private set; }
 
         public TransitExecutionSystem Transit { get; }
+        public TransitDemandObserver TransitDemand { get; private set; }
+        public DemandDayData LastTransitDemandDay { get; private set; }
+        private readonly Dictionary<int, TripRecord> _observedDemandTrips = new Dictionary<int, TripRecord>();
+        private readonly List<int> _terminalDemandTrips = new List<int>();
 
         public ResidentNeedsSystem Needs { get; }
         public SpecialistRoleSystem Specialists { get; }
@@ -164,6 +171,7 @@ namespace OneRoof.Domain
             var previousTick = Clock.CurrentTick;
             Clock.Advance();
             var currentTick = Clock.CurrentTick;
+            TransitDemand.BeginTick(currentTick.Value);
 
             // 0. Advance resident needs (decay and replenishment based on activity)
             Needs.Advance(Population, currentTick);
@@ -199,7 +207,11 @@ namespace OneRoof.Domain
                 foreach (var person in arrivals)
                 {
                     var moveIn = TripGenerator.CreateMoveInTrip(person, currentTick);
-                    if (moveIn != null) Transit.SubmitTrip(moveIn, Topology, currentTick, Population);
+                    if (moveIn != null)
+                    {
+                        _observedDemandTrips[moveIn.Id.Value] = moveIn;
+                        Transit.SubmitTrip(moveIn, Topology, currentTick, Population);
+                    }
                 }
             }
 
@@ -249,12 +261,40 @@ namespace OneRoof.Domain
                 person => !HousingLifecycle.IsMoveOutEligible(person.HouseholdId, simulationDayNow));
             for (var i = 0; i < trips.Count; i++)
             {
+                _observedDemandTrips[trips[i].Id.Value] = trips[i];
                 Transit.SubmitTrip(trips[i], Topology, currentTick, Population, HandleOutsideTripCompleted);
             }
 
+            for (var floor = ElevatorBank.MinFloor; floor <= ElevatorBank.MaxFloor; floor++)
+                TransitDemand.ObserveLiveWait((int)Math.Min(int.MaxValue, ElevatorBank.GetFloorWaitMetrics(floor).MaxWaitTicks));
             // 4. Advance transit execution (walking legs, elevator queues, riding cars)
             Transit.Advance(currentTick, Topology, ElevatorBank, Population, CivilActions.LobbyCapacityMultiplier,
                 HandleOutsideTripCompleted);
+            for (var floor = ElevatorBank.MinFloor; floor <= ElevatorBank.MaxFloor; floor++)
+                TransitDemand.ObserveLiveWait((int)Math.Min(int.MaxValue, ElevatorBank.GetFloorWaitMetrics(floor).MaxWaitTicks));
+            _terminalDemandTrips.Clear();
+            foreach (var pair in _observedDemandTrips)
+            {
+                var sequence = TransitDemand.FindSequenceForTrip(pair.Key);
+                var trip = pair.Value;
+                TransitDemand.ObserveQueueWait(sequence, trip.WaitTicks + (int)Math.Min(int.MaxValue - trip.WaitTicks,
+                    ElevatorBank.GetPassengerWaitTicks(trip.PersonId)));
+                if (trip.State == TripState.Completed)
+                {
+                    TransitDemand.Complete(sequence, currentTick.Value);
+                    _terminalDemandTrips.Add(pair.Key);
+                }
+                else if (trip.State == TripState.Cancelled || sequence == 0)
+                {
+                    TransitDemand.Reject(sequence, currentTick.Value);
+                    _terminalDemandTrips.Add(pair.Key);
+                }
+            }
+            foreach (var id in _terminalDemandTrips) _observedDemandTrips.Remove(id);
+            // The reference fixture starts partway through day zero; never certify that partial interval.
+            if (currentTick.Value % DailySchedule.TicksPerDay == 0) TransitDemand.MarkObservationComplete();
+            var finalizedDemand = TransitDemand.Advance(currentTick.Value);
+            if (finalizedDemand != null) LastTransitDemandDay = finalizedDemand;
             CompleteDepartedHouseholds(simulationDayNow);
         }
 
@@ -1402,6 +1442,12 @@ namespace OneRoof.Domain
                 nextEntityId = _nextEntityId
             };
 
+            data.transitDemand = TransitDemand.ToSaveData();
+            data.lastTransitDemandDay = LastTransitDemandDay;
+            data.hasLastTransitDemandDay = LastTransitDemandDay != null;
+            data.tripGenerator = TripGenerator.ToSaveData();
+            if (RandomStream is DeterministicRandomStream deterministic)
+                data.simulationRandom = deterministic.ToSaveData();
             data.SetEconomySaveData(Economy.ToSaveData());
             data.undergroundCells = Underground.ToSaveData();
             data.undergroundFloorCells = Underground.FloorsToSaveData();
@@ -1438,6 +1484,10 @@ namespace OneRoof.Domain
             if (data.floorSlabs == null || data.rooms == null || data.portals == null ||
                 data.households == null || data.persons == null)
                 throw new ArgumentException("Save payload is missing required tower data.", nameof(data));
+            if (data.simulationRandom != null && data.simulationRandom.version != 0)
+            {
+                randomStream = DeterministicRandomStream.FromSaveData(data.simulationRandom);
+            }
             var tick = data.simulationTick >= 0 ? data.simulationTick : 0;
             var clock = new SimulationClock(new Tick(tick));
             var topology = BuildingTopologyState.FromSaveData(data.GetTopologySaveData(), data.nextEntityId > 0 ? data.nextEntityId : 3000);
@@ -1466,6 +1516,17 @@ namespace OneRoof.Domain
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 
             sim.Transit.RestoreFromSaveData(data.activeTrips, sim.Topology, sim.Planner);
+            var nextTripId = 1;
+            if (data.activeTrips != null)
+                foreach (var trip in data.activeTrips)
+                    if (trip != null) nextTripId = Math.Max(nextTripId, checked(trip.tripId + 1));
+            sim.TripGenerator.RestoreFromSaveData(data.tripGenerator, nextTripId);
+            if (data.transitDemand != null) sim.TransitDemand = TransitDemandObserver.FromSaveData(data.transitDemand);
+            sim.LastTransitDemandDay = data.hasLastTransitDemandDay ? data.lastTransitDemandDay : null;
+            sim.TripGenerator.DemandObserver = sim.TransitDemand;
+            foreach (var execution in sim.Transit.ActiveTrips)
+                if (sim.TransitDemand.FindSequenceForTrip(execution.Trip.Id.Value) != 0)
+                    sim._observedDemandTrips[execution.Trip.Id.Value] = execution.Trip;
             sim.SyncTransitServices();
             return sim;
         }

@@ -11,6 +11,8 @@ namespace OneRoof.Domain.Persistence
     {
         /// <summary>Version of the household cash ledger fields; 0 denotes a pre-ledger save.</summary>
         public int householdLedgerVersion;
+        /// <summary>Version 1 records every need explicitly, including valid zero satisfaction.</summary>
+        public int residentNeedsVersion;
         public HouseholdSaveData[] households;
         public PersonSaveData[] persons;
     }

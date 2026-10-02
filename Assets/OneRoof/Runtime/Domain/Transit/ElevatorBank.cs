@@ -199,6 +199,14 @@ namespace OneRoof.Domain.Transit
             return 0;
         }
 
+        public long GetPassengerWaitTicks(EntityId personId)
+        {
+            foreach (var queue in _floorQueues.Values)
+                foreach (var passenger in queue)
+                    if (passenger.PersonId == personId) return passenger.WaitTicks;
+            return 0;
+        }
+
         public (long MaxWaitTicks, float AverageWaitTicks) GetFloorWaitMetrics(int floor)
         {
             if (!_floorQueues.TryGetValue(floor, out var queue) || queue.Count == 0)
@@ -331,6 +339,8 @@ namespace OneRoof.Domain.Transit
             RebalanceDispatches();
         }
 
+        public Action<long> ObservePreboardingWait { get; set; }
+
         public void Advance(Tick tick, float lobbyCapacityMultiplier = 1f)
         {
             if (lobbyCapacityMultiplier <= 0f || lobbyCapacityMultiplier > 1f)
@@ -341,6 +351,7 @@ namespace OneRoof.Domain.Transit
                 foreach (var passenger in queue)
                 {
                     passenger.WaitTicks++;
+                    ObservePreboardingWait?.Invoke(passenger.WaitTicks);
                 }
             }
 
@@ -500,6 +511,7 @@ namespace OneRoof.Domain.Transit
 
                 carSaveList.Add(new ElevatorCarSaveData
                 {
+                    targetFloors = new List<int>(car.TargetFloors).ToArray(),
                     id = car.Id.Value,
                     currentFloor = car.CurrentFloor,
                     capacity = car.Capacity,
@@ -574,6 +586,7 @@ namespace OneRoof.Domain.Transit
                     }
 
                     car.RestoreState(c.currentFloor, (ElevatorCarPhase)c.phase, (ElevatorDirection)c.direction, c.timerTicksRemaining, riders);
+                    if (c.targetFloors != null) car.RestoreTargets(c.targetFloors);
                     cars.Add(car);
                 }
             }
@@ -611,6 +624,18 @@ namespace OneRoof.Domain.Transit
                 elevatorBank.RestoreDeliveredPassengers(delivered);
             }
 
+            // Queue reconstruction rebalances dispatch; restore the saved execution only after it.
+            if (data?.cars != null)
+                for (var i = 0; i < data.cars.Length; i++)
+                {
+                    var saved = data.cars[i];
+                    if (saved.targetFloors == null) continue; // Legacy reconstruction remains supported.
+                    var car = cars[i];
+                    var riders = new List<ElevatorPassenger>(car.Passengers);
+                    car.RestoreState(saved.currentFloor, (ElevatorCarPhase)saved.phase,
+                        (ElevatorDirection)saved.direction, saved.timerTicksRemaining, riders);
+                    car.RestoreTargets(saved.targetFloors);
+                }
             return elevatorBank;
         }
     }

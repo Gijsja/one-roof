@@ -1,4 +1,5 @@
 using System;
+using OneRoof.Domain.Persistence;
 
 namespace OneRoof.Domain.Randomness
 {
@@ -26,6 +27,16 @@ namespace OneRoof.Domain.Randomness
         public RandomStreamState State => new RandomStreamState(_seed, _state, _position);
 
         public static DeterministicRandomStream Restore(RandomStreamState state) => new DeterministicRandomStream(state);
+
+        public SimulationRandomSaveData ToSaveData() => new SimulationRandomSaveData
+        { version = 1, seed = _seed, state = _state, position = _position };
+
+        public static DeterministicRandomStream FromSaveData(SimulationRandomSaveData data)
+        {
+            if (data == null || data.version != 1)
+                throw new ArgumentException("Unsupported simulation random checkpoint.", nameof(data));
+            return Restore(new RandomStreamState(data.seed, data.state, data.position));
+        }
 
         public uint NextUInt32()
         {

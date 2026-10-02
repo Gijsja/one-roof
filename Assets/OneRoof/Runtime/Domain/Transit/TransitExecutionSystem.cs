@@ -138,6 +138,9 @@ namespace OneRoof.Domain.Transit
             {
                 tripList.Add(new ActiveTripSaveData
                 {
+                    routeDataVersion = 1,
+                    plannedRoute = SaveRoute(exec.Trip.PlannedRoute),
+                    executionRoute = SaveRoute(exec.Route),
                     tripId = exec.Trip.Id.Value,
                     personId = exec.Trip.PersonId.Value,
                     originRoomId = exec.Trip.Origin.IsOutside ? 0 : exec.Trip.Origin.RoomId.Value,
@@ -161,6 +164,50 @@ namespace OneRoof.Domain.Transit
             return tripList.ToArray();
         }
 
+        private static TransitRouteSaveData SaveRoute(TransitRoute route)
+        {
+            if (route == null) return null;
+            var legs = new TransitEdgeSaveData[route.Legs.Count];
+            for (var i = 0; i < legs.Length; i++)
+            {
+                var edge = route.Legs[i];
+                legs[i] = new TransitEdgeSaveData
+                {
+                    fromNodeId = edge.FromNodeId.Value, toNodeId = edge.ToNodeId.Value,
+                    cost = edge.Cost, mode = (int)edge.Mode
+                };
+            }
+            return new TransitRouteSaveData
+            {
+                originNodeId = route.OriginNodeId.Value, destinationNodeId = route.DestinationNodeId.Value,
+                originX = route.Origin.X, originFloor = route.Origin.Floor,
+                destinationX = route.Destination.X, destinationFloor = route.Destination.Floor, legs = legs
+            };
+        }
+
+        private static TransitRoute RestoreRoute(TransitRouteSaveData route)
+        {
+            if (route == null) return null;
+            if (route.originNodeId <= 0 || route.destinationNodeId <= 0 || route.legs == null)
+                throw new ArgumentException("Invalid transit route checkpoint.", nameof(route));
+            var expectedNode = route.originNodeId;
+            var legs = new List<TransitEdge>();
+            foreach (var edge in route.legs ?? Array.Empty<TransitEdgeSaveData>())
+            {
+                if (edge == null || edge.fromNodeId != expectedNode || edge.toNodeId <= 0 ||
+                    edge.cost < 0 || !Enum.IsDefined(typeof(TransitMode), edge.mode))
+                    throw new ArgumentException("Invalid transit route leg checkpoint.", nameof(route));
+                expectedNode = edge.toNodeId;
+                legs.Add(new TransitEdge(new EntityId(edge.fromNodeId), new EntityId(edge.toNodeId),
+                    edge.cost, (TransitMode)edge.mode));
+            }
+            if (expectedNode != route.destinationNodeId)
+                throw new ArgumentException("Transit route checkpoint does not reach its destination.", nameof(route));
+            return new TransitRoute(new EntityId(route.originNodeId), new EntityId(route.destinationNodeId),
+                new CellCoordinate(route.originX, route.originFloor),
+                new CellCoordinate(route.destinationX, route.destinationFloor), legs);
+        }
+
         public void RestoreFromSaveData(ActiveTripSaveData[] data, BuildingTopologyState topology, TransitRoutePlanner planner)
         {
             ClearActiveTrips();
@@ -168,17 +215,27 @@ namespace OneRoof.Domain.Transit
 
             foreach (var t in data)
             {
+                if (t == null || t.routeDataVersion < 0 || t.routeDataVersion > 1 ||
+                    t.currentLegIndex < 0 || t.legRemainingTicks < 0 || float.IsNaN(t.currentX) || float.IsInfinity(t.currentX))
+                    throw new ArgumentException("Invalid active transit checkpoint.", nameof(data));
                 var origin = t.originLocationKind == (int)WorldLocationKind.Outside
                     ? WorldLocation.Outside : WorldLocation.InRoom(new EntityId(t.originRoomId));
                 var destination = t.destinationLocationKind == (int)WorldLocationKind.Outside
                     ? WorldLocation.Outside : WorldLocation.InRoom(new EntityId(t.destinationRoomId));
                 var originNode = topology?.TransitGraph?.GetNodeForLocation(origin);
                 var destNode = topology?.TransitGraph?.GetNodeForLocation(destination);
-                TransitRoute route = null;
-                if (originNode != null && destNode != null && !origin.Equals(destination) && planner != null)
+                TransitRoute route = t.routeDataVersion >= 1 ? RestoreRoute(t.plannedRoute) : null;
+                if (t.routeDataVersion == 0 && originNode != null && destNode != null && !origin.Equals(destination) && planner != null)
                 {
                     route = planner.FindRoute(originNode.Id, destNode.Id);
                 }
+
+                var executionRoute = t.routeDataVersion == 1 ? RestoreRoute(t.executionRoute) : route;
+                if (t.routeDataVersion == 1 && (route == null || executionRoute == null ||
+                    t.currentLegIndex >= executionRoute.Legs.Count ||
+                    (t.isQueuedInElevator && t.isRidingElevator) ||
+                    ((t.isQueuedInElevator || t.isRidingElevator) && executionRoute.Legs[t.currentLegIndex].Mode != TransitMode.Elevator)))
+                    throw new ArgumentException("Invalid active transit route progress checkpoint.", nameof(data));
 
                 var trip = new TripRecord(
                     new EntityId(t.tripId),
@@ -205,6 +262,10 @@ namespace OneRoof.Domain.Transit
                     t.isRidingElevator,
                     t.currentFloor,
                     t.currentX);
+                if (t.routeDataVersion >= 1 && _activeTripsByPerson.TryGetValue(trip.PersonId, out var execution))
+                {
+                    execution.Route = executionRoute;
+                }
             }
         }
 

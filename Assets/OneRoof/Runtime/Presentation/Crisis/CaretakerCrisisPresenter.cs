@@ -25,8 +25,13 @@ namespace OneRoof.Presentation.Crisis
         private TextMesh _contactMarker, _stairsMarker;
         private Camera _camera;
         private Vector3 _savedCameraPosition;
-        private float _savedCameraSize, _accumulator, _shake;
-        private bool _cameraCaptured, _lastActive;
+        private float _savedCameraSize, _accumulator;
+        private float _trauma, _hitStopTimer;
+        private bool _cameraCaptured, _lastActive, _wasInAir;
+        private const float TraumaDecay = 1.35f;
+        private static readonly Vector2 MaxShakeOffset = new Vector2(0.32f, 0.20f);
+        private const float MaxShakeAngle = 3.5f;
+
         private int _previousHealth = 100, _previousFloor = -1, _lastX;
         private string _message = "";
         private Vector2 _contactScroll;
@@ -37,6 +42,11 @@ namespace OneRoof.Presentation.Crisis
         public bool IsArcadeActive => _session != null && _session.CaretakerOwnsInput;
         public Transform LobbyCaretaker => _caretaker?.Transform;
 
+        public void AddTrauma(float amount)
+        {
+            _trauma = Mathf.Clamp01(_trauma + amount);
+        }
+
         public void Initialize(TowerPlayableController owner, TowerSimulationSession session, Material sharedMaterial)
         {
             _owner = owner;
@@ -45,7 +55,7 @@ namespace OneRoof.Presentation.Crisis
             {
                 _viewRoot = new GameObject("Caretaker crisis views").transform;
                 _viewRoot.SetParent(transform, false);
-                var material = NpcSkeletalHierarchy.GetOrCreateDefaultSharedMaterial();
+                var material = CaretakerCombatRig.GetOrCreateDefaultCombatMaterial();
                 _caretaker = new CaretakerCombatRig(_viewRoot, "Caretaker • Lobby contact", 9, material);
                 _impacts = new CaretakerImpactPool(_viewRoot, material);
                 _contactMarker = Marker("Caretaker contact", "CARETAKER", Gold);
@@ -128,18 +138,26 @@ namespace OneRoof.Presentation.Crisis
                 var kick = keyboard != null && keyboard.kKey.isPressed || pad != null && pad.buttonEast.isPressed;
                 var duck = keyboard != null && (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) || pad != null && pad.leftStick.y.ReadValue() < -.4f;
                 var jump = keyboard != null && keyboard.spaceKey.wasPressedThisFrame || pad != null && pad.buttonSouth.wasPressedThisFrame;
-                _accumulator = Mathf.Min(_accumulator + Time.unscaledDeltaTime, .15f);
-                while (_accumulator >= 1f / CaretakerCrisisState.StepsPerSecond)
+                if (_hitStopTimer > 0f)
                 {
-                    _session.ExecuteCaretaker(CaretakerCrisisAction.Step, new CaretakerCombatInput(move, punch, kick, duck, jump));
-                    jump = false;
-                    _accumulator -= 1f / CaretakerCrisisState.StepsPerSecond;
+                    _hitStopTimer = Mathf.Max(0f, _hitStopTimer - Time.unscaledDeltaTime);
+                    // During arcade hit-stop freeze frames, hold simulation steps to emphasize impact weight
+                }
+                else
+                {
+                    _accumulator = Mathf.Min(_accumulator + Time.unscaledDeltaTime, .15f);
+                    while (_accumulator >= 1f / CaretakerCrisisState.StepsPerSecond)
+                    {
+                        _session.ExecuteCaretaker(CaretakerCrisisAction.Step, new CaretakerCombatInput(move, punch, kick, duck, jump));
+                        jump = false;
+                        _accumulator -= 1f / CaretakerCrisisState.StepsPerSecond;
+                    }
                 }
             }
 
             RefreshPresentation();
             _impacts.Tick(Time.unscaledDeltaTime);
-            _shake = Mathf.Max(0, _shake - Time.unscaledDeltaTime);
+            _trauma = Mathf.Max(0f, _trauma - TraumaDecay * Time.unscaledDeltaTime);
         }
 
         private static string AttackName(CaretakerAttack attack) => attack == CaretakerAttack.Punch ? "Punch" : attack == CaretakerAttack.Kick ? "Kick" : attack == CaretakerAttack.JumpKick ? "JumpKick" : "None";
@@ -198,16 +216,29 @@ namespace OneRoof.Presentation.Crisis
             }
 
             _contactMarker.gameObject.SetActive(false);
-            var jumpHeight = _state.JumpFrames > 0 ? Mathf.Sin(_state.JumpFrames / 36f * Mathf.PI) * .55f : 0;
+            var inAir = _state.JumpFrames > 0;
+            var jumpHeight = inAir ? Mathf.Sin(_state.JumpFrames / 36f * Mathf.PI) * .55f : 0;
             var caretakerPosition = new Vector3(WorldX(_state.X), GroundY(_state.CurrentFloor) + jumpHeight, -.85f);
+
+            // Landing dust puff detection when touching down from jump
+            if (_wasInAir && !inAir)
+            {
+                _impacts.EmitLandingDust(new Vector3(caretakerPosition.x, GroundY(_state.CurrentFloor) - 0.05f, -.85f));
+                AddTrauma(0.08f);
+            }
+            _wasInAir = inAir;
+
             var hit = _state.Health < _previousHealth;
             if (hit)
             {
                 _impacts.Emit(caretakerPosition + Vector3.up * .45f, true);
-                _shake = .13f;
+                _impacts.EmitStreak(caretakerPosition + Vector3.up * .45f, new Vector2(-_state.Facing, 0.2f), true, false);
+                _hitStopTimer = 0.06f; // Hit-stop frames on Caretaker damage
+                AddTrauma(0.40f);
             }
 
-            _caretaker.Present(caretakerPosition, _state.Facing, AttackName(_state.Attack), _lastX != _state.X, _state.AttackFrame / (_state.Attack == CaretakerAttack.Punch ? 18f : 28f), hit, _state.Phase == CaretakerCrisisPhase.Failed, _state.Ducking);
+            var isDashing = Mathf.Abs(_state.X - _lastX) > 1;
+            _caretaker.Present(caretakerPosition, _state.Facing, AttackName(_state.Attack), _lastX != _state.X, _state.AttackFrame / (_state.Attack == CaretakerAttack.Punch ? 18f : 28f), hit, _state.Phase == CaretakerCrisisPhase.Failed, _state.Ducking, isBoss: false, attackFrame: _state.AttackFrame, isCritical: false, isDashing: isDashing);
             _previousHealth = _state.Health;
             _lastX = _state.X;
             if (_previousFloor != _state.RouteIndex)
@@ -217,7 +248,7 @@ namespace OneRoof.Presentation.Crisis
             }
 
             while (_opponents.Count < _state.Opponents.Count)
-                _opponents.Add(new CaretakerCombatRig(_viewRoot, "Faction encounter opponent " + _opponents.Count, 13 + _opponents.Count * 7, NpcSkeletalHierarchy.GetOrCreateDefaultSharedMaterial()));
+                _opponents.Add(new CaretakerCombatRig(_viewRoot, "Faction encounter opponent " + _opponents.Count, 13 + _opponents.Count * 7, CaretakerCombatRig.GetOrCreateDefaultCombatMaterial()));
             for (var i = 0; i < _opponents.Count; i++)
             {
                 var rig = _opponents[i];
@@ -226,14 +257,25 @@ namespace OneRoof.Presentation.Crisis
                     continue;
                 var opponent = _state.Opponents[i];
                 var position = new Vector3(WorldX(opponent.X), GroundY(_state.CurrentFloor), -.8f);
+                var isBoss = opponent.Role == CaretakerOpponentRole.FloorBoss;
                 var opponentHit = _lastHealth.TryGetValue(opponent.Id, out var oldHealth) && opponent.Health < oldHealth;
+                var isCritical = opponentHit && (isBoss || _state.Attack == CaretakerAttack.JumpKick);
+
                 if (opponentHit)
                 {
                     _impacts.Emit(position + Vector3.up * .45f, false);
-                    _shake = .08f;
+                    Vector2 attackVector = _state.Attack == CaretakerAttack.Kick
+                        ? new Vector2(_state.Facing, 0.45f)
+                        : _state.Attack == CaretakerAttack.JumpKick
+                            ? new Vector2(_state.Facing, -0.45f)
+                            : new Vector2(_state.Facing, 0.1f);
+
+                    _impacts.EmitStreak(position + Vector3.up * .45f, attackVector, false, isCritical);
+                    _hitStopTimer = isBoss ? 0.10f : 0.05f; // Extended hit-stop frames for floor bosses
+                    AddTrauma(isBoss ? 0.55f : 0.28f);
                 }
 
-                rig.Present(position, opponent.Facing, opponent.AttackFrame > 0 ? "Punch" : "None", opponent.Timer == 0, opponent.AttackFrame / 42f, opponentHit, opponent.Health <= 0);
+                rig.Present(position, opponent.Facing, opponent.AttackFrame > 0 ? "Punch" : "None", opponent.Timer == 0, opponent.AttackFrame / 42f, opponentHit, opponent.Health <= 0, crouching: false, isBoss: isBoss, attackFrame: opponent.AttackFrame, isCritical: isCritical, isDashing: false);
                 _lastHealth[opponent.Id] = opponent.Health;
             }
 
@@ -245,11 +287,25 @@ namespace OneRoof.Presentation.Crisis
                 _stairsMarker.transform.position = new Vector3(WorldX(route.ExitX), GroundY(route.Floor) + 1.1f, -.9f);
             }
 
+            // Corgi-style polynomial trauma camera shake: shake = trauma^2 * maxOffset
             if (_camera != null)
             {
                 var desired = new Vector3(caretakerPosition.x + _state.Facing * .8f, GroundY(_state.CurrentFloor) + .8f, _savedCameraPosition.z);
-                if (_shake > 0)
-                    desired += new Vector3(Mathf.Sin(Time.unscaledTime * 93) * _shake * .5f, Mathf.Cos(Time.unscaledTime * 79) * _shake * .25f, 0);
+                var shake = _trauma * _trauma;
+                if (shake > 0.001f)
+                {
+                    var time = Time.unscaledTime * 32f;
+                    var offsetX = (Mathf.Sin(time * 3.1f) + Mathf.Sin(time * 7.3f) * 0.5f) * MaxShakeOffset.x * shake;
+                    var offsetY = (Mathf.Cos(time * 2.7f) + Mathf.Cos(time * 6.1f) * 0.5f) * MaxShakeOffset.y * shake;
+                    var roll = Mathf.Sin(time * 4.2f) * MaxShakeAngle * shake;
+                    desired += new Vector3(offsetX, offsetY, 0f);
+                    _camera.transform.rotation = Quaternion.Euler(0f, 0f, roll);
+                }
+                else
+                {
+                    _camera.transform.rotation = Quaternion.identity;
+                }
+
                 _camera.transform.position = Vector3.Lerp(_camera.transform.position, desired, .2f);
                 _camera.orthographicSize = Mathf.Lerp(_camera.orthographicSize, 2.15f, .2f);
             }
@@ -260,10 +316,14 @@ namespace OneRoof.Presentation.Crisis
             if (_cameraCaptured && _camera != null)
             {
                 _camera.transform.position = _savedCameraPosition;
+                _camera.transform.rotation = Quaternion.identity;
                 _camera.orthographicSize = _savedCameraSize;
             }
 
             _cameraCaptured = false;
+            _trauma = 0f;
+            _hitStopTimer = 0f;
+            _wasInAir = false;
         }
 
         private void OnDisable()
@@ -277,8 +337,16 @@ namespace OneRoof.Presentation.Crisis
         private void OnDestroy()
         {
             _impacts?.Dispose();
+            _caretaker?.Dispose();
+            for (var i = 0; i < _opponents.Count; i++)
+                _opponents[i]?.Dispose();
             if (_viewRoot != null)
-                Destroy(_viewRoot.gameObject);
+            {
+                if (UnityEngine.Application.isPlaying)
+                    Destroy(_viewRoot.gameObject);
+                else
+                    DestroyImmediate(_viewRoot.gameObject);
+            }
         }
 
         private void EnsureStyles()

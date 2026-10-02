@@ -1,0 +1,530 @@
+{
+  "evidence": "Standalone arithmetic design models; not production implementation or Unity acceptance",
+  "boycott": {
+    "normal": [
+      {
+        "day": 1,
+        "requested": 112,
+        "paid": 112,
+        "cash": 113,
+        "debt": 0,
+        "held": 0,
+        "adjustedCausePressure": 0.3773611111111111
+      },
+      {
+        "day": 2,
+        "requested": 12,
+        "paid": 12,
+        "cash": 126,
+        "debt": 0,
+        "held": 0,
+        "adjustedCausePressure": 0.3575
+      },
+      {
+        "day": 3,
+        "requested": 12,
+        "paid": 12,
+        "cash": 139,
+        "debt": 0,
+        "held": 0,
+        "adjustedCausePressure": 0.3376388888888889
+      }
+    ],
+    "rolling": [
+      {
+        "day": 1,
+        "requested": 109,
+        "paid": 109,
+        "cash": 116,
+        "debt": 3,
+        "held": 0,
+        "adjustedCausePressure": 0.3773611111111111
+      },
+      {
+        "day": 2,
+        "requested": 12,
+        "paid": 12,
+        "cash": 129,
+        "debt": 3,
+        "held": 0,
+        "adjustedCausePressure": 0.3575
+      },
+      {
+        "day": 3,
+        "requested": 12,
+        "paid": 12,
+        "cash": 142,
+        "debt": 3,
+        "held": 0,
+        "adjustedCausePressure": 0.3376388888888889
+      }
+    ],
+    "held": [
+      {
+        "day": 1,
+        "requested": 109,
+        "paid": 109,
+        "cash": 116,
+        "debt": 3,
+        "held": 3,
+        "adjustedCausePressure": 0.3773611111111111
+      },
+      {
+        "day": 2,
+        "requested": 9,
+        "paid": 9,
+        "cash": 132,
+        "debt": 6,
+        "held": 6,
+        "adjustedCausePressure": 0.3575
+      },
+      {
+        "day": 3,
+        "requested": 9,
+        "paid": 9,
+        "cash": 148,
+        "debt": 9,
+        "held": 9,
+        "adjustedCausePressure": 0.3376388888888889
+      }
+    ]
+  },
+  "cap_relief": [
+    {
+      "day": 1,
+      "requested": 106,
+      "paid": 106,
+      "cash": 119,
+      "debt": 2,
+      "held": 2,
+      "adjustedCausePressure": 0.37125
+    },
+    {
+      "day": 2,
+      "requested": 6,
+      "paid": 6,
+      "cash": 138,
+      "debt": 4,
+      "held": 4,
+      "adjustedCausePressure": 0.3452777777777778
+    },
+    {
+      "day": 3,
+      "requested": 6,
+      "paid": 6,
+      "cash": 157,
+      "debt": 6,
+      "held": 6,
+      "adjustedCausePressure": 0.31930555555555556
+    }
+  ],
+  "low_cash": [
+    {
+      "day": 1,
+      "requested": 9,
+      "paid": 5,
+      "cash": 0,
+      "debt": 7,
+      "held": 3,
+      "adjustedCausePressure": 1.32
+    },
+    {
+      "day": 2,
+      "requested": 13,
+      "paid": 5,
+      "cash": 0,
+      "debt": 14,
+      "held": 6,
+      "adjustedCausePressure": 1.32
+    },
+    {
+      "day": 3,
+      "requested": 17,
+      "paid": 5,
+      "cash": 0,
+      "debt": 21,
+      "held": 9,
+      "adjustedCausePressure": 1.32
+    }
+  ],
+  "wear": {
+    "current": {
+      "failedTicks": 46,
+      "firstFailures": [
+        117,
+        126,
+        134,
+        143,
+        151,
+        160,
+        168,
+        177,
+        185,
+        194,
+        202,
+        211
+      ],
+      "conditionAt": {
+        "50": 0.7,
+        "100": 0.4,
+        "150": 0.304,
+        "200": 0.31,
+        "250": 0.316,
+        "300": 0.322,
+        "350": 0.328,
+        "400": 0.334,
+        "450": 0.34,
+        "500": 0.295
+      }
+    },
+    "repair50": {
+      "failedTicks": 10,
+      "firstFailures": [
+        117,
+        160,
+        202,
+        245,
+        287,
+        330,
+        372,
+        415,
+        457,
+        500
+      ],
+      "conditionAt": {
+        "50": 0.7,
+        "100": 0.4,
+        "150": 0.355,
+        "200": 0.31,
+        "250": 0.52,
+        "300": 0.475,
+        "350": 0.43,
+        "400": 0.385,
+        "450": 0.34,
+        "500": 0.295
+      }
+    },
+    "preventive": {
+      "failedTicks": 0,
+      "firstFailures": [],
+      "conditionAt": {
+        "50": 0.7,
+        "100": 0.706,
+        "150": 0.712,
+        "200": 0.718,
+        "250": 0.724,
+        "300": 0.73,
+        "350": 0.736,
+        "400": 0.742,
+        "450": 0.748,
+        "500": 0.754
+      }
+    }
+  },
+  "flowing_residual": [
+    {
+      "tick": 120,
+      "loads": [
+        90,
+        100
+      ]
+    },
+    {
+      "tick": 150,
+      "loads": [
+        80,
+        100
+      ]
+    },
+    {
+      "tick": 180,
+      "loads": [
+        70,
+        100
+      ]
+    },
+    {
+      "tick": 210,
+      "loads": [
+        60,
+        100
+      ]
+    },
+    {
+      "tick": 240,
+      "loads": [
+        50,
+        100
+      ]
+    },
+    {
+      "tick": 270,
+      "loads": [
+        40,
+        100
+      ]
+    },
+    {
+      "tick": 300,
+      "loads": [
+        30,
+        100
+      ]
+    },
+    {
+      "tick": 330,
+      "loads": [
+        20,
+        100
+      ]
+    },
+    {
+      "tick": 360,
+      "loads": [
+        10,
+        90
+      ]
+    },
+    {
+      "tick": 390,
+      "loads": [
+        0,
+        80
+      ]
+    },
+    {
+      "tick": 420,
+      "loads": [
+        0,
+        70
+      ]
+    },
+    {
+      "tick": 450,
+      "loads": [
+        0,
+        60
+      ]
+    },
+    {
+      "tick": 480,
+      "loads": [
+        0,
+        50
+      ]
+    },
+    {
+      "tick": 510,
+      "loads": [
+        0,
+        40
+      ]
+    },
+    {
+      "tick": 540,
+      "loads": [
+        0,
+        30
+      ]
+    },
+    {
+      "tick": 570,
+      "loads": [
+        0,
+        20
+      ]
+    },
+    {
+      "tick": 600,
+      "loads": [
+        0,
+        10
+      ]
+    },
+    {
+      "tick": 630,
+      "loads": [
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 660,
+      "loads": [
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 690,
+      "loads": [
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 720,
+      "loads": [
+        0,
+        0
+      ]
+    }
+  ],
+  "isolated_residual": [
+    {
+      "tick": 120,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 150,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 180,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 210,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 240,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 270,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 300,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 330,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 360,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 390,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 420,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 450,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 480,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 510,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 540,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 570,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 600,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 630,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 660,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 690,
+      "loads": [
+        100,
+        100
+      ]
+    },
+    {
+      "tick": 720,
+      "loads": [
+        100,
+        100
+      ]
+    }
+  ],
+  "crackdown_checks": [
+    120,
+    240,
+    360,
+    480
+  ],
+  "warning_at": 480,
+  "assumptions": "Funded wage/rent/spend ledgers, one maintenance specialist, continuous flow after source removal at97. Decimal differs from production float near exact boundaries; current equipment rates taken from source."
+}

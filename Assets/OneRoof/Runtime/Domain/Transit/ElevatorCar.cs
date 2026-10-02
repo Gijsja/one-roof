@@ -162,6 +162,12 @@ namespace OneRoof.Domain.Transit
             }
         }
 
+        internal void RestoreTargets(IEnumerable<int> floors)
+        {
+            _targetFloors.Clear();
+            foreach (var floor in floors) _targetFloors.Add(floor);
+        }
+
         public void Tick()
         {
             switch (Phase)

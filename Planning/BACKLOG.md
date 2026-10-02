@@ -1,6 +1,6 @@
 # One Roof — Active Backlog
 
-Updated 2026-10-01. [ROADMAP](./ROADMAP.md) defines direction; [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) defines package contracts, ownership and acceptance. One owner per package; only the coordinator updates status during parallel work.
+Updated 2026-10-02. [ROADMAP](./ROADMAP.md) defines direction; [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) defines package contracts, ownership and acceptance. [Single coding entry point](./BETA_IMPLEMENTATION_RUN.md) includes the five [foundation deepenings](./FOUNDATION_CAUSE_CONTRACTS.md). One owner per package; only the coordinator updates status during parallel work.
 
 **Statuses:** READY = inputs exist and work can start; IN PROGRESS = active work under an assigned owner (parent rollups may contain delivered slices); BLOCKED = a named missing dependency prevents completion; QUEUED = intentionally deferred scope; DONE = stated acceptance has evidence. Delivered Slice A remains a distinct historical delivery. Planning does not dispatch agents.
 
@@ -26,17 +26,22 @@ Parent BLOCKED statuses describe final closure, not a prohibition on READY child
 
 | Package | Status | Requires | Acceptance / blocker exit |
 |---|---|---|---|
-| OR-1002-C0 | READY | Existing system evidence | Specify six chains and exact City Status metrics; shared IDs/timing/scope/effect/save/explanation contracts and fixture matrix. |
+| OR-1002-C0 | IN PROGRESS | Existing system evidence | [Deep contract revision](./CRISIS_CONTRACTS.md) and [executed evidence](../Docs/Validation/C0_DEEP_DESIGN_2026-10-02.md): sources/ledgers/physical geometry/save APIs resolved; complete-demand/save checkpoint implemented with [evidence](../Docs/Validation/C0_CHECKPOINT_2026-10-02.md); measured complete-cohort transit still FAIL. Resolve inside the continuous coding run; no blanket foundation/chain-code block. Prior DONE claim withdrawn. |
+| OR-602/603-D | READY | Spatial facts contract | Real household/shared-space crowding, residential versus physical density, validated capacity response and measured recovery. Historical acceptance retained. |
+| OR-903-D | READY | Spatial facts; civil factual/save interfaces for scoped actions | One domain noise model, scoped civil effects, cause-driven recovery distinct from timed containment. |
+| OR-605-D | READY | Attendance/provider contract | Actual funded accessible instruction, attended progress, local qualified duty; no specialist aura. |
+| OR-701/702-D | READY | Typed provider/funding/reachability contract | Ordinary distinct clinic demand and security coverage; real payroll/capacity/outcomes; M11 injuries deferred. |
+| OR-901-D | READY | Allegiance/profile contract; integrate actual spatial/service sources | Enduring identity versus issue support, four demands, remembered idempotent real concessions. |
 | OR-1003-P | READY | Existing reference scene | Reproduce native overview/close/Caretaker views with HUD, resolution/hardware and tick/allocation/draw data; close measured budget failures. |
 | OR-1005-A | READY | Existing metrics; reconcile with C0 | Define and implement eligibility, finalized-day trends, streak/failure reasons; use explicit adapters for unavailable chain inputs, never placeholder-green gates. |
 | OR-1006-A | READY | Existing UI/input/overlays | Inventory and repair text/glyph/spatial equivalence, UI scale, remapping, W/D conflicts and exclusive modal/pause/speed behavior. |
 | OR-1007-A | READY | Existing save owners; reconcile with C0 | Baseline old/corrupt saves and deterministic replay fixtures; define bounded migrations and deletion recovery for new state. |
-| OR-1002-C1 | BLOCKED | C0 | Complete Rent Boycott lifecycle, scope/propagation, response, saved aftermath and integrated cause-chain evidence. |
-| OR-1002-C2 | BLOCKED | C0; agreed civil APIs | Complete Labor Strike; explicit relationship to WorkSlowdown; distinct scoped effects and recovery evidence. |
-| OR-1002-I1 | BLOCKED | C0 | Complete Power Cascade over existing physical grid/wear/backup systems. |
-| OR-1002-I2 | BLOCKED | C0 | Complete Transit Collapse over existing routing/congestion/capacity systems. |
-| OR-1002-I3 | BLOCKED | C0 | Complete Water Contamination, including a real source/exposure/containment contract distinct from low pressure. |
-| OR-1002-E1 | BLOCKED | C0 | Complete Building Crackdown with explicit scrutiny/exposure/event relationship, scope, expiry and saved aftermath. |
+| OR-1002-C1 | READY | Held-liability contract; integrate actual faction/economic ports | Complete Rent Boycott lifecycle, scope/propagation, response, saved aftermath and integrated cause-chain evidence. |
+| OR-1002-C2 | READY | Paid-office contract; serialize civil/payroll integration | Complete Labor Strike; explicit relationship to WorkSlowdown; distinct scoped effects and recovery evidence. |
+| OR-1002-I1 | READY | Selected contract; integrate typed physical/service/observation ports | Complete Power Cascade over existing physical grid/wear/backup systems. |
+| OR-1002-I2 | READY | Selected contract; integrate typed physical/service/observation ports | Complete Transit Collapse over existing routing/congestion/capacity systems. |
+| OR-1002-I3 | READY | Selected contract; integrate typed physical/service/observation ports | Complete Water Contamination, including a real source/exposure/containment contract distinct from low pressure. |
+| OR-1002-E1 | READY | Selected contract; integrate typed physical/service/observation ports | Complete Building Crackdown with explicit scrutiny/exposure/event relationship, scope, expiry and saved aftermath. |
 | OR-1002-U | BLOCKED | First C0 chain projection | Integrate explanation per delivered chain; final closure requires all six. No extra overlay implicit. |
 | OR-1005-B | BLOCKED | A; six accepted chain projections | Complete campaign pacing/end states/board and inspectable streak; sandbox continuation. |
 | OR-1007-R | BLOCKED | A; six saved chain owners; campaign save contract | Old/new/corrupt saves, every phase, replay, overlapping crises and partial demolition pass integrated recovery QA. |

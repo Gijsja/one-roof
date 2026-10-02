@@ -127,3 +127,6 @@ InitTestScene*.unity*
 # Pipeline test capture screenshots
 /[Aa]ssets/[Ss]creenshots*
 test-results.xml
+
+# Hand-authored standalone design probe; Unity-generated project files stay ignored.
+!Tools/DesignValidation/CrisisDesignProbe.csproj

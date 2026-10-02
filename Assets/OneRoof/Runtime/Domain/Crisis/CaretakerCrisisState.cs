@@ -80,8 +80,10 @@ namespace OneRoof.Domain.Crisis
         public int Facing { get; internal set; }
         public int Timer { get; internal set; }
         public int AttackFrame { get; internal set; }
+        public int HitStop { get; internal set; }
 
         internal int HitAttack;
+        internal int PendingKnockback;
     }
 
     public sealed class CaretakerEvictionRecord
@@ -96,11 +98,13 @@ namespace OneRoof.Domain.Crisis
     public sealed class CaretakerCrisisState
     {
         public const int UnitsPerCell = 1000, StepsPerSecond = 60;
+        public const int InputBufferTicks = 6, HitStopTicks = 3;
         private readonly List<CaretakerRouteFloor> _route = new List<CaretakerRouteFloor>();
         private readonly List<CaretakerOpponent> _opponents = new List<CaretakerOpponent>();
         private readonly List<CaretakerEvictionRecord> _evictions = new List<CaretakerEvictionRecord>();
         private int[] _residentIds = Array.Empty<int>(), _floors = Array.Empty<int>();
         private int _attackSerial, _attackFrame, _jumpFrames;
+        private int _punchBuffer, _kickBuffer, _jumpBuffer, _hitStop;
         private bool _attackDucking;
         private readonly List<int> _floorParticipants = new List<int>();
         private int _nextParticipant;
@@ -128,6 +132,10 @@ namespace OneRoof.Domain.Crisis
         public CaretakerAttack Attack { get; private set; }
         public int AttackFrame => _attackFrame;
         public int JumpFrames => _jumpFrames;
+        public int HitStop => _hitStop;
+        public int PunchBuffer => _punchBuffer;
+        public int KickBuffer => _kickBuffer;
+        public int JumpBuffer => _jumpBuffer;
         public bool Ducking { get; private set; }
         public bool Paused { get; private set; }
         public int Clock { get; private set; }
@@ -140,7 +148,7 @@ namespace OneRoof.Domain.Crisis
                 if (_nextParticipant < _floorParticipants.Count)
                     return false;
                 foreach (var o in _opponents)
-                    if (o.Health > 0)
+                    if (o.Health > 0 || o.HitStop > 0)
                         return false;
                 return true;
             }
@@ -417,55 +425,98 @@ namespace OneRoof.Domain.Crisis
             }
 
             var r = _route[RouteIndex];
-            Ducking = _jumpFrames == 0 && (Attack == CaretakerAttack.None ? input.Duck : _attackDucking);
-            if (input.Jump && _jumpFrames == 0 && !Ducking)
-                _jumpFrames = 36;
-            if (_jumpFrames > 0)
-                _jumpFrames--;
-            if (input.Move != 0 && !Ducking)
-            {
-                Facing = input.Move;
-                X = Clamp(X + input.Move * (Attack == CaretakerAttack.None ? 90 : 35), r.MinX + 150, r.MaxX - 150);
-            }
 
-            if (Attack == CaretakerAttack.None && (input.Punch || input.Kick))
-            {
-                Attack = input.Kick ? (_jumpFrames > 0 ? CaretakerAttack.JumpKick : CaretakerAttack.Kick) : CaretakerAttack.Punch;
-                _attackFrame = 0;
-                _attackSerial++;
-                _attackDucking = Ducking;
-            }
+            // 1. Record buffered inputs (buffer window of 6 ticks / 100ms)
+            if (input.Punch)
+                _punchBuffer = InputBufferTicks;
+            if (input.Kick)
+                _kickBuffer = InputBufferTicks;
+            if (input.Jump)
+                _jumpBuffer = InputBufferTicks;
 
-            if (Attack != CaretakerAttack.None)
-            {
-                _attackFrame++;
-                var activeStart = Attack == CaretakerAttack.Punch ? 5 : 9;
-                var duration = Attack == CaretakerAttack.Punch ? 18 : 28;
-                if (_attackFrame >= activeStart && _attackFrame <= activeStart + 3)
-                    foreach (var o in _opponents)
-                        if (o.Health > 0 && o.HitAttack != _attackSerial && (o.X - X) * Facing >= -100 && Math.Abs(o.X - X) <= (Attack == CaretakerAttack.Punch ? 1400 : 2000))
-                        {
-                            o.HitAttack = _attackSerial;
-                            o.Health = Math.Max(0, o.Health - (Attack == CaretakerAttack.Punch ? 15 : 25));
-                            o.X = Clamp(o.X + Facing * 450, r.MinX + 150, r.MaxX - 150);
-                            if (o.Health == 0)
-                                Score += o.Role == CaretakerOpponentRole.FloorBoss ? 500 : 100;
-                        }
+            // 2. Hit-stop tick counter & delayed knockback application
+            var inHitStop = _hitStop > 0;
+            if (_hitStop > 0)
+                _hitStop--;
 
-                if (_attackFrame >= duration)
+            foreach (var o in _opponents)
+            {
+                if (o.HitStop > 0)
                 {
-                    Attack = CaretakerAttack.None;
-                    _attackFrame = 0;
+                    o.HitStop--;
+                    if (o.HitStop == 0 && o.PendingKnockback != 0)
+                    {
+                        o.X = Clamp(o.X + o.PendingKnockback, r.MinX + 150, r.MaxX - 150);
+                        o.PendingKnockback = 0;
+                    }
                 }
             }
 
+            Ducking = _jumpFrames == 0 && (Attack == CaretakerAttack.None ? input.Duck : _attackDucking);
+
+            // 3. Movement, jump and attack processing (frozen during hit-stop micro-pause)
+            if (!inHitStop)
+            {
+                // Jump & Jump buffering: if Jump is pressed while airborne within 6 ticks of landing, immediately jump upon touching the ground.
+                if (_jumpBuffer > 0 && _jumpFrames == 0 && !Ducking && Attack == CaretakerAttack.None)
+                {
+                    _jumpFrames = 36;
+                    _jumpBuffer = 0;
+                }
+                if (_jumpFrames > 0)
+                    _jumpFrames--;
+
+                if (input.Move != 0 && !Ducking)
+                {
+                    Facing = input.Move;
+                    X = Clamp(X + input.Move * (Attack == CaretakerAttack.None ? 90 : 35), r.MinX + 150, r.MaxX - 150);
+                }
+
+                // Attack initiation & input buffering: execute immediately on the earliest frame when Attack == None
+                if (Attack == CaretakerAttack.None && (_kickBuffer > 0 || _punchBuffer > 0))
+                {
+                    Attack = _kickBuffer > 0 ? (_jumpFrames > 0 ? CaretakerAttack.JumpKick : CaretakerAttack.Kick) : CaretakerAttack.Punch;
+                    _attackFrame = 0;
+                    _attackSerial++;
+                    _attackDucking = Ducking;
+                    _kickBuffer = 0;
+                    _punchBuffer = 0;
+                }
+
+                if (Attack != CaretakerAttack.None)
+                {
+                    _attackFrame++;
+                    var activeStart = Attack == CaretakerAttack.Punch ? 5 : 9;
+                    var duration = Attack == CaretakerAttack.Punch ? 18 : 28;
+                    if (_attackFrame >= activeStart && _attackFrame <= activeStart + 3)
+                        foreach (var o in _opponents)
+                            if (o.Health > 0 && o.HitAttack != _attackSerial && (o.X - X) * Facing >= -100 && Math.Abs(o.X - X) <= (Attack == CaretakerAttack.Punch ? 1400 : 2000))
+                            {
+                                o.HitAttack = _attackSerial;
+                                o.Health = Math.Max(0, o.Health - (Attack == CaretakerAttack.Punch ? 15 : 25));
+                                o.HitStop = HitStopTicks;
+                                o.PendingKnockback = Facing * 450;
+                                _hitStop = HitStopTicks;
+                                if (o.Health == 0)
+                                    Score += o.Role == CaretakerOpponentRole.FloorBoss ? 500 : 100;
+                            }
+
+                    if (_attackFrame >= duration)
+                    {
+                        Attack = CaretakerAttack.None;
+                        _attackFrame = 0;
+                    }
+                }
+            }
+
+            // 4. Opponent AI update (paused during hit-stop)
             var committed = 0;
             foreach (var active in _opponents)
                 if (active.Health > 0 && active.AttackFrame > 0)
                     committed++;
             foreach (var o in _opponents)
             {
-                if (o.Health <= 0)
+                if (o.HitStop > 0 || o.Health <= 0)
                     continue;
                 o.Facing = X >= o.X ? 1 : -1;
                 if (o.AttackFrame > 0)
@@ -490,9 +541,17 @@ namespace OneRoof.Domain.Crisis
                     o.X = Clamp(o.X + o.Facing * (o.Role == CaretakerOpponentRole.FloorBoss ? 45 : 55), r.MinX + 150, r.MaxX - 150);
             }
 
+            // 5. Decrement input buffers if input was not pressed on this tick
+            if (!input.Punch && _punchBuffer > 0)
+                _punchBuffer--;
+            if (!input.Kick && _kickBuffer > 0)
+                _kickBuffer--;
+            if (!input.Jump && _jumpBuffer > 0)
+                _jumpBuffer--;
+
             if (Health <= 0)
                 Phase = CaretakerCrisisPhase.Failed;
-            else if (WaveDefeated() && _nextParticipant < _floorParticipants.Count)
+            else if (WaveDefeated() && _hitStop == 0 && _nextParticipant < _floorParticipants.Count)
                 SpawnNextWave();
         }
 
@@ -646,6 +705,10 @@ namespace OneRoof.Domain.Crisis
                 Phase = CaretakerCrisisPhase.Ready;
                 Paused = false;
                 Attack = CaretakerAttack.None;
+                _punchBuffer = 0;
+                _kickBuffer = 0;
+                _jumpBuffer = 0;
+                _hitStop = 0;
                 _opponents.Clear();
             }
         }
@@ -676,6 +739,10 @@ namespace OneRoof.Domain.Crisis
             Paused = false;
             RouteIndex = 0;
             Attack = CaretakerAttack.None;
+            _punchBuffer = 0;
+            _kickBuffer = 0;
+            _jumpBuffer = 0;
+            _hitStop = 0;
             Health = 100;
         }
 
@@ -717,6 +784,10 @@ namespace OneRoof.Domain.Crisis
                 attack = (int)Attack,
                 attackFrame = _attackFrame,
                 jumpFrames = _jumpFrames,
+                hitStop = _hitStop,
+                punchBuffer = _punchBuffer,
+                kickBuffer = _kickBuffer,
+                jumpBuffer = _jumpBuffer,
                 clock = Clock,
                 score = Score,
                 attackDucking = _attackDucking,
@@ -753,7 +824,9 @@ namespace OneRoof.Domain.Crisis
                     facing = o.Facing,
                     timer = o.Timer,
                     attackFrame = o.AttackFrame,
-                    hitAttack = o.HitAttack
+                    hitAttack = o.HitAttack,
+                    hitStop = o.HitStop,
+                    pendingKnockback = o.PendingKnockback
                 };
             }
 
@@ -821,11 +894,28 @@ namespace OneRoof.Domain.Crisis
             state.Attack = Enum.IsDefined(typeof(CaretakerAttack), data.attack) ? (CaretakerAttack)data.attack : CaretakerAttack.None;
             state._attackFrame = Clamp(data.attackFrame, 0, 28);
             state._jumpFrames = Clamp(data.jumpFrames, 0, 36);
+            state._hitStop = Math.Max(0, data.hitStop);
+            state._punchBuffer = Math.Max(0, data.punchBuffer);
+            state._kickBuffer = Math.Max(0, data.kickBuffer);
+            state._jumpBuffer = Math.Max(0, data.jumpBuffer);
             if (data.opponents != null)
                 foreach (var o in data.opponents)
                     if (state._opponents.Count < 4 && o != null && Enum.IsDefined(typeof(CaretakerOpponentRole), o.role))
                     {
-                        state._opponents.Add(new CaretakerOpponent { Id = o.id, ResidentId = o.residentId, Role = (CaretakerOpponentRole)o.role, X = o.x, Health = Clamp(o.health, 0, 80), Facing = o.facing < 0 ? -1 : 1, Timer = Math.Max(0, o.timer), AttackFrame = Clamp(o.attackFrame, 0, 42), HitAttack = o.hitAttack });
+                        state._opponents.Add(new CaretakerOpponent
+                        {
+                            Id = o.id,
+                            ResidentId = o.residentId,
+                            Role = (CaretakerOpponentRole)o.role,
+                            X = o.x,
+                            Health = Clamp(o.health, 0, 80),
+                            Facing = o.facing < 0 ? -1 : 1,
+                            Timer = Math.Max(0, o.timer),
+                            AttackFrame = Clamp(o.attackFrame, 0, 42),
+                            HitAttack = o.hitAttack,
+                            HitStop = Math.Max(0, o.hitStop),
+                            PendingKnockback = o.pendingKnockback
+                        });
                         state._attackSerial = Math.Max(state._attackSerial, o.hitAttack);
                     }
 

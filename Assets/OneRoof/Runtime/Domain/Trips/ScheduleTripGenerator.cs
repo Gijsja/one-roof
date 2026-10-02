@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Identity;
+using OneRoof.Domain.Persistence;
 using OneRoof.Domain.Population;
 using OneRoof.Domain.Time;
 using OneRoof.Domain.Topology;
@@ -31,6 +32,7 @@ namespace OneRoof.Domain.Trips
 
         private readonly DynamicScheduleArbitrator _arbitrator = new DynamicScheduleArbitrator();
         private int _nextTripId;
+        public TransitDemandObserver DemandObserver { get; set; }
 
         /// <param name="topology">The building topology for room lookups.</param>
         /// <param name="graph">Pre-built transit graph for portal node lookups.</param>
@@ -54,6 +56,33 @@ namespace OneRoof.Domain.Trips
             }
 
             _nextTripId = firstTripId;
+        }
+
+        public TripGeneratorSaveData ToSaveData()
+        {
+            var ids = new List<EntityId>(_failedRouteCooldowns.Keys);
+            ids.Sort();
+            var retries = new TripRetrySaveData[ids.Count];
+            for (var i = 0; i < ids.Count; i++)
+                retries[i] = new TripRetrySaveData { personId = ids[i].Value, retryAfterTick = _failedRouteCooldowns[ids[i]] };
+            return new TripGeneratorSaveData { version = 1, nextTripId = _nextTripId, retries = retries };
+        }
+
+        public void RestoreFromSaveData(TripGeneratorSaveData data, int legacyNextTripId)
+        {
+            _failedRouteCooldowns.Clear();
+            _nextTripId = Math.Max(1, legacyNextTripId);
+            if (data == null || data.version == 0) return;
+            if (data.version != 1 || data.nextTripId <= 0)
+                throw new ArgumentException("Invalid trip generator checkpoint.", nameof(data));
+            _nextTripId = Math.Max(_nextTripId, data.nextTripId);
+            if (data.retries == null) return;
+            foreach (var retry in data.retries)
+            {
+                if (retry == null || retry.personId <= 0 || retry.retryAfterTick < 0)
+                    throw new ArgumentException("Invalid trip retry checkpoint.", nameof(data));
+                _failedRouteCooldowns.Add(new EntityId(retry.personId), retry.retryAfterTick);
+            }
         }
 
         public void UpdateTopology(BuildingTopology topology, HierarchicalTransitGraph graph, TransitRoutePlanner planner)
@@ -99,6 +128,17 @@ namespace OneRoof.Domain.Trips
 
             foreach (var person in population.Persons)
             {
+                var block = person.Schedule.ActiveBlockAt(currentTick);
+                var scheduledPurpose = LabelToPurpose(person.Schedule.ActiveLabelAt(currentTick));
+                var changed = person.Schedule.ActiveLabelAt(previousTick) != person.Schedule.ActiveLabelAt(currentTick);
+                long scheduledEpisode = currentTick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay + (block?.StartTick.Value ?? 0);
+                if (changed && scheduledPurpose.HasValue &&
+                    ((canGenerateTrip != null && !canGenerateTrip(person)) || person.CurrentActivity == ActivityKind.Commuting ||
+                     person.HasCommittedPurposeAt(currentTick) && !CanInterruptOutsideWork(person, currentTick)))
+                {
+                    var suppressed = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, scheduledEpisode, currentTick.Value) ?? 0;
+                    DemandObserver?.Reject(suppressed, currentTick.Value);
+                }
                 if (canGenerateTrip != null && !canGenerateTrip(person)) continue;
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
                 if (person.CurrentPurpose == ResidentPurposeKind.None)
@@ -116,7 +156,11 @@ namespace OneRoof.Domain.Trips
 
                 if (purpose == TripPurpose.Food && person.CurrentLocation.IsOutside &&
                     person.IsOutsideFoodRetryBlocked(currentTick))
+                {
+                    var blocked = DemandObserver?.ObserveAttempt(person.Id, TripPurpose.Food, person.PurposeStartedAtTick, currentTick.Value) ?? 0;
+                    DemandObserver?.Reject(blocked, currentTick.Value);
                     purpose = null;
+                }
 
                 if (purpose == null)
                 {
@@ -124,8 +168,14 @@ namespace OneRoof.Domain.Trips
                     continue;
                 }
 
+                var episode = scheduledPurpose == purpose ? scheduledEpisode : person.PurposeStartedAtTick;
+                var demand = DemandObserver?.ObserveAttempt(person.Id, purpose.Value, episode, currentTick.Value) ?? 0;
                 var destination = ResolveDestination(person, purpose.Value);
-                if (!destination.HasValue) continue;
+                if (!destination.HasValue)
+                {
+                    DemandObserver?.RejectUnreachable(demand, currentTick.Value);
+                    continue;
+                }
 
                 var origin = person.CurrentLocation;
                 if (origin.Equals(destination.Value))
@@ -138,9 +188,11 @@ namespace OneRoof.Domain.Trips
                             person.UpdateActivity(ActivityKind.Commuting);
                             if (trips == null) trips = new List<TripRecord>();
                             trips.Add(localOutsideMeal);
+                            DemandObserver?.AcceptTrip(demand, localOutsideMeal.Id.Value);
                         }
                         continue;
                     }
+                    DemandObserver?.Complete(demand, currentTick.Value);
                     _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
                     TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
@@ -160,9 +212,11 @@ namespace OneRoof.Domain.Trips
                     person.UpdateActivity(ActivityKind.Commuting);
                     if (trips == null) trips = new List<TripRecord>();
                     trips.Add(trip);
+                    DemandObserver?.AcceptTrip(demand, trip.Id.Value);
                 }
                 else
                 {
+                    DemandObserver?.RejectUnreachable(demand, currentTick.Value);
                     _failedRouteCooldowns[person.Id] = currentTick.Value + 60;
                 }
             }
@@ -224,7 +278,11 @@ namespace OneRoof.Domain.Trips
         {
             if (person == null) throw new ArgumentNullException(nameof(person));
             if (!person.CurrentLocation.IsOutside) return null;
-            return BuildTrip(person.Id, WorldLocation.Outside, WorldLocation.InRoom(person.HomeRoomId), TripPurpose.Home, tick);
+            var demand = DemandObserver?.ObserveAttempt(person.Id, TripPurpose.Home, tick.Value, tick.Value) ?? 0;
+            var trip = BuildTrip(person.Id, WorldLocation.Outside, WorldLocation.InRoom(person.HomeRoomId), TripPurpose.Home, tick);
+            if (trip == null) DemandObserver?.RejectUnreachable(demand, tick.Value);
+            else DemandObserver?.AcceptTrip(demand, trip.Id.Value);
+            return trip;
         }
 
         /// <summary>Creates a one-way trip from the resident's current location to the outside city.</summary>

@@ -1,6 +1,6 @@
 # One Roof — Forward Roadmap to City Status
 
-Updated 2026-10-01. Organize work by complete, reviewable outcomes and shared hardening needs. Existing OR IDs remain traceable; grouped packages below replace the old milestone order as the execution schedule. No delivery dates or agents are assigned by this document.
+Updated 2026-10-02. Organize work by complete, reviewable outcomes and shared hardening needs. Existing OR IDs remain traceable; grouped packages below replace the old milestone order as the execution schedule. No delivery dates or agents are assigned by this document.
 
 Use [BACKLOG](./BACKLOG.md) for eligibility and status, [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) for contracts, ownership and agent assignments, and the single [active handoff](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md) for current evidence. Earlier milestones remain in the [historical archive](./Archive/ROADMAP_HISTORICAL_ARCHIVE.md).
 
@@ -38,6 +38,10 @@ Delivered foundations include elevator widening/tier upgrades (OR-204), social i
 | **W3 — Prove composition and City Status** | OR-1002-X, OR-1005-B, OR-1007-R, OR-1003-G | Cross-chain interaction/replay tests, completed campaign board and recovery QA, followed by the actual 30-day / 300-Resident acceptance under all budgets. |
 
 Waves express priority, not blanket barriers. A READY package can start when its own inputs exist; a later-wave read-only investigation or harness can proceed earlier. Shared aggregate/save/projection edits remain serialized through one integration owner. Parallel execution requires explicit authorization and non-overlapping file ownership.
+
+### C0 reopened for deep design validation — 2026-10-02
+
+**OR-1002-C0 is IN PROGRESS.** The initial [contract draft](./CRISIS_CONTRACTS.md) was prematurely marked complete. The revised contract now includes source-backed feasibility checks, tuning rationale, worked intervention/composition scenarios and concrete save/API boundaries. The executed isolated transit hypothesis still misses chosen limits; complete-cohort attainability remains the C0 closure check. The [single implementation run](./BETA_IMPLEMENTATION_RUN.md) incorporates OR-602/603-D, OR-903-D, OR-605-D, OR-701/702-D and OR-901-D through [foundation cause contracts](./FOUNDATION_CAUSE_CONTRACTS.md). The [complete demand/save engineering checkpoint](../Docs/Validation/C0_CHECKPOINT_2026-10-02.md) is implemented with deterministic reference continuation; measured transit still fails chosen limits. Continue legal calibration; foundations and chain code are startable on explicit interfaces while final C0 certification remains open. Historical closed acceptance is retained, M11 injuries stay deferred, and no new allegiance gate is added. No runtime crisis or City Status certification is implied.
 
 ### Blocker reassessment
 

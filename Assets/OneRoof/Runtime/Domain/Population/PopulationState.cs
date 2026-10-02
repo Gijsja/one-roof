@@ -269,6 +269,7 @@ namespace OneRoof.Domain.Population
             return new PopulationSaveData
             {
                 householdLedgerVersion = 3,
+                residentNeedsVersion = 1,
                 households = householdList.ToArray(),
                 persons = personList.ToArray()
             };
@@ -327,15 +328,16 @@ namespace OneRoof.Domain.Population
                     var trait = new PersonTrait(traitKind);
                     var schedule = RestoreSchedule(p, trait, rng);
 
-                    var energy = p.energySatisfaction > 0f ? p.energySatisfaction : (p.restSatisfaction > 0f ? p.restSatisfaction : 1f);
-                    var hygiene = p.hygieneSatisfaction > 0f ? p.hygieneSatisfaction : 1f;
-                    var purpose = p.purposeSatisfaction > 0f ? p.purposeSatisfaction : 1f;
+                    var explicitNeeds = data.residentNeedsVersion >= 1;
+                    var energy = explicitNeeds ? p.energySatisfaction : p.energySatisfaction > 0f ? p.energySatisfaction : (p.restSatisfaction > 0f ? p.restSatisfaction : 1f);
+                    var hygiene = explicitNeeds ? p.hygieneSatisfaction : p.hygieneSatisfaction > 0f ? p.hygieneSatisfaction : 1f;
+                    var purpose = explicitNeeds ? p.purposeSatisfaction : p.purposeSatisfaction > 0f ? p.purposeSatisfaction : 1f;
 
                     var needs = new[]
                     {
-                        new NeedState(NeedKind.Hunger, p.hungerSatisfaction > 0f ? p.hungerSatisfaction : 1f),
+                        new NeedState(NeedKind.Hunger, explicitNeeds ? p.hungerSatisfaction : p.hungerSatisfaction > 0f ? p.hungerSatisfaction : 1f),
                         new NeedState(NeedKind.Energy, energy),
-                        new NeedState(NeedKind.Social, p.socialSatisfaction > 0f ? p.socialSatisfaction : 1f),
+                        new NeedState(NeedKind.Social, explicitNeeds ? p.socialSatisfaction : p.socialSatisfaction > 0f ? p.socialSatisfaction : 1f),
                         new NeedState(NeedKind.Hygiene, hygiene),
                         new NeedState(NeedKind.Purpose, purpose)
                     };

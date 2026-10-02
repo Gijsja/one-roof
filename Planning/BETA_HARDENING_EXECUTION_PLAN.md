@@ -1,6 +1,6 @@
 # Beta Hardening — Agent Execution Plan
 
-Date: 2026-10-01. Planning and assignment definitions only; no agents or runtime implementation are started by this document. [ROADMAP](./ROADMAP.md) owns direction and scope; [BACKLOG](./BACKLOG.md) owns eligibility/status. This packet owns execution contracts. Do not duplicate detailed rules in all three files.
+Updated: 2026-10-02. C0 reopened for deep design validation with three authorized subagents; no runtime implementation is started by this document. [ROADMAP](./ROADMAP.md) owns direction and scope; [BACKLOG](./BACKLOG.md) owns eligibility/status. The [single continuous coding run](./BETA_IMPLEMENTATION_RUN.md) is now the dispatch entry point; [foundation cause contracts](./FOUNDATION_CAUSE_CONTRACTS.md) add all five requested deepenings and supersede incompatible global service/maintenance assumptions. This index owns hardening obligations. Do not duplicate detailed rules in all three files.
 
 ## 1. Start from existing evidence
 
@@ -49,7 +49,9 @@ OR-1002-U is repeated integration work for each delivered chain, then an all-six
 
 ## 4. Startable hardening lanes and final gates
 
-### C0 — Contracts and fixture matrix (READY)
+### C0 — Contracts and fixture matrix (IN PROGRESS)
+
+Canonical output: [Six crisis contracts and City Status gates](./CRISIS_CONTRACTS.md). Premature closure withdrawn; revision2 includes source/model/physical/prototype evidence but complete-cohort transit attainability remains open; its new runtime fixtures are NOT RUN. Detailed chosen thresholds, APIs and save/evaluation ordering live there rather than being duplicated in this execution index.
 
 Inventory current owners, define all common/chain contracts and exact City Status gate metrics, publish a pass/fail/not-run matrix and narrow API boundaries. Use a small deterministic fixture per chain, then compose at reference scale. Set a bounded history/version policy and incident ordering. Exit: downstream agents have concrete inputs and no ambiguous accepted defaults.
 
@@ -77,7 +79,7 @@ After X, B, A-accessibility, R and P close: run the actual 30-floor / 300-Reside
 
 1. Read AGENTS.md, BACKLOG and the single active handoff; choose only the canonical doc relevant to the assignment. Apply relevant Unity skills. Record commit/tree, existing changes, test/Console baseline and active Editor/lock.
 2. Assign exactly one package and exclusive write paths to one owner. The coordinator owns shared integration: TowerSimulation.cs, shared save roots, command dispatch, common projection/inspection/overlay APIs and any shared CivilActionState edits. Extend the existing state owners rather than duplicating them.
-3. After C0, civil-chain agents can work on separate tests/adapters, but C1/C2 must not edit CivilActionState concurrently. Likewise grid/water utility owners coordinate shared utility/save paths; UI agents wait for real API contracts. Declare dependencies at interfaces, not entire parent milestones.
+3. After their factual/save interfaces are integrated, civil-chain agents can work on separate tests/adapters, but C1/C2 must not edit CivilActionState concurrently. Likewise grid/water utility owners coordinate shared utility/save paths; UI agents wait for real API contracts. Declare dependencies at interfaces, not entire parent milestones.
 4. Parallel agent work requires human authorization and disjoint ownership. Prompt availability is not dispatch. With four slots, use one coordinator and at most three workers; one worker can independently review/validate while other two implement. Do not keep all three editing shared aggregates.
 5. One coordinator schedules Unity runs; no concurrent Editor/test runners against the same project. Use live unity-cli or a correctly isolated snapshot when locked. A HEAD worktree alone does not validate uncommitted work: include the exact scoped changes under review. See [WORKFLOW_AND_TESTING](../Docs/WORKFLOW_AND_TESTING.md).
 6. Test prerequisite existence before asserting consequences. Use deterministic input, real production observations and named parameter cases; preserve preview/execution/migration/replay distinctions. Scene-owning PlayMode fixtures use owned worlds and awaited failure-safe cleanup; captures isolate unrelated motion.
@@ -89,12 +91,9 @@ After X, B, A-accessibility, R and P close: run the actual 30-floor / 300-Reside
 
 > Work on **[package ID / outcome]** from Planning/BETA_HARDENING_EXECUTION_PLAN.md. Confirm **[dependency inputs]** and record the starting tree/baseline. You own **[exclusive paths]**; the coordinator owns **[shared paths]**. Deliver **[specific behavior + relevant contract rows]**, reusing **[existing aggregates/APIs]**. Keep **[explicit scope exclusions]**. Validate with **[targeted tests, integration scenario, replay/visual/performance evidence as applicable]**; coordinate Unity execution. Report changed files, decisions/tuning, pass/fail/not-run evidence, remaining risks and next eligible package. Preserve unrelated changes and paired metas; do not update parent status or create another active handoff.
 
-### Suggested dispatch batches after authorization
+### One continuous coding dispatch
 
-- **Start now:** coordinator C0; workers P, campaign-A and accessibility-A on exclusive files. Persistence-A may replace one lane when save evidence is the stronger blocker. This is a suggested sequence, not a current dispatch.
-- **After C0:** finish C1 first as a complete experience; C2 reuses its agreed civil APIs through serialized integration. Separate power/transit investigations or persistence/UI integration can run alongside it.
-- **Next:** power and transit implementation on separate owners; one independent reviewer verifies real propagation, ineffective/effective interventions and resume behavior. Water and crackdown specification work can begin once C0 supplies bounds.
-- **Then:** complete water and crackdown, integrate U/B/R continuously, close X and the final 1003-G gate. Do not wait until all six are implemented to discover explanation, persistence or frame-budget failures.
+Use [BETA_IMPLEMENTATION_RUN](./BETA_IMPLEMENTATION_RUN.md), not independent batch prompts. Start complete transit observation/replay as the first engineering checkpoint; proceed with spatial, service and allegiance foundations on exclusive files. Integrate each crisis after its concrete interfaces are ready, with UI/save/campaign work continuously. Missing reference transport acceptance blocks C0/final certification, not unrelated coding. Keep actual performance/accessibility obligations above in the same run.
 
 ## 6. Completion report and blocker template
 

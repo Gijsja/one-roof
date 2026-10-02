@@ -13,6 +13,7 @@ namespace OneRoof.Domain.Persistence
         public CaretakerCrisisSaveData beforePractice;
         public CaretakerResidentFloorSaveData[] residentFloors;
         public int version = 1, phase, warningDays, reliefDays, routeIndex, x, facing = 1, health = 100, attack, attackFrame, jumpFrames, clock, score;
+        public int hitStop, punchBuffer, kickBuffer, jumpBuffer;
         public long lastEvaluationTick = -1;
         public string factionId, cause;
         public int[] affectedResidentIds, affectedFloors;
@@ -38,7 +39,7 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class CaretakerOpponentSaveData
     {
-        public int id, residentId, role, x, health, facing, timer, attackFrame, hitAttack;
+        public int id, residentId, role, x, health, facing, timer, attackFrame, hitAttack, hitStop, pendingKnockback;
     }
 
     [Serializable]
