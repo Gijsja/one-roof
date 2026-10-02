@@ -18,9 +18,9 @@ Shader "OneRoof/Unlit"
     {
         Tags
         {
-            "RenderType" = "Opaque"
+            "RenderType" = "Transparent"
             "RenderPipeline" = "UniversalPipeline"
-            "Queue" = "Geometry"
+            "Queue" = "Transparent"
         }
 
         Blend [_SrcBlend] [_DstBlend]
@@ -100,6 +100,8 @@ Shader "OneRoof/Unlit"
 
             #if defined(_ALPHATEST_ON)
             clip(finalColor.a - cutoff);
+            #else
+            clip(finalColor.a - 0.005);
             #endif
 
             return finalColor;

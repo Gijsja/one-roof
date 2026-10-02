@@ -24,6 +24,10 @@ namespace OneRoof.Presentation.Tower
         public const float DefaultFloorHeight = 1.75f;
         public const float DefaultCellOriginX = -2.4f;
         public const float DefaultCellWidth = 0.5f;
+        // Undercity cells share Tower horizontal pitch and storey clearance; domain coordinates remain unchanged.
+        public const float UndergroundCellWidth = DefaultCellWidth;
+        public const float UndergroundCellHeight = DefaultFloorHeight;
+        // Normalized geometry is authored in logical units, then scaled to the presentation pitches above.
         public const float UndergroundCellSize = 1f;
 
         public const int DefaultFloorSlabMinX = -14;
@@ -58,7 +62,7 @@ namespace OneRoof.Presentation.Tower
                 var groundCenter = _cellOriginX + (DefaultFloorSlabMinX + DefaultFloorSlabMaxX + 1) * _cellWidth * 0.5f;
                 if (_simulationSession != null && _simulationSession.TryGetFloorSlab(0, out var ground))
                     groundCenter = _cellOriginX + (ground.MinX + ground.MaxX + 1) * _cellWidth * 0.5f;
-                return groundCenter - UndergroundDigState.GridWidthCells * UndergroundCellSize * 0.5f;
+                return groundCenter - UndergroundDigState.GridWidthCells * UndergroundCellWidth * 0.5f;
             }
         }
 
@@ -304,8 +308,9 @@ namespace OneRoof.Presentation.Tower
             var guiY = Screen.height - _lastHintScreenPos.y;
             var width = Mathf.Min(560f, Screen.width - 32f);
             var x = Mathf.Clamp(_lastHintScreenPos.x + 16f, 16f, Screen.width - width - 16f);
-            var y = Mathf.Clamp(guiY + 14f, 16f, Screen.height - 62f);
-            GUI.Label(new Rect(x, y, width, 48f), LastPlacementHint, _hintStyle);
+            var height = Mathf.Max(48f, _hintStyle.CalcHeight(new GUIContent(LastPlacementHint), width));
+            var y = Mathf.Clamp(guiY + 14f, 16f, Mathf.Max(16f, Screen.height - height - 16f));
+            GUI.Label(new Rect(x, y, width, height), LastPlacementHint, _hintStyle);
         }
 
         public static bool IsPointerOverUI(Vector3 screenPos, bool includeBuildPalette = true, int screenHeight = -1, int screenWidth = -1)
@@ -460,7 +465,7 @@ namespace OneRoof.Presentation.Tower
             {
                 if (_roomDragActive && !IsPrimaryPointerHeld()) _roomDragActive = false;
                 _lastHintScreenPos = screenPos;
-                LastPlacementHint = "✖ Point to the earth beneath the building.";
+                LastPlacementHint = "✖ Point to the earth beneath the Tower. Press U to frame the undercity.";
                 LastPlacementValid = false;
                 GhostPresenter.HideGhost();
                 return;
@@ -473,7 +478,6 @@ namespace OneRoof.Presentation.Tower
                 _roomDragStartX = cellX;
                 _roomDragStartDepth = depth;
             }
-            var size = UndergroundBrushSize(toolId);
             var isDigTool = IsUndergroundDigTool(toolId);
             var zoneX = _roomDragActive ? Mathf.Min(_roomDragStartX, cellX) : cellX;
             var zoneDepth = _roomDragActive ? Mathf.Min(_roomDragStartDepth, depth) : depth;
@@ -494,17 +498,17 @@ namespace OneRoof.Presentation.Tower
             }
             var result = _simulationSession.CanExecute(command);
             LastPlacementValid = result.Accepted;
-            LastPlacementHint = result.Accepted
-                ? $"✔ {UndergroundToolLabel(toolId)} · {width}×{height} m"
-                : $"✖ {result.Rejections[0].Message}";
-            LastPlacementHint += UndergroundPlacementDetails(command);
+            GetUndergroundPreviewFootprint(command, out var previewOrigin, out var previewSize);
+            LastPlacementHint = FormatUndergroundPlacementHint(toolId, previewOrigin, previewSize,
+                result.Accepted, result.Rejections.Count > 0 ? result.Rejections[0].Message : null);
+            LastPlacementHint += "\n" + UndergroundPlacementDetails(command);
             _lastHintScreenPos = screenPos;
 
-            var worldX = UndergroundLeftWorldX + (zoneX + width * 0.5f) * UndergroundCellSize;
+            var worldX = UndergroundLeftWorldX + (previewOrigin.x + previewSize.x * 0.5f) * UndergroundCellWidth;
             var groundY = _floorOriginY - 0.74f;
-            var worldY = groundY - (zoneDepth + height * 0.5f) * UndergroundCellSize;
+            var worldY = groundY - (previewOrigin.y + previewSize.y * 0.5f) * UndergroundCellHeight;
             GhostPresenter.ShowGhost(new Vector3(worldX, worldY, 0f),
-                new Vector2(width * UndergroundCellSize * 0.98f, height * UndergroundCellSize * 0.98f), result.Accepted,
+                new Vector2(previewSize.x * UndergroundCellWidth * 0.98f, previewSize.y * UndergroundCellHeight * 0.98f), result.Accepted,
                 result.Accepted
                     ? (isDigTool ? new Color(1f, 0.62f, 0.24f, 0.42f) : new Color(0.36f, 0.75f, 0.68f, 0.62f))
                     : (Color?)null, renderZ: 0.24f);
@@ -597,8 +601,8 @@ namespace OneRoof.Presentation.Tower
             if (!plane.Raycast(ray, out var enter)) return false;
             var world = ray.GetPoint(enter);
             var groundY = _floorOriginY - 0.74f;
-            cellX = Mathf.FloorToInt((world.x - UndergroundLeftWorldX) / UndergroundCellSize);
-            depth = Mathf.FloorToInt((groundY - world.y) / UndergroundCellSize);
+            cellX = Mathf.FloorToInt((world.x - UndergroundLeftWorldX) / UndergroundCellWidth);
+            depth = Mathf.FloorToInt((groundY - world.y) / UndergroundCellHeight);
             return cellX >= 0 && cellX < UndergroundDigState.GridWidthCells &&
                    depth >= 0 && depth < UndergroundDigState.MaxDepthCells;
         }
@@ -637,15 +641,52 @@ namespace OneRoof.Presentation.Tower
             return "Zone " + toolId.Substring("underground:room_".Length);
         }
 
+        /// <summary>The preview shows every cell affected by the validated command, including the full access shaft.</summary>
+        public static void GetUndergroundPreviewFootprint(ICommand command, out Vector2Int origin, out Vector2Int size)
+        {
+            switch (command)
+            {
+                case DigUndergroundCommand dig:
+                    origin = new Vector2Int(dig.X, dig.Depth);
+                    size = new Vector2Int(dig.Size, dig.Size);
+                    break;
+                case BuildUndergroundFloorCommand floor:
+                    origin = new Vector2Int(floor.X, floor.Depth);
+                    size = new Vector2Int(floor.Size, floor.Size);
+                    break;
+                case BuildUndergroundCoreCommand core:
+                    origin = new Vector2Int(core.X, 0);
+                    size = new Vector2Int(1, core.Depth + 1);
+                    break;
+                case BuildUndergroundCorridorCommand corridor:
+                    origin = new Vector2Int(corridor.X, corridor.Depth);
+                    size = new Vector2Int(corridor.Width, 1);
+                    break;
+                case ZoneUndergroundRoomCommand room:
+                    origin = new Vector2Int(room.X, room.Depth);
+                    size = new Vector2Int(room.Width, room.Height);
+                    break;
+                default:
+                    throw new ArgumentException("An underground construction command is required.", nameof(command));
+            }
+        }
+
+        public static string FormatUndergroundPlacementHint(string toolId, Vector2Int origin, Vector2Int size,
+            bool isValid, string failureReason)
+        {
+            var target = $"{UndergroundToolLabel(toolId)} · {size.x}×{size.y} m · depth {origin.y}–{origin.y + size.y} m";
+            return isValid ? "✔ " + target : $"✖ {failureReason ?? "Placement invalid."}\n{target}";
+        }
+
         private string UndergroundPlacementDetails(ICommand command)
         {
             switch (command)
             {
-                case DigUndergroundCommand _: return " · No construction cost";
-                case BuildUndergroundFloorCommand _: return " · No construction cost";
+                case DigUndergroundCommand _: return "Step 1 · No construction cost · Next: lay floor in the excavated space";
+                case BuildUndergroundFloorCommand _: return "Step 2 · No construction cost · Next: extend access core, then connect corridors";
                 case BuildUndergroundCoreCommand core:
                     var shaftCount = _simulationSession.UndergroundProjection().ServiceShaftCells.Count;
-                    return $" · Cost ${100L * Math.Max(0, core.Depth + 1 - shaftCount):N0} · Requires a floored lobby column";
+                    return $"Cost ${100L * Math.Max(0, core.Depth + 1 - shaftCount):N0} · Step 3: excavate and floor column {UndergroundDigState.GridWidthCells / 2} from the surface";
                 case BuildUndergroundCorridorCommand corridor:
                     var existing = _simulationSession.UndergroundProjection().Corridors;
                     var newCells = 0;
@@ -656,10 +697,10 @@ namespace OneRoof.Presentation.Tower
                             if (existing[i].X == corridor.X + dx && existing[i].Depth == corridor.Depth) { found = true; break; }
                         if (!found) newCells++;
                     }
-                    return $" · Cost ${30L * newCells:N0} · Requires access corridor";
+                    return $"Cost ${30L * newCells:N0} · Step 3: attach floored cells to the access core or a connected corridor";
                 case ZoneUndergroundRoomCommand room:
                     var definition = UndergroundRoomCatalog.Get(room.Type);
-                    return $" · Cost ${definition.BaseCost + 10L * room.Width * room.Height:N0} · Staff needed {definition.RequiredStaff} · Requires corridor entrance";
+                    return $"Cost ${definition.BaseCost + 10L * room.Width * room.Height:N0} · Staff needed {definition.RequiredStaff} · Step 4: floor the footprint and connect a corridor entrance";
                 default: return string.Empty;
             }
         }
@@ -770,6 +811,16 @@ namespace OneRoof.Presentation.Tower
             if (toolId.Equals("demolish:room", StringComparison.OrdinalIgnoreCase))
             {
                 return 1;
+            }
+
+            if (toolId.Equals("residential:micro", StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (toolId.Equals("residential:suite", StringComparison.OrdinalIgnoreCase))
+            {
+                return 9;
             }
 
             if (toolId.StartsWith("residential:", StringComparison.OrdinalIgnoreCase) ||

@@ -48,6 +48,7 @@ namespace OneRoof.Presentation.Tower
         private Transform _terracesRoot;
         private Transform _volumetricLightRoot;
         private Transform _groundRoot;
+        private Transform _undercityRoot;
         private Transform _frontFacadeRoot;
         private GameObject _framingObject;
         private GameObject _fenestrationObject;
@@ -91,6 +92,7 @@ namespace OneRoof.Presentation.Tower
         private Mesh _batchedConeMesh;
         private Color[] _batchedConeColors;
         private readonly List<Mesh> _coneMeshes = new List<Mesh>();
+        private Sprite _undercityPanelSprite;
         private readonly List<WindowLightingEntry> _windowLightingEntries = new List<WindowLightingEntry>();
         private readonly Dictionary<UndergroundCell, GameObject> _excavationViews = new Dictionary<UndergroundCell, GameObject>();
         private readonly Dictionary<UndergroundCell, GameObject> _lairFloorViews = new Dictionary<UndergroundCell, GameObject>();
@@ -205,7 +207,6 @@ namespace OneRoof.Presentation.Tower
             _parent = parent;
             _worldMaterial = worldMaterial;
             _colorBlock = colorBlock ?? new MaterialPropertyBlock();
-
             // Keep structural geometry depth writing. Making the shared material
             // transparent also changes rooms, floors and the outside city, so
             // distant quads can sort over the lobby and hide small lights.
@@ -498,48 +499,78 @@ namespace OneRoof.Presentation.Tower
             var baseline = TowerStructurePresenter.FloorY(0) - 0.74f;
             var width = right - left;
             var center = (left + right) * 0.5f;
+            // Author subterranean geometry in logical cells, then map it onto the Tower's columns/storeys.
+            _undercityRoot = EnsureChildTransform(_groundRoot, "Undercity");
+            var cellWidth = GridPlacementController.UndergroundCellWidth;
+            var cellHeight = GridPlacementController.UndergroundCellHeight;
+            _undercityRoot.localScale = new Vector3(cellWidth, cellHeight, 1f);
+            _undercityRoot.localPosition = new Vector3(center * (1f - cellWidth), baseline * (1f - cellHeight), 0f);
             var earthWidth = UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize;
             var earthLeft = center - earthWidth * 0.5f;
             var earthDepth = UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize;
 
-            // Keep cell art in front of the soil backing so the earth grid
-            // remains visible and excavation can reveal a real change.
-
-            // The lair board has its own bounds and remains a centered field beneath
-            // the tower, independent of tower-floor slab placement and expansion.
-            UpdateOrCreateQuad(_groundRoot, "Foundation Soil", new Color(0.25f, 0.16f, 0.10f),
+            UpdateOrCreateQuad(_undercityRoot, "Foundation Soil", new Color(0.25f, 0.16f, 0.10f),
                 new Vector3(center, baseline - earthDepth * 0.5f, 0.48f), new Vector2(earthWidth, earthDepth));
-            // Room-scale underground squares make both the dig target and the resulting
-            // open space readable at the same scale as a small tower room.
-            for (var depth = 0; depth < UndergroundDigState.MaxDepthCells; depth++)
-            for (var column = 0; column < UndergroundDigState.GridWidthCells; column++)
+            // Dense continuous samples give soil grain and fractured stone instead
+            // of colored stripes. All geology remains a single static draw batch.
+            var geology = new FacadeMeshBuilder();
+            const int rows = 96;
+            const int columns = 256;
+            // Shared lattice nodes avoid duplicating the dense soil surface per quad.
+            for (var row = 0; row <= rows; row++)
+            for (var column = 0; column <= columns; column++)
             {
-                var x = earthLeft + (column + 0.5f) * GridPlacementController.UndergroundCellSize;
-                var y = baseline - (depth + 0.5f) * GridPlacementController.UndergroundCellSize;
-                // Bands mark the four basement levels without making each cell
-                // look like a separate floating brick.
-                var band = depth / 3;
-                var shade = ((column * 7 + depth * 3) % 5) * 0.012f;
-                var earthColor = new Color(0.48f - band * 0.045f + shade,
-                    0.30f - band * 0.028f + shade * 0.5f,
-                    0.18f - band * 0.012f);
-                UpdateOrCreateQuad(_groundRoot, $"Earth Grid {column}_{depth}", earthColor,
-                    new Vector3(x, y, EarthTileZ), new Vector2(1.002f, 1.002f));
+                var x = earthLeft + earthWidth * column / columns;
+                var depth = earthDepth * row / rows;
+                geology.Vertices.Add(new Vector3(x, baseline - depth, EarthTileZ));
+                geology.Colors.Add(EarthColor(x, depth));
+                geology.UVs.Add(new Vector2(column / (float)columns, row / (float)rows));
             }
-            for (var level = 1; level < 4; level++)
-                UpdateOrCreateQuad(_groundRoot, $"Earth Stratum {level}", new Color(0.22f, 0.15f, 0.11f),
-                    new Vector3(center, baseline - level * 3f, EarthDetailZ), new Vector2(earthWidth, 0.065f));
-            for (var i = 0; i < 16; i++)
+            for (var row = 0; row < rows; row++)
+            for (var column = 0; column < columns; column++)
             {
-                var depositX = earthLeft + earthWidth * ((i + 1f) / 17f);
-                var depositY = baseline - 0.55f - (i % UndergroundDigState.MaxDepthCells) * 0.82f;
-                var depositWidth = 0.18f + (i % 3) * 0.09f;
-                var depositColor = i % 2 == 0
-                    ? new Color(0.29f, 0.19f, 0.12f)
-                    : new Color(0.17f, 0.11f, 0.08f);
-                UpdateOrCreateQuad(_groundRoot, $"Earth Deposit {i}", depositColor,
-                    new Vector3(depositX, depositY, EarthDetailZ), new Vector2(depositWidth, 0.07f));
+                var topLeft = row * (columns + 1) + column;
+                var bottomLeft = topLeft + columns + 1;
+                geology.Triangles.Add(topLeft);
+                geology.Triangles.Add(topLeft + 1);
+                geology.Triangles.Add(bottomLeft + 1);
+                geology.Triangles.Add(topLeft);
+                geology.Triangles.Add(bottomLeft + 1);
+                geology.Triangles.Add(bottomLeft);
             }
+            // Angular stone fragments vary in size, shape and burial depth.
+            for (var i = 0; i < 1800; i++)
+            {
+                var x = earthLeft + 0.2f + (earthWidth - 0.4f) * EarthRandom(i, 7);
+                var d = 0.2f + (earthDepth - 0.4f) * EarthRandom(i, 13);
+                var y = baseline - d;
+                var size = Mathf.Lerp(0.025f, 0.17f, Mathf.Pow(EarthRandom(i, 19), 3f));
+                var color = EarthColor(x, d) * Mathf.Lerp(0.55f, 1.35f, EarthRandom(i, 23));
+                color.a = 1f;
+                var first = geology.AddQuad(x - size, x + size, y - size * 0.42f,
+                    y + size * 0.42f, EarthDetailZ, color);
+                geology.Vertices[first] += new Vector3(size * 0.5f, 0f, 0f);
+                geology.Vertices[first + 1] += new Vector3(-size * 0.2f, size * 0.19f, 0f);
+                geology.Vertices[first + 2] += new Vector3(-size * 0.6f, 0f, 0f);
+                geology.Vertices[first + 3] += new Vector3(size * 0.2f, -size * 0.13f, 0f);
+            }
+            // Discontinuous fractures are concentrated in deeper rock, not a grid.
+            for (var i = 0; i < 100; i++)
+            {
+                var x = earthLeft + 1.5f + (earthWidth - 3f) * EarthRandom(i, 31);
+                var y = baseline - 2f - (earthDepth - 3f) * EarthRandom(i, 37);
+                var length = 0.14f + EarthRandom(i, 41) * 0.65f;
+                for (var part = 0; part < 4; part++)
+                {
+                    var nextX = x + (EarthRandom(i * 4 + part, 43) - 0.5f) * length;
+                    var nextY = y - length * 0.25f;
+                    AddEarthLine(geology, new Vector2(x, y), new Vector2(nextX, nextY),
+                        0.007f, EarthDetailZ - 0.001f, new Color(0.025f, 0.024f, 0.022f));
+                    x = nextX;
+                    y = nextY;
+                }
+            }
+            ReplaceGroundMesh("Continuous Earth Strata", geology);
             UpdateOrCreateQuad(_groundRoot, "Foundation Stone", new Color(0.18f, 0.27f, 0.23f),
                 new Vector3(center, baseline - 0.10f, 0.46f), new Vector2(width, 0.17f));
             UpdateOrCreateQuad(_groundRoot, "Ground Green Edge", new Color(0.16f, 0.36f, 0.27f),
@@ -578,6 +609,82 @@ namespace OneRoof.Presentation.Tower
                 new Vector3(right + 1.70f, baseline + 0.18f, 0.02f), new Vector2(0.42f, 0.28f));
             UpdateOrCreateQuad(_groundRoot, "Entrance Greenery", new Color(0.39f, 0.68f, 0.40f),
                 new Vector3(right + 1.70f, baseline + 0.43f, -0.01f), new Vector2(0.30f, 0.32f));
+        }
+
+        private static float EarthRandom(int index, int salt)
+        {
+            unchecked
+            {
+                var value = (uint)(index * 747796405 + salt * 289133645);
+                value = ((value >> (int)((value >> 28) + 4)) ^ value) * 277803737u;
+                value = (value >> 22) ^ value;
+                return (value & 0x00ffffff) / 16777215f;
+            }
+        }
+
+        private static Color EarthColor(float x, float depth)
+        {
+            var warpedDepth = depth + (Mathf.PerlinNoise(x * 0.19f + 71f, depth * 0.12f + 19f) - 0.5f) * 1.1f;
+            var rock = Mathf.SmoothStep(0f, 1f, (warpedDepth - 2.1f) / 6.4f);
+            var color = Color.Lerp(new Color(0.092f, 0.071f, 0.048f), new Color(0.061f, 0.065f, 0.066f), rock);
+            var broad = Mathf.PerlinNoise(x * 0.49f + 11f, depth * 1.2f + 23f);
+            var grain = Mathf.PerlinNoise(x * 12.7f + 39f, depth * 14.3f + 53f);
+            var medium = Mathf.PerlinNoise(x * 3.1f + 7f, depth * 4.7f + 17f);
+            // Uneven sediment horizons have restrained contrast and independent widths.
+            var horizon = Mathf.Sin(warpedDepth * 2.7f + Mathf.Sin(warpedDepth * 1.21f) * 2f);
+            color *= 0.66f + broad * 0.36f + medium * 0.25f + grain * 0.22f + horizon * 0.04f;
+            color.a = 1f;
+            return color;
+        }
+
+        private static void AddEarthLine(FacadeMeshBuilder builder, Vector2 start, Vector2 end,
+            float width, float z, Color color)
+        {
+            var normal = new Vector2(-(end - start).y, (end - start).x).normalized * width;
+            var first = builder.AddQuad(0f, 0f, 0f, 0f, z, color);
+            builder.Vertices[first] = new Vector3(start.x - normal.x, start.y - normal.y, z);
+            builder.Vertices[first + 1] = new Vector3(end.x - normal.x, end.y - normal.y, z);
+            builder.Vertices[first + 2] = new Vector3(end.x + normal.x, end.y + normal.y, z);
+            builder.Vertices[first + 3] = new Vector3(start.x + normal.x, start.y + normal.y, z);
+        }
+
+        private static void AddExcavationRim(FacadeMeshBuilder builder, Vector2 start,
+            Vector2 end, Vector2 inward, int seed)
+        {
+            const int pieces = 10;
+            for (var part = 0; part < pieces; part++)
+            {
+                var a = Vector2.Lerp(start, end, part / (float)pieces);
+                var b = Vector2.Lerp(start, end, (part + 1f) / pieces);
+                var thicknessA = 0.028f + EarthRandom(seed + part, 59) * 0.052f;
+                var thicknessB = 0.028f + EarthRandom(seed + part + 1, 59) * 0.052f;
+                var rock = new Color(0.091f, 0.081f, 0.064f) * (0.68f + EarthRandom(seed + part, 61) * 0.45f);
+                rock.a = 1f;
+                var first = builder.AddQuad(0f, 0f, 0f, 0f, 0.35f, rock);
+                var innerA = a + inward * thicknessA;
+                var innerB = b + inward * thicknessB;
+                builder.Vertices[first] = new Vector3(a.x, a.y, 0.35f);
+                builder.Vertices[first + 1] = new Vector3(b.x, b.y, 0.35f);
+                builder.Vertices[first + 2] = new Vector3(innerB.x, innerB.y, 0.35f);
+                builder.Vertices[first + 3] = new Vector3(innerA.x, innerA.y, 0.35f);
+                // Broken inner rock catches light; the cavity-facing lip falls into shadow.
+                AddEarthLine(builder, innerA, innerB, 0.009f, 0.349f, new Color(0.014f, 0.016f, 0.018f));
+            }
+        }
+
+        private void ReplaceGroundMesh(string name, FacadeMeshBuilder builder)
+        {
+            var previous = _undercityRoot.Find(name);
+            if (previous != null)
+            {
+                var oldMesh = previous.GetComponent<MeshFilter>().sharedMesh;
+                _coneMeshes.Remove(oldMesh);
+                DestroyGeneratedMesh(ref oldMesh);
+            }
+            var mesh = builder.BuildMesh(name);
+            _coneMeshes.Add(mesh); // Existing generated-mesh lifetime owner clears these on teardown.
+            var view = EnsureChildWithMesh(_undercityRoot, name, mesh, _worldMaterial);
+            SetColor(view.GetComponent<MeshRenderer>(), Color.white);
         }
 
         private void SyncExcavationViews(UndergroundDigProjection underground)
@@ -622,27 +729,49 @@ namespace OneRoof.Presentation.Tower
             }
             for (var i = 0; i < retired.Count; i++) _lairFloorViews.Remove(retired[i]);
 
-            if (underground == null) return;
+            if (underground == null)
+            {
+                ReplaceGroundMesh("Excavation Rock Faces", new FacadeMeshBuilder());
+                return;
+            }
             var baseline = TowerStructurePresenter.FloorY(0) - 0.74f;
             var groundCenter = -2.4f + (_renderedGroundSlab.MinX + _renderedGroundSlab.MaxX + 1) * 0.25f;
             if (_renderedGroundSlab.Width <= 0) groundCenter = -1.4f;
             var earthLeft = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize * 0.5f;
+            var faces = new FacadeMeshBuilder();
             for (var i = 0; i < underground.ExcavatedCells.Count; i++)
             {
                 var cell = underground.ExcavatedCells[i];
                 var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
-                var view = UpdateOrCreateQuad(_groundRoot, $"Excavated Cell {cell.X}_{cell.Depth}",
-                    new Color(0.035f, 0.052f, 0.061f), new Vector3(x, y, ExcavationZ), new Vector2(1.005f, 1.005f));
+                var view = UpdateOrCreateQuad(_undercityRoot, $"Excavated Cell {cell.X}_{cell.Depth}",
+                    new Color(0.004f, 0.007f, 0.009f), new Vector3(x, y, ExcavationZ), new Vector2(1.005f, 1.005f));
                 _excavationViews[cell] = view;
+                // Only the exposed perimeter receives rock and cavity shading.
+                var left = x - 0.5f;
+                var right = x + 0.5f;
+                var bottom = y - 0.5f;
+                var top = y + 0.5f;
+                var seed = cell.X * 107 + cell.Depth * 997;
+                if (!active.Contains(new UndergroundCell(cell.X - 1, cell.Depth)))
+                    AddExcavationRim(faces, new Vector2(left, bottom), new Vector2(left, top), Vector2.right, seed);
+                if (!active.Contains(new UndergroundCell(cell.X + 1, cell.Depth)))
+                    AddExcavationRim(faces, new Vector2(right, bottom), new Vector2(right, top), Vector2.left, seed + 11);
+                if (!active.Contains(new UndergroundCell(cell.X, cell.Depth - 1)))
+                    AddExcavationRim(faces, new Vector2(left, top), new Vector2(right, top), Vector2.down, seed + 23);
+                if (!active.Contains(new UndergroundCell(cell.X, cell.Depth + 1)))
+                    AddExcavationRim(faces, new Vector2(left, bottom), new Vector2(right, bottom), Vector2.up, seed + 37);
+
             }
+
+            ReplaceGroundMesh("Excavation Rock Faces", faces);
 
             for (var i = 0; i < underground.FlooredCells.Count; i++)
             {
                 var cell = underground.FlooredCells[i];
                 var x = earthLeft + (cell.X + 0.5f) * GridPlacementController.UndergroundCellSize;
                 var y = baseline - (cell.Depth + 0.5f) * GridPlacementController.UndergroundCellSize;
-                var floor = UpdateOrCreateQuad(_groundRoot, $"Lair Floor {cell.X}_{cell.Depth}",
+                var floor = UpdateOrCreateQuad(_undercityRoot, $"Lair Floor {cell.X}_{cell.Depth}",
                     new Color(0.11f, 0.19f, 0.22f), new Vector3(x, y, LairFloorZ), new Vector2(1.005f, 1.005f));
                 UpdateOrCreateQuad(floor.transform, "Floor Slab", new Color(0.25f, 0.40f, 0.42f),
                     new Vector3(0f, -0.43f, -0.02f), new Vector2(1.005f, 0.16f));
@@ -667,7 +796,11 @@ namespace OneRoof.Presentation.Tower
             RetireMissingCellViews(_shaftViews, shaft);
             var retiredRooms = new List<int>();
             foreach (var pair in _undergroundRoomViews)
-                if (!rooms.Contains(pair.Key)) { DestroyGenerated(pair.Value); retiredRooms.Add(pair.Key); }
+                if (!rooms.Contains(pair.Key))
+                {
+                    if (pair.Value != null) RetireUndercityDetailGroup(pair.Value.transform);
+                    retiredRooms.Add(pair.Key);
+                }
             for (var i = 0; i < retiredRooms.Count; i++) _undergroundRoomViews.Remove(retiredRooms[i]);
             if (underground == null) { DestroyGenerated(_accessCoreView); _accessCoreView = null; return; }
 
@@ -680,12 +813,30 @@ namespace OneRoof.Presentation.Tower
             {
                 var x = earthLeft + cell.X + 0.5f;
                 var y = baseline - cell.Depth - 0.5f;
-                var view = UpdateOrCreateQuad(_groundRoot, $"Underground Corridor {cell.X}_{cell.Depth}",
-                    new Color(0.17f, 0.29f, 0.32f), new Vector3(x, y, 0.30f), new Vector2(1.005f, 1.005f));
-                UpdateOrCreateQuad(view.transform, "Walkway", new Color(0.37f, 0.55f, 0.52f),
+                var view = UpdateOrCreateQuad(_undercityRoot, $"Underground Corridor {cell.X}_{cell.Depth}",
+                    new Color(0.12f, 0.18f, 0.21f), new Vector3(x, y, 0.30f), new Vector2(1.005f, 1.005f));
+                UpdateOrCreateQuad(view.transform, "Walkway", new Color(0.38f, 0.41f, 0.40f),
                     new Vector3(0f, -0.38f, -0.015f), new Vector2(1.005f, 0.12f));
                 UpdateOrCreateQuad(view.transform, "Wayfinding", new Color(0.65f, 0.79f, 0.58f),
                     new Vector3(0f, -0.25f, -0.02f), new Vector2(0.30f, 0.025f));
+                UpdateOrCreateQuad(view.transform, "Concrete Ceiling", new Color(0.30f, 0.34f, 0.35f),
+                    new Vector3(0f, 0.43f, -0.02f), new Vector2(1.005f, 0.10f));
+                // Overhead brackets support the ceiling without slicing the walkable tunnel into boxes.
+                var rib = UpdateOrCreateQuad(view.transform, "Steel Rib", new Color(0.43f, 0.49f, 0.50f),
+                    new Vector3(-0.40f, 0.32f, -0.03f), new Vector2(0.06f, 0.18f));
+                rib.SetActive(cell.X % 2 == 0);
+                UpdateOrCreateQuad(view.transform, "Wall Panel Joint", new Color(0.09f, 0.13f, 0.15f),
+                    new Vector3(0f, 0.08f, -0.01f), new Vector2(1f, 0.012f));
+                var recess = UpdateOrCreateQuad(view.transform, "Light Recess", new Color(0.06f, 0.09f, 0.10f),
+                    new Vector3(0.05f, 0.32f, -0.032f), new Vector2(0.32f, 0.08f));
+                recess.SetActive(cell.X % 2 == 0);
+                var lamp = UpdateOrCreateQuad(view.transform, "Work Light", new Color(0.92f, 0.75f, 0.41f),
+                    new Vector3(0.05f, 0.30f, -0.035f), new Vector2(0.23f, 0.045f));
+                lamp.SetActive(cell.X % 2 == 0);
+                var wash = new FacadeMeshBuilder();
+                AddUndercityLightWash(wash, 0.05f, 0.29f, 0.02f, 0.15f, 0.30f, -0.018f);
+                ReplaceUndercityDetailMesh(view.transform, "Light Wall Wash", wash, _coneMaterial);
+                view.transform.Find("Light Wall Wash").gameObject.SetActive(cell.X % 2 == 0);
                 _corridorViews[cell] = view;
             }
 
@@ -693,7 +844,7 @@ namespace OneRoof.Presentation.Tower
             {
                 var x = earthLeft + cell.X + 0.5f;
                 var y = baseline - cell.Depth - 0.5f;
-                var view = UpdateOrCreateQuad(_groundRoot, $"Underground Shaft {cell.X}_{cell.Depth}",
+                var view = UpdateOrCreateQuad(_undercityRoot, $"Underground Shaft {cell.X}_{cell.Depth}",
                     new Color(0.08f, 0.16f, 0.20f), new Vector3(x, y, 0.26f), new Vector2(1.005f, 1.005f));
                 UpdateOrCreateQuad(view.transform, "Left Rail", new Color(0.50f, 0.67f, 0.65f),
                     new Vector3(-0.27f, 0f, -0.02f), new Vector2(0.05f, 1.005f));
@@ -708,7 +859,7 @@ namespace OneRoof.Presentation.Tower
             if (underground.AccessCore.HasValue)
             {
                 var cell = underground.AccessCore.Value;
-                _accessCoreView = UpdateOrCreateQuad(_groundRoot, "Underground Access Core",
+                _accessCoreView = UpdateOrCreateQuad(_undercityRoot, "Underground Access Core",
                     new Color(0.85f, 0.65f, 0.30f),
                     new Vector3(earthLeft + cell.X + 0.5f, baseline - cell.Depth - 0.5f, 0.23f),
                     new Vector2(0.78f, 0.09f));
@@ -720,24 +871,29 @@ namespace OneRoof.Presentation.Tower
                 var room = underground.Rooms[i];
                 var x = earthLeft + room.X + room.Width * 0.5f;
                 var y = baseline - room.Depth - room.Height * 0.5f;
-                var root = _groundRoot.Find($"Underground Room {room.Id}");
+                var root = _undercityRoot.Find($"Underground Room {room.Id}");
                 if (root == null)
                 {
                     root = new GameObject($"Underground Room {room.Id}").transform;
-                    root.SetParent(_groundRoot, false);
+                    root.SetParent(_undercityRoot, false);
                 }
                 root.localPosition = new Vector3(x, y, 0f);
                 var color = UndergroundRoomColor(room.Type);
                 UpdateOrCreateQuad(root, "Room Backdrop", color, new Vector3(0f, 0f, 0.29f),
                     new Vector2(room.Width - 0.04f, room.Height - 0.04f));
                 UpdateOrCreateQuad(root, "Room Header", new Color(0.08f, 0.15f, 0.19f),
-                    new Vector3(0f, room.Height * 0.5f - 0.16f, 0.25f), new Vector2(room.Width - 0.04f, 0.26f));
+                    new Vector3(0f, room.Height * 0.5f - 0.27f, 0.25f), new Vector2(room.Width - 0.18f, 0.50f));
                 UpdateOrCreateQuad(root, "Room Floor", new Color(0.42f, 0.53f, 0.52f),
                     new Vector3(0f, -room.Height * 0.5f + 0.08f, 0.24f), new Vector2(room.Width - 0.02f, 0.16f));
+                SyncUndergroundRoomArchitecture(root, room, corridors, shaft);
+                // This marker describes corridor reachability only; operation has its own words below.
                 UpdateOrCreateQuad(root, "Connection Status", room.IsReachable
-                        ? new Color(0.40f, 0.86f, 0.56f) : new Color(1f, 0.42f, 0.34f),
+                        ? new Color(0.48f, 0.72f, 0.82f) : new Color(1f, 0.42f, 0.34f),
                     new Vector3(room.Width * 0.5f - 0.18f, room.Height * 0.5f - 0.16f, 0.21f),
-                    new Vector2(0.12f, 0.12f));
+                    new Vector2(0.045f, 0.12f));
+                UpdateUndergroundSign(root, "Connection Label", room.IsReachable ? "Connected" : "Disconnected",
+                    room.Width, room.Height * 0.5f - 0.26f,
+                    room.IsReachable ? new Color(0.66f, 0.83f, 0.90f) : new Color(1f, 0.58f, 0.46f), 0.021f);
                 var labelTransform = root.Find("Room Label");
                 if (labelTransform == null)
                 {
@@ -746,18 +902,77 @@ namespace OneRoof.Presentation.Tower
                 }
                 labelTransform.localPosition = new Vector3(-room.Width * 0.5f + 0.15f,
                     room.Height * 0.5f - 0.08f, 0.20f);
+                labelTransform.localScale = UndergroundWorldProportionScale;
                 var label = labelTransform.GetComponent<TextMesh>();
                 if (label == null) label = labelTransform.gameObject.AddComponent<TextMesh>();
                 if (label != null)
                 {
-                    label.text = room.Type.ToString().ToUpperInvariant();
+                    label.text = UndergroundRoomDisplayName(room.Type);
                     label.anchor = TextAnchor.UpperLeft;
-                    label.characterSize = 0.04f;
+                    label.characterSize = 0.032f;
                     label.fontSize = 64;
                     label.color = new Color(0.90f, 0.96f, 0.89f);
+                    FitUndergroundSign(label, (room.Width - 0.44f) * GridPlacementController.UndergroundCellWidth);
                 }
                 _undergroundRoomViews[room.Id] = root.gameObject;
             }
+        }
+
+        public static string UndergroundRoomDisplayName(UndergroundRoomType type)
+        {
+            var name = type.ToString();
+            var readable = new System.Text.StringBuilder(name.Length + 4);
+            for (var i = 0; i < name.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(name[i])) readable.Append(' ');
+                readable.Append(name[i]);
+            }
+            return readable.ToString();
+        }
+
+        /// <summary>Reachability is displayed separately; staffing never implies productive output.</summary>
+        public static string UndergroundRoomOperationLabel(UndergroundRoomOperationProjection room)
+        {
+            var state = !room.IsReachable ? "No access"
+                : room.IsDisrupted ? "Disrupted"
+                : room.Staff == 0 && room.RequiredStaff > 0 ? "Unstaffed"
+                : room.Staff < room.RequiredStaff ? "Needs staff"
+                : room.Cause == "Operating" ? "Operating"
+                : room.Cause != null && room.Cause.Contains("supplies") ? "Needs supplies"
+                : room.Cause != null && room.Cause.Contains("intel") ? "Needs intel"
+                : "Waiting";
+            return $"{state} · {room.Staff}/{room.RequiredStaff}";
+        }
+
+        private static void UpdateUndergroundSign(Transform root, string objectName, string text,
+            int width, float y, Color color, float characterSize)
+        {
+            var sign = root.Find(objectName);
+            if (sign == null)
+            {
+                sign = new GameObject(objectName).transform;
+                sign.SetParent(root, false);
+            }
+            sign.localPosition = new Vector3(-width * 0.5f + 0.15f, y, 0.19f);
+            sign.localScale = UndergroundWorldProportionScale;
+            var label = sign.GetComponent<TextMesh>();
+            if (label == null) label = sign.gameObject.AddComponent<TextMesh>();
+            label.text = text;
+            label.anchor = TextAnchor.UpperLeft;
+            label.fontSize = 64;
+            label.characterSize = characterSize;
+            label.color = color;
+            FitUndergroundSign(label, (width - 0.30f) * GridPlacementController.UndergroundCellWidth);
+        }
+
+        private static Vector3 UndergroundWorldProportionScale => new Vector3(
+            1f / GridPlacementController.UndergroundCellWidth, 1f / GridPlacementController.UndergroundCellHeight, 1f);
+
+        private static void FitUndergroundSign(TextMesh label, float availableWidth)
+        {
+            var renderedWidth = label.GetComponent<Renderer>().localBounds.size.x;
+            if (renderedWidth > availableWidth && renderedWidth > 0f)
+                label.characterSize *= Mathf.Max(0.1f, availableWidth) / renderedWidth;
         }
 
         private static Color UndergroundRoomColor(UndergroundRoomType type)
@@ -766,6 +981,283 @@ namespace OneRoof.Presentation.Tower
             return new Color(0.16f + (index % 3) * 0.05f,
                 0.25f + (index % 4) * 0.025f,
                 0.31f + (index % 5) * 0.018f);
+        }
+
+        private void SyncUndergroundRoomArchitecture(Transform root, UndergroundRoom room,
+            HashSet<UndergroundCell> corridors, HashSet<UndergroundCell> shafts)
+        {
+            var type = room.Type;
+            var width = room.Width;
+            var height = room.Height;
+            var halfWidth = width * 0.5f;
+            var halfHeight = height * 0.5f;
+            var concrete = new Color(0.39f, 0.42f, 0.42f);
+            var steel = new Color(0.18f, 0.23f, 0.26f);
+            UpdateOrCreateQuad(root, "Left Retaining Wall", concrete,
+                new Vector3(-halfWidth + 0.07f, 0f, 0.23f), new Vector2(0.10f, height - 0.08f));
+            UpdateOrCreateQuad(root, "Right Retaining Wall", concrete,
+                new Vector3(halfWidth - 0.07f, 0f, 0.23f), new Vector2(0.10f, height - 0.08f));
+            UpdateOrCreateQuad(root, "Steel Ceiling Beam", steel,
+                new Vector3(0f, halfHeight - 0.30f, 0.23f), new Vector2(width - 0.20f, 0.065f));
+            UpdateOrCreateQuad(root, "Work Light", new Color(0.92f, 0.75f, 0.41f),
+                new Vector3(halfWidth - 0.42f, halfHeight - 0.53f, 0.22f), new Vector2(Mathf.Min(0.5f, width * 0.3f), 0.035f));
+
+            var panels = new FacadeMeshBuilder();
+            var panelTop = halfHeight - 0.45f;
+            var panelBottom = -halfHeight + 0.19f;
+            SyncUndercityTexturedWall(root, width - 0.26f, panelTop, panelBottom);
+            var hasTexturedWall = root.Find("Textured Industrial Wall") != null;
+            for (var panel = 0; panel < width; panel++)
+            {
+                var left = -halfWidth + panel + 0.13f;
+                var right = -halfWidth + panel + 0.87f;
+                // Transparent batches sort as whole meshes; opaque fallback fills would cover the textured wall.
+                if (!hasTexturedWall)
+                    panels.AddQuad(left, right, panelBottom, panelTop, 0.275f,
+                        new Color(0.26f + panel % 2 * 0.015f, 0.29f, 0.30f));
+                panels.AddQuad(left, right, panelBottom, panelBottom + 0.025f, 0.268f, steel);
+                for (var bolt = 0; bolt < 2; bolt++)
+                {
+                    var bx = bolt == 0 ? left + 0.04f : right - 0.04f;
+                    panels.AddQuad(bx, bx + 0.015f, panelTop - 0.07f, panelTop - 0.055f, 0.265f, concrete);
+                }
+            }
+            // A shaded recess and descending warm wall wash give the fixture depth without a real light.
+            var lightX = halfWidth - 0.42f;
+            panels.AddQuad(lightX - 0.31f, lightX + 0.31f, halfHeight - 0.58f, halfHeight - 0.49f,
+                0.24f, new Color(0.07f, 0.10f, 0.11f));
+            ReplaceUndercityDetailMesh(root, "Concrete Wall Panels", panels);
+            var lightWash = new FacadeMeshBuilder();
+            AddUndercityLightWash(lightWash, lightX, halfHeight - 0.57f,
+                Mathf.Max(panelBottom, halfHeight - 1.03f), 0.24f, 0.44f, 0.255f);
+            ReplaceUndercityDetailMesh(root, "Recessed Light Wash", lightWash, _coneMaterial);
+            SyncUndergroundRoomPortals(root, room, corridors, shafts);
+
+            var hub = root.Find("Access Hub Equipment");
+            if (type == UndergroundRoomType.AccessHub)
+            {
+                if (hub == null)
+                {
+                    hub = new GameObject("Access Hub Equipment").transform;
+                    hub.SetParent(root, false);
+                }
+                var fittings = new FacadeMeshBuilder();
+                var floor = -halfHeight + 0.18f;
+                FitUndercityEquipment(hub, floor, -halfHeight + 0.16f);
+                var cabinetTop = Mathf.Min(panelTop - 0.08f, floor + 0.90f);
+                for (var cabinet = 0; cabinet < 2; cabinet++)
+                {
+                    var left = -halfWidth + 0.25f + cabinet * 0.32f;
+                    fittings.AddQuad(left, left + 0.29f, floor, cabinetTop, 0.225f, steel);
+                    fittings.AddQuad(left + 0.03f, left + 0.26f, floor + 0.04f, cabinetTop - 0.035f,
+                        0.215f, new Color(0.37f, 0.41f, 0.40f));
+                    fittings.AddQuad(left + 0.21f, left + 0.225f, cabinetTop - 0.23f, cabinetTop - 0.14f,
+                        0.205f, new Color(0.65f, 0.67f, 0.61f));
+                }
+                var benchLeft = Mathf.Max(-0.15f, -halfWidth + 1f);
+                var benchRight = halfWidth - 0.22f;
+                fittings.AddQuad(benchLeft, benchRight, floor + 0.20f, floor + 0.26f, 0.21f,
+                    new Color(0.52f, 0.40f, 0.26f));
+                fittings.AddQuad(benchLeft + 0.05f, benchLeft + 0.09f, floor, floor + 0.20f, 0.215f, steel);
+                fittings.AddQuad(benchRight - 0.09f, benchRight - 0.05f, floor, floor + 0.20f, 0.215f, steel);
+                fittings.AddQuad(benchLeft, benchRight, floor + 0.40f, floor + 0.47f, 0.235f,
+                    new Color(0.49f, 0.45f, 0.33f));
+                ReplaceUndercityDetailMesh(hub, "Lockers and Bench", fittings);
+            }
+            else if (hub != null) RetireUndercityDetailGroup(hub);
+
+            // Machinery is background dressing, below utility paths and behind the resident crew.
+            var generator = root.Find("Generator Equipment");
+            if (type != UndergroundRoomType.Generator)
+            {
+                if (generator != null) RetireUndercityDetailGroup(generator);
+                return;
+            }
+            if (generator == null)
+            {
+                generator = new GameObject("Generator Equipment").transform;
+                generator.SetParent(root, false);
+            }
+            var equipmentWidth = Mathf.Min(2.5f, width - 0.65f);
+            var equipmentHeight = Mathf.Min(0.95f, height - 0.65f);
+            FitUndercityEquipment(generator, -halfHeight + 0.165f, -halfHeight + 0.16f);
+            var centerY = -halfHeight + 0.20f + equipmentHeight * 0.5f;
+            UpdateOrCreateQuad(generator, "Machine Housing", steel,
+                new Vector3(-0.10f, centerY, 0.245f), new Vector2(equipmentWidth, equipmentHeight));
+            UpdateOrCreateQuad(generator, "Machine Plinth", concrete,
+                new Vector3(-0.10f, -halfHeight + 0.20f, 0.215f), new Vector2(equipmentWidth + 0.12f, 0.07f));
+            for (var vent = 0; vent < 3; vent++)
+            {
+                var oldVent = generator.Find($"Cooling Vent {vent}");
+                if (oldVent != null) DestroyGenerated(oldVent.gameObject);
+            }
+            var machinery = new FacadeMeshBuilder();
+            var machineLeft = -0.10f - equipmentWidth * 0.5f;
+            var floorY = -halfHeight + 0.24f;
+            var engineRight = machineLeft + equipmentWidth * 0.55f;
+            var top = floorY + equipmentHeight;
+            machinery.AddQuad(machineLeft + 0.06f, engineRight, floorY + 0.08f, top - 0.12f,
+                0.225f, new Color(0.30f, 0.37f, 0.33f));
+            machinery.AddQuad(machineLeft + 0.08f, engineRight - 0.03f, top - 0.12f, top - 0.07f,
+                0.215f, new Color(0.50f, 0.54f, 0.45f));
+            for (var cylinder = 0; cylinder < 4; cylinder++)
+            {
+                var cx = machineLeft + 0.12f + cylinder * equipmentWidth * 0.10f;
+                machinery.AddQuad(cx, cx + equipmentWidth * 0.055f, floorY + 0.14f, top - 0.15f,
+                    0.215f, new Color(0.18f, 0.24f, 0.22f));
+            }
+            // Alternator casing: inset ends, cooling fins and a steel coupling to the engine block.
+            var alternatorLeft = engineRight + 0.06f;
+            var alternatorRight = machineLeft + equipmentWidth * 0.84f;
+            machinery.AddQuad(engineRight - 0.02f, alternatorLeft + 0.03f, centerY - 0.035f, centerY + 0.035f,
+                0.21f, concrete);
+            machinery.AddQuad(alternatorLeft, alternatorRight, floorY + 0.10f, top - 0.13f,
+                0.22f, new Color(0.40f, 0.45f, 0.44f));
+            for (var fin = 0; fin < 6; fin++)
+            {
+                var fx = alternatorLeft + (alternatorRight - alternatorLeft) * (fin + 0.5f) / 6f;
+                machinery.AddQuad(fx, fx + 0.012f, floorY + 0.13f, top - 0.16f,
+                    0.21f, steel);
+            }
+            var controlLeft = machineLeft + equipmentWidth * 0.87f;
+            machinery.AddQuad(controlLeft, machineLeft + equipmentWidth - 0.03f, floorY + 0.05f, top,
+                0.22f, new Color(0.46f, 0.49f, 0.46f));
+            machinery.AddQuad(controlLeft + 0.025f, machineLeft + equipmentWidth - 0.05f,
+                top - equipmentHeight * 0.30f, top - equipmentHeight * 0.12f, 0.205f,
+                new Color(0.08f, 0.13f, 0.13f));
+            machinery.AddQuad(machineLeft + equipmentWidth * 0.18f, machineLeft + equipmentWidth * 0.18f + 0.045f,
+                top - 0.07f, Mathf.Min(panelTop - 0.07f, top + 0.25f), 0.215f, concrete);
+            machinery.AddQuad(machineLeft + equipmentWidth * 0.18f, engineRight,
+                Mathf.Min(panelTop - 0.10f, top + 0.20f), Mathf.Min(panelTop - 0.055f, top + 0.245f),
+                0.215f, concrete);
+            ReplaceUndercityDetailMesh(generator, "Engine Alternator and Control", machinery);
+            UpdateOrCreateQuad(generator, "Power Hazard Plate", new Color(1f, 0.72f, 0.20f),
+                new Vector3(equipmentWidth * 0.36f - 0.10f, centerY, 0.205f), new Vector2(0.10f, 0.13f));
+        }
+
+        private static void FitUndercityEquipment(Transform equipment, float authoredFloor, float roomFloor)
+        {
+            // Uniformly fit the original equipment silhouette to the narrower columns; storeys scale only the shell.
+            var fit = GridPlacementController.UndergroundCellWidth;
+            var verticalScale = fit / GridPlacementController.UndergroundCellHeight;
+            equipment.localScale = new Vector3(fit / GridPlacementController.UndergroundCellWidth, verticalScale, 1f);
+            equipment.localPosition = new Vector3(0f, roomFloor - authoredFloor * verticalScale, 0f);
+        }
+
+        private void SyncUndercityTexturedWall(Transform root, float width, float top, float bottom)
+        {
+            if (_undercityPanelSprite == null)
+            {
+                var source = Resources.Load<Sprite>("Rooms/backdrop_utility_industrial");
+                if (source == null || source.texture.width < 512 || source.texture.height < 512) return;
+                // Approved wall panel only: exclude the cyan utility stripe, hazards and floor artwork.
+                _undercityPanelSprite = Sprite.Create(source.texture, new Rect(80f, 384f, 432f, 128f),
+                    new Vector2(0.5f, 0.5f), 360f, 0, SpriteMeshType.FullRect);
+                _undercityPanelSprite.name = "Undercity Cropped Industrial Wall";
+            }
+            var panel = new FacadeMeshBuilder();
+            panel.AddQuad(-width * 0.5f, width * 0.5f, bottom, top, 0.268f, Color.white);
+            var texture = _undercityPanelSprite.texture;
+            var crop = _undercityPanelSprite.rect;
+            panel.UVs[0] = new Vector2(crop.xMin / texture.width, crop.yMin / texture.height);
+            panel.UVs[1] = new Vector2(crop.xMax / texture.width, crop.yMin / texture.height);
+            panel.UVs[2] = new Vector2(crop.xMax / texture.width, crop.yMax / texture.height);
+            panel.UVs[3] = new Vector2(crop.xMin / texture.width, crop.yMax / texture.height);
+            ReplaceUndercityDetailMesh(root, "Textured Industrial Wall", panel);
+            var renderer = root.Find("Textured Industrial Wall").GetComponent<MeshRenderer>();
+            renderer.GetPropertyBlock(_colorBlock);
+            _colorBlock.SetTexture("_BaseMap", texture);
+            _colorBlock.SetTexture("_MainTex", Texture2D.whiteTexture);
+            renderer.SetPropertyBlock(_colorBlock);
+        }
+
+        private static void AddUndercityLightWash(FacadeMeshBuilder builder, float x, float top, float bottom,
+            float nearHalfWidth, float farHalfWidth, float z)
+        {
+            var start = builder.AddQuad(x - farHalfWidth, x + farHalfWidth, bottom, top, z, Color.clear);
+            builder.Vertices[start + 2] = new Vector3(x + nearHalfWidth, top, z);
+            builder.Vertices[start + 3] = new Vector3(x - nearHalfWidth, top, z);
+            var light = new Color(0.95f, 0.78f, 0.46f, 0.25f);
+            builder.Colors[start] = new Color(light.r, light.g, light.b, 0f);
+            builder.Colors[start + 1] = new Color(light.r, light.g, light.b, 0f);
+            builder.Colors[start + 2] = light;
+            builder.Colors[start + 3] = light;
+        }
+
+        private void ReplaceUndercityDetailMesh(Transform parent, string name, FacadeMeshBuilder builder, Material material = null)
+        {
+            var previous = parent.Find(name);
+            if (previous != null)
+            {
+                var oldMesh = previous.GetComponent<MeshFilter>().sharedMesh;
+                if (_coneMeshes.Remove(oldMesh)) DestroyGeneratedMesh(ref oldMesh);
+            }
+            var mesh = builder.BuildMesh(name);
+            _coneMeshes.Add(mesh);
+            var view = EnsureChildWithMesh(parent, name, mesh, material ?? _worldMaterial);
+            SetColor(view.GetComponent<MeshRenderer>(), Color.white);
+        }
+
+        private void RetireUndercityDetailGroup(Transform root)
+        {
+            // Only our owned meshes belong to the lifetime list; primitive shared quads must survive.
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                var mesh = filter.sharedMesh;
+                if (_coneMeshes.Remove(mesh)) DestroyGeneratedMesh(ref mesh);
+            }
+            DestroyGenerated(root.gameObject);
+        }
+
+        private void SyncUndergroundRoomPortals(Transform root, UndergroundRoom room,
+            HashSet<UndergroundCell> corridors, HashSet<UndergroundCell> shafts)
+        {
+            var builder = new FacadeMeshBuilder();
+            var halfWidth = room.Width * 0.5f;
+            var halfHeight = room.Height * 0.5f;
+            var trim = new Color(0.50f, 0.53f, 0.49f);
+            var opening = new Color(0.04f, 0.07f, 0.08f);
+            var hasLeft = false;
+            var hasRight = false;
+            for (var row = 0; row < room.Height; row++)
+            {
+                var depth = room.Depth + row;
+                for (var side = 0; side < 2; side++)
+                {
+                    var cell = new UndergroundCell(side == 0 ? room.X - 1 : room.X + room.Width, depth);
+                    if (!corridors.Contains(cell) && !shafts.Contains(cell)) continue;
+                    if (side == 0) hasLeft = true; else hasRight = true;
+                    var x = side == 0 ? -halfWidth : halfWidth;
+                    var y = halfHeight - row - 0.5f;
+                    builder.AddQuad(x - 0.07f, x + 0.07f, y - 0.36f, y + 0.32f, 0.20f, opening);
+                    builder.AddQuad(x - 0.10f, x + 0.10f, y + 0.32f, y + 0.37f, 0.19f, trim);
+                    builder.AddQuad(x - 0.10f, x + 0.10f, y - 0.39f, y - 0.34f, 0.19f, trim);
+                }
+            }
+            // Keep the retaining wall visible above connected side openings, rather than sealing them.
+            root.Find("Left Retaining Wall").gameObject.SetActive(!hasLeft);
+            root.Find("Right Retaining Wall").gameObject.SetActive(!hasRight);
+            for (var column = 0; column < room.Width; column++)
+            {
+                for (var vertical = 0; vertical < 2; vertical++)
+                {
+                    var cell = new UndergroundCell(room.X + column,
+                        vertical == 0 ? room.Depth - 1 : room.Depth + room.Height);
+                    if (!corridors.Contains(cell) && !shafts.Contains(cell)) continue;
+                    var x = -halfWidth + column + 0.5f;
+                    var y = vertical == 0 ? halfHeight : -halfHeight;
+                    // A hatch at the exact adjoining cell; a short ladder ties the landing to the room floor.
+                    builder.AddQuad(x - 0.28f, x + 0.28f, y - 0.045f, y + 0.045f, 0.19f, opening);
+                    builder.AddQuad(x - 0.30f, x - 0.26f, y - 0.12f, y + 0.12f, 0.18f, trim);
+                    builder.AddQuad(x + 0.26f, x + 0.30f, y - 0.12f, y + 0.12f, 0.18f, trim);
+                    for (var rung = 0; rung < 3; rung++)
+                    {
+                        var ry = vertical == 0 ? y - 0.15f - rung * 0.09f : y + 0.03f + rung * 0.09f;
+                        builder.AddQuad(x - 0.20f, x + 0.20f, ry, ry + 0.025f, 0.18f, trim);
+                    }
+                }
+            }
+            ReplaceUndercityDetailMesh(root, "Connected Portals and Hatches", builder);
         }
 
         /// <summary>Bind a bounded visible crew to stable assigned resident IDs.</summary>
@@ -782,24 +1274,11 @@ namespace OneRoof.Presentation.Tower
                     var room = operations.Rooms[i];
                     if (!_undergroundRoomViews.TryGetValue(room.Id, out var roomView) || roomView == null) continue;
                     var root = roomView.transform;
-                    var statusTransform = root.Find("Staff Status");
-                    if (statusTransform == null)
-                    {
-                        statusTransform = new GameObject("Staff Status").transform;
-                        statusTransform.SetParent(root, false);
-                    }
-                    statusTransform.localPosition = new Vector3(-room.Width * 0.5f + 0.15f,
-                        room.Height * 0.5f - 0.37f, 0.19f);
-                    var status = statusTransform.GetComponent<TextMesh>();
-                    if (status == null) status = statusTransform.gameObject.AddComponent<TextMesh>();
-                    status.text = room.IsDisrupted ? $"DISRUPTED · {room.Staff}/{room.RequiredStaff} STAFF"
-                        : $"{room.Staff}/{room.RequiredStaff} STAFF";
-                    status.anchor = TextAnchor.UpperLeft;
-                    status.characterSize = 0.04f;
-                    status.fontSize = 64;
-                    status.color = room.IsDisrupted ? new Color(1f, 0.52f, 0.42f)
-                        : room.Staff >= room.RequiredStaff && room.IsReachable
-                            ? new Color(0.60f, 0.93f, 0.67f) : new Color(0.96f, 0.77f, 0.47f);
+                    var operating = room.IsReachable && !room.IsDisrupted && room.Cause == "Operating";
+                    UpdateUndergroundSign(root, "Staff Status", UndergroundRoomOperationLabel(room),
+                        room.Width, room.Height * 0.5f - 0.43f,
+                        room.IsDisrupted || !room.IsReachable ? new Color(1f, 0.58f, 0.46f)
+                            : operating ? new Color(0.68f, 0.88f, 0.71f) : new Color(0.96f, 0.77f, 0.47f), 0.020f);
 
                     var shownHere = Mathf.Min(room.AssignedResidentIds.Count, 4, maxVisibleCrew - visibleCount);
                     for (var crew = 0; crew < shownHere; crew++)
@@ -814,10 +1293,19 @@ namespace OneRoof.Presentation.Tower
                             skeletal.SetCaption(null);
                             _undergroundCrewViews[residentId] = skeletal;
                         }
-                        skeletal.transform.SetParent(root, false);
+                        var crewRoot = root.Find("Crew World Scale");
+                        if (crewRoot == null)
+                        {
+                            crewRoot = new GameObject("Crew World Scale").transform;
+                            crewRoot.SetParent(root, false);
+                        }
+                        // Pose evaluation writes resident local scale, so compensation belongs to its parent.
+                        crewRoot.localScale = UndergroundWorldProportionScale;
+                        skeletal.transform.SetParent(crewRoot, false);
                         var spacing = Mathf.Min(0.72f, (room.Width - 0.6f) / Mathf.Max(1, shownHere));
-                        skeletal.transform.localPosition = new Vector3((crew - (shownHere - 1) * 0.5f) * spacing,
-                            -room.Height * 0.5f + 0.21f, 0.12f);
+                        skeletal.transform.localPosition = new Vector3(
+                            (crew - (shownHere - 1) * 0.5f) * spacing * GridPlacementController.UndergroundCellWidth,
+                            (-room.Height * 0.5f + 0.21f) * GridPlacementController.UndergroundCellHeight, 0.12f);
                         skeletal.SetFacing(residentId % 2 == 0 ? 1f : -1f);
                         skeletal.SetAnimationClip(room.IsDisrupted ? NpcAnimationClip.QueueWait : NpcAnimationClip.Idle);
                         visibleCount++;
@@ -840,11 +1328,15 @@ namespace OneRoof.Presentation.Tower
                 if (crew != null) crew.ApplyProceduralAnimation(time);
         }
 
-        private static void RetireMissingCellViews(Dictionary<UndergroundCell, GameObject> views, HashSet<UndergroundCell> active)
+        private void RetireMissingCellViews(Dictionary<UndergroundCell, GameObject> views, HashSet<UndergroundCell> active)
         {
             var retired = new List<UndergroundCell>();
             foreach (var pair in views)
-                if (!active.Contains(pair.Key)) { DestroyGenerated(pair.Value); retired.Add(pair.Key); }
+                if (!active.Contains(pair.Key))
+                {
+                    if (pair.Value != null) RetireUndercityDetailGroup(pair.Value.transform);
+                    retired.Add(pair.Key);
+                }
             for (var i = 0; i < retired.Count; i++) views.Remove(retired[i]);
         }
 
@@ -1285,6 +1777,12 @@ namespace OneRoof.Presentation.Tower
                 }
             }
             _coneMeshes.Clear();
+            if (_undercityPanelSprite != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_undercityPanelSprite);
+                else Object.DestroyImmediate(_undercityPanelSprite);
+                _undercityPanelSprite = null;
+            }
             DestroyGeneratedMesh(ref _batchedConeMesh);
             _batchedConeColors = null;
             DestroyGeneratedMesh(ref _batchedGlassMesh);
@@ -1309,6 +1807,7 @@ namespace OneRoof.Presentation.Tower
             _terracesRoot = null;
             _volumetricLightRoot = null;
             _groundRoot = null;
+            _undercityRoot = null;
             _excavationViews.Clear();
             _lairFloorViews.Clear();
             _corridorViews.Clear();

@@ -154,6 +154,21 @@ namespace OneRoof.UI.Tests.EditMode
             Assert.That(ModeShellBarController.BuildModeStatusText(projection), Does.Contain("Overlay: UTILITIES"));
         }
 
+        [TestCase("underground:dig_2", "1 Dig", "Click or drag")]
+        [TestCase("underground:floor_2", "2 Floor", "Paint excavated cells")]
+        [TestCase("underground:core", "3 Connect", "Floored lobby column")]
+        [TestCase("underground:corridor_3", "3 Connect", "Paint from access core")]
+        public void BuildModeStatusText_UndergroundToolNamesStageAndPrerequisite(string tool, string stage, string instruction)
+        {
+            var projection = new ModeShellProjection(
+                InteractionMode.Build, InteractionMode.Inspect, tool, null, null, null, null, null);
+
+            var text = ModeShellBarController.BuildModeStatusText(projection);
+
+            Assert.That(text, Does.Contain(stage));
+            Assert.That(text, Does.Contain(instruction));
+        }
+
         [Test]
         public void BuildModeStatusText_UndergroundRoom_ExplainsDragAndRelease()
         {

@@ -111,7 +111,7 @@ namespace OneRoof.Presentation.Tower
             var defaultPos = new Vector3(groundStart ? -4.6f : 0.2f, centerY, -10f);
             ctrl.SetOverviewDefaults(defaultPos, defaultOrtho);
             ctrl.SetBounds(-20f, 20f,
-                TowerStructurePresenter.FloorY(0) - 0.74f - UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize - 2f,
+                TowerStructurePresenter.FloorY(0) - 0.74f - UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellHeight - 2f,
                 TowerStructurePresenter.FloorY(floorCount - 1) + 4f);
 
             if (isNew || resetView)
@@ -134,7 +134,7 @@ namespace OneRoof.Presentation.Tower
         public void FocusUnderground()
         {
             if (_camera == null) return;
-            var depth = UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellSize;
+            var depth = UndergroundDigState.MaxDepthCells * GridPlacementController.UndergroundCellHeight;
             var groundY = TowerStructurePresenter.FloorY(0) - 0.74f;
             var center = _defaultPosition;
             center.x = -1.4f;

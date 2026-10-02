@@ -71,15 +71,43 @@ namespace OneRoof.Presentation.Furnishings
             }
             if (matchCount > 0)
             {
-                var selected = Mathf.Abs(slot) % matchCount;
+                var s = Mathf.Abs(slot);
+                var selected = matchCount > 1 && kind == InteractionPointKind.Sleep
+                    ? (s == 2 ? 0 : (s % matchCount))
+                    : (s % matchCount);
+
                 for (var i = 0; i < _placedProps.Count; i++)
                 {
                     var prop = _placedProps[i];
                     if (prop != null && NameContainsAny(prop.name, matches) && selected-- == 0)
                     {
-                        var lateralOffset = (kind == InteractionPointKind.Sleep || kind == InteractionPointKind.Seat)
-                            ? ((Mathf.Abs(slot) % 2 == 0) ? -0.16f : 0.16f)
-                            : 0f;
+                        float lateralOffset;
+                        if (kind == InteractionPointKind.Sleep)
+                        {
+                            if (matchCount > 1)
+                            {
+                                lateralOffset = s switch
+                                {
+                                    0 => -0.16f,
+                                    1 => 0f,
+                                    2 => 0.16f,
+                                    _ => (s % 2 == 0) ? -0.16f : 0.16f
+                                };
+                            }
+                            else
+                            {
+                                lateralOffset = (s % 2 == 0) ? -0.16f : 0.16f;
+                            }
+                        }
+                        else if (kind == InteractionPointKind.Seat)
+                        {
+                            lateralOffset = (s % 2 == 0) ? -0.16f : 0.16f;
+                        }
+                        else
+                        {
+                            lateralOffset = 0f;
+                        }
+
                         worldPosition = prop.transform.position + new Vector3(lateralOffset, 0.06f, -0.2f);
                         return true;
                     }
@@ -147,33 +175,66 @@ namespace OneRoof.Presentation.Furnishings
 
         private void FurnishResidential(float width, float baselineY, bool isWestSide)
         {
-            // Bed on exterior side
-            var bedX = isWestSide ? (-width * 0.5f + 0.65f) : (width * 0.5f - 0.65f);
-            SpawnProp("prop.furniture.bed.v1", new Vector3(bedX, baselineY, 0.40f));
-
-            // Planter near bed
-            var planterX = isWestSide ? (-width * 0.5f + 0.20f) : (width * 0.5f - 0.20f);
-            SpawnProp("prop.decor.planter.v1", new Vector3(planterX, baselineY, 0.42f));
-
-            // Sofa in center-living area
-            if (width >= 2.0f)
+            if (width < 2.0f)
             {
+                // 1x1 Micro Pod (1.5m wide): 1 resident
+                var bedX = isWestSide ? (-width * 0.5f + 0.55f) : (width * 0.5f - 0.55f);
+                SpawnProp("prop.furniture.bed.v1", new Vector3(bedX, baselineY, 0.40f));
+
+                var planterX = isWestSide ? (-width * 0.5f + 0.16f) : (width * 0.5f - 0.16f);
+                SpawnProp("prop.decor.planter.v1", new Vector3(planterX, baselineY, 0.42f));
+            }
+            else if (width < 4.0f)
+            {
+                // 2x2 Studio Apartment (3.0m wide): 2 residents
+                var bedX = isWestSide ? (-width * 0.5f + 0.65f) : (width * 0.5f - 0.65f);
+                SpawnProp("prop.furniture.bed.v1", new Vector3(bedX, baselineY, 0.40f));
+
+                var planterX = isWestSide ? (-width * 0.5f + 0.20f) : (width * 0.5f - 0.20f);
+                SpawnProp("prop.decor.planter.v1", new Vector3(planterX, baselineY, 0.42f));
+
                 var sofaX = isWestSide ? (width * 0.5f - 0.95f) : (-width * 0.5f + 0.95f);
                 SpawnProp("prop.furniture.sofa.v1", new Vector3(sofaX, baselineY, 0.35f));
-            }
 
-            // Bookcase near wall
-            if (width >= 2.5f)
+                if (width >= 2.5f)
+                {
+                    var bookcaseX = isWestSide ? 0.42f : -0.42f;
+                    SpawnProp("prop.furniture.bookcase.v1", new Vector3(bookcaseX, baselineY, 0.46f));
+                }
+
+                if (width >= 3.0f)
+                {
+                    var extraPropId = isWestSide ? "prop.furniture.conversationset.v1" : "prop.furniture.vanitydresser.v1";
+                    var extraX = isWestSide ? (width * 0.5f - 1.45f) : (-width * 0.5f + 1.45f);
+                    SpawnProp(extraPropId, new Vector3(extraX, baselineY, 0.38f));
+                }
+            }
+            else
             {
-                var bookcaseX = isWestSide ? 0.42f : -0.42f;
+                // 3x3 Grand Suite (4.5m wide): 3 residents
+                // Master double bed (residents 0 & 2)
+                var masterBedX = isWestSide ? (-width * 0.5f + 0.75f) : (width * 0.5f - 0.75f);
+                SpawnProp("prop.furniture.bed.v1", new Vector3(masterBedX, baselineY, 0.40f));
+
+                // Secondary twin bed (resident 1)
+                var secondBedX = isWestSide ? (-width * 0.5f + 1.95f) : (width * 0.5f - 1.95f);
+                SpawnProp("prop.furniture.bed.v1", new Vector3(secondBedX, baselineY, 0.40f));
+
+                var planterX = isWestSide ? (-width * 0.5f + 0.18f) : (width * 0.5f - 0.18f);
+                SpawnProp("prop.decor.planter.v1", new Vector3(planterX, baselineY, 0.42f));
+
+                // Living lounge area
+                var sofaX = isWestSide ? (width * 0.5f - 1.25f) : (-width * 0.5f + 1.25f);
+                SpawnProp("prop.furniture.sofa.v1", new Vector3(sofaX, baselineY, 0.35f));
+
+                var tableX = isWestSide ? (width * 0.5f - 1.25f) : (-width * 0.5f + 1.25f);
+                SpawnProp("prop.furniture.table.v1", new Vector3(tableX, baselineY, 0.28f));
+
+                var bookcaseX = isWestSide ? 0.35f : -0.35f;
                 SpawnProp("prop.furniture.bookcase.v1", new Vector3(bookcaseX, baselineY, 0.46f));
-            }
 
-            // Wide apartments get either a lounge conversation set or a vanity dresser
-            if (width >= 3.0f)
-            {
                 var extraPropId = isWestSide ? "prop.furniture.conversationset.v1" : "prop.furniture.vanitydresser.v1";
-                var extraX = isWestSide ? (width * 0.5f - 1.45f) : (-width * 0.5f + 1.45f);
+                var extraX = isWestSide ? (width * 0.5f - 1.85f) : (-width * 0.5f + 1.85f);
                 SpawnProp(extraPropId, new Vector3(extraX, baselineY, 0.38f));
             }
         }

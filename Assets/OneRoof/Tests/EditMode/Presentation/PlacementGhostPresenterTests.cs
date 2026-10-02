@@ -34,5 +34,39 @@ namespace OneRoof.Presentation.Tests.EditMode
             _ghostPresenter.HideGhost();
             Assert.That(_ghostPresenter.IsVisible, Is.False);
         }
+
+        [Test]
+        public void GhostPresenter_TintChangesLeaveSharedPrimitiveUntouched_AndReleaseOwnedMesh()
+        {
+            var unrelated = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            try
+            {
+                var sharedMesh = unrelated.GetComponent<MeshFilter>().sharedMesh;
+                var originalColors = sharedMesh.colors;
+                _ghostPresenter.ShowGhost(Vector3.zero, Vector2.one, isValid: true);
+                var previewMesh = _holder.GetComponentInChildren<MeshFilter>(true).sharedMesh;
+                Assert.That(previewMesh, Is.Not.SameAs(sharedMesh),
+                    "Placement tint must not alter the mesh used by Tower geometry and excavation masks.");
+
+                _ghostPresenter.ShowGhost(Vector3.zero, Vector2.one, isValid: true);
+                Assert.That(previewMesh.colors.Length, Is.EqualTo(4));
+                Assert.That(sharedMesh.colors, Is.EqualTo(originalColors));
+                var validColors = previewMesh.colors;
+                _ghostPresenter.ShowGhost(Vector3.zero, Vector2.one, isValid: false);
+                Assert.That(previewMesh.colors, Is.Not.EqualTo(validColors), "Validity updates the preview tint.");
+                Assert.That(sharedMesh.colors, Is.EqualTo(originalColors));
+                Assert.That(unrelated.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(sharedMesh));
+
+                // EditMode does not invoke MonoBehaviour lifecycle for this unawakened component.
+                typeof(PlacementGhostPresenter).GetMethod("OnDestroy",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(_ghostPresenter, null);
+                Object.DestroyImmediate(_holder);
+                _holder = null;
+                Assert.That(previewMesh == null, Is.True, "The runtime mesh must be released with its owner.");
+                Assert.That(sharedMesh != null, Is.True, "Destroying the preview must preserve Unity's primitive mesh.");
+            }
+            finally { Object.DestroyImmediate(unrelated); }
+        }
     }
 }

@@ -100,5 +100,38 @@ namespace OneRoof.Presentation.Tests.EditMode
                 Object.DestroyImmediate(westRoom);
             }
         }
+
+        [Test]
+        public void WorldMaterial_IsConfiguredForAlphaBlending_WithZeroDepthWrite()
+        {
+            var worldMat = Resources.Load<Material>("Materials/OneRoofWorldMaterial");
+            Assert.That(worldMat, Is.Not.Null);
+            Assert.That(worldMat.renderQueue, Is.EqualTo(3000));
+            Assert.That(worldMat.GetFloat("_SrcBlend"), Is.EqualTo((float)UnityEngine.Rendering.BlendMode.SrcAlpha));
+            Assert.That(worldMat.GetFloat("_DstBlend"), Is.EqualTo((float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
+            Assert.That(worldMat.GetFloat("_ZWrite"), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void RoomBackdropPresenter_AppliesSharedAlphaMaterial_ToAllFixtures()
+        {
+            var worldMat = Resources.Load<Material>("Materials/OneRoofWorldMaterial");
+            var go = new GameObject("AlphaRoomTest");
+            try
+            {
+                var presenter = go.AddComponent<RoomBackdropPresenter>();
+                presenter.Setup("residential:studio", 3.0f, 1.42f, -3f, 0f, 0f, isWestSide: true, sharedMaterial: worldMat);
+
+                Assert.That(presenter.BackdropRenderer.sharedMaterial, Is.EqualTo(worldMat));
+                Assert.That(presenter.DoorRenderer.sharedMaterial, Is.EqualTo(worldMat));
+                Assert.That(presenter.BathroomDoorRenderer.sharedMaterial, Is.EqualTo(worldMat));
+                Assert.That(presenter.WindowRenderer.sharedMaterial, Is.EqualTo(worldMat));
+                Assert.That(presenter.SconceRenderer.sharedMaterial, Is.EqualTo(worldMat));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }

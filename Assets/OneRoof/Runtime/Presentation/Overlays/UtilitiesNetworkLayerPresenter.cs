@@ -337,15 +337,15 @@ namespace OneRoof.Presentation.Overlays
             if (_topology != null && _topology.TryGetFloorSlab(0, out var ground))
                 groundCenter = GridPlacementController.DefaultCellOriginX +
                     (ground.MinX + ground.MaxX + 1) * GridPlacementController.DefaultCellWidth * .5f;
-            var left = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellSize * .5f;
+            var left = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellWidth * .5f;
             var baseline = TowerStructurePresenter.FloorY(0) - .74f;
             var roomCenters = new Dictionary<int, Vector3>();
             if (_overlay.Underground != null)
             {
                 foreach (var room in _overlay.Underground.Rooms)
                     roomCenters[room.Id] = new Vector3(
-                        left + (room.X + room.Width * .5f) * GridPlacementController.UndergroundCellSize,
-                        baseline - (room.Depth + room.Height * .5f) * GridPlacementController.UndergroundCellSize,
+                        left + (room.X + room.Width * .5f) * GridPlacementController.UndergroundCellWidth,
+                        baseline - (room.Depth + room.Height * .5f) * GridPlacementController.UndergroundCellHeight,
                         LayerZ);
             }
 
@@ -399,8 +399,8 @@ namespace OneRoof.Presentation.Overlays
             if (point.Kind == UtilityPathPointKind.UndergroundRoom &&
                 roomCenters.TryGetValue(point.RoomId, out var center))
                 return center;
-            return new Vector3(left + (point.X + .5f) * GridPlacementController.UndergroundCellSize,
-                baseline - (point.Depth + .5f) * GridPlacementController.UndergroundCellSize, LayerZ);
+            return new Vector3(left + (point.X + .5f) * GridPlacementController.UndergroundCellWidth,
+                baseline - (point.Depth + .5f) * GridPlacementController.UndergroundCellHeight, LayerZ);
         }
 
         private void BuildWasteNetwork()

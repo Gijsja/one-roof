@@ -98,7 +98,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             var slabs = new Dictionary<int, CellBounds> { { 0, new CellBounds(0, -14, 17) } };
             _presenter.EnsureExteriorViews(new TowerTopologyProjection(slabs));
             var root = _presenter.Root;
-            var soil = root.Find("Ground Dressing/Foundation Soil");
+            var soil = root.Find("Ground Dressing/Undercity/Foundation Soil");
             var green = root.Find("Ground Dressing/Ground Green Edge");
             var entrance = root.Find("Right Facade/Entrance Glass");
             Assert.That(soil, Is.Not.Null);
@@ -134,14 +134,44 @@ namespace OneRoof.Presentation.Tests.EditMode
             _presenter.EnsureExteriorViews(null, new UndergroundDigProjection(state));
 
             var root = _presenter.Root;
-            Assert.That(root.Find("Ground Dressing/Foundation Soil").localScale.y,
+            Assert.That(root.Find("Ground Dressing/Undercity/Foundation Soil").localScale.y,
                 Is.EqualTo(UndergroundDigState.MaxDepthCells));
-            Assert.That(root.Find("Ground Dressing/Earth Grid 31_11"), Is.Not.Null);
-            Assert.That(root.Find("Ground Dressing/Underground Access Core"), Is.Not.Null);
-            Assert.That(root.Find("Ground Dressing/Underground Shaft 16_0/Left Rail"), Is.Not.Null);
-            Assert.That(root.Find("Ground Dressing/Underground Corridor 17_0/Walkway"), Is.Not.Null);
-            Assert.That(root.Find("Ground Dressing/Underground Room 11/Room Label"), Is.Not.Null);
-            Assert.That(root.Find("Ground Dressing/Underground Room 11/Connection Status"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Continuous Earth Strata"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Access Core"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Shaft 16_0/Left Rail"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Corridor 17_0/Walkway"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Room 11/Room Label"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Room 11/Connection Status"), Is.Not.Null);
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Room 11/Room Label").GetComponent<TextMesh>().text,
+                Is.EqualTo("Workshop"));
+            Assert.That(root.Find("Ground Dressing/Undercity/Underground Room 11/Connection Label").GetComponent<TextMesh>().text,
+                Is.EqualTo("Connected"));
+        }
+
+        [TestCase(UndergroundRoomType.AccessHub, "Access Hub")]
+        [TestCase(UndergroundRoomType.Generator, "Generator")]
+        [TestCase(UndergroundRoomType.OperationsCenter, "Operations Center")]
+        public void UndergroundRoomNamesAreReadable(UndergroundRoomType type, string expected)
+        {
+            Assert.That(BuildingExteriorPresenter.UndergroundRoomDisplayName(type), Is.EqualTo(expected));
+        }
+
+        [TestCase(true, false, 0, "Needs 2 staff; 0 assigned.", "Unstaffed")]
+        [TestCase(true, false, 2, "Waiting for delivered supplies.", "Needs supplies")]
+        [TestCase(true, false, 2, "Operating", "Operating")]
+        [TestCase(false, false, 2, "No connected corridor to the lobby access core.", "No access")]
+        [TestCase(true, true, 2, "Investigator disruption is temporarily stopping this room.", "Disrupted")]
+        public void UndergroundRoomOperationLabelsSeparateReachabilityFromOutput(
+            bool reachable, bool disrupted, int staff, string cause, string expected)
+        {
+            var room = new UndergroundRoomOperationProjection(1, UndergroundRoomType.Generator,
+                18, 1, 3, 2, 4, staff, 2, 10, reachable, disrupted, cause, new int[0]);
+
+            var text = BuildingExteriorPresenter.UndergroundRoomOperationLabel(room);
+
+            Assert.That(text, Does.Contain(expected));
+            Assert.That(text, Does.Contain($"{staff}/2"));
+            if (expected != "Operating") Assert.That(text, Does.Not.Contain("Operating"));
         }
 
         [Test]
@@ -164,13 +194,15 @@ namespace OneRoof.Presentation.Tests.EditMode
                 assignedResidentIds = new[] { 12, 8 }, assignedRoomIds = new[] { 11, 11 }
             });
             _presenter.SyncUndergroundCrew(new UndergroundOperationsProjection(staffed, layout, 0));
-            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 8"), Is.Not.Null);
-            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 12"), Is.Not.Null);
-            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Staff Status")
-                .GetComponent<TextMesh>().text, Does.Contain("2/2 STAFF"));
+            Assert.That(_presenter.Root.Find("Ground Dressing/Undercity/Underground Room 11/Crew World Scale/Underground Crew 8"), Is.Not.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Undercity/Underground Room 11/Crew World Scale/Underground Crew 12"), Is.Not.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Undercity/Underground Room 11/Staff Status")
+                .GetComponent<TextMesh>().text, Does.Contain("2/2"));
 
             _presenter.SyncUndergroundCrew(new UndergroundOperationsProjection(new UndergroundOperationsState(), layout, 0));
-            Assert.That(_presenter.Root.Find("Ground Dressing/Underground Room 11/Underground Crew 8"), Is.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Undercity/Underground Room 11/Crew World Scale/Underground Crew 8"), Is.Null);
+            Assert.That(_presenter.Root.Find("Ground Dressing/Undercity/Underground Room 11/Staff Status")
+                .GetComponent<TextMesh>().text, Does.Contain("Unstaffed"));
         }
 
         [Test]

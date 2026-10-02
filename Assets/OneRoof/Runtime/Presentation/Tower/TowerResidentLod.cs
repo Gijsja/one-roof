@@ -106,7 +106,7 @@ namespace OneRoof.Presentation.Tower
                     resident.Activity == ActivityKind.Working ? OneRoof.Domain.Topology.InteractionPointKind.Work : OneRoof.Domain.Topology.InteractionPointKind.Seat;
                 if (rooms != null && rooms.TryGetInteractionDock(room, kind, resident.SlotInRoom, out var dock)) return dock;
                 return new Vector3(-2.4f + (room.Bounds.MinX + room.Bounds.MaxX + 1) * 0.25f,
-                    TowerStructurePresenter.FloorY(room.Floor) - 0.58f, -0.15f);
+                    TowerStructurePresenter.FloorY(room.Floor) - 0.58f, 0.15f);
             }
             return new Vector3(-2.4f + resident.CellX * 0.5f + 0.25f,
                 TowerStructurePresenter.FloorY(Mathf.Max(0, resident.Floor)) - 0.58f, -0.2f);
@@ -128,7 +128,7 @@ namespace OneRoof.Presentation.Tower
             for (var i = 0; i < snapshot.Residents.Count; i++)
             {
                 var resident = snapshot.Residents[i];
-                if (resident.Status == TransitResidentStatus.Outside || ContainsResidentId(undergroundCrewResidentIds, resident.ResidentId)) continue;
+                if ((!InteriorsVisible && (resident.Status == TransitResidentStatus.InRoom || resident.Status == TransitResidentStatus.Arrived)) || resident.Status == TransitResidentStatus.Outside || (HallwayVisible && resident.Status == TransitResidentStatus.Riding) || ContainsResidentId(undergroundCrewResidentIds, resident.ResidentId)) continue;
                 var selected = resident.ResidentId == InspectedResidentId;
                 if (!close && !selected) continue;
                 var position = _lodViews[resident.ResidentId].transform.parent.position;
@@ -147,6 +147,7 @@ namespace OneRoof.Presentation.Tower
         private void PresentLodResident(TransitResidentProjection resident, Transform transform, NpcSkeletalHierarchy skeleton, float time)
         {
             var renderer = _lodViews[resident.ResidentId];
+            renderer.sortingOrder = resident.Status == TransitResidentStatus.InRoom || resident.Status == TransitResidentStatus.Arrived ? -1 : 1;
             var fallback = renderer.transform.parent;
             if (skeleton != null)
             {

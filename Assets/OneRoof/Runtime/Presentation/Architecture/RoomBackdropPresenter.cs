@@ -10,7 +10,9 @@ namespace OneRoof.Presentation.Architecture
     {
         public SpriteRenderer BackdropRenderer { get; private set; }
         public SpriteRenderer DoorRenderer { get; private set; }
+        public SpriteRenderer BathroomDoorRenderer { get; private set; }
         public SpriteRenderer WindowRenderer { get; private set; }
+        public SpriteRenderer WindowSecondaryRenderer { get; private set; }
         public SpriteRenderer SconceRenderer { get; private set; }
 
         public string RoomTheme { get; private set; }
@@ -26,7 +28,9 @@ namespace OneRoof.Presentation.Architecture
             _interiorAlpha = Mathf.Clamp01(alpha);
             ApplyInteriorAlpha(BackdropRenderer, fadeMaterial);
             ApplyInteriorAlpha(DoorRenderer, fadeMaterial);
+            ApplyInteriorAlpha(BathroomDoorRenderer, fadeMaterial);
             ApplyInteriorAlpha(WindowRenderer, fadeMaterial);
+            ApplyInteriorAlpha(WindowSecondaryRenderer, fadeMaterial);
             ApplyInteriorAlpha(SconceRenderer, fadeMaterial);
         }
 
@@ -65,12 +69,6 @@ namespace OneRoof.Presentation.Architecture
             backdropObj.transform.localPosition = new Vector3(0f, 0f, 0.7f);
 
             BackdropRenderer = backdropObj.AddComponent<SpriteRenderer>();
-            _baseBackdropColor = BackdropRenderer.color;
-            BackdropRenderer.sprite = ArchitecturalFixtureCatalog.GetRoomBackdrop(roomTheme);
-            BackdropRenderer.drawMode = SpriteDrawMode.Sliced;
-            BackdropRenderer.size = new Vector2(Mathf.Max(0.5f, width - 0.04f), height);
-            BackdropRenderer.sortingOrder = -10;
-            if (_sharedMaterial != null) BackdropRenderer.sharedMaterial = _sharedMaterial;
 
             var lowerTheme = (roomTheme ?? "").ToLowerInvariant();
             var isResidential = lowerTheme.Contains("residential") || lowerTheme.Contains("apartment");
@@ -83,9 +81,35 @@ namespace OneRoof.Presentation.Architecture
                                    lowerTheme.Contains("water_pump") ||
                                    lowerTheme.Contains("waste_collection");
 
+            if (isResidential)
+            {
+                // Harmonious palette tints so adjoining apartments don't look like an identical cloned grid
+                var paletteIndex = Mathf.Abs((int)(worldLeft * 3.7f + centerY * 5.3f)) % 6;
+                _baseBackdropColor = paletteIndex switch
+                {
+                    0 => new Color(0.96f, 0.89f, 0.82f), // Warm Terracotta Peach
+                    1 => new Color(0.86f, 0.94f, 0.89f), // Soft Sage Leaf
+                    2 => new Color(0.97f, 0.95f, 0.87f), // Honey Amber Warmth
+                    3 => new Color(0.89f, 0.92f, 0.98f), // Slate Blue Grey
+                    4 => new Color(0.95f, 0.89f, 0.93f), // Dusty Rose Linen
+                    _ => new Color(0.97f, 0.96f, 0.93f)  // Neutral Cream Canvas
+                };
+            }
+            else
+            {
+                _baseBackdropColor = Color.white;
+            }
+
+            BackdropRenderer.color = _baseBackdropColor;
+            BackdropRenderer.sprite = ArchitecturalFixtureCatalog.GetRoomBackdrop(roomTheme);
+            BackdropRenderer.drawMode = SpriteDrawMode.Sliced;
+            BackdropRenderer.size = new Vector2(Mathf.Max(0.5f, width - 0.04f), height);
+            BackdropRenderer.sortingOrder = -10;
+            if (_sharedMaterial != null) BackdropRenderer.sharedMaterial = _sharedMaterial;
+
             var floorBaselineY = -height * 0.5f;
 
-            // 2. Door fixture (interior corridor side, facing elevator shaft)
+            // 2. Door fixtures
             if (isResidential || isOffice)
             {
                 AddDoor(ArchitecturalFixtureCatalog.ApartmentDoor, width, floorBaselineY, isWestSide, Vector3.one);
@@ -99,10 +123,23 @@ namespace OneRoof.Presentation.Architecture
                 AddDoor(ArchitecturalFixtureCatalog.UtilityRollerDoor, width, floorBaselineY, isWestSide, new Vector3(2.2f, 1.9f, 1f));
             }
 
-            // 3. Window fixtures (exterior wall side)
-            if (isResidential && width >= 1.5f)
+            // Loose interior bathroom door for residential units
+            if (isResidential)
             {
-                AddWindow(ArchitecturalFixtureCatalog.ResidentialWindow, width, isWestSide, Vector3.one);
+                AddBathroomDoor(width, floorBaselineY, isWestSide);
+            }
+
+            // 3. Window fixtures (exterior wall side)
+            if (isResidential && width >= 1.4f)
+            {
+                var winScale = width < 2.0f ? new Vector3(0.85f, 0.85f, 1f) : Vector3.one;
+                AddWindow(ArchitecturalFixtureCatalog.ResidentialWindow, width, isWestSide, winScale);
+
+                // Grand 3x3 suites (width >= 4.0m) get a secondary window for the living lounge
+                if (width >= 4.0f)
+                {
+                    AddSecondaryWindow(ArchitecturalFixtureCatalog.ResidentialWindow, width, isWestSide, Vector3.one);
+                }
             }
             else if (isRetail && width >= 2.0f)
             {
@@ -144,20 +181,61 @@ namespace OneRoof.Presentation.Architecture
             if (_sharedMaterial != null) DoorRenderer.sharedMaterial = _sharedMaterial;
         }
 
+        private void AddBathroomDoor(float width, float floorBaselineY, bool isWestSide)
+        {
+            var doorObj = new GameObject("BathroomDoor");
+            doorObj.transform.SetParent(transform, false);
+
+            // Position bathroom door on back wall inside the room
+            // In 1x1: placed between sleeping and corridor entry
+            // In 2x2: placed comfortably between living zone and corridor
+            // In 3x3: placed near corridor/service zone
+            var bathLocalX = width < 2.0f
+                ? (isWestSide ? (width * 0.5f - 0.72f) : (-width * 0.5f + 0.72f))
+                : (width < 4.0f
+                    ? (isWestSide ? (width * 0.5f - 0.95f) : (-width * 0.5f + 0.95f))
+                    : (isWestSide ? (width * 0.5f - 1.25f) : (-width * 0.5f + 1.25f)));
+
+            doorObj.transform.localPosition = new Vector3(bathLocalX, floorBaselineY, 0.46f);
+            doorObj.transform.localScale = new Vector3(0.88f, 0.92f, 1f);
+
+            BathroomDoorRenderer = doorObj.AddComponent<SpriteRenderer>();
+            BathroomDoorRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(ArchitecturalFixtureCatalog.ApartmentDoor);
+            BathroomDoorRenderer.color = new Color(0.82f, 0.80f, 0.76f, _interiorAlpha);
+            BathroomDoorRenderer.sortingOrder = -5;
+            if (_sharedMaterial != null) BathroomDoorRenderer.sharedMaterial = _sharedMaterial;
+        }
+
         private void AddWindow(string fixtureKey, float width, bool isWestSide, Vector3 scale)
         {
             var windowObj = new GameObject("Window");
             windowObj.transform.SetParent(transform, false);
 
             // Window sits on exterior side opposite the door
-            var windowLocalX = isWestSide ? (-width * 0.5f + 0.55f) : (width * 0.5f - 0.55f);
-            windowObj.transform.localPosition = new Vector3(windowLocalX, 0.08f, 0.5f);
+            var offset = width < 2.0f ? 0.45f : 0.60f;
+            var windowLocalX = isWestSide ? (-width * 0.5f + offset) : (width * 0.5f - offset);
+            windowObj.transform.localPosition = new Vector3(windowLocalX, 0.12f, 0.5f);
             windowObj.transform.localScale = scale;
 
             WindowRenderer = windowObj.AddComponent<SpriteRenderer>();
             WindowRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
             WindowRenderer.sortingOrder = -6;
             if (_sharedMaterial != null) WindowRenderer.sharedMaterial = _sharedMaterial;
+        }
+
+        private void AddSecondaryWindow(string fixtureKey, float width, bool isWestSide, Vector3 scale)
+        {
+            var windowObj = new GameObject("WindowSecondary");
+            windowObj.transform.SetParent(transform, false);
+
+            var windowLocalX = isWestSide ? (-width * 0.5f + 2.0f) : (width * 0.5f - 2.0f);
+            windowObj.transform.localPosition = new Vector3(windowLocalX, 0.12f, 0.5f);
+            windowObj.transform.localScale = scale;
+
+            WindowSecondaryRenderer = windowObj.AddComponent<SpriteRenderer>();
+            WindowSecondaryRenderer.sprite = ArchitecturalFixtureCatalog.GetFixture(fixtureKey);
+            WindowSecondaryRenderer.sortingOrder = -6;
+            if (_sharedMaterial != null) WindowSecondaryRenderer.sharedMaterial = _sharedMaterial;
         }
     }
 }

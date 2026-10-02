@@ -44,6 +44,14 @@ The player interacts through a unified mode shell bar (`ModeShellBarController`)
 - **Facade Envelope Lock (`F`)**: Toggles visible presentation between CUTAWAY interior view and OUTSIDE curtain wall envelope, with manual locks taking precedence over camera-driven semantic zoom.
 - **Overview Frame (`Home`)**: Reframes the camera to view the full tower structure.
 
+### Hallway and Elevator Landings
+
+The cutaway shows a continuous foreground hallway tread across each constructed above-ground slab. Room interiors remain visible behind it. Each served shaft floor has a landing for each elevator car; paired door panels retract during the actual opening phase, remain open while loading, and close before departure. Only the landing at the car's current floor opens. The header light pairs amber/green with the physical closed/open doorway.
+
+Each above-ground occupied-use room has a hallway access door aligned with its actual topology entrance, a stable room number above the door, and an open cutaway into its interior. Numbering uses the stable room entity ID so expansion never renumbers existing doors. Diner frontages use a taller open viewing bay. Floor backing draws behind wallpaper and furniture. Opaque hallway frontage walls and window trim are omitted so furniture and indoor Residents remain visible at every cutaway zoom.
+
+Hallway doors, numbers, floor tread and elevator landings fade smoothly when zooming into rooms: fully visible at orthographic size 6 or greater, absent at size 3 or less, with the facade fade also applied. Hallway and landing geometry follow room/floor additions, removals, entrance changes and shaft changes and hide when the facade takes over. Indoor Residents use interior-depth interaction docks and disappear with their bubbles when the facade is at least half opaque. Walking and waiting Residents stand in front of the landing; riders are concealed behind it. This is a presentation of existing circulation, not an explicit hallway construction or routing system. Doors consume immutable elevator phase/timing projections and never drive boarding or simulation state.
+
 ---
 
 ## 3. The Cause-Chain Explanation Contract

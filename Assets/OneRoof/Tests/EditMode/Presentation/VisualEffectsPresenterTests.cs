@@ -94,6 +94,7 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(docked, Is.True);
             Assert.That(position.x, Is.EqualTo(-2.4f + 6.5f * 0.5f).Within(0.001f));
             Assert.That(position.y, Is.EqualTo(TowerStructurePresenter.FloorY(2) - 0.58f).Within(0.001f));
+            Assert.That(position.z, Is.GreaterThan(0f), "Indoor dock must sit behind the hallway entrance.");
         }
     }
 }

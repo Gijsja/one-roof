@@ -132,6 +132,18 @@ namespace OneRoof.Presentation.Population
             s_bubbleSharedMaterial = null;
         }
 
+        private UnityEngine.Rendering.SortingGroup _circulationSorting;
+
+        public void SetIndoorDepth(bool indoors)
+        {
+            if (_circulationSorting == null)
+            {
+                _circulationSorting = GetComponent<UnityEngine.Rendering.SortingGroup>();
+                if (_circulationSorting == null) _circulationSorting = gameObject.AddComponent<UnityEngine.Rendering.SortingGroup>();
+            }
+            _circulationSorting.sortingOrder = indoors ? -1 : 1;
+        }
+
         private void Awake()
         {
             EnsureHierarchy();

@@ -126,9 +126,11 @@ namespace OneRoof.Presentation.Tests.EditMode
             var originalPosition = slab.position;
             var originalScale = slab.localScale;
 
+            slab.GetComponent<MeshRenderer>().sortingOrder = 0;
             slab.GetComponent<MeshRenderer>().SetPropertyBlock(new MaterialPropertyBlock());
             _presenter.EnsureFloorViews(topology);
 
+            Assert.That(slab.GetComponent<MeshRenderer>().sortingOrder, Is.EqualTo(-20));
             Assert.That(slab.position, Is.EqualTo(originalPosition));
             Assert.That(slab.localScale, Is.EqualTo(originalScale));
             var block = new MaterialPropertyBlock();

@@ -376,7 +376,7 @@ namespace OneRoof.Presentation.Tower
                 {
                     var point = matching[Mathf.Abs(slot) % matching.Count];
                     var x = -2.4f + (room.Bounds.MinX + point.LocalCellOffset + 0.5f) * 0.5f;
-                    worldPosition = new Vector3(x, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, -0.2f);
+                    worldPosition = new Vector3(x, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, 0.15f);
                     return true;
                 }
                 if (_furnishings.TryGetValue(room.Id, out var furnishings) && furnishings != null && furnishings.TryGetDockPosition(kind, slot, out worldPosition))

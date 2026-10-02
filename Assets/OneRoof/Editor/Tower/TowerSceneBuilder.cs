@@ -15,6 +15,7 @@ namespace OneRoof.Editor.Tower
     {
         public const string ScenePath = "Assets/Scenes/Tower.unity";
         public const string GroundStartScenePath = "Assets/Scenes/Tower_GroundStart.unity";
+        public const string DiversifiedScenePath = "Assets/Scenes/Tower_Diversified.unity";
 
         static TowerSceneBuilder()
         {
@@ -57,6 +58,22 @@ namespace OneRoof.Editor.Tower
             controller.Initialize();
             EditorSceneManager.SaveScene(scene, GroundStartScenePath);
             Debug.Log($"Successfully rebuilt and saved {GroundStartScenePath}");
+        }
+
+        [MenuItem("One Roof/Build Diversified Tower Scene")]
+        public static void CreateDiversifiedScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var root = new GameObject("Tower World");
+            root.SetActive(false);
+            var controller = root.AddComponent<TowerPlayableController>();
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("_startMode").enumValueIndex = (int)TowerStartMode.DiversifiedTower;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            root.SetActive(true);
+            controller.Initialize();
+            EditorSceneManager.SaveScene(scene, DiversifiedScenePath);
+            Debug.Log($"Successfully built and saved {DiversifiedScenePath}");
         }
     }
 }

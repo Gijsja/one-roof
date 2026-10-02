@@ -30,6 +30,35 @@ namespace OneRoof.Presentation.Tests.EditMode
         }
 
         [Test]
+        public void ConcealedInteriors_HideIndoorViewsAndRestoreThemBehindHallway()
+        {
+            var session = new TowerSimulationSession();
+            var topology = session.TopologyProjection();
+            int roomId = 0;
+            foreach (var room in topology.Rooms.Values)
+                if (room.ContentType.Value.StartsWith("residential:")) { roomId = room.Id.Value; break; }
+            Assert.That(roomId, Is.GreaterThan(0));
+            _presenter.EnsureResidentViews(2);
+            var snapshot = new TowerProjection(1L, 0, 0, 0f,
+                new List<TransitResidentProjection>
+                {
+                    new TransitResidentProjection(100, 0, TransitResidentStatus.InRoom, 0, 0f, roomId, ActivityKind.Idle, 0, 0, "home", ""),
+                    new TransitResidentProjection(101, 0, TransitResidentStatus.Walking, 0, 0f)
+                }, new List<ElevatorProjection>());
+            _presenter.InteriorsVisible = false;
+            _presenter.UpdateResidentPositions(snapshot, topology, 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeSelf, Is.False);
+            Assert.That(_presenter.ResidentViews[1].gameObject.activeSelf, Is.True);
+            _presenter.InteriorsVisible = true;
+            _presenter.UpdateResidentPositions(snapshot, topology, 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeSelf, Is.True);
+            Assert.That(_presenter.ResidentViews[0].transform.position.z, Is.GreaterThan(0f));
+            Assert.That(_presenter.ResidentSkeletons[0].GetComponent<UnityEngine.Rendering.SortingGroup>().sortingOrder, Is.EqualTo(-1));
+            Assert.That(_presenter.ResidentSkeletons[1].GetComponent<UnityEngine.Rendering.SortingGroup>().sortingOrder, Is.EqualTo(1));
+            Assert.That(_presenter.ResidentViews[1].transform.position.z, Is.LessThan(-.18f));
+        }
+
+        [Test]
         public void EnsureResidentViews_CreatesRequestedViewCount()
         {
             _presenter.EnsureResidentViews(10);
@@ -227,6 +256,25 @@ namespace OneRoof.Presentation.Tests.EditMode
             Assert.That(skeletal.MainRenderer.enabled, Is.False);
             Assert.That(skeletal.MainRenderer.sprite, Is.Not.Null);
             Assert.That(skeletal.LimbRenderers[OneRoof.Content.NpcRigDefinition.BoneLegUpperL].enabled, Is.True);
+        }
+
+        [Test]
+        public void Hallway_RidingResidentIsHidden_AndArrivalRestoresView()
+        {
+            var session = new TowerSimulationSession();
+            _presenter.EnsureResidentViews(1);
+            _presenter.HallwayVisible = true;
+            TowerProjection Snapshot(TransitResidentStatus status) => new TowerProjection(1, 0, 0, 0f,
+                new[] { new TransitResidentProjection(7, 2, status, 2) },
+                new[] { new ElevatorProjection(1, 2, 1, 8, new[] { 7 }) });
+            _presenter.UpdateResidentPositions(Snapshot(TransitResidentStatus.Riding), session.TopologyProjection(), 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeSelf, Is.False);
+            _presenter.UpdateResidentPositions(Snapshot(TransitResidentStatus.Arrived), session.TopologyProjection(), 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeSelf, Is.True);
+            _presenter.UpdateResidentPositions(Snapshot(TransitResidentStatus.Riding), session.TopologyProjection(), 0f);
+            _presenter.HallwayVisible = false;
+            _presenter.UpdateResidentPositions(Snapshot(TransitResidentStatus.Riding), session.TopologyProjection(), 0f);
+            Assert.That(_presenter.ResidentViews[0].gameObject.activeSelf, Is.True);
         }
 
         [Test]

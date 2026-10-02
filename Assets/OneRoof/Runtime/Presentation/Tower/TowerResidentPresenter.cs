@@ -19,6 +19,8 @@ namespace OneRoof.Presentation.Tower
     /// </summary>
     public sealed partial class TowerResidentPresenter
     {
+        public bool HallwayVisible { get; set; }
+        public bool InteriorsVisible { get; set; } = true;
         private ResidentPresentationSettings _presentationSettings = new ResidentPresentationSettings();
 
         /// <summary>Captures validated authoring settings before any views are created.</summary>
@@ -304,9 +306,19 @@ namespace OneRoof.Presentation.Tower
                     if (_viewPool == null) residentTransform.gameObject.SetActive(false);
                     continue;
                 }
-                if (_viewPool == null && !residentTransform.gameObject.activeSelf)
+                // Occupants are inside the enclosed car in hallway view. They become
+                // visible again through the simulation's exit/arrival state, never drifting
+                // between landing doors while the car travels.
+                if ((HallwayVisible && resident.Status == TransitResidentStatus.Riding) ||
+                    (!InteriorsVisible && (resident.Status == TransitResidentStatus.InRoom || resident.Status == TransitResidentStatus.Arrived)))
+                {
+                    residentTransform.gameObject.SetActive(false);
+                    continue;
+                }
+                if (!residentTransform.gameObject.activeSelf)
                     residentTransform.gameObject.SetActive(true);
 
+                skeletal?.SetIndoorDepth(resident.Status == TransitResidentStatus.InRoom || resident.Status == TransitResidentStatus.Arrived);
                 switch (resident.Status)
                 {
                     case TransitResidentStatus.InRoom:
@@ -336,7 +348,7 @@ namespace OneRoof.Presentation.Tower
                             var dockKind = resident.Activity == ActivityKind.Sleeping ? InteractionPointKind.Sleep :
                                 resident.Activity == ActivityKind.Working ? InteractionPointKind.Work : InteractionPointKind.Seat;
                             if (roomPresenter == null || !roomPresenter.TryGetInteractionDock(room, dockKind, resident.SlotInRoom, out var dockPosition))
-                                dockPosition = new Vector3(roomX, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, -0.15f);
+                                dockPosition = new Vector3(roomX, TowerStructurePresenter.FloorY(room.Floor) - 0.58f, 0.15f);
                             residentTransform.position = dockPosition;
 
                             var roomCenterX = (worldLeft + worldRight) * 0.5f;
@@ -375,11 +387,16 @@ namespace OneRoof.Presentation.Tower
                         if (walkFloor < 0 || walkFloor >= floorCount) walkFloor = 0;
                         var walkY = TowerStructurePresenter.FloorY(walkFloor) - 0.58f;
                         var walkTarget = new Vector3(walkX, walkY, -0.2f);
-                        // The simulation advances in fixed discrete ticks. Interpolate the
-                        // visible resident toward each new walking projection every frame.
-                        // Editor tests and non-play presentation remain deterministic.
+                        // Walking is horizontal. A hidden rider or a reused pooled view
+                        // can still be positioned on another floor; place it on the new
+                        // landing immediately instead of walking through intervening floors.
                         if (UnityEngine.Application.isPlaying && Time.deltaTime > 0f)
-                            residentTransform.position = Vector3.MoveTowards(residentTransform.position, walkTarget, WalkPresentationSpeed * Time.deltaTime);
+                        {
+                            var previous = residentTransform.position;
+                            var changedFloor = Mathf.Abs(previous.y - walkY) > TowerStructurePresenter.DefaultFloorHeight * 0.5f;
+                            var x = changedFloor ? walkX : Mathf.MoveTowards(previous.x, walkX, WalkPresentationSpeed * Time.deltaTime);
+                            residentTransform.position = new Vector3(x, walkY, walkTarget.z);
+                        }
                         else
                             residentTransform.position = walkTarget;
                         // Face travel direction, latched per resident so pauses keep heading.
@@ -436,11 +453,11 @@ namespace OneRoof.Presentation.Tower
                             // anchoring to it keeps residents inside mid-travel
                             // instead of snapping to the logical floor ahead of it.
                             var carPos = elevatorPresenter.ElevatorViews[elevatorIndex].transform.position;
-                            carAnchor = new Vector3(carPos.x, carPos.y - 0.25f, -0.3f);
+                            carAnchor = new Vector3(carPos.x, carPos.y - 0.25f, HallwayVisible ? -0.10f : -0.3f);
                         }
                         else
                         {
-                            carAnchor = new Vector3(layoutX, TowerStructurePresenter.FloorY(snapshot.Elevators[elevatorIndex].Floor) - 0.25f, -0.3f);
+                            carAnchor = new Vector3(layoutX, TowerStructurePresenter.FloorY(snapshot.Elevators[elevatorIndex].Floor) - 0.25f, HallwayVisible ? -0.10f : -0.3f);
                         }
                         residentTransform.position = new Vector3(carAnchor.x + jitterX, carAnchor.y, carAnchor.z);
                         skeletal?.SetTransitStatus(TransitResidentStatus.Riding);

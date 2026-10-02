@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using OneRoof.Domain.Population;
+using OneRoof.Domain.Transit;
 
 namespace OneRoof.Application.Transit
 {
@@ -68,14 +69,22 @@ namespace OneRoof.Application.Transit
 
     public readonly struct ElevatorProjection
     {
-        public ElevatorProjection(int elevatorId, int floor, int passengerCount, int capacity, IReadOnlyList<int> passengerIds)
+        public ElevatorProjection(int elevatorId, int floor, int passengerCount, int capacity, IReadOnlyList<int> passengerIds,
+            ElevatorCarPhase phase = ElevatorCarPhase.Idle, int timerTicksRemaining = 0, int doorCycleTicks = 0)
         {
             ElevatorId = elevatorId;
             Floor = floor;
             PassengerCount = passengerCount;
             Capacity = capacity;
             PassengerIds = passengerIds ?? System.Array.Empty<int>();
+            Phase = phase;
+            TimerTicksRemaining = timerTicksRemaining;
+            DoorCycleTicks = doorCycleTicks;
         }
+
+        public ElevatorCarPhase Phase { get; }
+        public int TimerTicksRemaining { get; }
+        public int DoorCycleTicks { get; }
 
         public int ElevatorId { get; }
 

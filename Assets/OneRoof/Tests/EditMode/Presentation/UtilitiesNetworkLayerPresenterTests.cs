@@ -213,7 +213,7 @@ namespace OneRoof.Presentation.Tests.EditMode
                 ?.GetComponent<LineRenderer>();
             Assert.That(powerLine, Is.Not.Null);
             Assert.That(powerLine.sharedMaterial, Is.SameAs(_presenter.ActiveLineMaterial));
-            Assert.That(powerLine.GetPosition(0).x, Is.EqualTo(-.9f).Within(.001f));
+            Assert.That(powerLine.GetPosition(0).x, Is.EqualTo(-1.4f + .5f * OneRoof.Presentation.Tower.GridPlacementController.UndergroundCellWidth).Within(.001f));
 
             _presenter.Select(UtilitiesNetworkLayerPresenter.NetworkKind.Water);
             var waterLine = _holder.transform.Find("Utility Network View Layer/Underground_Water_water:cell:16:0:16:1")

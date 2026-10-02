@@ -82,9 +82,19 @@ namespace OneRoof.Application.Tower
 
         public static TowerSimulationSession CreateGoldStandardCity() => new TowerSimulationSession(GoldStandardCityFixture.Create());
 
+        public static TowerSimulationSession CreateDiversifiedTower(int floorCount = OneRoof.Domain.Topology.DiversifiedTowerFixture.DefaultFloorCount, ulong seed = OneRoof.Domain.Topology.DiversifiedTowerFixture.DefaultSeed) =>
+            new TowerSimulationSession(OneRoof.Domain.Topology.DiversifiedTowerFixture.Create(floorCount, seed));
+
         public void ResetToGoldStandardCity()
         {
             _simulation = GoldStandardCityFixture.Create();
+            InvalidateUndergroundUtilityPathCache();
+            BumpVersion(topologyChanged: true);
+        }
+
+        public void ResetToDiversifiedTower(int floorCount = OneRoof.Domain.Topology.DiversifiedTowerFixture.DefaultFloorCount, ulong seed = OneRoof.Domain.Topology.DiversifiedTowerFixture.DefaultSeed)
+        {
+            _simulation = OneRoof.Domain.Topology.DiversifiedTowerFixture.Create(floorCount, seed);
             InvalidateUndergroundUtilityPathCache();
             BumpVersion(topologyChanged: true);
         }
@@ -410,7 +420,7 @@ namespace OneRoof.Application.Tower
                     car.CurrentFloor,
                     car.Passengers.Count,
                     car.Capacity,
-                    passengerIds));
+                    passengerIds, car.Phase, car.TimerTicksRemaining, car.Timing.DoorCycleTicks));
             }
 
             var (bMaxWait, _) = _simulation.GetFloorWaitMetrics(bottleneckFloor);
@@ -561,7 +571,7 @@ namespace OneRoof.Application.Tower
                     car.CurrentFloor,
                     car.Passengers.Count,
                     car.Capacity,
-                    passengerIds));
+                    passengerIds, car.Phase, car.TimerTicksRemaining, car.Timing.DoorCycleTicks));
             }
 
             _cachedTransitProjection = new TowerProjection(

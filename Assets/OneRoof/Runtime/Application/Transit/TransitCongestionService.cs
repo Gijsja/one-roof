@@ -54,7 +54,7 @@ namespace OneRoof.Application.Transit
                     car.CurrentFloor,
                     car.Passengers.Count,
                     car.Capacity,
-                    null)); // congestion service projects queue metrics only, not passenger manifest
+                    null, car.Phase, car.TimerTicksRemaining, car.Timing.DoorCycleTicks)); // congestion service projects queue metrics only, not passenger manifest
             }
 
             return new ElevatorBankCongestionProjection(

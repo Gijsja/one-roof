@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using OneRoof.Application.Transit;
+using OneRoof.Domain.Transit;
 using UnityEngine;
 
 namespace OneRoof.Presentation.Tower
@@ -26,6 +27,240 @@ namespace OneRoof.Presentation.Tower
         private readonly List<MeshRenderer> _elevatorViews = new List<MeshRenderer>();
         private readonly List<GameObject> _shaftObjects = new List<GameObject>();
         private readonly HashSet<GameObject> _authoredObjects = new HashSet<GameObject>();
+
+        private sealed class LandingDoor
+        {
+            public int Floor;
+            public int CarIndex;
+            public GameObject Root;
+            public Transform Left;
+            public Transform Right;
+            public Transform Recess;
+            public Transform Header;
+            public Transform Indicator;
+        }
+        private readonly List<LandingDoor> _landingDoors = new List<LandingDoor>();
+        private int _landingCarCount;
+        private GameObject _landingMeshRoot;
+        private Mesh _landingMesh;
+        private Material _landingMaterial;
+        private MeshRenderer _landingRenderer;
+        private MaterialPropertyBlock _landingProperties;
+        public float LandingDoorsAlpha { get; private set; } = 1f;
+        private Vector3[] _landingVertices;
+        private Color[] _landingColors;
+        private TowerProjection _landingMeshSnapshot;
+        private int _landingMeshMinX;
+        private int _landingMeshMaxX;
+        public Mesh LandingMesh => _landingMesh;
+        private bool _landingDoorsVisible = true;
+        private bool _carVisualsVisible = true;
+        public int LandingDoorCount => _landingDoors.Count;
+
+        public static float DoorOpenFraction(ElevatorProjection elevator)
+        {
+            var remaining = elevator.DoorCycleTicks > 0
+                ? Mathf.Clamp01((float)elevator.TimerTicksRemaining / elevator.DoorCycleTicks) : 0f;
+            switch (elevator.Phase)
+            {
+                case ElevatorCarPhase.DoorsOpening: return 1f - remaining;
+                case ElevatorCarPhase.OpenLoading: return 1f;
+                case ElevatorCarPhase.DoorsClosing: return remaining;
+                default: return 0f;
+            }
+        }
+
+        public void SetLandingDoorsVisible(bool visible)
+        {
+            _landingDoorsVisible = visible;
+            _carVisualsVisible = !visible;
+            // Hallway landings replace the shaft cutaway. Hide complete cabins including
+            // authored dressing so open apertures never reveal a second closed door.
+            for (var i = 0; i < _elevatorViews.Count; i++)
+                if (_elevatorViews[i] != null) _elevatorViews[i].gameObject.SetActive(!visible);
+            if (_landingMeshRoot != null) _landingMeshRoot.SetActive(visible);
+            for (var i = 0; i < _landingDoors.Count; i++)
+                _landingDoors[i].Root.SetActive(visible);
+        }
+
+        public void SetLandingDoorsAlpha(float alpha)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            if (Mathf.Approximately(LandingDoorsAlpha, alpha)) return;
+            LandingDoorsAlpha = alpha;
+            ApplyLandingAlpha();
+        }
+
+        private void ApplyLandingAlpha()
+        {
+            if (_landingRenderer == null) return;
+            _landingProperties.Clear();
+            var tint = new Color(1f, 1f, 1f, LandingDoorsAlpha);
+            _landingProperties.SetColor("_BaseColor", tint);
+            _landingProperties.SetColor("_Color", tint);
+            _landingProperties.SetTexture("_BaseMap", Texture2D.whiteTexture);
+            _landingProperties.SetTexture("_MainTex", Texture2D.whiteTexture);
+            _landingRenderer.SetPropertyBlock(_landingProperties);
+            _landingRenderer.enabled = LandingDoorsAlpha > .001f;
+        }
+
+        private void EnsureLandingDoors(int carCount)
+        {
+            if (_landingCarCount == carCount && _landingDoors.Count == _renderedShaftFloorCount * carCount) return;
+            ClearLandingDoors();
+            _landingCarCount = carCount;
+            for (var floor = _renderedMinFloor; floor <= _renderedMaxFloor; floor++)
+            for (var car = 0; car < carCount; car++)
+            {
+                var root = new GameObject($"Elevator Landing {floor} Car {car}");
+                root.transform.SetParent(_parent, false);
+                var landing = new LandingDoor { Floor = floor, CarIndex = car, Root = root };
+                var back = CreateLandingPart(root.transform, "Landing Recess");
+                back.transform.localScale = new Vector3(1.16f, 0.96f, 1f);
+                // Cover the legacy moving cabin's closed-door dressing when the
+                // landing opens, while staying behind the retracting panels.
+                back.transform.localPosition = new Vector3(0f, 0f, -0.012f);
+                landing.Recess = back;
+                landing.Left = CreateLandingPart(root.transform, "Landing Door Left");
+                landing.Right = CreateLandingPart(root.transform, "Landing Door Right");
+                var header = CreateLandingPart(root.transform, "Landing Header");
+                header.transform.localPosition = new Vector3(0f, 0.5f, -0.01f);
+                header.transform.localScale = new Vector3(1.16f, 0.07f, 1f);
+                landing.Header = header;
+                landing.Indicator = CreateLandingPart(root.transform, "Landing Status Light");
+                landing.Indicator.transform.localPosition = new Vector3(0f, 0.5f, -0.02f);
+                landing.Indicator.transform.localScale = new Vector3(0.18f, 0.04f, 1f);
+                root.SetActive(_landingDoorsVisible);
+                _landingDoors.Add(landing);
+            }
+        }
+
+        private Transform CreateLandingPart(Transform parent, string name)
+        {
+            // Lightweight markers keep per-landing geometry inspectable; rendering is batched.
+            var part = new GameObject(name).transform;
+            part.SetParent(parent, false);
+            return part;
+        }
+
+        private void CreateLandingMesh()
+        {
+            _landingProperties ??= new MaterialPropertyBlock();
+            _landingMeshRoot = new GameObject("Elevator Landing Mesh");
+            _landingMeshRoot.transform.SetParent(_parent, false);
+            var filter = _landingMeshRoot.AddComponent<MeshFilter>();
+            var renderer = _landingMeshRoot.AddComponent<MeshRenderer>();
+            _landingMaterial = new Material(_worldMaterial) { name = "Hallway Landing Fade Material", renderQueue = 3000 };
+            _landingMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            _landingMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            _landingMaterial.SetInt("_ZWrite", 0);
+            renderer.sharedMaterial = _landingMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            _landingRenderer = renderer;
+            ApplyLandingAlpha();
+            _landingMesh = new Mesh { name = "Elevator Landing Geometry" };
+            _landingMesh.MarkDynamic();
+            _landingVertices = new Vector3[_landingDoors.Count * 20];
+            _landingColors = new Color[_landingVertices.Length];
+            var triangles = new int[_landingDoors.Count * 30];
+            var uvs = new Vector2[_landingVertices.Length];
+            for (var q = 0; q < _landingDoors.Count * 5; q++)
+            {
+                var v = q * 4;
+                var t = q * 6;
+                triangles[t] = v; triangles[t + 1] = v + 3; triangles[t + 2] = v + 2;
+                triangles[t + 3] = v; triangles[t + 4] = v + 2; triangles[t + 5] = v + 1;
+                uvs[v] = Vector2.zero; uvs[v + 1] = Vector2.right;
+                uvs[v + 2] = Vector2.one; uvs[v + 3] = Vector2.up;
+            }
+            _landingMesh.indexFormat = _landingVertices.Length > 65534
+                ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            _landingMesh.vertices = _landingVertices;
+            _landingMesh.triangles = triangles;
+            _landingMesh.uv = uvs;
+            filter.sharedMesh = _landingMesh;
+            _landingMeshRoot.SetActive(_landingDoorsVisible);
+        }
+
+        private void WriteLandingQuad(int vertex, Transform marker, Color color)
+        {
+            var matrix = _landingMeshRoot.transform.worldToLocalMatrix * marker.localToWorldMatrix;
+            _landingVertices[vertex] = matrix.MultiplyPoint3x4(new Vector3(-0.5f, -0.5f, 0f));
+            _landingVertices[vertex + 1] = matrix.MultiplyPoint3x4(new Vector3(0.5f, -0.5f, 0f));
+            _landingVertices[vertex + 2] = matrix.MultiplyPoint3x4(new Vector3(0.5f, 0.5f, 0f));
+            _landingVertices[vertex + 3] = matrix.MultiplyPoint3x4(new Vector3(-0.5f, 0.5f, 0f));
+            for (var i = 0; i < 4; i++) _landingColors[vertex + i] = color;
+        }
+
+        private void ClearLandingDoors()
+        {
+            for (var i = 0; i < _landingDoors.Count; i++)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_landingDoors[i].Root);
+                else Object.DestroyImmediate(_landingDoors[i].Root);
+            }
+            _landingDoors.Clear();
+            _landingCarCount = 0;
+            _landingMeshSnapshot = null;
+            if (_landingMeshRoot != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_landingMeshRoot);
+                else Object.DestroyImmediate(_landingMeshRoot);
+            }
+            if (_landingMesh != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_landingMesh);
+                else Object.DestroyImmediate(_landingMesh);
+            }
+            _landingMeshRoot = null;
+            _landingMesh = null;
+            if (_landingMaterial != null)
+            {
+                if (UnityEngine.Application.isPlaying) Object.Destroy(_landingMaterial);
+                else Object.DestroyImmediate(_landingMaterial);
+            }
+            _landingMaterial = null;
+            _landingRenderer = null;
+            _landingVertices = null;
+            _landingColors = null;
+        }
+
+        private void UpdateLandingDoors(TowerProjection snapshot)
+        {
+            EnsureLandingDoors(snapshot.Elevators.Count);
+            if (_landingDoors.Count == 0) return;
+            if (_landingMesh == null) CreateLandingMesh();
+            if (ReferenceEquals(_landingMeshSnapshot, snapshot) && _landingMeshMinX == _shaftMinX && _landingMeshMaxX == _shaftMaxX) return;
+            _landingMeshSnapshot = snapshot;
+            _landingMeshMinX = _shaftMinX;
+            _landingMeshMaxX = _shaftMaxX;
+            for (var i = 0; i < _landingDoors.Count; i++)
+            {
+                var landing = _landingDoors[i];
+                var elevator = snapshot.Elevators[landing.CarIndex];
+                CalculateCarLayoutInCurrentShaft(landing.CarIndex, snapshot.Elevators.Count,
+                    elevator.Capacity >= 12, out var x, out var width);
+                landing.Root.transform.position = new Vector3(x, TowerStructurePresenter.FloorY(landing.Floor) - 0.17f, -0.16f);
+                landing.Root.transform.localScale = new Vector3(width, 1f, 1f);
+                var open = elevator.Floor == landing.Floor ? DoorOpenFraction(elevator) : 0f;
+                // Panels retract into jambs rather than moving across neighboring landings.
+                var panelWidth = 0.485f * (1f - open);
+                landing.Left.localScale = landing.Right.localScale = new Vector3(panelWidth, 0.9f, 1f);
+                landing.Left.localPosition = new Vector3(-0.49f + panelWidth * 0.5f, 0f, -0.015f);
+                landing.Right.localPosition = new Vector3(0.49f - panelWidth * 0.5f, 0f, -0.015f);
+                var vertex = i * 20;
+                WriteLandingQuad(vertex, landing.Recess, new Color(0.035f, 0.07f, 0.08f));
+                WriteLandingQuad(vertex + 4, landing.Left, new Color(0.44f, 0.55f, 0.56f));
+                WriteLandingQuad(vertex + 8, landing.Right, new Color(0.35f, 0.47f, 0.49f));
+                WriteLandingQuad(vertex + 12, landing.Header, new Color(0.67f, 0.68f, 0.57f));
+                WriteLandingQuad(vertex + 16, landing.Indicator,
+                    open > 0f ? new Color(0.34f, 0.9f, 0.62f) : new Color(0.88f, 0.64f, 0.26f));
+            }
+            _landingMesh.vertices = _landingVertices;
+            _landingMesh.colors = _landingColors;
+            _landingMesh.RecalculateBounds();
+        }
 
         public IReadOnlyList<MeshRenderer> ElevatorViews => _elevatorViews;
         public int RenderedShaftFloorCount => _renderedShaftFloorCount;
@@ -191,6 +426,7 @@ namespace OneRoof.Presentation.Tower
                 SetRendererColor(_shaftPitBuffer.GetComponent<MeshRenderer>(), pitBufferColor);
             }
 
+            if (_renderedMinFloor != minFloor || _renderedMaxFloor != maxFloor) ClearLandingDoors();
             _renderedMinFloor = minFloor;
             _renderedMaxFloor = maxFloor;
             _renderedShaftFloorCount = maxFloor - minFloor + 1;
@@ -203,6 +439,7 @@ namespace OneRoof.Presentation.Tower
                 var index = _elevatorViews.Count;
                 CalculateCarLayoutInCurrentShaft(index, targetCount, false, out var x, out var carWidth);
                 var view = CreateQuadRenderer($"Elevator Car {index}", new Color(0.13f, 0.31f, 0.29f), new Vector3(x, TowerStructurePresenter.FloorY(0), -0.12f), new Vector2(carWidth, 1.06f));
+                view.gameObject.SetActive(_carVisualsVisible);
                 _elevatorViews.Add(view);
             }
 
@@ -287,6 +524,7 @@ namespace OneRoof.Presentation.Tower
         public void UpdateElevatorPositions(TowerProjection snapshot)
         {
             if (snapshot == null) return;
+            UpdateLandingDoors(snapshot);
 
             for (var i = 0; i < snapshot.Elevators.Count; i++)
             {
@@ -322,6 +560,7 @@ namespace OneRoof.Presentation.Tower
 
         public void Clear()
         {
+            ClearLandingDoors();
             for (var i = 0; i < _shaftObjects.Count; i++)
             {
                 var go = _shaftObjects[i];

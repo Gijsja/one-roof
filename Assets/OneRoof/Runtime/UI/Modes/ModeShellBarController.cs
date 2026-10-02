@@ -214,9 +214,15 @@ namespace OneRoof.UI.Modes
                 GUILayout.Height(paletteRect.height - 70f));
             GUILayout.Label("SPACE & USE", StewardTheme.Label(10, StewardTheme.Mint, true));
 
-            // Row 1: Zoning & Structure
+            // Row 1: Residential Zones
             GUILayout.BeginHorizontal();
+            DrawToolButton("Micro Pod\n$0.8k (3c)", "residential:micro", projection.SelectedBuildTool == "residential:micro");
             DrawToolButton("Studio Apt\n$1.5k (6c)", "residential:apartment", projection.SelectedBuildTool == "residential:apartment");
+            DrawToolButton("Grand Suite\n$2.3k (9c)", "residential:suite", projection.SelectedBuildTool == "residential:suite");
+            GUILayout.EndHorizontal();
+
+            // Row 2: Commercial & Structure
+            GUILayout.BeginHorizontal();
             DrawToolButton("Office\n$2.8k (8c)", "commercial:office", projection.SelectedBuildTool == "commercial:office");
             DrawToolButton("Diner\n$3.5k (10c)", "commercial:diner", projection.SelectedBuildTool == "commercial:diner");
             DrawToolButton("New Floor\n$3.2k (32c)", "floor:slab", projection.SelectedBuildTool == "floor:slab");
@@ -224,7 +230,7 @@ namespace OneRoof.UI.Modes
 
             GUILayout.Space(2);
             GUILayout.Label("UNDERGROUND EARTH", StewardTheme.Label(10, StewardTheme.Mint, true));
-            GUILayout.Label("Dig → floor → link corridors → zone rooms. Press U to frame the undercity.", StewardTheme.Label(10, StewardTheme.Muted));
+            GUILayout.Label("1 Dig → 2 Floor → 3 Access core + corridors → 4 Zone. U frames the undercity.", StewardTheme.Label(10, StewardTheme.Muted));
             GUILayout.BeginHorizontal();
             DrawToolButton("Dig 1×1", "underground:dig_1", projection.SelectedBuildTool == "underground:dig_1");
             DrawToolButton("Dig 2×2", "underground:dig_2", projection.SelectedBuildTool == "underground:dig_2");
@@ -244,7 +250,7 @@ namespace OneRoof.UI.Modes
             GUILayout.EndHorizontal();
 
             GUILayout.Space(2);
-            GUILayout.Label("UNDERCITY ROOMS · 3×2 m", StewardTheme.Label(10, StewardTheme.Mint, true));
+            GUILayout.Label("UNDERCITY ROOMS · CLICK 3×2 m / DRAG TO SIZE", StewardTheme.Label(10, StewardTheme.Mint, true));
             DrawUndergroundRoomRow("Access Hub", "Supply Depot", "Generator", "Workshop", projection);
             DrawUndergroundRoomRow("Operations Center", "Research Lab", "Cover Office", "Security Post", projection);
             DrawUndergroundRoomRow("Staff Commons", "Infirmary", "Vault", "Training Room", projection);
@@ -420,15 +426,18 @@ namespace OneRoof.UI.Modes
             {
                 if (!string.IsNullOrEmpty(projection.SelectedBuildTool))
                 {
-                    var isUndergroundBrush = projection.SelectedBuildTool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase) ||
-                        projection.SelectedBuildTool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase) ||
-                        projection.SelectedBuildTool.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase);
-                    var isUndergroundRoom = projection.SelectedBuildTool.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase);
-                    var instruction = isUndergroundBrush
-                        ? "Click or drag to dig/build · Right-click to cancel"
-                        : isUndergroundRoom
-                            ? "Drag to size room, release to zone · Right-click to cancel"
-                            : "Click to place · Right-click to cancel";
+                    var tool = projection.SelectedBuildTool;
+                    var instruction = tool.StartsWith("underground:dig_", StringComparison.OrdinalIgnoreCase)
+                        ? "1 Dig · Click or drag · Right-click to cancel"
+                        : tool.StartsWith("underground:floor_", StringComparison.OrdinalIgnoreCase)
+                            ? "2 Floor · Paint excavated cells · Right-click to cancel"
+                            : tool.Equals("underground:core", StringComparison.OrdinalIgnoreCase)
+                                ? "3 Connect · Floored lobby column · Right-click to cancel"
+                                : tool.StartsWith("underground:corridor_", StringComparison.OrdinalIgnoreCase)
+                                    ? "3 Connect · Paint from access core · Right-click to cancel"
+                                    : tool.StartsWith("underground:room_", StringComparison.OrdinalIgnoreCase)
+                                        ? "4 Zone · Drag to size room, release to zone · Right-click to cancel"
+                                        : "Click to place · Right-click to cancel";
                     statusText += $"  /  {ReadableName(projection.SelectedBuildTool)}  /  {instruction}";
                 }
                 else

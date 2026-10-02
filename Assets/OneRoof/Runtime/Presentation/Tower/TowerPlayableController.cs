@@ -24,7 +24,8 @@ namespace OneRoof.Presentation.Tower
     {
         StandardFiveFloor = 0,
         GroundFloorStart = 1,
-        GoldStandardCity = 2
+        GoldStandardCity = 2,
+        DiversifiedTower = 3
     }
 
     /// <summary>Presentation coordinator routing projection snapshots to four deep presenters.</summary>
@@ -71,6 +72,7 @@ namespace OneRoof.Presentation.Tower
 
         private readonly TowerStructurePresenter _structure = new TowerStructurePresenter();
         private readonly FloorDeckPresenter _floorDecks = new FloorDeckPresenter();
+        private readonly HallwayPresenter _hallways = new HallwayPresenter();
         private readonly BuildingExteriorPresenter _exterior = new BuildingExteriorPresenter();
         private readonly ElevatorBankPresenter _elevator = new ElevatorBankPresenter();
         private readonly RoomPresenter _room = new RoomPresenter();
@@ -93,6 +95,7 @@ namespace OneRoof.Presentation.Tower
         public InspectSelectionController InspectSelection => _inspectSelection; public InspectOutlinePresenter InspectOutline => _inspectOutline;
         public TowerStructurePresenter StructurePresenter => _structure; public FloorDeckPresenter FloorDeckPresenter => _floorDecks; public BuildingExteriorPresenter ExteriorPresenter => _exterior; public ElevatorBankPresenter ElevatorPresenter => _elevator;
         public RoomPresenter RoomPresenter => _room; public TowerResidentPresenter ResidentPresenter => _resident;
+        public HallwayPresenter HallwayPresenter => _hallways;
         public TowerAtmospherePresenter AtmospherePresenter => _atmosphere;
         public PixelRainPresenter RainPresenter => _pixelRain;
         private MonthlyWeatherCycle _weatherCycle = new MonthlyWeatherCycle();
@@ -108,6 +111,7 @@ namespace OneRoof.Presentation.Tower
         public TowerStartMode StartMode => _startMode;
         public bool IsGoldStandardCity => _startMode == TowerStartMode.GoldStandardCity;
         public bool IsGroundStart => _startMode == TowerStartMode.GroundFloorStart;
+        public bool IsDiversifiedTower => _startMode == TowerStartMode.DiversifiedTower;
         public bool IsPaused => _isPaused; public static float FloorY(int floor) => TowerStructurePresenter.FloorY(floor);
         public ManagementOnboarding Onboarding => _onboarding;
 
@@ -116,13 +120,14 @@ namespace OneRoof.Presentation.Tower
             if (_sim != null) return;
             var presentation = (_residentPresentation ?? new ResidentPresentationSettings()).ValidatedCopy();
             _sim = IsGoldStandardCity ? TowerSimulationSession.CreateGoldStandardCity() :
+                IsDiversifiedTower ? TowerSimulationSession.CreateDiversifiedTower() :
                 IsGroundStart ? TowerSimulationSession.CreateGroundFloorStart() : new TowerSimulationSession();
             // Seed weather from world hash for determinism per save
             var worldSeed = IsGoldStandardCity ? OneRoof.Domain.Topology.GoldStandardCityFixture.Seed : (ulong)(uint)_sim.GetHashCode();
             if (worldSeed == 0) worldSeed = 0xDEADBEEFCAFEUL;
             _weatherCycle = new MonthlyWeatherCycle(worldSeed);
             _lastWeatherSampleTick = -1; // force re-sample on first frame
-            if (!IsGroundStart && !IsGoldStandardCity) SeedMorningRush();
+            if (!IsGroundStart && !IsGoldStandardCity && !IsDiversifiedTower) SeedMorningRush();
             _mode = new ModeShellSession();
             _mode.ConfigureInputBlocker(() => CaretakerInputBlocked);
             _dataOverlays = new TowerDataOverlays(_sim); _predictor = new ElevatorPlacementPredictor();
@@ -336,6 +341,7 @@ namespace OneRoof.Presentation.Tower
                     break;
                 }
             }
+            _hallways.EnsureHallways(topo);
             _elevator.EnsureShaftViews(minFloor, maxFloor, shaftMinX, shaftMaxX); _structure.EnsureFloorViews(topo); _exterior.EnsureExteriorViews(topo, _sim?.UndergroundProjection()); _room.EnsureRoomViews(topo);
             _lastUndergroundCrewVersion = -1;
             if (!IsGoldStandardCity && topo != null && topo.TryGetFloorSlab(0, out var ground)) _outside?.SyncGround(ground, fl);
@@ -466,6 +472,7 @@ namespace OneRoof.Presentation.Tower
         private void CreateWorldGeometry()
         {
             ClearWorldGeometry();
+            _hallways.Initialize(transform, _worldMat, _colorBlock);
             var camera = UpdateCamera(resetView: true);
             _pixelRain?.Initialize(camera);
             SyncPresenterGeometry();
@@ -477,7 +484,7 @@ namespace OneRoof.Presentation.Tower
         }
         private Camera UpdateCamera(bool resetView = false) =>
             TowerCameraController.EnsureTowerCamera(_sim?.FloorCount ?? InitialFloorCount, _gridPlacement, resetView);
-        private void ClearWorldGeometry() { _structure.Clear(); _floorDecks?.Clear(); _exterior.Clear(); _pixelRain?.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
+        private void ClearWorldGeometry() { _structure.Clear(); _floorDecks?.Clear(); _hallways.Clear(); _exterior.Clear(); _pixelRain?.Clear(); _outside?.Clear(); _elevator.Clear(); _room.Clear(); _resident.Clear(); _atmosphere?.Clear(); }
         public void CycleWeatherOverride()
         {
             _weatherOverride++;
@@ -532,6 +539,9 @@ namespace OneRoof.Presentation.Tower
             _pixelRain?.SetWeather(_currentWeather);
         }
 
+        public static float EvaluateHallwayAlpha(float orthographicSize, float facadeAlpha) =>
+            Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(3f, 6f, orthographicSize)) * (1f - Mathf.Clamp01(facadeAlpha));
+
         private void RenderVisualSnapshot(bool tickAdvanced)
         {
             var projection = _sim.Projection();
@@ -547,6 +557,15 @@ namespace OneRoof.Presentation.Tower
             if (_modeBar != null) _modeBar.IsFacadeVisible = _exterior.FacadeEnvelopeAlpha >= 0.5f;
             _room.SetClutterAlpha(1f - _exterior.FacadeEnvelopeAlpha);
             _floorDecks.SetInteriorDecksVisible(_exterior.FacadeEnvelopeAlpha < 0.999f);
+            var hallwayVisible = _exterior.FacadeEnvelopeAlpha < 0.999f;
+            var hallwayAlpha = EvaluateHallwayAlpha(camera != null && camera.orthographic ? camera.orthographicSize : 6f,
+                _exterior.FacadeEnvelopeAlpha);
+            _hallways.SetVisible(hallwayVisible);
+            _hallways.SetWallAlpha(hallwayAlpha);
+            _elevator.SetLandingDoorsVisible(hallwayVisible);
+            _elevator.SetLandingDoorsAlpha(hallwayAlpha);
+            _resident.HallwayVisible = hallwayVisible;
+            _resident.InteriorsVisible = _exterior.FacadeEnvelopeAlpha < 0.5f;
             if (!mode.SelectedEntityId.HasValue) _resident.InspectedResidentId = null;
             if (tickAdvanced)
             {

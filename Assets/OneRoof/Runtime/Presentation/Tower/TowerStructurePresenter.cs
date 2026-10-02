@@ -96,6 +96,9 @@ namespace OneRoof.Presentation.Tower
 
                 // Main floor slab background
                 var slabRenderer = CreateQuad($"Floor Slab {floor}", floorColor, new Vector3(centerX, y, 1f), new Vector2(width, 1.55f));
+                // Shared world materials blend without depth writes; sort the backing
+                // behind wallpaper (-10) and furnishings (-2), not over them.
+                slabRenderer.sortingOrder = -20;
                 slabRenderer.gameObject.AddComponent<VisualEffectsPresenter>().BeginConstruction();
 
                 // Split the floor edge around the actual shaft footprint so widening keeps the chute open.
@@ -277,6 +280,7 @@ namespace OneRoof.Presentation.Tower
             var child = _parent != null ? _parent.Find(name) : null;
             var renderer = child != null ? child.GetComponent<MeshRenderer>() : null;
             if (renderer == null || _worldMaterial == null) return;
+            if (name.StartsWith("Floor Slab ", System.StringComparison.Ordinal)) renderer.sortingOrder = -20;
 
             if (_colorBlock == null) _colorBlock = new MaterialPropertyBlock();
             _colorBlock.Clear();

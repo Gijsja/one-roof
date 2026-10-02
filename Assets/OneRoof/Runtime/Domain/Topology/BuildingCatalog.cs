@@ -10,7 +10,9 @@ namespace OneRoof.Domain.Topology
     /// </summary>
     public static class BuildingCatalog
     {
+        public static readonly BuildingRoomDefinition MicroPod = new BuildingRoomDefinition("residential:micro", 3, 1);
         public static readonly BuildingRoomDefinition Apartment = new BuildingRoomDefinition("residential:apartment", 6, 5);
+        public static readonly BuildingRoomDefinition Suite = new BuildingRoomDefinition("residential:suite", 9, 3);
         public static readonly BuildingRoomDefinition Office = new BuildingRoomDefinition("commercial:office", 8, 8);
         public static readonly BuildingRoomDefinition Diner = new BuildingRoomDefinition("commercial:diner", 10, 5);
         public static readonly BuildingRoomDefinition RetailShop = new BuildingRoomDefinition("commercial:retail", 6, 6);
@@ -28,7 +30,9 @@ namespace OneRoof.Domain.Topology
 
         private static readonly BuildingRoomDefinition[] RoomDefinitions =
         {
+            MicroPod,
             Apartment,
+            Suite,
             Office,
             Diner,
             RetailShop,

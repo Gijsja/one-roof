@@ -101,17 +101,17 @@ namespace OneRoof.Presentation.Tower
             if (topology.TryGetFloorSlab(0, out var slab))
                 groundCenter = GridPlacementController.DefaultCellOriginX +
                     (slab.MinX + slab.MaxX + 1) * GridPlacementController.DefaultCellWidth * .5f;
-            var left = groundCenter - UndergroundDigState.GridWidthCells * .5f;
+            var left = groundCenter - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellWidth * .5f;
             var baseline = TowerStructurePresenter.FloorY(0) - .74f;
             var outsideX = GridPlacementController.DefaultCellOriginX + 20 * GridPlacementController.DefaultCellWidth;
             var targetX = state.Phase == InvestigatorPhase.Street ||
                           (state.Phase == InvestigatorPhase.Return && state.InvestigatorDepth < 0)
                 ? outsideX : state.Phase == InvestigatorPhase.Lobby ? outsideX - 1.1f
-                : left + state.InvestigatorX + .5f;
+                : left + (state.InvestigatorX + .5f) * GridPlacementController.UndergroundCellWidth;
             var targetY = state.Phase == InvestigatorPhase.Street || state.Phase == InvestigatorPhase.Lobby ||
                           (state.Phase == InvestigatorPhase.Return && state.InvestigatorDepth < 0)
                 ? TowerStructurePresenter.FloorY(0) - .35f
-                : baseline - (Mathf.Max(0, state.InvestigatorDepth) + .5f);
+                : baseline - (Mathf.Max(0, state.InvestigatorDepth) + 1f) * GridPlacementController.UndergroundCellHeight + .14f;
             var target = new Vector3(targetX, targetY, -.22f);
             if (_investigator.transform.position == Vector3.zero) _investigator.transform.position = target;
             else _investigator.transform.position = Vector3.MoveTowards(_investigator.transform.position,

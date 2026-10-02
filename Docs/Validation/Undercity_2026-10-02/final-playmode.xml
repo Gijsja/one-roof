@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="21" result="Passed" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.9521905">
+  <test-suite type="TestSuite" id="1041" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.952191" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1034" name="OneRoof.Tests.PlayMode.dll" fullname="/home/geisha/Vibecode/UnityAI/one-roof/Library/ScriptAssemblies/OneRoof.Tests.PlayMode.dll" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.920817" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0">
+      <properties>
+        <property name="_PID" value="43236" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1035" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.913209" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1036" name="Tests" fullname="OneRoof.Tests" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.912217" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1037" name="PlayMode" fullname="OneRoof.Tests.PlayMode" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:47:03Z" duration="33.908951" total="21" passed="20" failed="0" inconclusive="0" skipped="1" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="CaretakerCrisisPlayModeTests" fullname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests" classname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:46:34Z" duration="5.208282" total="3" passed="2" failed="0" inconclusive="0" skipped="1" asserts="0">
+              <properties />
+              <test-case id="1002" name="GoldenTower_LobbyContactAndPracticeRestoreManagementAndCamera" fullname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests.GoldenTower_LobbyContactAndPracticeRestoreManagementAndCamera" methodname="GoldenTower_LobbyContactAndPracticeRestoreManagementAndCamera" classname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests" runstate="Runnable" seed="31604611" result="Passed" start-time="2026-10-02 06:46:29Z" end-time="2026-10-02 06:46:32Z" duration="2.746386" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1004" name="GoldenTower_NavigationWeatherAndModalInputsStayExclusive" fullname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests.GoldenTower_NavigationWeatherAndModalInputsStayExclusive" methodname="GoldenTower_NavigationWeatherAndModalInputsStayExclusive" classname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests" runstate="Runnable" seed="1973446542" result="Passed" start-time="2026-10-02 06:46:32Z" end-time="2026-10-02 06:46:34Z" duration="2.433795" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1003" name="GoldenTower_PracticeCapturesAndPerformanceDiagnostics" fullname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests.GoldenTower_PracticeCapturesAndPerformanceDiagnostics" methodname="GoldenTower_PracticeCapturesAndPerformanceDiagnostics" classname="OneRoof.Tests.PlayMode.CaretakerCrisisPlayModeTests" runstate="Explicit" seed="2115841123" result="Skipped" label="Explicit" start-time="2026-10-02 06:46:34Z" end-time="2026-10-02 06:46:34Z" duration="0.000327" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="_SKIPREASON" value="Optional graphical captures and timing diagnostics." />
+                  <property name="Category" value="VisualCapture" />
+                </properties>
+                <reason>
+                  <message><![CDATA[Optional graphical captures and timing diagnostics.]]></message>
+                </reason>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1008" name="GoldenExpansionPlayModeTests" fullname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests" classname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-02 06:46:34Z" end-time="2026-10-02 06:46:35Z" duration="1.231827" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1009" name="BuildMode_FloorSlabPreviewAndConfirmation_ExtendsTheRenderedTower" fullname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests.BuildMode_FloorSlabPreviewAndConfirmation_ExtendsTheRenderedTower" methodname="BuildMode_FloorSlabPreviewAndConfirmation_ExtendsTheRenderedTower" classname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests" runstate="Runnable" seed="2031956533" result="Passed" start-time="2026-10-02 06:46:34Z" end-time="2026-10-02 06:46:34Z" duration="0.275955" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1010" name="GoldenExpansionPlayMode_FullLifecycle_ExpandsTowerAndIntervenes" fullname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests.GoldenExpansionPlayMode_FullLifecycle_ExpandsTowerAndIntervenes" methodname="GoldenExpansionPlayMode_FullLifecycle_ExpandsTowerAndIntervenes" classname="OneRoof.Tests.PlayMode.GoldenExpansionPlayModeTests" runstate="Runnable" seed="700646354" result="Passed" start-time="2026-10-02 06:46:34Z" end-time="2026-10-02 06:46:35Z" duration="0.954684" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1011" name="GoldenFirstPlayablePlayModeTests" fullname="OneRoof.Tests.PlayMode.GoldenFirstPlayablePlayModeTests" classname="OneRoof.Tests.PlayMode.GoldenFirstPlayablePlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:35Z" end-time="2026-10-02 06:46:35Z" duration="0.096313" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1012" name="GoldenFirstPlayable_CapacityIntervention_DeliversResidentsToTheirWorkplace" fullname="OneRoof.Tests.PlayMode.GoldenFirstPlayablePlayModeTests.GoldenFirstPlayable_CapacityIntervention_DeliversResidentsToTheirWorkplace" methodname="GoldenFirstPlayable_CapacityIntervention_DeliversResidentsToTheirWorkplace" classname="OneRoof.Tests.PlayMode.GoldenFirstPlayablePlayModeTests" runstate="Runnable" seed="1926963139" result="Passed" start-time="2026-10-02 06:46:35Z" end-time="2026-10-02 06:46:35Z" duration="0.095134" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1005" name="GoldStandardPlaygroundTests" fullname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests" classname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-02 06:46:35Z" end-time="2026-10-02 06:46:46Z" duration="10.884690" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1006" name="AuthoredScene_FacadeToggleAndLodRemainConnectedAcrossZoomLevels" fullname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests.AuthoredScene_FacadeToggleAndLodRemainConnectedAcrossZoomLevels" methodname="AuthoredScene_FacadeToggleAndLodRemainConnectedAcrossZoomLevels" classname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests" runstate="Runnable" seed="1308032125" result="Passed" start-time="2026-10-02 06:46:35Z" end-time="2026-10-02 06:46:41Z" duration="5.118631" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1007" name="AuthoredScene_StartsFilledResetsAndRendersTheLivingCity" fullname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests.AuthoredScene_StartsFilledResetsAndRendersTheLivingCity" methodname="AuthoredScene_StartsFilledResetsAndRendersTheLivingCity" classname="OneRoof.Tests.PlayMode.GoldStandardPlaygroundTests" runstate="Runnable" seed="1304896837" result="Passed" start-time="2026-10-02 06:46:41Z" end-time="2026-10-02 06:46:46Z" duration="5.764752" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+Can not play a disabled audio source
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1013" name="M9ManagementOnboardingPlayModeTests" fullname="OneRoof.Tests.PlayMode.M9ManagementOnboardingPlayModeTests" classname="OneRoof.Tests.PlayMode.M9ManagementOnboardingPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:46Z" end-time="2026-10-02 06:46:48Z" duration="1.248415" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1014" name="FirstManagementLessonFollowsActualTowerActions" fullname="OneRoof.Tests.PlayMode.M9ManagementOnboardingPlayModeTests.FirstManagementLessonFollowsActualTowerActions" methodname="FirstManagementLessonFollowsActualTowerActions" classname="OneRoof.Tests.PlayMode.M9ManagementOnboardingPlayModeTests" runstate="Runnable" seed="1606338353" result="Passed" start-time="2026-10-02 06:46:46Z" end-time="2026-10-02 06:46:48Z" duration="1.246322" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1015" name="OutsideCityPlayModeTests" fullname="OneRoof.Tests.PlayMode.OutsideCityPlayModeTests" classname="OneRoof.Tests.PlayMode.OutsideCityPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:48Z" duration="0.288141" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1016" name="TowerControllerCreatesParallaxCityWithoutBlockingInput" fullname="OneRoof.Tests.PlayMode.OutsideCityPlayModeTests.TowerControllerCreatesParallaxCityWithoutBlockingInput" methodname="TowerControllerCreatesParallaxCityWithoutBlockingInput" classname="OneRoof.Tests.PlayMode.OutsideCityPlayModeTests" runstate="Runnable" seed="34324795" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:48Z" duration="0.286678" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1017" name="PlayModeTestRunnerSmokeTests" fullname="OneRoof.Tests.PlayMode.PlayModeTestRunnerSmokeTests" classname="OneRoof.Tests.PlayMode.PlayModeTestRunnerSmokeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:48Z" duration="0.002516" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1018" name="PlayModeTestRunnerCanAdvanceOneFrame" fullname="OneRoof.Tests.PlayMode.PlayModeTestRunnerSmokeTests.PlayModeTestRunnerCanAdvanceOneFrame" methodname="PlayModeTestRunnerCanAdvanceOneFrame" classname="OneRoof.Tests.PlayMode.PlayModeTestRunnerSmokeTests" runstate="Runnable" seed="603428497" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:48Z" duration="0.001428" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1019" name="ResidentialFurnishingVisualCapturePlayModeTests" fullname="OneRoof.Tests.PlayMode.ResidentialFurnishingVisualCapturePlayModeTests" classname="OneRoof.Tests.PlayMode.ResidentialFurnishingVisualCapturePlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:50Z" duration="2.316829" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1020" name="GoldStandard30_CaptureResidentialEmptyAndFurnishedCutaways" fullname="OneRoof.Tests.PlayMode.ResidentialFurnishingVisualCapturePlayModeTests.GoldStandard30_CaptureResidentialEmptyAndFurnishedCutaways" methodname="GoldStandard30_CaptureResidentialEmptyAndFurnishedCutaways" classname="OneRoof.Tests.PlayMode.ResidentialFurnishingVisualCapturePlayModeTests" runstate="Runnable" seed="800103084" result="Passed" start-time="2026-10-02 06:46:48Z" end-time="2026-10-02 06:46:50Z" duration="2.315845" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Captured residential overview to: /home/geisha/.gemini/antigravity/brain/209c71ff-acf1-4c4b-8713-320ad2c07a9d/golden30_cutaway_residential_overview.png
+Captured close-up comparison to: /home/geisha/.gemini/antigravity/brain/209c71ff-acf1-4c4b-8713-320ad2c07a9d/golden30_empty_vs_furnished_close.png
+Captured furnished room detail to: /home/geisha/.gemini/antigravity/brain/209c71ff-acf1-4c4b-8713-320ad2c07a9d/golden30_furnished_room_detail.png
+Captured empty room detail to: /home/geisha/.gemini/antigravity/brain/209c71ff-acf1-4c4b-8713-320ad2c07a9d/golden30_empty_room_detail.png
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1021" name="TowerAtmosphereAndElevatorLimitsPlayModeTests" fullname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" classname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-02 06:46:50Z" end-time="2026-10-02 06:46:51Z" duration="0.987064" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1023" name="Facade_FloorRemovalRetiresGeometryImmediately_AndSurvivesDeferredDestruction" fullname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests.Facade_FloorRemovalRetiresGeometryImmediately_AndSurvivesDeferredDestruction" methodname="Facade_FloorRemovalRetiresGeometryImmediately_AndSurvivesDeferredDestruction" classname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" runstate="Runnable" seed="281401236" result="Passed" start-time="2026-10-02 06:46:50Z" end-time="2026-10-02 06:46:50Z" duration="0.015537" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="Facade_FollowsCameraZoom_AndKeepsInteractionModesOpen" fullname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests.Facade_FollowsCameraZoom_AndKeepsInteractionModesOpen" methodname="Facade_FollowsCameraZoom_AndKeepsInteractionModesOpen" classname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" runstate="Runnable" seed="978512785" result="Passed" start-time="2026-10-02 06:46:50Z" end-time="2026-10-02 06:46:51Z" duration="0.366356" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1024" name="TowerController_RestoresModeRoutingAfterDisableAndReenable" fullname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests.TowerController_RestoresModeRoutingAfterDisableAndReenable" methodname="TowerController_RestoresModeRoutingAfterDisableAndReenable" classname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" runstate="Runnable" seed="1631776846" result="Passed" start-time="2026-10-02 06:46:51Z" end-time="2026-10-02 06:46:51Z" duration="0.286152" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1025" name="TowerPresentation_ShowsWindowLightConesAndKeepsThreeCarsInsideTheShaft" fullname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests.TowerPresentation_ShowsWindowLightConesAndKeepsThreeCarsInsideTheShaft" methodname="TowerPresentation_ShowsWindowLightConesAndKeepsThreeCarsInsideTheShaft" classname="OneRoof.Tests.PlayMode.TowerAtmosphereAndElevatorLimitsPlayModeTests" runstate="Runnable" seed="305262008" result="Passed" start-time="2026-10-02 06:46:51Z" end-time="2026-10-02 06:46:51Z" duration="0.317359" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1026" name="UndercityVisualCapturePlayModeTests" fullname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests" classname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-02 06:46:51Z" end-time="2026-10-02 06:46:57Z" duration="5.839720" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1027" name="UndercityConstructionPresentation_ConnectedRoomsAndUnfinishedCavity" fullname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests.UndercityConstructionPresentation_ConnectedRoomsAndUnfinishedCavity" methodname="UndercityConstructionPresentation_ConnectedRoomsAndUnfinishedCavity" classname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests" runstate="Runnable" seed="479855761" result="Passed" start-time="2026-10-02 06:46:51Z" end-time="2026-10-02 06:46:52Z" duration="1.147323" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="UndercityUtilitiesVisualCapture_RunningAndBrokenFlow" fullname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests.UndercityUtilitiesVisualCapture_RunningAndBrokenFlow" methodname="UndercityUtilitiesVisualCapture_RunningAndBrokenFlow" classname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests" runstate="Runnable" seed="107178323" result="Passed" start-time="2026-10-02 06:46:52Z" end-time="2026-10-02 06:46:53Z" duration="0.237012" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="UndercityVisualCapture_TowerArrivalAndConnectedRoom" fullname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests.UndercityVisualCapture_TowerArrivalAndConnectedRoom" methodname="UndercityVisualCapture_TowerArrivalAndConnectedRoom" classname="OneRoof.Tests.PlayMode.UndercityVisualCapturePlayModeTests" runstate="Runnable" seed="471659541" result="Passed" start-time="2026-10-02 06:46:53Z" end-time="2026-10-02 06:46:57Z" duration="4.452610" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1030" name="WeatherVisibilityPlayModeTests" fullname="OneRoof.Tests.PlayMode.WeatherVisibilityPlayModeTests" classname="OneRoof.Tests.PlayMode.WeatherVisibilityPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:46:57Z" end-time="2026-10-02 06:47:01Z" duration="4.157639" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1031" name="GroundStart_RainAndFogAppearAgainstMatchedCameraControls" fullname="OneRoof.Tests.PlayMode.WeatherVisibilityPlayModeTests.GroundStart_RainAndFogAppearAgainstMatchedCameraControls" methodname="GroundStart_RainAndFogAppearAgainstMatchedCameraControls" classname="OneRoof.Tests.PlayMode.WeatherVisibilityPlayModeTests" runstate="Runnable" seed="581802276" result="Passed" start-time="2026-10-02 06:46:57Z" end-time="2026-10-02 06:47:01Z" duration="4.156163" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1032" name="WordBattlePlayModeTests" fullname="OneRoof.Tests.PlayMode.WordBattlePlayModeTests" classname="OneRoof.Tests.PlayMode.WordBattlePlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:47:01Z" end-time="2026-10-02 06:47:03Z" duration="1.643473" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1033" name="ResidentChatOwnsModalInputAndRestoresPauseAfterLearning" fullname="OneRoof.Tests.PlayMode.WordBattlePlayModeTests.ResidentChatOwnsModalInputAndRestoresPauseAfterLearning" methodname="ResidentChatOwnsModalInputAndRestoresPauseAfterLearning" classname="OneRoof.Tests.PlayMode.WordBattlePlayModeTests" runstate="Runnable" seed="1194658321" result="Passed" start-time="2026-10-02 06:47:01Z" end-time="2026-10-02 06:47:03Z" duration="1.642474" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -3,7 +3,9 @@ using NUnit.Framework;
 using OneRoof.Application.Modes;
 using OneRoof.Application.Tower;
 using OneRoof.Domain.Economy;
+using OneRoof.Domain.Commands;
 using OneRoof.Domain.Topology;
+using OneRoof.Domain.Underground;
 using OneRoof.Presentation.Tower;
 using OneRoof.UI.Modes;
 using UnityEngine;
@@ -40,6 +42,62 @@ namespace OneRoof.Presentation.Tests.EditMode
             {
                 Object.DestroyImmediate(_holder);
             }
+        }
+
+        [Test]
+        public void UndergroundPointer_UsesTowerColumnWidthAndFloorHeight()
+        {
+            Assert.That(GridPlacementController.UndergroundCellWidth, Is.EqualTo(_gridPlacement.CellWidth));
+            Assert.That(GridPlacementController.UndergroundCellHeight, Is.EqualTo(_gridPlacement.FloorHeight));
+            Assert.That(_session.TryGetFloorSlab(0, out var slab), Is.True);
+            var center = _gridPlacement.CellOriginX + (slab.MinX + slab.MaxX + 1) * _gridPlacement.CellWidth * 0.5f;
+            var left = center - UndergroundDigState.GridWidthCells * GridPlacementController.UndergroundCellWidth * 0.5f;
+            var cameraObject = new GameObject("Dimensional mapping camera");
+            try
+            {
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.orthographic = true;
+                camera.orthographicSize = 20f;
+                camera.transform.position = new Vector3(center, -12f, -10f);
+                var world = new Vector3(left + 23.1f * GridPlacementController.UndergroundCellWidth,
+                    _gridPlacement.FloorOriginY - 0.74f - 5.1f * GridPlacementController.UndergroundCellHeight, 0f);
+                Assert.That(_gridPlacement.TryGetUndergroundCellFromScreen(camera.WorldToScreenPoint(world), camera,
+                    out var cell, out var depth), Is.True);
+                Assert.That(cell, Is.EqualTo(23));
+                Assert.That(depth, Is.EqualTo(5));
+            }
+            finally { Object.DestroyImmediate(cameraObject); }
+        }
+
+        [Test]
+        public void UndergroundPreview_CoreSpansSurfaceToTargetDepth()
+        {
+            GridPlacementController.GetUndergroundPreviewFootprint(
+                new BuildUndergroundCoreCommand(UndergroundDigState.GridWidthCells / 2, 5), out var origin, out var size);
+
+            Assert.That(origin, Is.EqualTo(new Vector2Int(UndergroundDigState.GridWidthCells / 2, 0)));
+            Assert.That(size, Is.EqualTo(new Vector2Int(1, 6)));
+        }
+
+        [Test]
+        public void UndergroundPreview_RoomRetainsDraggedRectangle()
+        {
+            GridPlacementController.GetUndergroundPreviewFootprint(
+                new ZoneUndergroundRoomCommand(UndergroundRoomType.Generator, 4, 3, 5, 4), out var origin, out var size);
+
+            Assert.That(origin, Is.EqualTo(new Vector2Int(4, 3)));
+            Assert.That(size, Is.EqualTo(new Vector2Int(5, 4)));
+        }
+
+        [Test]
+        public void UndergroundHint_InvalidPlacementPreservesCauseAndTargetDepth()
+        {
+            var hint = GridPlacementController.FormatUndergroundPlacementHint("underground:corridor_3",
+                new Vector2Int(4, 3), new Vector2Int(3, 1), false, "No connected access core");
+
+            Assert.That(hint, Does.StartWith("✖ No connected access core"));
+            Assert.That(hint, Does.Contain("3×1 m"));
+            Assert.That(hint, Does.Contain("depth 3–4 m"));
         }
 
         [Test]

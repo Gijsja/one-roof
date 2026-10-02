@@ -29,9 +29,20 @@ namespace OneRoof.Tests.PlayMode
             {
                 tower.SetPaused(true);
                 camera.GetComponent<TowerCameraController>().enabled = false;
-                var activeCount = 0;
-                foreach (var resident in tower.SimulationSession.Projection().Residents)
-                    if (resident.Status != TransitResidentStatus.Outside) activeCount++;
+                var residents = tower.SimulationSession.Projection().Residents;
+                int EligibleResidentCount(bool interiorsVisible, bool hallwayVisible)
+                {
+                    var count = 0;
+                    foreach (var resident in residents)
+                    {
+                        if (resident.Status == TransitResidentStatus.Outside) continue;
+                        if (!interiorsVisible && (resident.Status == TransitResidentStatus.InRoom ||
+                            resident.Status == TransitResidentStatus.Arrived)) continue;
+                        if (hallwayVisible && resident.Status == TransitResidentStatus.Riding) continue;
+                        count++;
+                    }
+                    return count;
+                }
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.Auto);
                 camera.GetComponent<TowerCameraController>().FocusOverview();
                 yield return null;
@@ -39,8 +50,11 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(tower.RoomPresenter.ClutterAlpha, Is.Zero);
                 Assert.That(tower.FloorDeckPresenter.Decks[0].gameObject.activeSelf, Is.True);
                 Assert.That(tower.FloorDeckPresenter.Decks[29].gameObject.activeSelf, Is.False);
-                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.EqualTo(activeCount));
-                Assert.That(tower.ResidentPresenter.VisibleMacroCount, Is.EqualTo(activeCount));
+                var facadeResidentCount = EligibleResidentCount(interiorsVisible: false, hallwayVisible: false);
+                Assert.That(tower.ResidentPresenter.InteriorsVisible, Is.False);
+                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.EqualTo(facadeResidentCount),
+                    "Residents inside rooms must be concealed by the facade at every LOD tier.");
+                Assert.That(tower.ResidentPresenter.VisibleMacroCount, Is.EqualTo(facadeResidentCount));
                 var directory = "/tmp/one-roof-lod-visuals";
                 Directory.CreateDirectory(directory);
                 Capture(camera, Path.Combine(directory, "facade-overview.png"));
@@ -49,13 +63,18 @@ namespace OneRoof.Tests.PlayMode
                 Assert.That(tower.ExteriorPresenter.FrontFacadeRoot.gameObject.activeSelf, Is.False);
                 Assert.That(tower.RoomPresenter.ClutterAlpha, Is.EqualTo(1f));
                 Assert.That(tower.FloorDeckPresenter.Decks[29].gameObject.activeSelf, Is.True);
-                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.EqualTo(activeCount));
+                var cutawayResidentCount = EligibleResidentCount(interiorsVisible: true, hallwayVisible: true);
+                Assert.That(tower.ResidentPresenter.InteriorsVisible, Is.True);
+                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.EqualTo(cutawayResidentCount));
+                Assert.That(tower.ResidentPresenter.VisibleMacroCount, Is.EqualTo(cutawayResidentCount),
+                    "Opening the cutaway must restore indoor residents to the distant LOD batch.");
                 Capture(camera, Path.Combine(directory, "cutaway-overview.png"));
                 playground.FrameStreet();
                 camera.orthographicSize = 5f;
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.LockedFacade);
                 yield return null;
                 Assert.That(tower.ExteriorPresenter.FacadeEnvelopeAlpha, Is.EqualTo(1f));
+                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.LessThanOrEqualTo(facadeResidentCount));
                 Assert.That(tower.ResidentPresenter.VisibleRigCount, Is.LessThanOrEqualTo(tower.GetComponent<NpcViewPool>().MaxCapacity));
                 Capture(camera, Path.Combine(directory, "facade-street-close.png"));
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.LockedCutaway);
@@ -66,8 +85,18 @@ namespace OneRoof.Tests.PlayMode
                 yield return null;
                 Assert.That(tower.ExteriorPresenter.FacadeEnvelopeAlpha, Is.EqualTo(0.5f).Within(0.001f));
                 Assert.That(tower.RoomPresenter.ClutterAlpha, Is.EqualTo(0.5f).Within(0.001f));
-                Assert.That(tower.ResidentPresenter.VisibleSpriteCount, Is.GreaterThan(0));
+                Assert.That(tower.ResidentPresenter.InteriorsVisible, Is.False,
+                    "The midpoint belongs to the facade: indoor residents hide at alpha >= 0.5.");
+                var midpointResidentCount = EligibleResidentCount(interiorsVisible: false, hallwayVisible: true);
+                Assert.That(tower.ResidentPresenter.VisibleResidentCount, Is.LessThanOrEqualTo(midpointResidentCount));
+                Assert.That(tower.ResidentPresenter.VisibleSpriteCount, Is.LessThanOrEqualTo(midpointResidentCount));
                 Capture(camera, Path.Combine(directory, "crossfade-middle.png"));
+                camera.orthographicSize = 12.9f;
+                yield return null;
+                Assert.That(tower.ExteriorPresenter.FacadeEnvelopeAlpha, Is.LessThan(0.5f));
+                Assert.That(tower.ResidentPresenter.InteriorsVisible, Is.True);
+                Assert.That(tower.ResidentPresenter.VisibleSpriteCount, Is.GreaterThan(0),
+                    "Crossing back into cutaway must restore indoor residents at sprite LOD.");
                 camera.GetComponent<TowerCameraController>().FocusOverview();
                 tower.ModeSession.SetFacadeMode(FacadeDisplayMode.LockedFacade);
                 for (var frame = 0; frame < 30; frame++) yield return null;
