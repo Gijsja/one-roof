@@ -408,7 +408,7 @@ namespace OneRoof.Domain.Tests.EditMode
 
             // Save and Restore FactionState
             var factionSave = factions.ToSaveData();
-            Assert.That(factionSave.version, Is.EqualTo(4));
+            Assert.That(factionSave.version, Is.EqualTo(5));
             Assert.That(factionSave.edges[0].stage, Is.EqualTo((int)RelationshipStage.Crush));
 
             var restoredFactions = FactionState.FromSaveData(factionSave, population);

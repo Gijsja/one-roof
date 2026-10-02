@@ -89,6 +89,22 @@ namespace OneRoof.Application.Tower
             BumpVersion(topologyChanged: true);
         }
 
+        private OneRoof.Application.Dialogue.WordBattleProjection _cachedWordBattleProjection;
+        private OneRoof.Domain.Dialogue.WordBattleState _cachedWordBattleState;
+        public OneRoof.Application.Dialogue.WordBattleProjection WordBattleProjection()
+        {
+            var state = _simulation.WordBattles;
+            if (_cachedWordBattleProjection == null || !ReferenceEquals(state, _cachedWordBattleState) || _cachedWordBattleProjection.Revision != state.Revision)
+            { _cachedWordBattleProjection = new OneRoof.Application.Dialogue.WordBattleProjection(state); _cachedWordBattleState = state; }
+            return _cachedWordBattleProjection;
+        }
+        public CommandResult ExecuteWordBattle(OneRoof.Domain.Commands.WordBattleCommand command)
+        {
+            var result = _simulation.ExecuteCommand(command);
+            if (result.Accepted) BumpVersion();
+            return result;
+        }
+
         public bool CaretakerOwnsInput => _simulation.CaretakerOwnsInput;
 
         public CaretakerCrisisProjection CaretakerProjection()

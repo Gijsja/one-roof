@@ -8,9 +8,10 @@ namespace OneRoof.Application.Social
 {
     public sealed class FactionSummaryProjection
     {
-        public FactionSummaryProjection(string id, string name, float pressure, float previousPressure, string topGrievance, int members, int supporters, IDictionary<int, int> influenceByFloor, IList<int> representativeResidentIds)
+        public FactionSummaryProjection(string id, string name, float pressure, float previousPressure, string topGrievance, int members, int supporters, IDictionary<int, int> influenceByFloor, IList<int> representativeResidentIds, float earnedRespect = 0f, float? rawPressure = null)
         {
             Id = id; Name = name; Pressure = pressure; PreviousPressure = previousPressure; TopGrievance = topGrievance;
+            RawPressure = rawPressure ?? pressure; EarnedRespect = earnedRespect;
             MemberCount = members; SupporterCount = supporters;
             InfluenceByFloor = new ReadOnlyDictionary<int, int>(new Dictionary<int, int>(influenceByFloor));
             RepresentativeResidentIds = new ReadOnlyCollection<int>(new List<int>(representativeResidentIds));
@@ -19,6 +20,8 @@ namespace OneRoof.Application.Social
         public string Name { get; }
         public float Pressure { get; }
         public float PreviousPressure { get; }
+        public float RawPressure { get; }
+        public float EarnedRespect { get; }
         public string Trend => Pressure > PreviousPressure + .001f ? "rising" : Pressure < PreviousPressure - .001f ? "falling" : "steady";
         public string TopGrievance { get; }
         public int MemberCount { get; }
@@ -97,7 +100,7 @@ namespace OneRoof.Application.Social
                 contributors.Sort((a, b) => { var bySupport = b.Support.CompareTo(a.Support); return bySupport != 0 ? bySupport : a.ResidentId.Value.CompareTo(b.ResidentId.Value); });
                 var representatives = new List<int>();
                 for (var i = 0; i < contributors.Count && i < 3; i++) representatives.Add(contributors[i].ResidentId.Value);
-                summaries.Add(new FactionSummaryProjection(faction.Id, Name(faction.Id), faction.Pressure, faction.PreviousPressure, faction.TopGrievance, faction.MemberCount, faction.SupporterCount, floorCounts, representatives));
+                summaries.Add(new FactionSummaryProjection(faction.Id, Name(faction.Id), faction.EffectivePressure, faction.PreviousEffectivePressure, faction.TopGrievance, faction.MemberCount, faction.SupporterCount, floorCounts, representatives, faction.EarnedRespect, faction.Pressure));
             }
             var ties = new List<ResidentTieProjection>();
             foreach (var edge in social.Edges)

@@ -66,6 +66,8 @@ namespace OneRoof.UI.Modes
             if (new Rect(16, 16, 392, 330).Contains(imguiPosition))
                 return true;
             if (ManagementOnboardingView.PanelRect(Screen.width).Contains(imguiPosition)) return true;
+            if ((projection.IsManageMode || projection.IsInspectMode) &&
+                OneRoof.UI.Dialogue.WordBattlePanelView.EntryRect(Screen.width, screenHeight).Contains(imguiPosition)) return true;
             if (ModeBarRect(screenHeight).Contains(imguiPosition) ||
                 ContextRect(screenHeight, projection.IsBuildMode).Contains(imguiPosition))
                 return true;

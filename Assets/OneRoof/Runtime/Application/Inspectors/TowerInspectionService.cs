@@ -145,7 +145,9 @@ namespace OneRoof.Application.Inspectors
                 var details = new List<string>
                 {
                     $"Support signals: {region.SupporterCount}",
-                    $"Average support pressure: {region.AveragePressure:P0} ({region.Tier})",
+                    $"Effective faction tension: {region.AveragePressure:P0} ({region.Tier})",
+                    $"Raw support pressure: {region.RawAveragePressure:P0}",
+                    $"Learned-wit relief: {region.EarnedRespectRelief:P0}",
                     $"Leading faction: {region.LeadingFactionName}",
                     $"Top grievance: {region.TopGrievance}",
                     $"Trend: {region.Trend}"
@@ -153,7 +155,7 @@ namespace OneRoof.Application.Inspectors
                 return new InspectorDetailProjection($"Floor {floor} Faction Tension",
                     region.SupporterCount == 0 ? "No faction support is recorded on this floor." : region.AccessibilityLabel,
                     details,
-                    "Review affected households, transit, services, and the decree panel; then compare the next daily settlement.");
+                    "Earn faction respect through word battles, or review affected households, transit, services, and decrees; compare the next daily settlement.");
             }
             return null;
         }

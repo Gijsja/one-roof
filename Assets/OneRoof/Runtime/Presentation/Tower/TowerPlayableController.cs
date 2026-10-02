@@ -40,10 +40,12 @@ namespace OneRoof.Presentation.Tower
         public ResidentPresentationSettings ResidentPresentation => _residentPresentation;
 
         private TowerSimulationSession _sim; private ModeShellSession _mode;
+        private OneRoof.UI.Dialogue.WordBattlePanelView _wordBattlePanel;
+        public OneRoof.UI.Dialogue.WordBattlePanelView WordBattlePanel => _wordBattlePanel;
         private CaretakerCrisisPresenter _caretakerPresenter;
         private readonly Dictionary<Behaviour, bool> _caretakerSuspended = new Dictionary<Behaviour, bool>();
         public CaretakerCrisisPresenter CaretakerPresenter => _caretakerPresenter;
-        public bool CaretakerInputBlocked => (_sim != null && _sim.CaretakerOwnsInput) || (_caretakerPresenter != null && _caretakerPresenter.ContactOpen);
+        public bool CaretakerInputBlocked => (_wordBattlePanel != null && _wordBattlePanel.IsOpen) || (_sim != null && _sim.CaretakerOwnsInput) || (_caretakerPresenter != null && _caretakerPresenter.ContactOpen);
         private long _lastVisualVersion = -1;
         private TowerDataOverlays _dataOverlays; private ElevatorPlacementPredictor _predictor;
         private ModeShellBarController _modeBar; private ElevatorWaitOverlayPresenter _overlayPresenter;
@@ -255,6 +257,7 @@ namespace OneRoof.Presentation.Tower
             _outside = Ensure<OutsideCityPresenter>(); _outside.Initialize(camera, _worldMat);
             _pixelRain = Ensure<PixelRainPresenter>();
             (_caretakerPresenter = Ensure<CaretakerCrisisPresenter>()).Initialize(this, _sim, _worldMat);
+            (_wordBattlePanel = Ensure<OneRoof.UI.Dialogue.WordBattlePanelView>()).Bind(_sim, _mode, SetPaused, () => IsPaused, RefreshCaretakerInputLock);
             var cameraControls = camera.GetComponent<TowerCameraController>();
             if (cameraControls != null) cameraControls.InputBlocker = () => CaretakerInputBlocked;
             if (IsGroundStart && _mode.CurrentMode != InteractionMode.Build) _mode.SwitchMode(InteractionMode.Build);
@@ -267,6 +270,7 @@ namespace OneRoof.Presentation.Tower
             if (_caretakerSuspended.Count > 0) return;
             foreach (var component in GetComponents<MonoBehaviour>())
             {
+                if (component == _wordBattlePanel && _wordBattlePanel.IsOpen) continue;
                 var ns = component.GetType().Namespace ?? string.Empty;
                 if (!ns.StartsWith("OneRoof.UI", StringComparison.Ordinal) && !(component is TowerDashboardHudView) &&
                     !(component is UndergroundOperationsView) && !(component is GridPlacementController) && !(component is InspectSelectionController)) continue;

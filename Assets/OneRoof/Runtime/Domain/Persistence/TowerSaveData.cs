@@ -64,6 +64,7 @@ namespace OneRoof.Domain.Persistence
         public FactionSaveData factions;
         public CivilActionSaveData civilActions;
         public CaretakerCrisisSaveData caretakerCrisis;
+        public WordBattleSaveData wordBattles;
         public DecisionRecordSaveData decisions;
 
         public TopologySaveData GetTopologySaveData() => new TopologySaveData

@@ -19,11 +19,12 @@ namespace OneRoof.Application.Overlays
 
     public readonly struct FactionTensionFloorProjection
     {
-        public FactionTensionFloorProjection(int floor, int supporters, float averagePressure, string leadingFactionId, string leadingFactionName, string topGrievance, string trend)
+        public FactionTensionFloorProjection(int floor, int supporters, float averagePressure, string leadingFactionId, string leadingFactionName, string topGrievance, string trend, float earnedRespectRelief = 0f)
         {
             Floor = floor;
             SupporterCount = supporters;
             AveragePressure = averagePressure;
+            EarnedRespectRelief = earnedRespectRelief;
             LeadingFactionId = leadingFactionId ?? string.Empty;
             LeadingFactionName = leadingFactionName ?? string.Empty;
             TopGrievance = topGrievance ?? "none";
@@ -33,6 +34,8 @@ namespace OneRoof.Application.Overlays
         public int Floor { get; }
         public int SupporterCount { get; }
         public float AveragePressure { get; }
+        public float EarnedRespectRelief { get; }
+        public float RawAveragePressure => AveragePressure + EarnedRespectRelief;
         public string LeadingFactionId { get; }
         public string LeadingFactionName { get; }
         public string TopGrievance { get; }
@@ -50,6 +53,7 @@ namespace OneRoof.Application.Overlays
         {
             public int Count;
             public float Sum;
+            public float Relief;
             public readonly Dictionary<string, int> ByFaction = new Dictionary<string, int>();
         }
 
@@ -66,7 +70,11 @@ namespace OneRoof.Application.Overlays
                 if (!floors.TryGetValue(support.HomeFloor, out var entry))
                     floors[support.HomeFloor] = entry = new FloorAccumulator();
                 entry.Count++;
-                entry.Sum += support.Support;
+                var respect = 0f;
+                foreach (var faction in social.Factions) if (faction.Id == support.FactionId) { respect = faction.EarnedRespect; break; }
+                var effective = Math.Max(0f, support.Support - respect);
+                entry.Sum += effective;
+                entry.Relief += support.Support - effective;
                 entry.ByFaction.TryGetValue(support.FactionId, out var count);
                 entry.ByFaction[support.FactionId] = count + 1;
             }
@@ -81,7 +89,7 @@ namespace OneRoof.Application.Overlays
                     { strongest = count; leader = faction; }
                 result.Add(new FactionTensionFloorProjection(pair.Key, entry.Count,
                     entry.Count == 0 ? 0f : entry.Sum / entry.Count,
-                    leader?.Id, leader?.Name, leader?.TopGrievance, leader?.Trend));
+                    leader?.Id, leader?.Name, leader?.TopGrievance, leader?.Trend, entry.Count == 0 ? 0f : entry.Relief / entry.Count));
             }
             return new FactionTensionOverlayProjection(tick, result);
         }

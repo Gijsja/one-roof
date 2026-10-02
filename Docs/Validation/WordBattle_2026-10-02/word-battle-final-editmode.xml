@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="1.3121364">
+  <test-suite type="TestSuite" id="1000" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="1163" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="1.312136" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1095" name="OneRoof.Application.Tests.EditMode.dll" fullname="/home/geisha/Vibecode/UnityAI/one-roof/Library/ScriptAssemblies/OneRoof.Application.Tests.EditMode.dll" runstate="Runnable" testcasecount="72" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.126403" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="30181" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1096" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="72" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.124446" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1100" name="Application" fullname="OneRoof.Application" runstate="Runnable" testcasecount="69" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.122849" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1101" name="Tests" fullname="OneRoof.Application.Tests" runstate="Runnable" testcasecount="69" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.121661" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1102" name="EditMode" fullname="OneRoof.Application.Tests.EditMode" runstate="Runnable" testcasecount="69" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.120466" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1093" name="WordBattleProjectionTests" fullname="OneRoof.Application.Tests.EditMode.WordBattleProjectionTests" classname="OneRoof.Application.Tests.EditMode.WordBattleProjectionTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.118188" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1094" name="ResidentLearningUsesCommandsAndInvalidatesImmutableProjection" fullname="OneRoof.Application.Tests.EditMode.WordBattleProjectionTests.ResidentLearningUsesCommandsAndInvalidatesImmutableProjection" methodname="ResidentLearningUsesCommandsAndInvalidatesImmutableProjection" classname="OneRoof.Application.Tests.EditMode.WordBattleProjectionTests" runstate="Runnable" seed="1850639150" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.102491" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1799" name="OneRoof.Domain.Tests.EditMode.dll" fullname="/home/geisha/Vibecode/UnityAI/one-roof/Library/ScriptAssemblies/OneRoof.Domain.Tests.EditMode.dll" runstate="Runnable" testcasecount="590" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.617341" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="30181" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1800" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="590" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.611319" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1804" name="Domain" fullname="OneRoof.Domain" runstate="Runnable" testcasecount="582" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.605874" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1805" name="Tests" fullname="OneRoof.Domain.Tests" runstate="Runnable" testcasecount="582" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.600973" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1806" name="EditMode" fullname="OneRoof.Domain.Tests.EditMode" runstate="Runnable" testcasecount="582" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.595959" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1317" name="FactionWordBattleRespectTests" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.117223" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1318" name="AwardsAreUniqueBoundedAndPersistAcrossDailyEvaluation" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests.AwardsAreUniqueBoundedAndPersistAcrossDailyEvaluation" methodname="AwardsAreUniqueBoundedAndPersistAcrossDailyEvaluation" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" seed="1544866951" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.108504" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1321" name="RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests.RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.006298" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1319" name="RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization(0.55f,Clear)" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests.RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization(0.55f,Clear)" methodname="RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" seed="1042745269" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.004420" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1320" name="RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization(1.0f,Active)" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests.RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization(1.0f,Active)" methodname="RespectChangesRealCivilActionThresholdsWithoutRemovingOrganization" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" seed="985055956" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.000821" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1322" name="RestoreIgnoresUnprovenNumericRespectAndInvalidDuplicateTiers" fullname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests.RestoreIgnoresUnprovenNumericRespectAndInvalidDuplicateTiers" methodname="RestoreIgnoresUnprovenNumericRespectAndInvalidDuplicateTiers" classname="OneRoof.Domain.Tests.EditMode.FactionWordBattleRespectTests" runstate="Runnable" seed="173879785" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.001008" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1787" name="WordBattleTests" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.471629" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1796" name="CatalogAndOldSaveDefaultsAreValid" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.CatalogAndOldSaveDefaultsAreValid" methodname="CatalogAndOldSaveDefaultsAreValid" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="593741801" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.004542" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1795" name="CompletedResidentLessonLimitSurvivesSaveAndResetsNextDay" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.CompletedResidentLessonLimitSurvivesSaveAndResetsNextDay" methodname="CompletedResidentLessonLimitSurvivesSaveAndResetsNextDay" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="1393305711" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.233953" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1797" name="EarlyGuildSpokespersonRequiresEligibleOccupationWithoutInventingMembership" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.EarlyGuildSpokespersonRequiresEligibleOccupationWithoutInventingMembership" methodname="EarlyGuildSpokespersonRequiresEligibleOccupationWithoutInventingMembership" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="866917252" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.003077" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1792" name="InvalidActiveSaveAndMissingSpeakerRetainLearningWithoutReward" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.InvalidActiveSaveAndMissingSpeakerRetainLearningWithoutReward" methodname="InvalidActiveSaveAndMissingSpeakerRetainLearningWithoutReward" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="1357157864" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.003887" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1793" name="LoadedDefeatedTierRemainsPracticeWhenSavedFlagIsCorrupted" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.LoadedDefeatedTierRemainsPracticeWhenSavedFlagIsCorrupted" methodname="LoadedDefeatedTierRemainsPracticeWhenSavedFlagIsCorrupted" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="2013793062" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:12Z" duration="0.004514" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1788" name="LossLearnsOneReplyAndRetryWaitsUntilNextDay" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.LossLearnsOneReplyAndRetryWaitsUntilNextDay" methodname="LossLearnsOneReplyAndRetryWaitsUntilNextDay" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="52979784" result="Passed" start-time="2026-10-02 06:30:12Z" end-time="2026-10-02 06:30:13Z" duration="0.202385" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1794" name="ResidentChatAcknowledgementTeachesAndCancellationDoesNot" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.ResidentChatAcknowledgementTeachesAndCancellationDoesNot" methodname="ResidentChatAcknowledgementTeachesAndCancellationDoesNot" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="1333666793" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.002815" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1790" name="StaleCommandsCannotRepeatExchangeOrLearning" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.StaleCommandsCannotRepeatExchangeOrLearning" methodname="StaleCommandsCannotRepeatExchangeOrLearning" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="2112349568" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.002555" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1791" name="SuspendedSavePreservesChallengeScoresAndUnblocksSimulation" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.SuspendedSavePreservesChallengeScoresAndUnblocksSimulation" methodname="SuspendedSavePreservesChallengeScoresAndUnblocksSimulation" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="771745567" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.004694" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1798" name="UnsupportedFactionAndAbsentGuildRepresentativeAreRejected" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.UnsupportedFactionAndAbsentGuildRepresentativeAreRejected" methodname="UnsupportedFactionAndAbsentGuildRepresentativeAreRejected" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="719352613" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.003445" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1789" name="VictoryIsPermanentAndPracticeCannotFarmRespect" fullname="OneRoof.Domain.Tests.EditMode.WordBattleTests.VictoryIsPermanentAndPracticeCannotFarmRespect" methodname="VictoryIsPermanentAndPracticeCannotFarmRespect" classname="OneRoof.Domain.Tests.EditMode.WordBattleTests" runstate="Runnable" seed="1728154032" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.002593" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1859" name="OneRoof.Infrastructure.Tests.EditMode.dll" fullname="/home/geisha/Vibecode/UnityAI/one-roof/Library/ScriptAssemblies/OneRoof.Infrastructure.Tests.EditMode.dll" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.548855" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="30181" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1860" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.547695" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1864" name="Infrastructure" fullname="OneRoof.Infrastructure" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.546792" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1865" name="Tests" fullname="OneRoof.Infrastructure.Tests" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.546024" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1866" name="EditMode" fullname="OneRoof.Infrastructure.Tests.EditMode" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.545326" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1855" name="WordBattleSaveRoundTripTests" fullname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests" classname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.544514" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1856" name="JsonRoundTrip_ActiveBattleResumesSameChallengeWithoutDuplicateLearning" fullname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests.JsonRoundTrip_ActiveBattleResumesSameChallengeWithoutDuplicateLearning" methodname="JsonRoundTrip_ActiveBattleResumesSameChallengeWithoutDuplicateLearning" classname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests" runstate="Runnable" seed="1995593351" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.016241" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1858" name="JsonRoundTrip_OldSaveDefaultsToStarterLineAndZeroRespect" fullname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests.JsonRoundTrip_OldSaveDefaultsToStarterLineAndZeroRespect" methodname="JsonRoundTrip_OldSaveDefaultsToStarterLineAndZeroRespect" classname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests" runstate="Runnable" seed="1007647832" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.007343" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1857" name="JsonRoundTrip_VictoryPreservesRepertoireAndRespect" fullname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests.JsonRoundTrip_VictoryPreservesRepertoireAndRespect" methodname="JsonRoundTrip_VictoryPreservesRepertoireAndRespect" classname="OneRoof.Infrastructure.Tests.EditMode.WordBattleSaveRoundTripTests" runstate="Runnable" seed="1032212644" result="Passed" start-time="2026-10-02 06:30:13Z" end-time="2026-10-02 06:30:13Z" duration="0.519455" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

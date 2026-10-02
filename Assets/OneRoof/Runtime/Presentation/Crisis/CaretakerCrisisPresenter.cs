@@ -73,7 +73,7 @@ namespace OneRoof.Presentation.Crisis
 
         public void ToggleContact()
         {
-            if (IsArcadeActive)
+            if (IsArcadeActive || (_owner != null && _owner.WordBattlePanel != null && _owner.WordBattlePanel.IsOpen))
                 return;
             ContactOpen = !ContactOpen;
             _message = "";
@@ -82,7 +82,7 @@ namespace OneRoof.Presentation.Crisis
 
         public bool RequestAction(CaretakerCrisisAction action)
         {
-            if (_session == null)
+            if (_session == null || (_owner != null && _owner.WordBattlePanel != null && _owner.WordBattlePanel.IsOpen))
                 return false;
             var result = _session.ExecuteCaretaker(action);
             _message = result.Accepted ? "" : result.Reason;
@@ -95,7 +95,7 @@ namespace OneRoof.Presentation.Crisis
 
         private void Update()
         {
-            if (_session == null)
+            if (_session == null || (_owner != null && _owner.WordBattlePanel != null && _owner.WordBattlePanel.IsOpen))
                 return;
             var keyboard = Keyboard.current;
             var pad = Gamepad.current;
@@ -328,7 +328,7 @@ namespace OneRoof.Presentation.Crisis
 
         private void OnGUI()
         {
-            if (_session == null || _state == null)
+            if (_session == null || _state == null || (_owner != null && _owner.WordBattlePanel != null && _owner.WordBattlePanel.IsOpen))
                 return;
             EnsureStyles();
             var oldMatrix = GUI.matrix;

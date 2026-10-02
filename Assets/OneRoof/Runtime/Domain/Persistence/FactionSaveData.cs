@@ -15,5 +15,5 @@ namespace OneRoof.Domain.Persistence
     [Serializable] public sealed class FactionSupportSaveData
     { public int residentId; public string factionId; public float support; public int sustainedDays; public string driver; public int homeFloor; public int grievanceDays; public float directPressure; }
     [Serializable] public sealed class FactionRecordSaveData
-    { public string id; public float pressure; public float previousPressure; public string topGrievance; }
+    { public string id; public float pressure; public float previousPressure; public string topGrievance; public float earnedRespect; public int[] wordBattleVictoryTiers; public float previousEffectivePressure; }
 }

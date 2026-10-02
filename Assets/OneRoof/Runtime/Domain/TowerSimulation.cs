@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using OneRoof.Domain.Commands;
+using OneRoof.Domain.Dialogue;
 using OneRoof.Domain.Crisis;
 using OneRoof.Domain.CivilAction;
 using OneRoof.Domain.Decisions;
@@ -71,6 +72,7 @@ namespace OneRoof.Domain
             Factions = new FactionState();
             CivilActions = new CivilActionState();
             CaretakerCrisis = new CaretakerCrisisState();
+            WordBattles = new WordBattleState();
             Decisions = new DecisionRecordState();
             HousingLifecycle = new HouseholdLeaseLifecycleState();
             HousingLifecycleSystem = new HouseholdHousingLifecycleSystem();
@@ -115,6 +117,7 @@ namespace OneRoof.Domain
         public FactionState Factions { get; private set; }
         public CivilActionState CivilActions { get; private set; }
         public CaretakerCrisisState CaretakerCrisis { get; private set; }
+        public WordBattleState WordBattles { get; private set; }
         public bool CaretakerOwnsInput => CaretakerCrisis.Phase == CaretakerCrisisPhase.Active || CaretakerCrisis.Phase == CaretakerCrisisPhase.Failed;
         public DecisionRecordState Decisions { get; private set; }
         public HouseholdLeaseLifecycleState HousingLifecycle { get; private set; }
@@ -157,7 +160,7 @@ namespace OneRoof.Domain
 
         public void AdvanceOneTick()
         {
-            if (CaretakerOwnsInput) return;
+            if (CaretakerOwnsInput || WordBattles.OwnsInput) return;
             var previousTick = Clock.CurrentTick;
             Clock.Advance();
             var currentTick = Clock.CurrentTick;
@@ -429,6 +432,8 @@ namespace OneRoof.Domain
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
 
+            if (command is WordBattleCommand wit) return CanExecuteWordBattle(wit);
+            if (WordBattles.OwnsInput) return CommandResult.Fail("Finish or suspend the word battle before changing Tower systems.", "dialogue:controls_owned");
             if (command is CaretakerCrisisCommand caretaker) return CanExecuteCaretaker(caretaker);
             if (CaretakerOwnsInput) return CommandResult.Fail("Return the Caretaker to the lobby before changing Tower systems.", "crisis:controls_owned");
 
@@ -669,6 +674,34 @@ namespace OneRoof.Domain
             }
         }
 
+        private int WordBattleSpeaker(WordBattleCommand command)
+        {
+            if (command.Action != WordBattleAction.Start && command.Action != WordBattleAction.Teach) return WordBattles.SpeakerId;
+            if (command.Action == WordBattleAction.Teach) return command.SpeakerId;
+            int chosen = 0; float strongest = .15f;
+            foreach (var support in Factions.Supports)
+                if (support.FactionId == command.FactionId && support.Support >= strongest && Population.TryGetPerson(support.ResidentId, out _) && (support.Support > strongest || chosen == 0 || support.ResidentId.Value < chosen))
+                { chosen = support.ResidentId.Value; strongest = support.Support; }
+            // Occupational representatives allow an early Guild encounter before the first support evaluation.
+            // This freezes a spokesperson without adding membership or changing allegiance.
+            if (chosen == 0 && command.FactionId == FactionIds.MerchantGuild)
+                foreach (var resident in Population.Persons)
+                    if (!resident.WorkplaceLocation.IsOutside && resident.WorkplaceRoomId.IsValid && Topology.TryGetRoom(resident.WorkplaceRoomId, out var workplace))
+                    {
+                        var type = workplace.ContentType.Value;
+                        if (type != "commercial:office" && (type.StartsWith("commercial:", StringComparison.Ordinal) || type.StartsWith("service:", StringComparison.Ordinal)) && (chosen == 0 || resident.Id.Value < chosen)) chosen = resident.Id.Value;
+                    }
+            return chosen;
+        }
+
+        private CommandResult CanExecuteWordBattle(WordBattleCommand command)
+        {
+            if (CaretakerOwnsInput) return CommandResult.Fail("Return the Caretaker to the lobby first.", "crisis:controls_owned");
+            int speaker = WordBattleSpeaker(command);
+            bool exists = speaker > 0 && Population.TryGetPerson(new EntityId(speaker), out _);
+            return WordBattles.CanExecute(command, CurrentTick / DailySchedule.TicksPerDay, exists);
+        }
+
         private CommandResult CanExecuteCaretaker(CaretakerCrisisCommand command)
         {
             if (!Enum.IsDefined(typeof(CaretakerCrisisAction), command.Action)) return CommandResult.Fail("Unknown Caretaker action.");
@@ -755,6 +788,13 @@ namespace OneRoof.Domain
         public CommandResult ExecuteCommand(ICommand command)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+            if (command is WordBattleCommand wit)
+            {
+                var result = CanExecuteWordBattle(wit);
+                if (result.Accepted) WordBattles.Execute(wit, CurrentTick / DailySchedule.TicksPerDay, WordBattleSpeaker(wit), Factions);
+                return result;
+            }
+            if (WordBattles.OwnsInput) return CanExecute(command);
             if (command is CaretakerCrisisCommand caretaker) return ExecuteCaretaker(caretaker);
             if (CaretakerOwnsInput) return CanExecute(command);
 
@@ -1386,6 +1426,7 @@ namespace OneRoof.Domain
             data.factions = Factions.ToSaveData();
             data.civilActions = CivilActions.ToSaveData();
             data.caretakerCrisis = CaretakerCrisis.ToSaveData();
+            data.wordBattles = WordBattles.ToSaveData();
             data.decisions = Decisions.ToSaveData();
 
             return data;
@@ -1419,6 +1460,7 @@ namespace OneRoof.Domain
             sim.Factions = FactionState.FromSaveData(data.factions, population);
             sim.CivilActions = CivilActionState.FromSaveData(data.civilActions);
             sim.CaretakerCrisis = CaretakerCrisisState.FromSaveData(data.caretakerCrisis);
+            sim.WordBattles = WordBattleState.FromSaveData(data.wordBattles, id => id > 0 && population.TryGetPerson(new EntityId(id), out _));
             sim.Decisions = DecisionRecordState.FromSaveData(data.decisions);
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;

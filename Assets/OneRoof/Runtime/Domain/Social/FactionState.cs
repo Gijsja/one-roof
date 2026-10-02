@@ -61,6 +61,19 @@ namespace OneRoof.Domain.Social
         public string Id { get; }
         public float Pressure { get; internal set; }
         public float PreviousPressure { get; internal set; }
+        private readonly List<int> _wordBattleVictoryTiers = new List<int>();
+        public IReadOnlyList<int> WordBattleVictoryTiers => _wordBattleVictoryTiers.AsReadOnly();
+        public float EarnedRespect => _wordBattleVictoryTiers.Count * .10f;
+        public float EffectivePressure => Math.Max(0f, Pressure - EarnedRespect);
+        public float PreviousEffectivePressure { get; internal set; }
+        internal bool AwardWordBattleRespect(int tier)
+        {
+            if (tier < 1 || tier > 3 || _wordBattleVictoryTiers.Contains(tier)) return false;
+            PreviousEffectivePressure = EffectivePressure;
+            _wordBattleVictoryTiers.Add(tier);
+            _wordBattleVictoryTiers.Sort();
+            return true;
+        }
         public string TopGrievance { get; internal set; } = "none";
         public int MemberCount { get; internal set; }
         public int SupporterCount { get; internal set; }
@@ -80,6 +93,13 @@ namespace OneRoof.Domain.Social
         public IReadOnlyList<FactionSupport> Supports => _supports;
         public IReadOnlyList<FactionRecord> Factions => _factions;
         public long LastEvaluationTick { get; private set; }
+
+        public bool AwardWordBattleRespect(string factionId, int tier)
+        {
+            foreach (var faction in _factions)
+                if (faction.Id == factionId) return faction.AwardWordBattleRespect(tier);
+            return false;
+        }
 
         public void Evaluate(PopulationState population, BuildingTopologyState topology, BusinessState businesses, PolicyDecreeState policy, long tick)
         {
@@ -178,6 +198,7 @@ namespace OneRoof.Domain.Social
             for (var i = 0; i < 4; i++)
             {
                 var record = _factions[i];
+                record.PreviousEffectivePressure = record.EffectivePressure;
                 record.PreviousPressure = record.Pressure;
                 record.Pressure = people.Count == 0 ? 0f : pressureSum[i] / people.Count;
                 record.SupporterCount = counts[i];
@@ -221,7 +242,7 @@ namespace OneRoof.Domain.Social
                 var ids = new int[best.Count]; var floors = new SortedSet<int>(); var pressure = 0f;
                 for (var index = 0; index < best.Count; index++) { ids[index] = best[index].ResidentId.Value; floors.Add(best[index].HomeFloor); pressure += best[index].DirectPressure; }
                 Array.Sort(ids); var floorIds = new int[floors.Count]; floors.CopyTo(floorIds);
-                signals.Add(new CivilActionSignal(faction.Id, best.Count == 0 ? 0f : pressure / best.Count, best.Count, best.Count == 0 ? "none" : best[0].Driver, ids, floorIds));
+                signals.Add(new CivilActionSignal(faction.Id, best.Count == 0 ? 0f : Math.Max(0f, pressure / best.Count - faction.EarnedRespect), best.Count, best.Count == 0 ? "none" : best[0].Driver, ids, floorIds));
             }
             return signals;
         }
@@ -416,11 +437,11 @@ namespace OneRoof.Domain.Social
 
         public FactionSaveData ToSaveData()
         {
-            var data = new FactionSaveData { version = 4, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
+            var data = new FactionSaveData { version = 5, lastEvaluationTick = LastEvaluationTick, edges = new RelationshipEdgeSaveData[_edges.Count], supports = new FactionSupportSaveData[_supports.Count], factions = new FactionRecordSaveData[_factions.Count] };
             for (var i = 0; i < _edges.Count; i++) { var e = _edges[i]; data.edges[i] = new RelationshipEdgeSaveData { first = e.First.Value, second = e.Second.Value, affinity = e.Affinity, previousAffinity = e.PreviousAffinity, lastContactTick = e.LastContactTick, cause = e.Cause, lastMeaningfulTick = e.LastMeaningfulTick, sharedSupportDays = e.SharedSupportDays, sharedIssue = e.SharedIssue, stage = (int)e.Stage }; }
             Array.Sort(data.edges, (a, b) => a.first != b.first ? a.first.CompareTo(b.first) : a.second.CompareTo(b.second));
             for (var i = 0; i < _supports.Count; i++) { var s = _supports[i]; data.supports[i] = new FactionSupportSaveData { residentId = s.ResidentId.Value, factionId = s.FactionId, support = s.Support, sustainedDays = s.SustainedDays, driver = s.Driver, homeFloor = s.HomeFloor, grievanceDays = s.GrievanceDays, directPressure = s.DirectPressure }; }
-            for (var i = 0; i < _factions.Count; i++) { var f = _factions[i]; data.factions[i] = new FactionRecordSaveData { id = f.Id, pressure = f.Pressure, previousPressure = f.PreviousPressure, topGrievance = f.TopGrievance }; }
+            for (var i = 0; i < _factions.Count; i++) { var f = _factions[i]; data.factions[i] = new FactionRecordSaveData { id = f.Id, pressure = f.Pressure, previousPressure = f.PreviousPressure, topGrievance = f.TopGrievance, earnedRespect = f.EarnedRespect, wordBattleVictoryTiers = new List<int>(f.WordBattleVictoryTiers).ToArray(), previousEffectivePressure = f.PreviousEffectivePressure }; }
             return data;
         }
         public static FactionState FromSaveData(FactionSaveData data, PopulationState population)
@@ -459,7 +480,12 @@ namespace OneRoof.Domain.Social
             state._supports.Sort((a, b) => a.ResidentId.Value != b.ResidentId.Value ? a.ResidentId.Value.CompareTo(b.ResidentId.Value) : string.CompareOrdinal(a.FactionId, b.FactionId));
             if (data.factions != null) foreach (var saved in data.factions)
                 if (saved != null) foreach (var faction in state._factions) if (faction.Id == saved.id)
-                    { faction.Pressure = ClampFinite(saved.pressure, 0f, 1f); faction.PreviousPressure = ClampFinite(saved.previousPressure, 0f, 1f); faction.TopGrievance = saved.topGrievance ?? "none"; }
+                    { faction.Pressure = ClampFinite(saved.pressure, 0f, 1f); faction.PreviousPressure = ClampFinite(saved.previousPressure, 0f, 1f); faction.TopGrievance = saved.topGrievance ?? "none";
+                        // Respect is reconstructed from validated provenance, never trusted as a free numeric bonus.
+                        if (data.version >= 5 && saved.wordBattleVictoryTiers != null)
+                            foreach (var tier in saved.wordBattleVictoryTiers) faction.AwardWordBattleRespect(tier);
+                        faction.PreviousEffectivePressure = data.version >= 5 ? ClampFinite(saved.previousEffectivePressure, 0f, 1f) : faction.PreviousPressure;
+                    }
             foreach (var faction in state._factions) foreach (var support in state._supports) if (support.FactionId == faction.Id) { faction.SupporterCount++; if (support.IsMember) faction.MemberCount++; }
             state.LastEvaluationTick = Math.Max(0, data.lastEvaluationTick);
             return state;
