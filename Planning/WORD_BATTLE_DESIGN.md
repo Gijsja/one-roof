@@ -42,16 +42,24 @@ START: freeze faction/spokesperson IDs, tier, encounter sequence and challenges
   SUSPEND (available before completion): save current node and resume later
 ```
 
-Example paired lines, with neutral political arguments rather than hidden facts:
+Authored comedy pairs target Guild hypocrisy with concrete reversals. Both challenge variants map to the same learned reply; stable IDs preserve existing learning and saves.
 
 | Argument | Leader challenge | Learned Steward reply |
 |---|---|---|
-| Burden sharing | “We set the course; the rest must pay.” | “Then lead by sharing costs today.” |
-| Authority | “Our rank alone proves we are right.” | “A title cannot win this fight.” |
-| Empty promises | “Just trust our pledge: the future's bright.” | “A pledge alone won't keep the light.” |
-| Necessity | “There is no choice; accept the strain.” | “Then say who bears it, who will gain.” |
+| Burden | “We all must tighten belts today.” | “Then why's your tailor on our pay?” |
+| Authority | “Our charter says we're fit to lead.” | “Does gold leaf teach a plaque to read?” |
+| Promises | “Our pledge will keep your future bright.” | “The brochure glows. Who pays for light?” |
+| Necessity | “There is no cure without some pain.” | “Your umbrella's dry. Explain.” |
+| Value | “Hard work has earned our splendid view.” | “The lift works just as hard as you.” |
+| Prosperity | “Our margins show we're serving all.” | “Your pie got big. Our slice got small.” |
+| Representation | “Their silence means they like our way.” | “You charged admission to have a say.” |
+| Risk | “We bear the risk; we've earned it all.” | “You keep the gold. We catch the fall.” |
+| Tradition | “This fee's been here since days of old.” | “So has the damp. Shall we pay mould?” |
+| Unity | “One roof means everyone agrees with me.” | “Then why's agreement an entry fee?” |
+| Charity | “Relieving hardship is our goal.” | “You raised the rent, then passed the bowl.” |
+| Order | “Our quiet halls show perfect peace.” | “You put complaints outside the lease.” |
 
-Example harder challenge for the same burden-sharing reply: “For common good, the weak must pay.” The Steward recognizes the same family beneath new wording. Localized pairs must preserve rhyme and meaning, while stable family IDs preserve matching rules. These examples are draft copy; publish only after editorial review for rhythm, natural wording and genuinely plausible distractors.
+The lines are rhyming call-and-response couplets. Leaders defend their own privilege; the Steward exposes the contradiction without inventing evidence objects. Reply explanations retain the argument family for learning. Copy changes retain catalog version and matching IDs because the encounter structure and meaning remain compatible.
 
 ## Lasting tension relief
 

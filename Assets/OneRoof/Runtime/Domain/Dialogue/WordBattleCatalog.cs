@@ -18,18 +18,18 @@ namespace OneRoof.Domain.Dialogue
     {
         public const string Version = "guild_wit_v1";
         public static IReadOnlyList<WordBattleReply> Replies { get; } = Array.AsReadOnly(new[] {
-            new WordBattleReply("wit:share", 1, "burden", "Then lead by sharing costs today.", "We set the course; the rest must pay.", "For common good, the weak must pay.", "Leadership requires sharing the burden."),
-            new WordBattleReply("wit:rank", 1, "authority", "A title cannot win this fight.", "Our rank alone proves we are right.", "Our Guild has rank; respect its might.", "Rank is no substitute for a sound argument."),
-            new WordBattleReply("wit:pledge", 1, "promises", "A pledge alone won't keep the light.", "Just trust our pledge: the future's bright.", "Our future profits shine so bright.", "Promises need practical delivery."),
-            new WordBattleReply("wit:choice", 1, "necessity", "Then say who bears it, who will gain.", "There is no choice; accept the strain.", "These costs are needed; don't complain.", "Necessity does not settle who bears the costs."),
-            new WordBattleReply("wit:price", 2, "value", "A price is not what people are worth.", "The market sets your place on earth.", "Your purse decides your place on earth.", "Market value cannot measure human dignity."),
-            new WordBattleReply("wit:profit", 2, "prosperity", "Who gets the feast, who pays the price?", "Our profits prove this policy is nice.", "Our growing margins should suffice.", "Private profit does not prove shared prosperity."),
-            new WordBattleReply("wit:voice", 2, "representation", "Then let the quiet have their say.", "No one objects; we've won the day.", "Their silence tells us we're okay.", "Silence does not establish consent."),
-            new WordBattleReply("wit:risk", 2, "risk", "But public hands must catch your fall.", "We take the risk, we earn it all.", "Our daring built this trading hall.", "Private rewards must account for public risk."),
-            new WordBattleReply("wit:custom", 3, "tradition", "Old habits cannot make wrong right.", "We've always done it; end this fight.", "Our ancient charter grants this right.", "Tradition alone does not justify a policy."),
-            new WordBattleReply("wit:unity", 3, "unity", "A shared roof leaves room to disagree.", "One Tower means you side with me.", "Divide our Guild and none are free.", "Unity does not require unquestioning agreement."),
-            new WordBattleReply("wit:mercy", 3, "charity", "Fair terms should never beg for grace.", "Our mercy keeps you in your place.", "Be grateful for our kindly face.", "Basic fairness is not a personal favor."),
-            new WordBattleReply("wit:order", 3, "order", "An unjust peace will crack once more.", "Keep quiet; order matters more.", "No grievances upon this floor.", "Suppressing complaints leaves their causes intact.") });
+            new WordBattleReply("wit:share", 1, "burden", "Then why's your tailor on our pay?", "We all must tighten belts today.", "Each must contribute, come what may.", "Shared sacrifice should include the people demanding it."),
+            new WordBattleReply("wit:rank", 1, "authority", "Does gold leaf teach a plaque to read?", "Our charter says we're fit to lead.", "Our titles show the skills you need.", "Authority can silence a question without answering it."),
+            new WordBattleReply("wit:pledge", 1, "promises", "The brochure glows. Who pays for light?", "Our pledge will keep your future bright.", "Tomorrow's profits bring delight.", "A glowing forecast cannot power the Tower."),
+            new WordBattleReply("wit:choice", 1, "necessity", "Your umbrella's dry. Explain.", "There is no cure without some pain.", "We all must weather this hard rain.", "A hardship called shared can still spare those imposing it."),
+            new WordBattleReply("wit:price", 2, "value", "The lift works just as hard as you.", "Hard work has earned our splendid view.", "We earned our place; you could do too.", "Wealth and status do not prove effort or human worth."),
+            new WordBattleReply("wit:profit", 2, "prosperity", "Your pie got big. Our slice got small.", "Our margins show we're serving all.", "Our growing profits help us all.", "A larger total does not mean a fairer share."),
+            new WordBattleReply("wit:voice", 2, "representation", "You charged admission to have a say.", "Their silence means they like our way.", "No voices rose against us today.", "Silence means little when speaking has a price."),
+            new WordBattleReply("wit:risk", 2, "risk", "You keep the gold. We catch the fall.", "We bear the risk; we've earned it all.", "Our daring built this trading hall.", "Private rewards can rest on risks passed to the Tower."),
+            new WordBattleReply("wit:custom", 3, "tradition", "So has the damp. Shall we pay mould?", "This fee's been here since days of old.", "Our oldest dues are good as gold.", "A practice surviving for years does not make it worth keeping."),
+            new WordBattleReply("wit:unity", 3, "unity", "Then why's agreement an entry fee?", "One roof means everyone agrees with me.", "We stand as one; dissent won't keep us free.", "Belonging under one roof should not require agreement with its leaders."),
+            new WordBattleReply("wit:mercy", 3, "charity", "You raised the rent, then passed the bowl.", "Relieving hardship is our goal.", "Our generous gifts will make you whole.", "Charity deserves scrutiny when its benefactor created the hardship."),
+            new WordBattleReply("wit:order", 3, "order", "You put complaints outside the lease.", "Our quiet halls show perfect peace.", "No one complains; disputes must cease.", "Banning complaints can hide hardship without resolving it.") });
         /// <summary>Validation seam for content compiled from future authoring assets.</summary>
         public static void Validate(IReadOnlyList<WordBattleReply> replies)
         {
