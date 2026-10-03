@@ -64,11 +64,15 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 # Headless Unity compilation check (requires Editor to be closed / no Temp/UnityLockfile):
 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -quit -projectPath . -logFile /tmp/compile.log
 
-# EditMode tests (NEVER pass -quit with -runTests!)
+# EditMode tests with automated failure reporting (recommended):
+Tools/run_editmode_tests.sh [-testFilter <Filter>]
+
+# Or raw headless EditMode tests (NEVER pass -quit with -runTests!):
 timeout 1500 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults /tmp/editmode.xml -logFile /tmp/editmode.log
 ```
 
 - **Validation & Pipeline Probing**: See [`Docs/WORKFLOW_AND_TESTING.md`](./Docs/WORKFLOW_AND_TESTING.md) for full details, worktree isolation, and live `unity command` telemetry/test probes (`unity-cli`).
 - **Commit hygiene**: Always commit paired `.meta` files for any new assets. Keep generated directories (`Library/`, `Temp/`, `.plastic/`) untracked.
-- **Sandbox & Git Operations**: Project workspace files are writable in the standard sandbox, but `.git/` is mounted read-only. Use standard shell commands (`mv`, `cp`, `mkdir`) inside sandbox. Any Git commands mutating repository index or history (`git add`, `git commit`, `git checkout`, `git stash`) require sandbox bypass (`BypassSandbox: true`).
+- **Sandbox & Tool Execution Boundaries**: Project workspace files are writable in the standard sandbox. However, `.git/` is mounted read-only, and Unity Editor assemblies/binaries reside on external paths (`/home/geisha/Unity/Hub/Editor/...` and `/home/geisha/.vscode/extensions/...`). Therefore, sandbox bypass (`BypassSandbox: true`) is required for: (1) Git commands mutating index or history (`git add`, `git commit`, `git checkout`, `git stash`), (2) Headless Unity Editor invocations, and (3) `dotnet` compilation/runs referencing Unity-generated project files (`OneRoof.*.csproj`).
+- **Tool Parameter Hygiene**: Never provide `ArtifactMetadata` to `write_to_file` when writing files in the workspace (only valid for `<appDataDir>/brain/`). Use `replace_file_content` for editing existing repository source code.
 - For documentation-only changes, state that Unity validation was not run.

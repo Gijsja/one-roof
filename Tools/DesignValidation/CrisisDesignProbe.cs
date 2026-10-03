@@ -13,7 +13,10 @@ using OneRoof.Domain.Time;
 using OneRoof.Domain.Transit;
 using OneRoof.Domain.Economy;
 
-var output = args.Length > 0 ? Path.GetFullPath(args[0]) : "/tmp/one-roof-crisis-design-probe";
+var rawOutput = args.Length > 0 ? Path.GetFullPath(args[0]) : "/tmp/one-roof-crisis-design-probe";
+var isJsonFile = rawOutput.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+var output = isJsonFile ? Path.GetDirectoryName(rawOutput)! : rawOutput;
+var summaryPath = isJsonFile ? rawOutput : Path.Combine(output, "summary.json");
 Directory.CreateDirectory(output);
 var json = new JsonSerializerOptions { IncludeFields = true };
 // Canonicalize only proven non-authoritative fields/order; all causal values stay in the comparison.
@@ -149,9 +152,28 @@ foreach (var condition in new[] { .2f, .6f, 1f })
         sourcePressure = network.Floors.Single(f => f.Floor == 1).WaterPressure,
         wasteAvailable = network.Floors.Single(f => f.Floor == 1).HasWasteCollection });
 }
-File.WriteAllText(Path.Combine(output, "summary.json"), JsonSerializer.Serialize(new {
+File.WriteAllText(summaryPath, JsonSerializer.Serialize(new {
     evidence = args.Length > 1 ? args[1] : "Actual current Domain source, standalone net10; not Unity, City daily sampling, new-chain acceptance or performance certification",
     limitations = "Captured-trip diagnostics remain positive-wait polling samples; completeDemandDay uses integrated pre-planning observation including local and rejected demand. Starts at tick450: first day is partial/unavailable. Semantic replay ignores only faction-support ordering and stale room IDs while Outside. Standalone timing is not native certification.",
     scenarios = summary, physicalFixture = new { commandReceipts, networkCases }
 }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
-Console.WriteLine(File.ReadAllText(Path.Combine(output, "summary.json")));
+
+Console.WriteLine($"\n[CrisisDesignProbe] Complete!");
+Console.WriteLine($"[CrisisDesignProbe] Summary output: {summaryPath}");
+Console.WriteLine($"[CrisisDesignProbe] Auxiliary files directory: {output}");
+foreach (var s in summary)
+{
+    var doc = JsonDocument.Parse(JsonSerializer.Serialize(s, json));
+    var root = doc.RootElement;
+    var tierVal = root.GetProperty("tier").GetInt32();
+    var cDay = root.GetProperty("completeDemandDay");
+    int status = cDay.TryGetProperty("Status", out var pStat) ? pStat.GetInt32() : 0;
+    long att = cDay.TryGetProperty("attempted", out var pAtt) ? pAtt.GetInt64() : 0;
+    long succ = cDay.TryGetProperty("succeeded", out var pSucc) ? pSucc.GetInt64() : 0;
+    long fail = cDay.TryGetProperty("failed", out var pFail) ? pFail.GetInt64() : 0;
+    long unreach = cDay.TryGetProperty("unreachable", out var pUnreach) ? pUnreach.GetInt64() : 0;
+    int p95 = cDay.TryGetProperty("P95Wait", out var pP95) ? pP95.GetInt32() : 0;
+    int liveMax = cDay.TryGetProperty("liveMaximum", out var pLiveMax) ? pLiveMax.GetInt32() : 0;
+    var divergence = root.GetProperty("firstFutureDivergenceStep").ValueKind == JsonValueKind.Null ? "None" : root.GetProperty("firstFutureDivergenceStep").ToString();
+    Console.WriteLine($"   Tier {tierVal}: Status={status} Attempted={att} Succeeded={succ} Failed={fail} Unreach={unreach} P95={p95} LiveMax={liveMax} Divergence={divergence}");
+}

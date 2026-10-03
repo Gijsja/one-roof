@@ -32,7 +32,7 @@ This document is the authoritative engineering guide for test architecture, head
 Validation runs headlessly via batchmode. When no interactive Editor is locking the workspace (`Temp/UnityLockfile` is absent), execute commands directly in the primary project directory. When an Editor session is actively running or for destructive experiments, use an isolated worktree.
 
 ### 2.1 Execution Modes
-- **Direct Workspace (Default)**: If `Temp/UnityLockfile` is absent, execute directly against the workspace (`-projectPath /home/geisha/Vibecode/UnityAI/one-roof` or `.`). Fast, no Git worktree overhead, no sandbox bypass required.
+- **Direct Workspace (Default)**: If `Temp/UnityLockfile` is absent, execute directly against the workspace (`-projectPath /home/geisha/Vibecode/UnityAI/one-roof` or `.`). Fast, no Git worktree overhead. Note that invoking Unity binaries or dotnet building Unity-generated csproj files requires `BypassSandbox: true` due to external assembly paths in `/home/geisha/Unity/Hub/Editor/...`.
 - **Isolated Worktree (Concurrent / Destructive)**: If an interactive Editor session has the workspace open, create a detached worktree:
   ```bash
   git worktree add ../one-roof-<task>-validation HEAD
@@ -40,7 +40,7 @@ Validation runs headlessly via batchmode. When no interactive Editor is locking 
   Apply scoped changes, validate, and remove the worktree when finished (`git worktree remove ../one-roof-<task>-validation`).
 
 ### 2.2 Fast Compilation Check
-Verify C# compilation without running tests (exit code `0` required).
+Verify C# compilation without running tests (exit code `0` required). Requires `BypassSandbox: true`.
 
 **Preferred (Concurrent with live Editor / No lockfile clash)**:
 ```bash
@@ -62,7 +62,14 @@ On failure, grep `/tmp/one-roof-compile.log` for `error CS` lines to pinpoint co
 > [!IMPORTANT]
 > **Never pass `-quit` with `-runTests`**. In Unity 6000.3 LTS, `-quit` causes the Editor to exit immediately upon initialization before the test runner executes or emits results XML. The test runner exits automatically with its own code.
 
-#### EditMode Tests (832 Passing)
+#### EditMode Tests (1,265 Passing)
+
+**Recommended Automated Runner (Prints Failure Traces to Console on Error)**:
+```bash
+Tools/run_editmode_tests.sh [-testFilter <Filter>]
+```
+
+**Direct Headless Invocations**:
 ```bash
 timeout 1500 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity \
   -batchmode -nographics \
@@ -133,5 +140,6 @@ When an Editor session runs with `com.unity.pipeline` active (port 7800 or 7801,
 ## 4. Pre-Commit Hygiene & Git Rules
 
 - **Paired `.meta` Files**: Ensure every new asset or directory has a valid `.meta` file; zero orphaned `.meta` files.
-- **Git Sandbox Rules**: File modifications inside the workspace work in standard sandbox mode. Git commands altering index/history (`git add`, `git commit`, `git checkout`) require sandbox bypass (`BypassSandbox: true`).
+- **Sandbox & Tool Execution Boundaries**: Workspace files are writable in the standard sandbox. However, `.git/` is mounted read-only, and Unity assemblies/binaries reside on external paths (`/home/geisha/Unity/Hub/Editor/...` and `/home/geisha/.vscode/extensions/...`). Therefore, sandbox bypass (`BypassSandbox: true`) is required for: (1) Git commands mutating index or history (`git add`, `git commit`, `git checkout`, `git stash`), (2) Headless Unity Editor invocations, and (3) `dotnet` compilation/runs referencing Unity-generated project files (`OneRoof.*.csproj`).
+- **Tool Parameter Hygiene**: Never provide `ArtifactMetadata` to `write_to_file` when writing files in the workspace (only valid for conversational artifacts in `<appDataDir>/brain/`). Use `replace_file_content` for editing existing repository source code.
 - **C# Syntax & Boundary Integrity**: Confirm zero engine references in `OneRoof.Domain` and `OneRoof.Application`.
