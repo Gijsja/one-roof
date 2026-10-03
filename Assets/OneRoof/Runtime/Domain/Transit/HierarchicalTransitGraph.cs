@@ -72,6 +72,22 @@ namespace OneRoof.Domain.Transit
 
         public IReadOnlyList<TransitEdge> Edges { get; }
 
+        private HierarchicalTransitGraph _nonElevatorGraph;
+        public HierarchicalTransitGraph NonElevatorGraph
+        {
+            get
+            {
+                if (_nonElevatorGraph != null) return _nonElevatorGraph;
+                var availableEdges = new List<TransitEdge>();
+                for (var i = 0; i < Edges.Count; i++)
+                {
+                    if (Edges[i].Mode != TransitMode.Elevator) availableEdges.Add(Edges[i]);
+                }
+                _nonElevatorGraph = new HierarchicalTransitGraph(Nodes, availableEdges);
+                return _nonElevatorGraph;
+            }
+        }
+
         public bool TryGetNode(EntityId id, out TransitNode node) => _nodesById.TryGetValue(id, out node);
 
         public IReadOnlyList<TransitEdge> GetOutgoingEdges(EntityId nodeId)

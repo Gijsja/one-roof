@@ -122,6 +122,12 @@ namespace OneRoof.Domain.Transit
 
             _passengers.Add(passenger);
             RequestFloor(passenger.DestinationFloor);
+            if (Direction == ElevatorDirection.None)
+            {
+                Direction = passenger.DestinationFloor > CurrentFloor ? ElevatorDirection.Up
+                    : passenger.DestinationFloor < CurrentFloor ? ElevatorDirection.Down
+                    : ElevatorDirection.None;
+            }
             return true;
         }
 
@@ -135,6 +141,12 @@ namespace OneRoof.Domain.Transit
                     discharged.Add(_passengers[i]);
                     _passengers.RemoveAt(i);
                 }
+            }
+
+            if (_passengers.Count == 0 && !HasTargetsInDirection(Direction))
+            {
+                var opposite = Direction == ElevatorDirection.Up ? ElevatorDirection.Down : ElevatorDirection.Up;
+                Direction = HasTargetsInDirection(opposite) ? opposite : ElevatorDirection.None;
             }
 
             return discharged;
@@ -234,6 +246,11 @@ namespace OneRoof.Domain.Transit
                 _targetFloors.Remove(CurrentFloor);
                 Phase = ElevatorCarPhase.DoorsOpening;
                 TimerTicksRemaining = Timing.DoorCycleTicks;
+                if (!HasTargetsInDirection(Direction))
+                {
+                    var opposite = Direction == ElevatorDirection.Up ? ElevatorDirection.Down : ElevatorDirection.Up;
+                    Direction = HasTargetsInDirection(opposite) ? opposite : ElevatorDirection.None;
+                }
             }
             else
             {
@@ -355,7 +372,7 @@ namespace OneRoof.Domain.Transit
             return nearest;
         }
 
-        private bool HasTargetsInDirection(ElevatorDirection dir)
+        public bool HasTargetsInDirection(ElevatorDirection dir)
         {
             if (dir == ElevatorDirection.Up)
             {

@@ -447,12 +447,14 @@ namespace OneRoof.Domain.Transit
                 {
                     if (elevatorBank.Cars.Count == 0)
                     {
-                        if (TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                        var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
+                        if (TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline) ||
+                            TryRerouteWithoutElevators(execution, topology.TransitGraph, long.MaxValue))
                         {
                             continue;
                         }
 
-                        CancelTrip(i, execution, person);
+                        CancelTrip(i, execution, person, elevatorBank);
                         continue;
                     }
 
@@ -463,8 +465,10 @@ namespace OneRoof.Domain.Transit
 
                     if (!execution.IsQueuedInElevator && !execution.IsRidingElevator)
                     {
-                        if (((floorDelta <= 2 && queueLength > 0) || queueLength >= 3) &&
-                            TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                        var isShortFlight = floorDelta <= 2 || (destFloor < originFloor && floorDelta <= 4);
+                        var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
+                        if (isShortFlight && queueLength > 0 &&
+                            TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline))
                         {
                             continue;
                         }
@@ -491,17 +495,23 @@ namespace OneRoof.Domain.Transit
                             execution.IsRidingElevator = false;
                             AdvanceLeg(i, execution, tick, person, onTripCompleted);
                         }
-                        else if (trip.WaitTicks >= 15 || (floorDelta <= 2 && trip.WaitTicks >= 5))
+                        else
                         {
-                            if (elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var waiting))
+                            var liveWait = elevatorBank.GetPassengerWaitTicks(trip.PersonId);
+                            var isShortFlight = floorDelta <= 2 || (destFloor < originFloor && floorDelta <= 4);
+                            var patienceThreshold = isShortFlight ? 5 : 20;
+                            if (liveWait >= patienceThreshold)
                             {
-                                trip.AddWaitTicks((int)waiting.WaitTicks);
-                                if (TryRerouteWithoutElevators(execution, topology.TransitGraph))
+                                var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
+                                if ((isShortFlight || liveWait >= 40) &&
+                                    TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline))
                                 {
+                                    if (elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var waiting))
+                                    {
+                                        trip.AddWaitTicks((int)waiting.WaitTicks);
+                                    }
                                     continue;
                                 }
-
-                                elevatorBank.EnqueuePassenger(waiting);
                             }
                         }
                     }
@@ -547,7 +557,8 @@ namespace OneRoof.Domain.Transit
 
         private static bool TryRerouteWithoutElevators(
             ActiveTripExecution execution,
-            HierarchicalTransitGraph graph)
+            HierarchicalTransitGraph graph,
+            long remainingDeadlineTicks = long.MaxValue)
         {
             var activeRoute = execution?.Route ?? execution?.Trip?.PlannedRoute;
             if (activeRoute == null || graph == null ||
@@ -558,15 +569,9 @@ namespace OneRoof.Domain.Transit
 
             var currentNodeId = activeRoute.Legs[execution.CurrentLegIndex].FromNodeId;
             var destinationNodeId = activeRoute.DestinationNodeId;
-            var availableEdges = new List<TransitEdge>();
-            foreach (var edge in graph.Edges)
-            {
-                if (edge.Mode != TransitMode.Elevator) availableEdges.Add(edge);
-            }
-
-            var accessibleGraph = new HierarchicalTransitGraph(graph.Nodes, availableEdges);
+            var accessibleGraph = graph.NonElevatorGraph;
             var route = new TransitRoutePlanner(accessibleGraph).FindRoute(currentNodeId, destinationNodeId);
-            if (route == null) return false;
+            if (route == null || route.TotalCost > remainingDeadlineTicks) return false;
 
             execution.Route = route;
             execution.CurrentLegIndex = 0;
@@ -576,8 +581,12 @@ namespace OneRoof.Domain.Transit
             return true;
         }
 
-        private void CancelTrip(int listIndex, ActiveTripExecution execution, PersonRecord person)
+        private void CancelTrip(int listIndex, ActiveTripExecution execution, PersonRecord person, ElevatorBank elevatorBank = null)
         {
+            if (execution.IsQueuedInElevator && elevatorBank != null)
+            {
+                elevatorBank.TryRemoveQueuedPassenger(execution.Trip.PersonId, out _);
+            }
             if (execution.Trip.State == TripState.InProgress) execution.Trip.Cancel();
             person?.UpdateActivity(ActivityKind.Idle);
             _activeTrips.RemoveAt(listIndex);

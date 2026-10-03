@@ -83,29 +83,29 @@ namespace OneRoof.Domain.Population
 
             // Base split (ticks): Sleep=baseSleepEnd, Work=480, Eat=120, Leisure fills remainder of day
             var isSliceScale = baseSleepEnd <= 60;
-            var baseWorkEnd  = isSliceScale ? baseSleepEnd + 80 : 960L;
-            var baseEatEnd   = isSliceScale ? baseWorkEnd + 40 : 1080L;
+            var baseWorkEnd  = isSliceScale ? baseSleepEnd + 80 : baseSleepEnd + 480L;
+            var baseEatEnd   = isSliceScale ? baseWorkEnd + 40 : baseWorkEnd + 120L;
 
             var traitShift = trait.Kind switch
             {
-                PersonTraitKind.EarlyBird  => isSliceScale ? -3L : -60L,
-                PersonTraitKind.NightOwl   => isSliceScale ? +3L : +60L,
+                PersonTraitKind.EarlyBird  => isSliceScale ? -3L : -30L,
+                PersonTraitKind.NightOwl   => isSliceScale ? +3L : +30L,
                 _                          => 0L,
             };
 
-            var jitter1 = isSliceScale ? rng.NextInt(-2, 3) : rng.NextInt(-30, 31);
-            var jitter2 = isSliceScale ? rng.NextInt(-5, 6) : rng.NextInt(-20, 21);
+            var jitter1 = isSliceScale ? rng.NextInt(-2, 3) : rng.NextInt(-20, 21);
+            var jitter2 = isSliceScale ? rng.NextInt(-5, 6) : rng.NextInt(-15, 16);
             var jitter3 = isSliceScale ? rng.NextInt(-4, 5) : rng.NextInt(-15, 16);
 
             var minSleep   = Math.Max(2, (int)(baseSleepEnd * 0.5f));
-            var maxSleep   = isSliceScale ? baseSleepEnd + 8 : 660L;
+            var maxSleep   = isSliceScale ? baseSleepEnd + 8 : baseSleepEnd + 120L;
             var sleepEnd   = Clamp(baseSleepEnd  + traitShift + jitter1, minSleep, maxSleep);
             // Keep full-day shifts at exactly eight in-game hours. Jitter shifts
             // the whole shift, rather than shortening or lengthening it.
             var workEnd    = isSliceScale
                 ? Clamp(baseWorkEnd + traitShift + jitter2, sleepEnd + 20, 250)
                 : sleepEnd + 480;
-            var eatEnd     = Clamp(baseEatEnd    + traitShift + jitter3, workEnd  + (isSliceScale ? 15 : 60),  isSliceScale ? 350 : 1200);
+            var eatEnd     = Clamp(baseEatEnd    + traitShift + jitter3, workEnd  + (isSliceScale ? 15 : 60),  isSliceScale ? 350 : Math.Min(TicksPerDay - 30L, workEnd + 180L));
 
             var blocks = new List<ScheduleBlock>(4)
             {

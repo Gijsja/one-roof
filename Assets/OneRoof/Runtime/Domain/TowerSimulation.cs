@@ -286,7 +286,7 @@ namespace OneRoof.Domain
                 }
                 else if (trip.State == TripState.Cancelled || sequence == 0)
                 {
-                    TransitDemand.Reject(sequence, currentTick.Value);
+                    TransitDemand.Reject(sequence, currentTick.Value, "TripCancelled");
                     _terminalDemandTrips.Add(pair.Key);
                 }
             }

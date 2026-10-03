@@ -125,7 +125,7 @@ namespace OneRoof.Domain.Trips
                     Current.unreachable++;
                     break;
                 }
-            Reject(sequence, tick);
+            Reject(sequence, tick, "RejectUnreachable");
         }
         public void AcceptTrip(long sequence, long tripId)
         {
@@ -154,8 +154,9 @@ namespace OneRoof.Domain.Trips
             MarkReachable(sequence);
             Finish(sequence, tick, true);
         }
-        public void Reject(long sequence, long tick) => Finish(sequence, tick, false);
-        private void Finish(long sequence, long tick, bool success)
+        public static Action<string, DemandEpisodeData, long, bool> DiagnosticFailure;
+        public void Reject(long sequence, long tick, string reason = "Unknown") => Finish(sequence, tick, false, reason);
+        private void Finish(long sequence, long tick, bool success, string reason = "Complete")
         {
             if (!unresolved.TryGetValue(sequence, out var item)) return;
             var day = Day(item.day);
@@ -163,7 +164,11 @@ namespace OneRoof.Domain.Trips
             try
             {
                 if (success && tick - item.submissionTick <= 360) day.succeeded = checked(day.succeeded + 1);
-                else day.failed = checked(day.failed + 1);
+                else
+                {
+                    day.failed = checked(day.failed + 1);
+                    DiagnosticFailure?.Invoke(success ? "Exceeded360" : reason, item, tick, success);
+                }
                 if (success || item.tripId > 0)
                 { int bin = Math.Min(361, item.queueWait); day.waitHistogram[bin] = checked(day.waitHistogram[bin] + 1); }
             }
@@ -187,7 +192,7 @@ namespace OneRoof.Domain.Trips
             if (tick < 0 || tick / 1440 < Current.day) { Current.invalid = true; return null; }
             expiryBuffer.Clear();
             foreach (var item in unresolved.Values) if (tick - item.submissionTick >= 360) expiryBuffer.Add(item.sequence);
-            foreach (long sequence in expiryBuffer) Reject(sequence, tick);
+            foreach (long sequence in expiryBuffer) Reject(sequence, tick, "ExpiredAt360");
             DemandDayData finalized = null;
             if (Pending != null && Pending.attempted == Pending.succeeded + Pending.failed)
             { finalized = Pending; LastFinalizedDay = Pending.day; Pending = null; }

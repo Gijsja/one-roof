@@ -1,3 +1,4 @@
+using System;
 using OneRoof.Domain.Time;
 
 namespace OneRoof.Domain.Population
@@ -27,9 +28,17 @@ namespace OneRoof.Domain.Population
             switch (person.CurrentActivity)
             {
                 case ActivityKind.Working:
+                    var remainingWork = OutsideWorkTicks;
+                    var activeBlock = person.Schedule.ActiveBlockAt(tick);
+                    if (activeBlock.HasValue && activeBlock.Value.Label == DailySchedule.LabelWork)
+                    {
+                        var dayTick = tick.Value % DailySchedule.TicksPerDay;
+                        var blockEnd = activeBlock.Value.EndTick.Value;
+                        if (blockEnd > dayTick) remainingWork = Math.Min(OutsideWorkTicks, blockEnd - dayTick);
+                    }
                     person.CommitPurpose(person.CurrentLocation.IsOutside
                         ? ResidentPurposeKind.WorkingOutside : ResidentPurposeKind.WorkingInside,
-                        tick, person.CurrentLocation.IsOutside ? OutsideWorkTicks : homeTicks);
+                        tick, person.CurrentLocation.IsOutside ? remainingWork : homeTicks);
                     return;
                 case ActivityKind.Eating:
                     person.CommitPurpose(ResidentPurposeKind.EatingAtDiner, tick, mealTicks);

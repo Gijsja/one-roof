@@ -132,9 +132,11 @@ namespace OneRoof.Domain.Trips
                 var scheduledPurpose = LabelToPurpose(person.Schedule.ActiveLabelAt(currentTick));
                 var changed = person.Schedule.ActiveLabelAt(previousTick) != person.Schedule.ActiveLabelAt(currentTick);
                 long scheduledEpisode = currentTick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay + (block?.StartTick.Value ?? 0);
+                var isOutsideShift = person.CurrentPurpose == ResidentPurposeKind.WorkingOutside &&
+                                     person.CurrentLocation.IsOutside;
                 if (changed && scheduledPurpose.HasValue &&
-                    ((canGenerateTrip != null && !canGenerateTrip(person)) || person.CurrentActivity == ActivityKind.Commuting ||
-                     person.HasCommittedPurposeAt(currentTick) && !CanInterruptOutsideWork(person, currentTick)))
+                    ((canGenerateTrip != null && !canGenerateTrip(person)) ||
+                     (isOutsideShift && !CanInterruptOutsideWork(person, currentTick))))
                 {
                     var suppressed = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, scheduledEpisode, currentTick.Value) ?? 0;
                     var requiredDestination = ResolveDestination(person, scheduledPurpose.Value);
@@ -142,34 +144,38 @@ namespace OneRoof.Domain.Trips
                         person.CurrentActivity != ActivityKind.Commuting)
                         DemandObserver?.Complete(suppressed, currentTick.Value);
                     else if (DemandObserver == null || !DemandObserver.HasOutstandingTrip(person.Id, scheduledPurpose.Value))
-                        DemandObserver?.Reject(suppressed, currentTick.Value);
+                        DemandObserver?.Reject(suppressed, currentTick.Value, "SuppressedCommitted");
                 }
                 if (canGenerateTrip != null && !canGenerateTrip(person)) continue;
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
                 if (person.CurrentPurpose == ResidentPurposeKind.None)
                     ResidentPurposeSystem.AdvancePerson(person, currentTick);
-                if (person.HasCommittedPurposeAt(currentTick) && !CanInterruptOutsideWork(person, currentTick)) continue;
+                if (isOutsideShift && !CanInterruptOutsideWork(person, currentTick)) continue;
                 if (_failedRouteCooldowns.TryGetValue(person.Id, out var cooldownUntil) && currentTick.Value < cooldownUntil) continue;
 
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
                 var currentLabel  = person.Schedule.ActiveLabelAt(currentTick);
                 var blockChanged  = previousLabel != currentLabel;
 
-                TripPurpose? purpose = blockChanged
-                    ? (_arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: true) ?? LabelToPurpose(currentLabel))
-                    : _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: false);
+                TripPurpose? purpose = _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: blockChanged);
 
                 if (purpose == TripPurpose.Food && person.CurrentLocation.IsOutside &&
                     person.IsOutsideFoodRetryBlocked(currentTick))
                 {
                     var blocked = DemandObserver?.ObserveAttempt(person.Id, TripPurpose.Food, person.PurposeStartedAtTick, currentTick.Value) ?? 0;
-                    DemandObserver?.Reject(blocked, currentTick.Value);
+                    DemandObserver?.Reject(blocked, currentTick.Value, "OutsideFoodRetryBlocked");
                     purpose = null;
                 }
 
                 if (purpose == null)
                 {
                     ResidentPurposeSystem.AdvancePerson(person, currentTick);
+                    if (blockChanged && scheduledPurpose.HasValue)
+                    {
+                        var localEpisode = scheduledEpisode;
+                        var localDemand = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, localEpisode, currentTick.Value) ?? 0;
+                        DemandObserver?.Complete(localDemand, currentTick.Value);
+                    }
                     continue;
                 }
 
@@ -197,6 +203,7 @@ namespace OneRoof.Domain.Trips
                         }
                         continue;
                     }
+
                     DemandObserver?.Complete(demand, currentTick.Value);
                     _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
@@ -320,21 +327,27 @@ namespace OneRoof.Domain.Trips
                     return WorldLocation.InRoom(person.HomeRoomId);
 
                 case TripPurpose.Food:
-                    // Distribute diners deterministically across all matching commercial rooms
-                    // so a second diner actually relieves 24/7 meal demand. Residents can
-                    // still seek food in the outside city when the tower has no diner; the
-                    // external service is deliberately abstracted to the street endpoint.
-                    if (person.WorkplaceLocation.IsOutside) return WorldLocation.Outside;
-                    var diner = FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: 0, personId: person.Id);
+                    // Distribute diners deterministically across matching commercial rooms,
+                    // prioritizing the nearest reachable diner to the resident's current floor.
+                    if (person.WorkplaceLocation.IsOutside && person.CurrentLocation.IsOutside) return WorldLocation.Outside;
+                    var foodFloor = GetPersonCurrentFloor(person);
+                    var diner = FindRoomByContent(FiveFloorTopologyFixture.CommercialContentId, floorHint: foodFloor, personId: person.Id);
                     return diner.HasValue ? WorldLocation.InRoom(diner.Value) : WorldLocation.Outside;
 
                 case TripPurpose.Leisure:
-                    // Distribute across all lobbies the same way.
-                    return AsLocation(FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: 0, personId: person.Id));
+                    // Distribute across lobbies, prioritizing nearest floor.
+                    var leisureFloor = GetPersonCurrentFloor(person);
+                    return AsLocation(FindRoomByContent(FiveFloorTopologyFixture.LobbyContentId, floorHint: leisureFloor, personId: person.Id));
 
                 default:
                     return null;
             }
+        }
+
+        private int GetPersonCurrentFloor(PersonRecord person)
+        {
+            if (person == null || person.CurrentLocation.IsOutside) return 0;
+            return _topology.TryGetRoom(person.CurrentRoomId, out var room) ? room.Floor : 0;
         }
 
         private static WorldLocation? AsLocation(EntityId? roomId) => roomId.HasValue ? WorldLocation.InRoom(roomId.Value) : (WorldLocation?)null;
@@ -351,20 +364,27 @@ namespace OneRoof.Domain.Trips
             var rooms = contentId == FiveFloorTopologyFixture.CommercialContentId ? _foodRooms : _lobbyRooms;
             if (rooms == null || rooms.Length == 0) return null;
 
-            // Preference 1: Candidate rooms on the local floor
-            var localCount = 0;
+            // Preference 1: Closest candidate rooms by floor delta
+            var minDelta = int.MaxValue;
             for (var i = 0; i < rooms.Length; i++)
             {
-                if (rooms[i].Floor == floorHint) localCount++;
+                var delta = Math.Abs(rooms[i].Floor - floorHint);
+                if (delta < minDelta) minDelta = delta;
             }
 
-            if (localCount > 0)
+            var closestCount = 0;
+            for (var i = 0; i < rooms.Length; i++)
             {
-                var targetIndex = Math.Abs(personId.Value % localCount);
+                if (Math.Abs(rooms[i].Floor - floorHint) == minDelta) closestCount++;
+            }
+
+            if (closestCount > 0)
+            {
+                var targetIndex = Math.Abs(personId.Value % closestCount);
                 var currentIndex = 0;
                 for (var i = 0; i < rooms.Length; i++)
                 {
-                    if (rooms[i].Floor == floorHint)
+                    if (Math.Abs(rooms[i].Floor - floorHint) == minDelta)
                     {
                         if (currentIndex == targetIndex) return rooms[i].Id;
                         currentIndex++;

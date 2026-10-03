@@ -81,9 +81,13 @@ namespace OneRoof.Domain.Topology
                     var needs = new[] { new NeedState(NeedKind.Hunger, 1f), new NeedState(NeedKind.Energy, 1f),
                         new NeedState(NeedKind.Social, 1f), new NeedState(NeedKind.Hygiene, 1f), new NeedState(NeedKind.Purpose, 1f) };
                     // One internal worker per household, two autonomous Outside commuters.
+                    // Stagger shifts across morning departure waves (all waking >= 450 starting tick).
+                    var baseSleep = member == 0
+                        ? 500 + (h % 3) * 50
+                        : (member == 1 ? 500 + (h % 2) * 60 : 530 + (h % 2) * 60);
                     people.Add(new PersonRecord(members[member], householdId, homes[h].Id,
                         member == 0 ? jobs[h % jobs.Count] : default,
-                        DailySchedule.Standard(trait, rng), needs, new[] { trait }, worksOutside: member != 0));
+                        DailySchedule.Standard(trait, rng, baseSleep), needs, new[] { trait }, worksOutside: member != 0));
                 }
             }
             var simulation = new TowerSimulation(new SimulationClock(new Tick(450)), topology,

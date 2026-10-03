@@ -99,7 +99,7 @@ namespace OneRoof.Domain.Population
                 person.UpdateActivity(ActivityKind.Working);
             if (isOutsideShift && tick.Value >= person.PurposeEndsAtTick)
                 return TripPurpose.Home;
-            if (person.HasCommittedPurposeAt(tick) && !CanInterruptOutsideWork(person, tick)) return null;
+            if (isOutsideShift && !CanInterruptOutsideWork(person, tick)) return null;
 
             var activeLabel = person.Schedule.ActiveLabelAt(tick);
             var urgent = ArbitrateUrgentNeed(person);
@@ -155,6 +155,10 @@ namespace OneRoof.Domain.Population
                     {
                         return TripPurpose.Food;
                     }
+                    if (!isAtHome)
+                    {
+                        return TripPurpose.Home;
+                    }
                     return null;
 
                 case DailySchedule.LabelLeisure:
@@ -162,6 +166,10 @@ namespace OneRoof.Domain.Population
                     if (social < LowSocialThreshold && person.CurrentActivity != ActivityKind.Leisure)
                     {
                         return TripPurpose.Leisure;
+                    }
+                    if (!isAtHome)
+                    {
+                        return TripPurpose.Home;
                     }
 
                     return null;

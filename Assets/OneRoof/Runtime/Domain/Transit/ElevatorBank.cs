@@ -380,15 +380,43 @@ namespace OneRoof.Domain.Transit
                     // B. Board waiting passengers up to remaining capacity
                     if (_floorQueues.TryGetValue(car.CurrentFloor, out var queue))
                     {
-                        // A lobby protest narrows boarding space on floor zero; car capacity elsewhere is unchanged.
-                        var boardingLimit = car.CurrentFloor == 0
-                            ? Math.Max(1, (int)Math.Floor(car.Capacity * lobbyCapacityMultiplier))
-                            : car.Capacity;
-                        while (car.CanBoard && car.Passengers.Count < boardingLimit && queue.Count > 0)
+                        var travelDir = car.Direction;
+                        if (travelDir == ElevatorDirection.None && queue.Count > 0)
                         {
-                            var nextPassenger = queue.Dequeue();
-                            car.Board(nextPassenger);
+                            var first = queue.Peek();
+                            travelDir = first.DestinationFloor > car.CurrentFloor ? ElevatorDirection.Up
+                                : first.DestinationFloor < car.CurrentFloor ? ElevatorDirection.Down
+                                : ElevatorDirection.None;
                         }
+
+                        var reserved = 0;
+                        if (car.CurrentFloor == 0 && travelDir == ElevatorDirection.Up)
+                        {
+                            for (var f = 1; f <= 4; f++)
+                            {
+                                if (car.HasTargetFloor(f) && _floorQueues.TryGetValue(f, out var q))
+                                {
+                                    reserved += q.Count;
+                                }
+                            }
+                        }
+                        else if (car.CurrentFloor == 29 && travelDir == ElevatorDirection.Down)
+                        {
+                            for (var f = 28; f >= 25; f--)
+                            {
+                                if (car.HasTargetFloor(f) && _floorQueues.TryGetValue(f, out var q))
+                                {
+                                    reserved += q.Count;
+                                }
+                            }
+                        }
+                        reserved = Math.Min(car.Capacity / 2, reserved);
+
+                        var effectiveCap = Math.Max(1, car.Capacity - reserved);
+                        var boardingLimit = car.CurrentFloor == 0
+                            ? Math.Max(1, Math.Min(effectiveCap, (int)Math.Floor(car.Capacity * lobbyCapacityMultiplier)))
+                            : effectiveCap;
+                        BoardPassengersDirectional(car, queue, boardingLimit);
                     }
 
                     if (car.Passengers.Count >= car.Capacity)
@@ -400,6 +428,132 @@ namespace OneRoof.Domain.Transit
 
             // 4. Rebalance unserviced floor calls to best available cars
             RebalanceDispatches();
+        }
+
+        private void BoardPassengersDirectional(ElevatorCar car, Queue<ElevatorPassenger> queue, int boardingLimit)
+        {
+            if (queue == null || queue.Count == 0 || !car.CanBoard || car.Passengers.Count >= boardingLimit)
+                return;
+
+            var effectiveDirection = car.Direction;
+            if (effectiveDirection == ElevatorDirection.None)
+            {
+                var first = queue.Peek();
+                effectiveDirection = first.DestinationFloor > car.CurrentFloor ? ElevatorDirection.Up
+                    : first.DestinationFloor < car.CurrentFloor ? ElevatorDirection.Down
+                    : ElevatorDirection.None;
+            }
+
+            var unboarded = new List<ElevatorPassenger>(queue.Count);
+            while (queue.Count > 0)
+            {
+                var p = queue.Dequeue();
+                var passengerDirection = p.DestinationFloor > car.CurrentFloor ? ElevatorDirection.Up
+                    : p.DestinationFloor < car.CurrentFloor ? ElevatorDirection.Down
+                    : ElevatorDirection.None;
+
+                if (car.CanBoard && car.Passengers.Count < boardingLimit &&
+                    (effectiveDirection == ElevatorDirection.None || passengerDirection == effectiveDirection))
+                {
+                    car.Board(p);
+                    if (effectiveDirection == ElevatorDirection.None)
+                    {
+                        effectiveDirection = passengerDirection;
+                    }
+                }
+                else
+                {
+                    unboarded.Add(p);
+                }
+            }
+
+            // If car still has capacity and has no more targets in its current direction,
+            // it can accept remaining passengers (reversal)
+            if (car.CanBoard && car.Passengers.Count < boardingLimit && !car.HasTargetsInDirection(effectiveDirection))
+            {
+                var stillUnboarded = new List<ElevatorPassenger>(unboarded.Count);
+                for (var i = 0; i < unboarded.Count; i++)
+                {
+                    if (car.CanBoard && car.Passengers.Count < boardingLimit)
+                    {
+                        car.Board(unboarded[i]);
+                    }
+                    else
+                    {
+                        stillUnboarded.Add(unboarded[i]);
+                    }
+                }
+                unboarded = stillUnboarded;
+            }
+
+            for (var i = 0; i < unboarded.Count; i++)
+            {
+                queue.Enqueue(unboarded[i]);
+            }
+        }
+
+
+        private ElevatorDirection GetFloorQueueDirection(int floor)
+        {
+            if (!_floorQueues.TryGetValue(floor, out var queue) || queue.Count == 0)
+                return ElevatorDirection.None;
+
+            var first = queue.Peek();
+            return first.DestinationFloor > floor ? ElevatorDirection.Up
+                : first.DestinationFloor < floor ? ElevatorDirection.Down
+                : ElevatorDirection.None;
+        }
+
+        private bool CanTargetFloorNow(ElevatorCar car, int floor, ElevatorDirection queueDir)
+        {
+            if (car.CurrentFloor == floor &&
+                (car.Phase == ElevatorCarPhase.DoorsClosing ||
+                 car.Phase == ElevatorCarPhase.Moving ||
+                 car.Phase == ElevatorCarPhase.OpenLoading))
+            {
+                return false;
+            }
+
+            if (car.Direction == ElevatorDirection.None)
+                return true;
+
+            if (car.Direction == ElevatorDirection.Up)
+            {
+                if (queueDir == ElevatorDirection.Up)
+                    return floor >= car.CurrentFloor;
+
+                if (queueDir == ElevatorDirection.Down)
+                {
+                    var highestTarget = car.CurrentFloor;
+                    foreach (var p in car.Passengers)
+                        if (p.DestinationFloor > highestTarget) highestTarget = p.DestinationFloor;
+                    foreach (var t in car.TargetFloors)
+                        if (t > highestTarget) highestTarget = t;
+                    return floor >= highestTarget;
+                }
+
+                return true;
+            }
+
+            if (car.Direction == ElevatorDirection.Down)
+            {
+                if (queueDir == ElevatorDirection.Down)
+                    return floor <= car.CurrentFloor;
+
+                if (queueDir == ElevatorDirection.Up)
+                {
+                    var lowestTarget = car.CurrentFloor;
+                    foreach (var p in car.Passengers)
+                        if (p.DestinationFloor < lowestTarget) lowestTarget = p.DestinationFloor;
+                    foreach (var t in car.TargetFloors)
+                        if (t < lowestTarget) lowestTarget = t;
+                    return floor <= lowestTarget;
+                }
+
+                return true;
+            }
+
+            return true;
         }
 
         private void RebalanceDispatches()
@@ -427,65 +581,135 @@ namespace OneRoof.Domain.Transit
                 return waitOrder != 0 ? waitOrder : a.floor.CompareTo(b.floor);
             });
 
+            var committedCapacityUp = new Dictionary<ElevatorCar, int>(_cars.Count);
+            var committedCapacityDown = new Dictionary<ElevatorCar, int>(_cars.Count);
+            foreach (var car in _cars)
+            {
+                var upCount = 0;
+                var downCount = 0;
+                foreach (var p in car.Passengers)
+                {
+                    if (p.DestinationFloor > car.CurrentFloor) upCount++;
+                    else if (p.DestinationFloor < car.CurrentFloor) downCount++;
+                    else
+                    {
+                        if (car.Direction == ElevatorDirection.Up) upCount++;
+                        else if (car.Direction == ElevatorDirection.Down) downCount++;
+                    }
+                }
+                committedCapacityUp[car] = upCount;
+                committedCapacityDown[car] = downCount;
+            }
+
             foreach (var item in floorsWithQueues)
             {
                 var floor = item.floor;
-                var bestCar = FindBestCarForFloor(floor);
-                if (bestCar != null)
-                {
-                    bestCar.RequestFloor(floor);
+                var queueCount = _floorQueues[floor].Count;
+                var queueDir = GetFloorQueueDirection(floor);
+                var assignedCapacity = 0;
+                var assignedCars = new List<ElevatorCar>();
+                var committedCapacity = queueDir == ElevatorDirection.Down ? committedCapacityDown : committedCapacityUp;
 
-                    foreach (var other in _cars)
+                var maxCarsPerFloor = Math.Max(1, _cars.Count - 1);
+                while (assignedCapacity < queueCount && assignedCars.Count < maxCarsPerFloor)
+                {
+                    ElevatorCar bestCar = null;
+                    long minCost = long.MaxValue;
+
+                    foreach (var car in _cars)
                     {
-                        if (other != bestCar)
+                        if (assignedCars.Contains(car)) continue;
+                        if (committedCapacity[car] >= car.Capacity) continue;
+                        if (!CanTargetFloorNow(car, floor, queueDir)) continue;
+
+                        long cost = _tierProfile.EtaDispatch
+                            ? EstimatePickupCost(car, floor, queueDir)
+                            : (long)Math.Abs(car.CurrentFloor - floor) * 5L + car.RequestCount * 10L;
+
+                        if (car.HasTargetFloor(floor))
                         {
-                            other.RemoveTargetFloor(floor);
+                            cost = Math.Max(0L, cost - 10L);
                         }
+
+                        if (cost < minCost || (cost == minCost && (bestCar == null || car.Id.CompareTo(bestCar.Id) < 0)))
+                        {
+                            minCost = cost;
+                            bestCar = car;
+                        }
+                    }
+
+                    if (bestCar == null) break;
+
+                    bestCar.RequestFloor(floor);
+                    assignedCars.Add(bestCar);
+                    var canTake = Math.Min(queueCount - assignedCapacity, bestCar.Capacity - committedCapacity[bestCar]);
+                    assignedCapacity += canTake;
+                    committedCapacity[bestCar] += canTake;
+                }
+
+                foreach (var other in _cars)
+                {
+                    if (!assignedCars.Contains(other))
+                    {
+                        other.RemoveTargetFloor(floor);
                     }
                 }
             }
         }
 
-        private ElevatorCar FindBestCarForFloor(int floor)
-        {
-            ElevatorCar bestCar = null;
-            long minCost = long.MaxValue;
-
-            foreach (var car in _cars)
-            {
-                if (car.Passengers.Count >= car.Capacity)
-                {
-                    continue;
-                }
-                var dist = Math.Abs(car.CurrentFloor - floor);
-                long cost = _tierProfile.EtaDispatch
-                    ? EstimatePickupCost(car, floor, dist)
-                    : dist * 5L + car.RequestCount * 10L;
-
-                if (cost < minCost || (cost == minCost && (bestCar == null || car.Id.CompareTo(bestCar.Id) < 0)))
-                {
-                    minCost = cost;
-                    bestCar = car;
-                }
-            }
-
-            return bestCar;
-        }
-
-        private long EstimatePickupCost(ElevatorCar car, int floor, int distance)
+        private long EstimatePickupCost(ElevatorCar car, int floor, ElevatorDirection queueDir)
         {
             var timing = car.Timing;
             var moving = car.Phase == ElevatorCarPhase.Moving ? car.TimerTicksRemaining : 0;
             var doorWork = (long)car.RequestCount * (timing.DoorCycleTicks * 2L + timing.DwellTicks);
-            var directionMismatch = car.Direction != ElevatorDirection.None &&
-                ((car.Direction == ElevatorDirection.Up && floor < car.CurrentFloor) ||
-                 (car.Direction == ElevatorDirection.Down && floor > car.CurrentFloor));
-            var reversal = directionMismatch ? Math.Max(1, distance) * (long)timing.FloorTravelTicks : 0L;
             var load = (long)car.Passengers.Count * (timing.DoorCycleTicks + timing.DwellTicks) /
                        Math.Max(1, car.Capacity);
             var waitCredit = Math.Min(_tierProfile.WaitCreditCapTicks, GetFloorWaitMetrics(floor).MaxWaitTicks / 4);
             var committedStops = doorWork + load;
-            var predictedTicks = moving + (long)distance * timing.FloorTravelTicks + committedStops + reversal;
+
+            long effectiveDist;
+            long turnaroundPenalty = 0;
+
+            if (car.Direction == ElevatorDirection.None)
+            {
+                effectiveDist = Math.Abs(car.CurrentFloor - floor);
+            }
+            else if (car.Direction == ElevatorDirection.Up)
+            {
+                if (queueDir == ElevatorDirection.Up && floor >= car.CurrentFloor)
+                {
+                    effectiveDist = floor - car.CurrentFloor;
+                }
+                else
+                {
+                    var highest = car.CurrentFloor;
+                    foreach (var t in car.TargetFloors)
+                        if (t > highest) highest = t;
+                    if (floor > highest) highest = floor;
+
+                    effectiveDist = (highest - car.CurrentFloor) + Math.Abs(highest - floor);
+                    turnaroundPenalty = timing.FloorTravelTicks * 20L;
+                }
+            }
+            else // ElevatorDirection.Down
+            {
+                if (queueDir == ElevatorDirection.Down && floor <= car.CurrentFloor)
+                {
+                    effectiveDist = car.CurrentFloor - floor;
+                }
+                else
+                {
+                    var lowest = car.CurrentFloor;
+                    foreach (var t in car.TargetFloors)
+                        if (t < lowest) lowest = t;
+                    if (floor < lowest) lowest = floor;
+
+                    effectiveDist = (car.CurrentFloor - lowest) + Math.Abs(floor - lowest);
+                    turnaroundPenalty = timing.FloorTravelTicks * 20L;
+                }
+            }
+
+            var predictedTicks = moving + effectiveDist * timing.FloorTravelTicks + committedStops + turnaroundPenalty;
             return Math.Max(0L, predictedTicks - waitCredit);
         }
 
