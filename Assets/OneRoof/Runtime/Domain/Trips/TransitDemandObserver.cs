@@ -95,6 +95,13 @@ namespace OneRoof.Domain.Trips
             }
             catch (OverflowException) { Current.invalid = true; return 0; }
         }
+        /// <summary>Finds pending required attendance even when no trip could be submitted.</summary>
+        public long FindOutstandingSequence(EntityId resident, TripPurpose purpose)
+        {
+            return latest.TryGetValue(Key(resident.Value, purpose), out var item) && !item.terminal
+                ? item.sequence : 0;
+        }
+
         public bool HasOutstandingTrip(EntityId resident, TripPurpose purpose)
         {
             return latest.TryGetValue(Key(resident.Value, purpose), out var item) &&

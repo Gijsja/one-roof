@@ -97,7 +97,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(result.Accepted, Is.True);
             Assert.That(_sim.ElevatorBank.Tier, Is.EqualTo(2));
             Assert.That(_sim.Economy.CashBalance, Is.EqualTo(startingBalance - 2000));
-            Assert.That(_sim.ElevatorBank.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(5));
+            Assert.That(_sim.ElevatorBank.Cars[0].Timing.FloorTravelSeconds, Is.EqualTo(10));
         }
 
         [Test]

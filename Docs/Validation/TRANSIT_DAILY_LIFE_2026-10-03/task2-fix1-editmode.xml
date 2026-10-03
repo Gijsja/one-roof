@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="72" result="Passed" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.5008985">
+  <test-suite type="TestSuite" id="1000" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="1352" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.500899" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1959" name="OneRoof.Domain.Tests.EditMode.dll" fullname="/tmp/one-roof-transit-baseline-unity/Library/ScriptAssemblies/OneRoof.Domain.Tests.EditMode.dll" runstate="Runnable" testcasecount="718" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.461527" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="102011" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1960" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="718" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.448099" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1964" name="Domain" fullname="OneRoof.Domain" runstate="Runnable" testcasecount="710" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.435111" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1965" name="Tests" fullname="OneRoof.Domain.Tests" runstate="Runnable" testcasecount="710" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.422906" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1966" name="EditMode" fullname="OneRoof.Domain.Tests.EditMode" runstate="Runnable" testcasecount="710" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.409697" total="72" passed="72" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1251" name="DirectionalDispatchTests" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.288267" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1265" name="AlreadyOpeningPickupIsEstimatedFromItsRemainingDoorWork" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.AlreadyOpeningPickupIsEstimatedFromItsRemainingDoorWork" methodname="AlreadyOpeningPickupIsEstimatedFromItsRemainingDoorWork" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="334372290" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.032093" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1267" name="CompatibleBoardingKeepsFifoWithinEachDirection" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.CompatibleBoardingKeepsFifoWithinEachDirection" methodname="CompatibleBoardingKeepsFifoWithinEachDirection" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="487334588" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.012154" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1262" name="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.012324" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1258" name="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,4)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,4)" methodname="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="528327422" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001333" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1259" name="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,29)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,29)" methodname="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1728051812" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001243" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1260" name="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,39)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(0,39)" methodname="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="164043820" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000955" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1261" name="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(-5,4)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop(-5,4)" methodname="EndpointReservationUsesCompatibleIntermediateDemandAtConfiguredTop" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1941124928" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000845" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1266" name="FifoHeadKeepsFasterElevatorWhenTwentyThreeLaterCallersWaitBehindIt" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.FifoHeadKeepsFasterElevatorWhenTwentyThreeLaterCallersWaitBehindIt" methodname="FifoHeadKeepsFasterElevatorWhenTwentyThreeLaterCallersWaitBehindIt" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1991795111" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.060524" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1264" name="FullCarEstimateIncludesSeatReleaseBeforeTheNextPickup" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.FullCarEstimateIncludesSeatReleaseBeforeTheNextPickup" methodname="FullCarEstimateIncludesSeatReleaseBeforeTheNextPickup" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="594189503" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.003934" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1269" name="LegalTierOneThroughFiveCommandsImproveTheSamePeakWithoutChangingDemand" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.LegalTierOneThroughFiveCommandsImproveTheSamePeakWithoutChangingDemand" methodname="LegalTierOneThroughFiveCommandsImproveTheSamePeakWithoutChangingDemand" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1751981978" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.133452" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1263" name="NewCallsDoNotReassignAnAcceptedPickup" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.NewCallsDoNotReassignAnAcceptedPickup" methodname="NewCallsDoNotReassignAnAcceptedPickup" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="787917731" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001738" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1268" name="OldestCallGetsServiceUnderContinuingFreshOppositeDemand" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OldestCallGetsServiceUnderContinuingFreshOppositeDemand" methodname="OldestCallGetsServiceUnderContinuingFreshOppositeDemand" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1451620543" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.003485" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1256" name="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.005513" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1252" name="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,4)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,4)" methodname="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="609301119" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001302" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1253" name="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,29)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,29)" methodname="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="1251407232" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000751" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1254" name="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,39)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(0,39)" methodname="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="937639580" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000879" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1255" name="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(-5,4)" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve(-5,4)" methodname="OneLandingPeakUsesEveryCarWithoutHoldingAnIdleReserve" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="715570367" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000475" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1257" name="OppositeDirectionQueueReceivesASeparatePickupCommitment" fullname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests.OppositeDirectionQueueReceivesASeparatePickupCommitment" methodname="OppositeDirectionQueueReceivesASeparatePickupCommitment" classname="OneRoof.Domain.Tests.EditMode.DirectionalDispatchTests" runstate="Runnable" seed="123631588" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.002903" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1799" name="TransitChoiceAndClockTests" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="56" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.090274" total="56" passed="56" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1865" name="AuthoredZeroDoorAndLoadingTimesStillProduceReplayableIdleCheckpoint" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.AuthoredZeroDoorAndLoadingTimesStillProduceReplayableIdleCheckpoint" methodname="AuthoredZeroDoorAndLoadingTimesStillProduceReplayableIdleCheckpoint" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1921840135" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.006643" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1812" name="CustomMinuteTimingSurvivesBankSaveWithoutSpeedingUp" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.CustomMinuteTimingSurvivesBankSaveWithoutSpeedingUp" methodname="CustomMinuteTimingSurvivesBankSaveWithoutSpeedingUp" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="706411843" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.004877" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1860" name="EarlierPhysicalCheckpointVersionReplaysWithAuthoritativeClock" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EarlierPhysicalCheckpointVersionReplaysWithAuthoritativeClock" methodname="EarlierPhysicalCheckpointVersionReplaysWithAuthoritativeClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="210682082" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.006134" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1803" name="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001774" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1800" name="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(1,3)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(1,3)" methodname="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1424373712" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000531" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1801" name="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(3,2)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(3,2)" methodname="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1308036849" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000247" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1802" name="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(5,2)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor(5,2)" methodname="ElevenFloorJourneyUsesMinutesRatherThanMinutesPerFloor" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="2103407060" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000234" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="1820" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.008532" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1814" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(1,0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(1,0)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1414816661" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001635" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1815" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(2,0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(2,0)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1545796058" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001504" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1816" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(3,0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(3,0)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="57137517" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001082" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1817" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(4,0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(4,0)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1651758147" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001102" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1818" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(0,2)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(0,2)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1028643223" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001036" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1819" name="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(0,1)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter(0,1)" methodname="EligibleShortFlightUsesStairsWhenFullArrivalAndEffortAreBetter" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="468026176" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001017" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1828" name="FailedReconsiderationRetainsQueueOrderAndCountsWaitOnlyOnce" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.FailedReconsiderationRetainsQueueOrderAndCountsWaitOnlyOnce" methodname="FailedReconsiderationRetainsQueueOrderAndCountsWaitOnlyOnce" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1137078457" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.002594" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1811" name="FloorTravelRetainsSecondsAcrossFiveSecondBoundaries" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.FloorTravelRetainsSecondsAcrossFiveSecondBoundaries" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001351" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1809" name="FloorTravelRetainsSecondsAcrossFiveSecondBoundaries(3,7,4)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.FloorTravelRetainsSecondsAcrossFiveSecondBoundaries(3,7,4)" methodname="FloorTravelRetainsSecondsAcrossFiveSecondBoundaries" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1615139410" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000585" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1810" name="FloorTravelRetainsSecondsAcrossFiveSecondBoundaries(5,10,6)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.FloorTravelRetainsSecondsAcrossFiveSecondBoundaries(5,10,6)" methodname="FloorTravelRetainsSecondsAcrossFiveSecondBoundaries" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="4416004" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000189" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1808" name="HallwayTraversalConsumesOneSecondPerCellAcrossSeveralLegs" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.HallwayTraversalConsumesOneSecondPerCellAcrossSeveralLegs" methodname="HallwayTraversalConsumesOneSecondPerCellAcrossSeveralLegs" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="800349118" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000573" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1853" name="ImpossibleCarTemporalCheckpointIsRejected" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.003867" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1844" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_travel&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_travel&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="11614617" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000758" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1845" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_door&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_door&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="216905595" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000182" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1846" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_dwell&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;minute_dwell&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="2132718645" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000150" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1847" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;phase&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;phase&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="578091710" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000137" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1848" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;direction&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;direction&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1118285928" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000132" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1849" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;moving_without_direction&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;moving_without_direction&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1073589569" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000124" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1850" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;negative_timer&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;negative_timer&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="926327532" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000162" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1851" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;timer_projection&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;timer_projection&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1371087219" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000177" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1852" name="ImpossibleCarTemporalCheckpointIsRejected(&quot;bank_version&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleCarTemporalCheckpointIsRejected(&quot;bank_version&quot;)" methodname="ImpossibleCarTemporalCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1976861109" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000132" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="1843" name="ImpossibleMovementCheckpointIsRejected" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.005067" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1835" name="ImpossibleMovementCheckpointIsRejected(&quot;remaining&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;remaining&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1455938007" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001426" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1836" name="ImpossibleMovementCheckpointIsRejected(&quot;duration&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;duration&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="169756789" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000308" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1837" name="ImpossibleMovementCheckpointIsRejected(&quot;tick_projection&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;tick_projection&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="739049601" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000303" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1838" name="ImpossibleMovementCheckpointIsRejected(&quot;legacy_mode&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;legacy_mode&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1003410634" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000280" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1839" name="ImpossibleMovementCheckpointIsRejected(&quot;future_reconsideration&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;future_reconsideration&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="531246121" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000269" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1840" name="ImpossibleMovementCheckpointIsRejected(&quot;state&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;state&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1796213321" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000279" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1841" name="ImpossibleMovementCheckpointIsRejected(&quot;purpose&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;purpose&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1424638198" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000248" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1842" name="ImpossibleMovementCheckpointIsRejected(&quot;location_kind&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ImpossibleMovementCheckpointIsRejected(&quot;location_kind&quot;)" methodname="ImpossibleMovementCheckpointIsRejected" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1378482322" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000245" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1834" name="InfeasibleLateDiversionKeepsTheHeldQueuePosition" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.InfeasibleLateDiversionKeepsTheHeldQueuePosition" methodname="InfeasibleLateDiversionKeepsTheHeldQueuePosition" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="276337566" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001415" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1807" name="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.005378" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1804" name="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(0)" methodname="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="628779061" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001901" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1805" name="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(3)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(3)" methodname="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="287325987" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001137" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1806" name="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(20)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes(20)" methodname="LongOrdinaryDescentKeepsUsableElevatorEvenAfterFortyQueueMinutes" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1440371494" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001497" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1827" name="LongStairsAreAvailableWhenThereAreNoCars" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.LongStairsAreAvailableWhenThereAreNoCars" methodname="LongStairsAreAvailableWhenThereAreNoCars" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1526957788" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.003213" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1859" name="MovementChronologyUsesAuthoritativeAggregateClock" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.MovementChronologyUsesAuthoritativeAggregateClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.002463" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1855" name="MovementChronologyUsesAuthoritativeAggregateClock(&quot;checkpoint_future&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.MovementChronologyUsesAuthoritativeAggregateClock(&quot;checkpoint_future&quot;)" methodname="MovementChronologyUsesAuthoritativeAggregateClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="838367389" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000743" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1856" name="MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_future&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_future&quot;)" methodname="MovementChronologyUsesAuthoritativeAggregateClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1168387293" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000267" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1857" name="MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_before_departure&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_before_departure&quot;)" methodname="MovementChronologyUsesAuthoritativeAggregateClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1627392612" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000259" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1858" name="MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_after_recorded_progress&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.MovementChronologyUsesAuthoritativeAggregateClock(&quot;reconsideration_after_recorded_progress&quot;)" methodname="MovementChronologyUsesAuthoritativeAggregateClock" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1852184172" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000255" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1831" name="OlderSavedElevatorUsesItsMinuteTimerAndTierSpeed" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.OlderSavedElevatorUsesItsMinuteTimerAndTierSpeed" methodname="OlderSavedElevatorUsesItsMinuteTimerAndTierSpeed" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1694680129" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000828" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1826" name="OrdinaryStairEligibilityIsDirectionalAndBounded" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.OrdinaryStairEligibilityIsDirectionalAndBounded" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.003040" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1824" name="OrdinaryStairEligibilityIsDirectionalAndBounded(0,3)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.OrdinaryStairEligibilityIsDirectionalAndBounded(0,3)" methodname="OrdinaryStairEligibilityIsDirectionalAndBounded" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1024510223" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001477" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1825" name="OrdinaryStairEligibilityIsDirectionalAndBounded(5,0)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.OrdinaryStairEligibilityIsDirectionalAndBounded(5,0)" methodname="OrdinaryStairEligibilityIsDirectionalAndBounded" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="108073543" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001014" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1830" name="PartialEightSecondMovementReplaysCarAndDirectionalPickupsExactly" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PartialEightSecondMovementReplaysCarAndDirectionalPickupsExactly" methodname="PartialEightSecondMovementReplaysCarAndDirectionalPickupsExactly" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1514649200" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.015845" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1829" name="PartialStairSecondsReplayToTheSameArrivalWithoutWholeMinuteRounding" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PartialStairSecondsReplayToTheSameArrivalWithoutWholeMinuteRounding" methodname="PartialStairSecondsReplayToTheSameArrivalWithoutWholeMinuteRounding" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="610022965" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001409" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1864" name="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001801" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1861" name="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;remaining&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;remaining&quot;)" methodname="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1871518760" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000580" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1862" name="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;phase_version&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;phase_version&quot;)" methodname="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="448012166" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000205" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1863" name="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;phase_units&quot;)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion(&quot;phase_units&quot;)" methodname="PhaseDurationCheckpointRejectsImpossibleRemainderAndVersion" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="49241657" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000188" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1833" name="ReconsiderationRequiresThreeMinutesOfBenefitAndFiveMinuteCadence" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ReconsiderationRequiresThreeMinutesOfBenefitAndFiveMinuteCadence" methodname="ReconsiderationRequiresThreeMinutesOfBenefitAndFiveMinuteCadence" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="195163386" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001033" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1832" name="ReconsiderationUsesLiveFirstLegWaitAndCreditsAcceptedDiversionOnce" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ReconsiderationUsesLiveFirstLegWaitAndCreditsAcceptedDiversionOnce" methodname="ReconsiderationUsesLiveFirstLegWaitAndCreditsAcceptedDiversionOnce" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1777324708" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.002541" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1823" name="ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001630" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1821" name="ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage(3,1)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage(3,1)" methodname="ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="223015621" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000668" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1822" name="ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage(4,2)" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage(4,2)" methodname="ThreeOrFourFloorDescentKeepsElevatorWhenStairsHaveNoCostAdvantage" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="394067315" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000365" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1854" name="UpgradeRemainderBeyondNewSpeedRetainsOriginalPhaseAndExactReplay" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.UpgradeRemainderBeyondNewSpeedRetainsOriginalPhaseAndExactReplay" methodname="UpgradeRemainderBeyondNewSpeedRetainsOriginalPhaseAndExactReplay" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="494299937" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.001078" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1813" name="UpgradeRetainsTheUnfinishedMinutePhaseBeforeUsingNewSpeed" fullname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests.UpgradeRetainsTheUnfinishedMinutePhaseBeforeUsingNewSpeed" methodname="UpgradeRetainsTheUnfinishedMinutePhaseBeforeUsingNewSpeed" classname="OneRoof.Domain.Tests.EditMode.TransitChoiceAndClockTests" runstate="Runnable" seed="1002121109" result="Passed" start-time="2026-10-03 13:15:54Z" end-time="2026-10-03 13:15:54Z" duration="0.000353" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

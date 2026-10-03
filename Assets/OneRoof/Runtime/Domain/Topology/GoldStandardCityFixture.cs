@@ -16,7 +16,7 @@ namespace OneRoof.Domain.Topology
         public const int ResidentCount = 300;
         public const ulong Seed = 301003;
 
-        public static TowerSimulation Create()
+        public static TowerSimulation Create(ulong seed = Seed)
         {
             var slabs = new List<CellBounds>();
             var rooms = new List<Room>();
@@ -66,7 +66,7 @@ namespace OneRoof.Domain.Topology
             }
             var topology = new BuildingTopologyState(startingEntityId: 3000);
             topology.RestoreFromData(slabs, rooms, portals);
-            var rng = new DeterministicRandomStream(Seed);
+            var rng = new DeterministicRandomStream(seed);
             var people = new List<PersonRecord>();
             var households = new List<HouseholdRecord>();
             var traits = (PersonTraitKind[])Enum.GetValues(typeof(PersonTraitKind));
@@ -78,16 +78,12 @@ namespace OneRoof.Domain.Topology
                 for (var member = 0; member < 3; member++)
                 {
                     var trait = new PersonTrait(traits[rng.NextInt(0, traits.Length)]);
-                    var needs = new[] { new NeedState(NeedKind.Hunger, 1f), new NeedState(NeedKind.Energy, 1f),
-                        new NeedState(NeedKind.Social, 1f), new NeedState(NeedKind.Hygiene, 1f), new NeedState(NeedKind.Purpose, 1f) };
-                    // One internal worker per household, two autonomous Outside commuters.
-                    // Stagger shifts across morning departure waves (all waking >= 450 starting tick).
-                    var baseSleep = member == 0
-                        ? 500 + (h % 3) * 50
-                        : (member == 1 ? 500 + (h % 2) * 60 : 530 + (h % 2) * 60);
+                    var workplace = member == 0 ? jobs[h % jobs.Count] : default;
+                    var content = workplace.IsValid ? topology.Rooms[workplace].ContentType.Value : null;
+                    var schedule = EmploymentRoutineFactory.Create(members[member], trait, content, (uint)seed);
                     people.Add(new PersonRecord(members[member], householdId, homes[h].Id,
-                        member == 0 ? jobs[h % jobs.Count] : default,
-                        DailySchedule.Standard(trait, rng, baseSleep), needs, new[] { trait }, worksOutside: member != 0));
+                        workplace, schedule, EmploymentRoutineFactory.InitialNeeds(schedule, new Tick(450)),
+                        new[] { trait }, worksOutside: member != 0));
                 }
             }
             var simulation = new TowerSimulation(new SimulationClock(new Tick(450)), topology,
@@ -96,10 +92,10 @@ namespace OneRoof.Domain.Topology
                     new ElevatorCar(new EntityId(902), 14, 20), new ElevatorCar(new EntityId(903), 29, 20) }),
                 new TowerEconomyState(250000), rng);
             // Reserve the fixture's authored IDs through the existing save contract.
-            var seed = simulation.ExportSaveData();
-            seed.nextElevatorCarId = 904;
-            seed.nextEntityId = 3000;
-            return TowerSimulation.RestoreFromSaveData(seed, rng);
+            var checkpoint = simulation.ExportSaveData();
+            checkpoint.nextElevatorCarId = 904;
+            checkpoint.nextEntityId = 3000;
+            return TowerSimulation.RestoreFromSaveData(checkpoint, rng);
         }
     }
 }

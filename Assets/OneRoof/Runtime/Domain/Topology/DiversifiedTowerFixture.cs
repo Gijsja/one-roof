@@ -137,24 +137,12 @@ namespace OneRoof.Domain.Topology
                 for (var m = 0; m < memberCount; m++)
                 {
                     var trait = new PersonTrait(traits[rng.NextInt(0, traits.Length)]);
-                    var needs = new[]
-                    {
-                        new NeedState(NeedKind.Hunger, 1f),
-                        new NeedState(NeedKind.Energy, 1f),
-                        new NeedState(NeedKind.Social, 1f),
-                        new NeedState(NeedKind.Hygiene, 1f),
-                        new NeedState(NeedKind.Purpose, 1f)
-                    };
-
-                    people.Add(new PersonRecord(
-                        members[m],
-                        householdId,
-                        home.Id,
-                        m == 0 && jobs.Count > 0 ? jobs[h % jobs.Count] : default,
-                        DailySchedule.Standard(trait, rng),
-                        needs,
-                        new[] { trait },
-                        worksOutside: m != 0));
+                    var workplace = m == 0 && jobs.Count > 0 ? jobs[h % jobs.Count] : default;
+                    var content = workplace.IsValid ? topology.Rooms[workplace].ContentType.Value : null;
+                    var schedule = EmploymentRoutineFactory.Create(members[m], trait, content, (uint)seed);
+                    people.Add(new PersonRecord(members[m], householdId, home.Id,
+                        workplace, schedule, EmploymentRoutineFactory.InitialNeeds(schedule, new Tick(450)),
+                        new[] { trait }, worksOutside: !workplace.IsValid));
                 }
             }
 

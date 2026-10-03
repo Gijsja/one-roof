@@ -39,7 +39,13 @@ namespace OneRoof.Application.Tests.EditMode
             Assert.That(population.Persons.Count, Is.EqualTo(50), "First playable requires exactly 50 persistent residents.");
             Assert.That(population.Households.Count, Is.EqualTo(16), "16 households across floors 1-4.");
 
-            var scenario1 = new CongestedElevatorScenario(carCount: 1);
+            // Deliberately undersize the synthetic morning-peak car: physical
+            // travel timing makes the default eight-seat car clear this queue
+            // without the severe (>20 minute) wait this cause-chain test needs.
+            // Keep the same capacity and default physical clock after intervention
+            // so adding a car is the only changed service variable.
+            const int congestedCarCapacity = 2;
+            var scenario1 = new CongestedElevatorScenario(carCount: 1, carCapacity: congestedCarCapacity);
             var congestionService = new TransitCongestionService();
 
             var predictor = new ElevatorPlacementPredictor();
@@ -103,7 +109,7 @@ namespace OneRoof.Application.Tests.EditMode
             Assert.That(baselineAvgWait, Is.GreaterThan(20f), "Baseline wait time must reflect congestion.");
 
             // ── Step 6: Player Intervention & Run Capacity Scenario (2 Cars) ──
-            var scenario2 = new CongestedElevatorScenario(carCount: 2);
+            var scenario2 = new CongestedElevatorScenario(carCount: 2, carCapacity: congestedCarCapacity);
             scenario2.RunToCompletion();
             Assert.That(scenario2.IsComplete, Is.True);
 

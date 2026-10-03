@@ -163,12 +163,12 @@ namespace OneRoof.Domain.Tests.EditMode
                 () => bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(998), 0, -1)));
         }
 
-        [TestCase(1, 5, 8)]
-        [TestCase(2, 5, 8)]
-        [TestCase(3, 4, 9)]
-        [TestCase(4, 4, 9)]
-        [TestCase(5, 3, 10)]
-        public void SetTierAppliesBankWideTimingAndCapacity(int tier, int expectedTravelTicks, int expectedCapacity)
+        [TestCase(1, 10, 8)]
+        [TestCase(2, 10, 8)]
+        [TestCase(3, 8, 9)]
+        [TestCase(4, 8, 9)]
+        [TestCase(5, 6, 10)]
+        public void SetTierAppliesBankWideTimingAndCapacity(int tier, int expectedTravelSeconds, int expectedCapacity)
         {
             var first = new ElevatorCar(new EntityId(2), 0, 6);
             var second = new ElevatorCar(new EntityId(1), 0, 10);
@@ -177,17 +177,17 @@ namespace OneRoof.Domain.Tests.EditMode
             bank.SetTier(tier);
 
             Assert.That(bank.Tier, Is.EqualTo(tier));
-            Assert.That(first.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
-            Assert.That(second.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
-            Assert.That(first.Timing.DoorCycleTicks, Is.EqualTo(2));
-            Assert.That(first.Timing.DwellTicks, Is.EqualTo(2));
+            Assert.That(first.Timing.FloorTravelSeconds, Is.EqualTo(expectedTravelSeconds));
+            Assert.That(second.Timing.FloorTravelSeconds, Is.EqualTo(expectedTravelSeconds));
+            Assert.That(first.Timing.DoorCycleSeconds, Is.EqualTo(5));
+            Assert.That(first.Timing.DwellSeconds, Is.EqualTo(10));
             Assert.That(first.Capacity, Is.EqualTo(expectedCapacity));
             Assert.That(second.Capacity, Is.EqualTo(10));
         }
 
-        [TestCase(3, 4, 9)]
-        [TestCase(5, 3, 10)]
-        public void AddCarToUpgradedBankAppliesCurrentTier(int tier, int travelTicks, int capacity)
+        [TestCase(3, 8, 9)]
+        [TestCase(5, 6, 10)]
+        public void AddCarToUpgradedBankAppliesCurrentTier(int tier, int travelSeconds, int capacity)
         {
             var bank = new ElevatorBank(0, 4, null);
             bank.SetTier(tier);
@@ -195,7 +195,7 @@ namespace OneRoof.Domain.Tests.EditMode
 
             bank.AddCar(car);
 
-            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(travelTicks));
+            Assert.That(car.Timing.FloorTravelSeconds, Is.EqualTo(travelSeconds));
             Assert.That(car.Capacity, Is.EqualTo(capacity));
         }
 
@@ -209,13 +209,13 @@ namespace OneRoof.Domain.Tests.EditMode
             bank.AddCar(car);
 
             Assert.That(car.Capacity, Is.EqualTo(12));
-            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(3));
+            Assert.That(car.Timing.FloorTravelSeconds, Is.EqualTo(6));
         }
 
         [Test]
         public void UpgradeDuringTravelPreservesCurrentPhaseAndTimerThroughSave()
         {
-            var car = new ElevatorCar(new EntityId(1), 0, 8);
+            var car = new ElevatorCar(new EntityId(1), 0, 8, new ElevatorTimingConfig(5, 2, 2));
             var bank = new ElevatorBank(0, 2, new[] { car });
             bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(100), 0, 2));
             for (var tick = 1; tick <= 6; tick++) bank.Advance(new Tick(tick));
@@ -229,7 +229,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(restored.Tier, Is.EqualTo(5));
             Assert.That(restored.Cars[0].Phase, Is.EqualTo(ElevatorCarPhase.Moving));
             Assert.That(restored.Cars[0].TimerTicksRemaining, Is.EqualTo(remaining));
-            Assert.That(restored.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(3));
+            Assert.That(restored.Cars[0].Timing.FloorTravelSeconds, Is.EqualTo(6));
             Assert.That(restored.Cars[0].Passengers.Count, Is.EqualTo(1));
             Assert.That(AdvanceUntilDelivered(restored), Is.EqualTo(AdvanceUntilDelivered(bank)));
         }
@@ -273,23 +273,23 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(fartherButAligned.HasTargetFloor(4), Is.True);
         }
 
-        [TestCase(3, 4)]
-        [TestCase(5, 3)]
-        public void HigherTransportTierReducesMeasuredSingleFloorTripTicks(int tier, int expectedTravelTicks)
+        [TestCase(3, 8)]
+        [TestCase(5, 6)]
+        public void HigherTransportTierReducesMeasuredElevenFloorTripTicks(int tier, int expectedTravelSeconds)
         {
             var bank = CreateSingleTripBank(tier, out var car);
             var deliveredAt = AdvanceUntilDelivered(bank);
 
-            Assert.That(car.Timing.FloorTravelTicks, Is.EqualTo(expectedTravelTicks));
+            Assert.That(car.Timing.FloorTravelSeconds, Is.EqualTo(expectedTravelSeconds));
             Assert.That(deliveredAt, Is.LessThan(AdvanceUntilDelivered(CreateSingleTripBank(1, out _))));
         }
 
         private static ElevatorBank CreateSingleTripBank(int tier, out ElevatorCar car)
         {
             car = new ElevatorCar(new EntityId(1), 0, 8);
-            var bank = new ElevatorBank(0, 1, new[] { car });
+            var bank = new ElevatorBank(0, 11, new[] { car });
             bank.SetTier(tier);
-            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(200), 0, 1));
+            bank.EnqueuePassenger(new ElevatorPassenger(new EntityId(200), 0, 11));
             return bank;
         }
 

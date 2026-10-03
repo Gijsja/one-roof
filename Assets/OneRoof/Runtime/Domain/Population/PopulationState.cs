@@ -204,11 +204,17 @@ namespace OneRoof.Domain.Population
                 var scheduleLabels = new string[scheduleBlocks.Count];
                 var scheduleStarts = new long[scheduleBlocks.Count];
                 var scheduleEnds = new long[scheduleBlocks.Count];
+                var episodeStarts = new long[scheduleBlocks.Count];
+                var appointmentStarts = new long[scheduleBlocks.Count];
+                var appointmentEnds = new long[scheduleBlocks.Count];
                 for (var i = 0; i < scheduleBlocks.Count; i++)
                 {
                     scheduleLabels[i] = scheduleBlocks[i].Label;
                     scheduleStarts[i] = scheduleBlocks[i].StartTick.Value;
                     scheduleEnds[i] = scheduleBlocks[i].EndTick.Value;
+                    episodeStarts[i] = scheduleBlocks[i].EpisodeStartDayTick;
+                    appointmentStarts[i] = scheduleBlocks[i].AppointmentStartDayTick;
+                    appointmentEnds[i] = scheduleBlocks[i].AppointmentEndDayTick;
                 }
 
                 var sTraits = new int[p.SocialTraits.Count];
@@ -245,6 +251,20 @@ namespace OneRoof.Domain.Population
                     scheduleLabels = scheduleLabels,
                     scheduleStartTicks = scheduleStarts,
                     scheduleEndTicks = scheduleEnds,
+                    routineVersion = 1,
+                    employmentCohort = (int)p.Schedule.Cohort,
+                    routineSeed = p.Schedule.RoutineSeed,
+                    scheduleEpisodeStartTicks = episodeStarts,
+                    scheduleAppointmentStartTicks = appointmentStarts,
+                    scheduleAppointmentEndTicks = appointmentEnds,
+                    routineChoiceDay = p.RoutineChoiceDay,
+                    routineDayChoice = p.RoutineDayChoice,
+                    workAppointmentStartTick = p.WorkAppointmentStartTick,
+                    workAppointmentEndTick = p.WorkAppointmentEndTick,
+                    workSegmentStartTick = p.WorkSegmentStartTick,
+                    workDemandEpisodeStartTick = p.WorkDemandEpisodeStartTick,
+                    workDepartureTick = p.WorkDepartureTick,
+                    workArrivalTick = p.WorkArrivalTick,
                     trait = p.Traits.Count > 0 ? (int)p.Traits[0].Kind : 0,
                     personalityFacets = FacetIds(p),
                     socialTraits = sTraits,
@@ -275,7 +295,8 @@ namespace OneRoof.Domain.Population
             };
         }
 
-        public static PopulationState FromSaveData(PopulationSaveData data, IRandomStream randomStream = null)
+        public static PopulationState FromSaveData(PopulationSaveData data, IRandomStream randomStream = null,
+            long? restoredTick = null)
         {
             var households = new List<HouseholdRecord>();
             if (data?.households != null)
@@ -356,14 +377,20 @@ namespace OneRoof.Domain.Population
                         traits, facets, p.workplaceLocationKind == (int)WorldLocationKind.Outside,
                         socialTraits);
 
-                    person.UpdateLocation(p.currentLocationKind == (int)WorldLocationKind.Outside
-                        ? WorldLocation.Outside
-                        : WorldLocation.InRoom(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId)));
+                    // Outside retains the last indoor room in the live record. Restore that cache
+                    // before its Outside endpoint so checkpoint/export remains exact.
+                    person.UpdateLocation(WorldLocation.InRoom(new EntityId(p.currentRoomId > 0 ? p.currentRoomId : p.homeRoomId)));
+                    if (p.currentLocationKind == (int)WorldLocationKind.Outside)
+                        person.UpdateLocation(WorldLocation.Outside);
                     person.UpdateActivity((ActivityKind)p.currentActivity);
                     if (Enum.IsDefined(typeof(ResidentPurposeKind), p.currentPurpose))
                         person.RestorePurpose((ResidentPurposeKind)p.currentPurpose,
                             p.purposeStartedAtTick, p.purposeEndsAtTick);
                     person.RestoreOutsideFoodRetryAfter(p.outsideFoodRetryAfterTick);
+                    if (p.routineVersion == 1)
+                        person.RestoreRoutineState(p.routineChoiceDay, p.routineDayChoice,
+                            p.workAppointmentStartTick, p.workAppointmentEndTick, p.workSegmentStartTick,
+                            p.workDemandEpisodeStartTick, p.workDepartureTick, p.workArrivalTick, restoredTick);
                     var role = Enum.IsDefined(typeof(SpecialistRole), p.specialistRole) ? (SpecialistRole)p.specialistRole : SpecialistRole.None;
                     var trainingRole = Enum.IsDefined(typeof(SpecialistRole), p.specialistTrainingRole) ? (SpecialistRole)p.specialistTrainingRole : SpecialistRole.None;
                     person.RestoreSpecialization(role, trainingRole, p.specialistTrainingProgress);
@@ -398,16 +425,46 @@ namespace OneRoof.Domain.Population
 
         private static DailySchedule RestoreSchedule(PersonSaveData data, PersonTrait trait, IRandomStream rng)
         {
+            if (data.routineVersion < 0 || data.routineVersion > 1)
+                throw new ArgumentException("Unsupported resident routine version.");
             var labels = data.scheduleLabels;
             var starts = data.scheduleStartTicks;
             var ends = data.scheduleEndTicks;
+            if (data.routineVersion == 1)
+            {
+                if (!Enum.IsDefined(typeof(EmploymentCohort), data.employmentCohort))
+                    throw new ArgumentException("Unsupported employment cohort.");
+                var count = labels?.Length ?? 0;
+                if (count == 0 || starts == null || ends == null || starts.Length != count || ends.Length != count ||
+                    data.scheduleEpisodeStartTicks == null || data.scheduleEpisodeStartTicks.Length != count ||
+                    data.scheduleAppointmentStartTicks == null || data.scheduleAppointmentStartTicks.Length != count ||
+                    data.scheduleAppointmentEndTicks == null || data.scheduleAppointmentEndTicks.Length != count)
+                    throw new ArgumentException("Incomplete resident routine blocks.");
+                if (data.employmentCohort != (int)EmploymentCohort.Legacy)
+                {
+                    if (starts[0] != 0 || ends[count - 1] != DailySchedule.TicksPerDay)
+                        throw new ArgumentException("Employment routine must cover the full day.");
+                    for (var i = 1; i < count; i++)
+                        if (starts[i] != ends[i - 1]) throw new ArgumentException("Employment routine blocks must be contiguous.");
+                    for (var i = 0; i < count; i++)
+                        if (labels[i] != DailySchedule.LabelWork && labels[i] != DailySchedule.LabelSleep &&
+                            labels[i] != DailySchedule.LabelEat && labels[i] != DailySchedule.LabelHome &&
+                            labels[i] != DailySchedule.LabelPreparation && labels[i] != DailySchedule.LabelLeisure)
+                            throw new ArgumentException("Unsupported employment routine activity.");
+                }
+            }
             if (labels != null && starts != null && ends != null && labels.Length > 0 &&
                 labels.Length == starts.Length && labels.Length == ends.Length)
             {
                 var blocks = new List<ScheduleBlock>(labels.Length);
                 for (var i = 0; i < labels.Length; i++)
-                    blocks.Add(new ScheduleBlock(labels[i], new Tick(starts[i]), new Tick(ends[i])));
-                return DailySchedule.FromBlocks(blocks);
+                    blocks.Add(new ScheduleBlock(labels[i], new Tick(starts[i]), new Tick(ends[i]),
+                        data.routineVersion >= 1 ? data.scheduleEpisodeStartTicks?[i] : null,
+                        data.routineVersion >= 1 ? data.scheduleAppointmentStartTicks?[i] : null,
+                        data.routineVersion >= 1 ? data.scheduleAppointmentEndTicks?[i] : null));
+                var cohort = data.routineVersion == 1
+                    ? (EmploymentCohort)data.employmentCohort : EmploymentCohort.Legacy;
+                return DailySchedule.FromBlocks(blocks, cohort, data.routineSeed);
             }
 
             // Legacy saves lacked schedule blocks; retain their historical fixture schedule.

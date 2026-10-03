@@ -15,7 +15,7 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(upgrade.Accepted, Is.True, upgrade.Reason);
             var restored = ElevatorBank.FromSaveData(sim.ElevatorBank.ToSaveData());
             Assert.That(restored.Tier, Is.EqualTo(2));
-            Assert.That(restored.Cars[0].Timing.FloorTravelTicks, Is.EqualTo(5));
+            Assert.That(restored.Cars[0].Timing.FloorTravelSeconds, Is.EqualTo(10));
         }
 
         [Test]

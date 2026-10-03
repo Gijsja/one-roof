@@ -67,6 +67,7 @@ namespace OneRoof.Domain.Transit
                 Route = trip.PlannedRoute;
                 CurrentFloor = 0;
                 CurrentX = 0f;
+                LastProgressTick = trip.DepartureTick.Value;
             }
 
             public TripRecord Trip { get; }
@@ -74,6 +75,11 @@ namespace OneRoof.Domain.Transit
             public int CurrentLegIndex { get; set; }
 
             public int LegRemainingTicks { get; set; }
+            public int LegRemainingSeconds { get; set; }
+            public int LegDurationSeconds { get; set; }
+            public bool LegacyLegProgress { get; set; }
+            public long LastReconsiderationTick { get; set; } = long.MinValue;
+            public long LastProgressTick { get; set; }
 
             public bool IsQueuedInElevator { get; set; }
 
@@ -114,6 +120,9 @@ namespace OneRoof.Domain.Transit
             {
                 CurrentLegIndex = legIndex,
                 LegRemainingTicks = legRemaining,
+                LegRemainingSeconds = checked(legRemaining * 60),
+                LegDurationSeconds = trip.PlannedRoute.Legs.Count > legIndex ? Math.Max(60, checked(trip.PlannedRoute.Legs[legIndex].Cost * 60)) : 0,
+                LegacyLegProgress = true,
                 IsQueuedInElevator = isQueued,
                 IsRidingElevator = isRiding,
                 CurrentFloor = floor,
@@ -139,6 +148,12 @@ namespace OneRoof.Domain.Transit
                 tripList.Add(new ActiveTripSaveData
                 {
                     routeDataVersion = 1,
+                    movementDataVersion = 2,
+                    checkpointTick = exec.LastProgressTick,
+                    legRemainingSeconds = exec.LegRemainingSeconds,
+                    legDurationSeconds = exec.LegDurationSeconds,
+                    legacyLegProgress = exec.LegacyLegProgress,
+                    lastReconsiderationTick = exec.LastReconsiderationTick,
                     plannedRoute = SaveRoute(exec.Trip.PlannedRoute),
                     executionRoute = SaveRoute(exec.Route),
                     tripId = exec.Trip.Id.Value,
@@ -174,7 +189,8 @@ namespace OneRoof.Domain.Transit
                 legs[i] = new TransitEdgeSaveData
                 {
                     fromNodeId = edge.FromNodeId.Value, toNodeId = edge.ToNodeId.Value,
-                    cost = edge.Cost, mode = (int)edge.Mode
+                    cost = edge.Cost, mode = (int)edge.Mode,
+                    durationDataVersion = 1, durationSeconds = edge.DurationSeconds, hasPhysicalDuration = edge.HasPhysicalDuration
                 };
             }
             return new TransitRouteSaveData
@@ -195,11 +211,13 @@ namespace OneRoof.Domain.Transit
             foreach (var edge in route.legs ?? Array.Empty<TransitEdgeSaveData>())
             {
                 if (edge == null || edge.fromNodeId != expectedNode || edge.toNodeId <= 0 ||
-                    edge.cost < 0 || !Enum.IsDefined(typeof(TransitMode), edge.mode))
+                    edge.durationDataVersion < 0 || edge.durationDataVersion > 1 || edge.durationSeconds < 0 ||
+                    edge.cost < 0 || (edge.durationDataVersion >= 1 && !edge.hasPhysicalDuration && edge.durationSeconds != edge.cost * 60L) ||
+                    !Enum.IsDefined(typeof(TransitMode), edge.mode))
                     throw new ArgumentException("Invalid transit route leg checkpoint.", nameof(route));
                 expectedNode = edge.toNodeId;
                 legs.Add(new TransitEdge(new EntityId(edge.fromNodeId), new EntityId(edge.toNodeId),
-                    edge.cost, (TransitMode)edge.mode));
+                    edge.cost, (TransitMode)edge.mode, edge.durationDataVersion >= 1 && edge.hasPhysicalDuration ? edge.durationSeconds : -1));
             }
             if (expectedNode != route.destinationNodeId)
                 throw new ArgumentException("Transit route checkpoint does not reach its destination.", nameof(route));
@@ -208,7 +226,7 @@ namespace OneRoof.Domain.Transit
                 new CellCoordinate(route.destinationX, route.destinationFloor), legs);
         }
 
-        public void RestoreFromSaveData(ActiveTripSaveData[] data, BuildingTopologyState topology, TransitRoutePlanner planner)
+        public void RestoreFromSaveData(ActiveTripSaveData[] data, BuildingTopologyState topology, TransitRoutePlanner planner, Tick? checkpointTick = null)
         {
             ClearActiveTrips();
             if (data == null) return;
@@ -216,7 +234,11 @@ namespace OneRoof.Domain.Transit
             foreach (var t in data)
             {
                 if (t == null || t.routeDataVersion < 0 || t.routeDataVersion > 1 ||
-                    t.currentLegIndex < 0 || t.legRemainingTicks < 0 || float.IsNaN(t.currentX) || float.IsInfinity(t.currentX))
+                    t.movementDataVersion < 0 || t.movementDataVersion > 2 || t.legRemainingSeconds < 0 || t.legDurationSeconds < 0 ||
+                    !Enum.IsDefined(typeof(TripState), t.state) || !Enum.IsDefined(typeof(TripPurpose), t.purpose) ||
+                    !Enum.IsDefined(typeof(WorldLocationKind), t.originLocationKind) || !Enum.IsDefined(typeof(WorldLocationKind), t.destinationLocationKind) ||
+                    t.departureTick < 0 || t.waitTicks < 0 ||
+                    t.currentLegIndex < 0 || t.legRemainingTicks < 0 || t.legRemainingTicks > int.MaxValue / 60 || float.IsNaN(t.currentX) || float.IsInfinity(t.currentX))
                     throw new ArgumentException("Invalid active transit checkpoint.", nameof(data));
                 var origin = t.originLocationKind == (int)WorldLocationKind.Outside
                     ? WorldLocation.Outside : WorldLocation.InRoom(new EntityId(t.originRoomId));
@@ -237,6 +259,7 @@ namespace OneRoof.Domain.Transit
                     ((t.isQueuedInElevator || t.isRidingElevator) && executionRoute.Legs[t.currentLegIndex].Mode != TransitMode.Elevator)))
                     throw new ArgumentException("Invalid active transit route progress checkpoint.", nameof(data));
 
+                var legDurationSeconds = ValidateMovementCheckpoint(t, executionRoute, checkpointTick);
                 var trip = new TripRecord(
                     new EntityId(t.tripId),
                     new EntityId(t.personId),
@@ -265,8 +288,54 @@ namespace OneRoof.Domain.Transit
                 if (t.routeDataVersion >= 1 && _activeTripsByPerson.TryGetValue(trip.PersonId, out var execution))
                 {
                     execution.Route = executionRoute;
+                    if (t.movementDataVersion >= 1)
+                    {
+                        execution.LegRemainingSeconds = t.legRemainingSeconds;
+                        execution.LegDurationSeconds = legDurationSeconds;
+                        execution.LegacyLegProgress = t.legacyLegProgress;
+                        execution.LastReconsiderationTick = t.lastReconsiderationTick;
+                        execution.LastProgressTick = t.movementDataVersion >= 2 ? t.checkpointTick :
+                            checkpointTick?.Value ?? Math.Max(t.departureTick, t.lastReconsiderationTick);
+                    }
                 }
             }
+        }
+
+        private static int ValidateMovementCheckpoint(ActiveTripSaveData save, TransitRoute route, Tick? authoritativeTick)
+        {
+            if (authoritativeTick.HasValue && save.departureTick > authoritativeTick.Value.Value)
+                throw new ArgumentException("Transit departure is after the checkpoint clock.", nameof(save));
+            if (save.movementDataVersion >= 2 && (save.checkpointTick < save.departureTick ||
+                (authoritativeTick.HasValue && save.checkpointTick > authoritativeTick.Value.Value)))
+                throw new ArgumentException("Invalid transit checkpoint chronology.", nameof(save));
+            if (save.movementDataVersion >= 1)
+            {
+                var last = save.lastReconsiderationTick;
+                var upper = save.movementDataVersion >= 2 ? save.checkpointTick : authoritativeTick?.Value ?? long.MaxValue - 1;
+                if (last != long.MinValue && (last < save.departureTick || last > upper))
+                    throw new ArgumentException("Invalid transit reconsideration chronology.", nameof(save));
+            }
+            if (route == null) return save.legDurationSeconds; // Older unreachable records keep the established cancellation path.
+            if (save.currentLegIndex >= route.Legs.Count || (save.isQueuedInElevator && save.isRidingElevator))
+                throw new ArgumentException("Invalid active route progress.", nameof(save));
+            var leg = route.Legs[save.currentLegIndex];
+            if ((save.isQueuedInElevator || save.isRidingElevator) && leg.Mode != TransitMode.Elevator)
+                throw new ArgumentException("Elevator state does not match the active route leg.", nameof(save));
+            if (save.movementDataVersion >= 1)
+            {
+                var duration = save.legacyLegProgress ? Math.Max(60L, leg.Cost * 60L) : leg.DurationSeconds;
+                // Version 1's legacy restoration used the physical edge duration as metadata while advancing whole minutes.
+                // Preserve that minute progress, but canonicalize its duration for subsequent version-2 checkpoints.
+                var previousLegacyDuration = save.movementDataVersion == 1 && save.legacyLegProgress && leg.HasPhysicalDuration &&
+                    save.legDurationSeconds == Math.Max(60L, leg.DurationSeconds);
+                if ((!save.legacyLegProgress && !leg.HasPhysicalDuration) || duration > int.MaxValue ||
+                    (!previousLegacyDuration && save.legDurationSeconds != duration) ||
+                    save.legRemainingSeconds > duration || save.legRemainingTicks != (save.legRemainingSeconds + 59L) / 60 ||
+                    (save.legacyLegProgress && save.legRemainingSeconds % 60 != 0))
+                    throw new ArgumentException("Inconsistent active transit temporal progress.", nameof(save));
+                return (int)duration;
+            }
+            return save.legDurationSeconds;
         }
 
         public void SubmitTrip(TripRecord trip, BuildingTopologyState topology, Tick currentTick, PopulationState population,
@@ -346,9 +415,9 @@ namespace OneRoof.Domain.Transit
                 trip.Begin();
             }
 
-            var execution = new ActiveTripExecution(trip);
+            var execution = new ActiveTripExecution(trip) { LastProgressTick = currentTick.Value };
             var firstLeg = trip.PlannedRoute.Legs[0];
-            execution.LegRemainingTicks = Math.Max(1, firstLeg.Cost);
+            StartLeg(execution, firstLeg);
 
             if (topology.TransitGraph.TryGetNode(firstLeg.FromNodeId, out var fromNode))
             {
@@ -376,113 +445,86 @@ namespace OneRoof.Domain.Transit
             if (topology == null) throw new ArgumentNullException(nameof(topology));
             if (elevatorBank == null) throw new ArgumentNullException(nameof(elevatorBank));
 
-            // 1. Advance elevator bank state machine
-            elevatorBank.Advance(tick, lobbyCapacityMultiplier);
-
-            // 2. Process all active resident trip legs
-            for (var i = _activeTrips.Count - 1; i >= 0; i--)
+            elevatorBank.BeginAdvanceTick(lobbyCapacityMultiplier);
+            for (var step = 0; step < ElevatorBank.SecondsPerTick / ElevatorBank.SubstepSeconds; step++)
             {
-                var execution = _activeTrips[i];
-                var trip = execution.Trip;
-                var person = population?.TryGetPerson(trip.PersonId, out var p) == true ? p : null;
-
-                if (trip.State == TripState.Cancelled)
+                elevatorBank.AdvanceSubstep(lobbyCapacityMultiplier, step == 0);
+                for (var i = _activeTrips.Count - 1; i >= 0; i--)
                 {
-                    _activeTrips.RemoveAt(i);
-                    _activeTripsByPerson.Remove(trip.PersonId);
-                    continue;
-                }
-
-                if (trip.PlannedRoute?.Legs == null)
-                {
-                    CancelInvalidRestoredTrip(trip);
-                    person?.UpdateActivity(ActivityKind.Idle);
-                    _activeTrips.RemoveAt(i);
-                    _activeTripsByPerson.Remove(trip.PersonId);
-                    continue;
-                }
-
-                if (execution.CurrentLegIndex >= execution.Route.Legs.Count)
-                {
-                    CompleteTrip(i, execution, tick, person, onTripCompleted);
-                    continue;
-                }
-
-                var leg = execution.Route.Legs[execution.CurrentLegIndex];
-                topology.TransitGraph.TryGetNode(leg.FromNodeId, out var fromNode);
-                topology.TransitGraph.TryGetNode(leg.ToNodeId, out var toNode);
-
-                if (leg.Mode == TransitMode.Walk)
-                {
-                    if (fromNode != null && toNode != null)
+                    var execution = _activeTrips[i];
+                    var trip = execution.Trip;
+                    execution.LastProgressTick = tick.Value;
+                    var person = population?.TryGetPerson(trip.PersonId, out var p) == true ? p : null;
+                    if (trip.State == TripState.Cancelled)
                     {
-                        if (fromNode.Floor != toNode.Floor)
-                        {
-                            var totalTicks = Math.Max(1, leg.Cost);
-                            var progress = Math.Clamp(1f - ((float)execution.LegRemainingTicks / totalTicks), 0f, 1f);
-                            execution.CurrentFloor = progress < 0.5f ? fromNode.Floor : toNode.Floor;
-                            var lateralOffset = (float)Math.Sin(progress * Math.PI) * 0.5f;
-                            execution.CurrentX = fromNode.Location.X - lateralOffset;
-                        }
-                        else
-                        {
-                            var totalDistance = Math.Max(1, Math.Abs(toNode.Location.X - fromNode.Location.X));
-                            var progress = 1f - ((float)execution.LegRemainingTicks / totalDistance);
-                            execution.CurrentFloor = fromNode.Floor;
-                            execution.CurrentX = fromNode.Location.X + (toNode.Location.X - fromNode.Location.X) * Math.Clamp(progress, 0f, 1f);
-                        }
+                        if (execution.IsQueuedInElevator) elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out _);
+                        _activeTrips.RemoveAt(i); _activeTripsByPerson.Remove(trip.PersonId); continue;
                     }
-
-                    if (execution.LegRemainingTicks > 0)
+                    if (execution.Route?.Legs == null)
                     {
-                        execution.LegRemainingTicks--;
+                        CancelTrip(i, execution, person, elevatorBank); continue;
                     }
-
-                    if (execution.LegRemainingTicks <= 0)
+                    var budget = ElevatorBank.SubstepSeconds;
+                    // A bounded budget may span several short hall edges, without rounding each edge to a minute.
+                    while (execution.CurrentLegIndex < execution.Route.Legs.Count)
                     {
-                        AdvanceLeg(i, execution, tick, person, onTripCompleted);
-                    }
-                }
-                else if (leg.Mode == TransitMode.Elevator)
-                {
-                    if (elevatorBank.Cars.Count == 0)
-                    {
-                        var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
-                        if (TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline) ||
-                            TryRerouteWithoutElevators(execution, topology.TransitGraph, long.MaxValue))
+                        var leg = execution.Route.Legs[execution.CurrentLegIndex];
+                        topology.TransitGraph.TryGetNode(leg.FromNodeId, out var fromNode);
+                        topology.TransitGraph.TryGetNode(leg.ToNodeId, out var toNode);
+                        if (leg.Mode == TransitMode.Walk)
                         {
+                            if (execution.LegacyLegProgress)
+                            {
+                                if (step != 0) break;
+                                execution.LegRemainingTicks = Math.Max(0, execution.LegRemainingTicks - 1);
+                                execution.LegRemainingSeconds = execution.LegRemainingTicks * 60;
+                            }
+                            else
+                            {
+                                var used = Math.Min(budget, execution.LegRemainingSeconds);
+                                execution.LegRemainingSeconds -= used;
+                                execution.LegRemainingTicks = (execution.LegRemainingSeconds + 59) / 60;
+                                budget -= used;
+                            }
+                            if (fromNode != null && toNode != null)
+                            {
+                                var progress = Math.Clamp(1f - (float)execution.LegRemainingSeconds / Math.Max(1, execution.LegDurationSeconds), 0f, 1f);
+                                execution.CurrentFloor = fromNode.Floor == toNode.Floor ? fromNode.Floor : progress < .5f ? fromNode.Floor : toNode.Floor;
+                                execution.CurrentX = fromNode.Location.X + (toNode.Location.X - fromNode.Location.X) * progress;
+                            }
+                            if (execution.LegRemainingSeconds > 0) break;
+                            var legacy = execution.LegacyLegProgress;
+                            AdvanceLeg(i, execution, tick, person, onTripCompleted);
+                            if (!IsPersonTravelling(trip.PersonId) || legacy || budget == 0) break;
                             continue;
                         }
 
-                        CancelTrip(i, execution, person, elevatorBank);
-                        continue;
-                    }
-
-                    var originFloor = fromNode?.Floor ?? 0;
-                    var destFloor = toNode?.Floor ?? 0;
-                    var floorDelta = Math.Abs(destFloor - originFloor);
-                    var queueLength = elevatorBank.GetQueueLength(originFloor);
-
-                    if (!execution.IsQueuedInElevator && !execution.IsRidingElevator)
-                    {
-                        var isShortFlight = floorDelta <= 2 || (destFloor < originFloor && floorDelta <= 4);
-                        var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
-                        if (isShortFlight && queueLength > 0 &&
-                            TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline))
+                        var origin = fromNode?.Floor ?? execution.CurrentFloor;
+                        var destination = toNode?.Floor ?? origin;
+                        var usable = elevatorBank.Cars.Count > 0 && origin >= elevatorBank.MinFloor && origin <= elevatorBank.MaxFloor &&
+                            destination >= elevatorBank.MinFloor && destination <= elevatorBank.MaxFloor;
+                        if (!usable)
                         {
+                            var alternative = FindStairAlternative(execution, topology.TransitGraph, long.MaxValue, false);
+                            if (alternative == null) { CancelTrip(i, execution, person, elevatorBank); break; }
+                            if (execution.IsQueuedInElevator)
+                            {
+                                if (!elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var stranded)) break;
+                                trip.AddWaitTicks((int)stranded.WaitTicks);
+                            }
+                            AcceptAlternative(execution, alternative);
                             continue;
                         }
-
-                        var passenger = new ElevatorPassenger(trip.PersonId, originFloor, destFloor);
-                        elevatorBank.EnqueuePassenger(passenger);
-                        execution.IsQueuedInElevator = true;
-                        execution.CurrentFloor = originFloor;
-                        execution.CurrentX = fromNode?.Location.X ?? 0f;
-                    }
-                    else if (execution.IsQueuedInElevator)
-                    {
-                        // Check if car picked up this passenger
-                        if (elevatorBank.IsPassengerInCar(trip.PersonId, out var car))
+                        if (!execution.IsQueuedInElevator && !execution.IsRidingElevator)
+                        {
+                            var alternative = ChooseStairs(execution, topology.TransitGraph, elevatorBank, origin, destination, tick, false);
+                            if (alternative != null) { AcceptAlternative(execution, alternative); continue; }
+                            elevatorBank.EnqueuePassenger(new ElevatorPassenger(trip.PersonId, origin, destination));
+                            execution.IsQueuedInElevator = true;
+                            execution.CurrentFloor = origin;
+                            execution.CurrentX = fromNode?.Location.X ?? 0f;
+                        }
+                        else if (elevatorBank.IsPassengerInCar(trip.PersonId, out var car))
                         {
                             execution.IsQueuedInElevator = false;
                             execution.IsRidingElevator = true;
@@ -494,42 +536,87 @@ namespace OneRoof.Domain.Transit
                             execution.IsQueuedInElevator = false;
                             execution.IsRidingElevator = false;
                             AdvanceLeg(i, execution, tick, person, onTripCompleted);
+                            if (IsPersonTravelling(trip.PersonId) && budget > 0) continue;
                         }
-                        else
+                        else if (execution.IsQueuedInElevator)
                         {
                             var liveWait = elevatorBank.GetPassengerWaitTicks(trip.PersonId);
-                            var isShortFlight = floorDelta <= 2 || (destFloor < originFloor && floorDelta <= 4);
-                            var patienceThreshold = isShortFlight ? 5 : 20;
-                            if (liveWait >= patienceThreshold)
+                            if (liveWait >= 15 && (execution.LastReconsiderationTick == long.MinValue || tick.Value - execution.LastReconsiderationTick >= 5))
                             {
-                                var remainingDeadline = 360 - (tick.Value - trip.DepartureTick.Value);
-                                if ((isShortFlight || liveWait >= 40) &&
-                                    TryRerouteWithoutElevators(execution, topology.TransitGraph, remainingDeadline))
+                                execution.LastReconsiderationTick = tick.Value;
+                                var alternative = ChooseStairs(execution, topology.TransitGraph, elevatorBank, origin, destination, tick, true);
+                                // Planning is read-only. Route mutation follows successful queue removal.
+                                if (alternative != null && elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var waiting))
                                 {
-                                    if (elevatorBank.TryRemoveQueuedPassenger(trip.PersonId, out var waiting))
-                                    {
-                                        trip.AddWaitTicks((int)waiting.WaitTicks);
-                                    }
+                                    trip.AddWaitTicks((int)waiting.WaitTicks);
+                                    AcceptAlternative(execution, alternative);
                                     continue;
                                 }
                             }
                         }
+                        break;
                     }
-                    else if (execution.IsRidingElevator)
-                    {
-                        if (elevatorBank.IsPassengerInCar(trip.PersonId, out var car))
-                        {
-                            execution.CurrentFloor = car.CurrentFloor;
-                        }
-                        else if (elevatorBank.TryTakeDeliveredPassenger(trip.PersonId, out var delivered))
-                        {
-                            trip.AddWaitTicks((int)delivered.WaitTicks);
-                            execution.IsRidingElevator = false;
-                            AdvanceLeg(i, execution, tick, person, onTripCompleted);
-                        }
-                    }
+                    if (IsPersonTravelling(trip.PersonId) && execution.CurrentLegIndex >= execution.Route.Legs.Count)
+                        CompleteTrip(i, execution, tick, person, onTripCompleted);
                 }
             }
+        }
+
+        private static void StartLeg(ActiveTripExecution execution, TransitEdge leg)
+        {
+            execution.LegacyLegProgress = !leg.HasPhysicalDuration;
+            execution.LegDurationSeconds = leg.HasPhysicalDuration ? leg.DurationSeconds : Math.Max(60, leg.DurationSeconds);
+            execution.LegRemainingSeconds = execution.LegDurationSeconds;
+            execution.LegRemainingTicks = (execution.LegRemainingSeconds + 59) / 60;
+        }
+
+        private static TransitRoute FindStairAlternative(ActiveTripExecution execution, HierarchicalTransitGraph graph, long deadline, bool ordinary)
+        {
+            if (execution?.Route == null || graph == null || execution.CurrentLegIndex >= execution.Route.Legs.Count) return null;
+            var route = new TransitRoutePlanner(graph.NonElevatorGraph).FindRoute(
+                execution.Route.Legs[execution.CurrentLegIndex].FromNodeId, execution.Route.DestinationNodeId);
+            if (route == null) return null;
+            long seconds = 0;
+            var up = 0; var down = 0;
+            foreach (var edge in route.Legs)
+            {
+                seconds += edge.DurationSeconds;
+                if (graph.TryGetNode(edge.FromNodeId, out var from) && graph.TryGetNode(edge.ToNodeId, out var to))
+                { up += Math.Max(0, to.Floor - from.Floor); down += Math.Max(0, from.Floor - to.Floor); }
+            }
+            if (ordinary && (up > 2 || down > 4)) return null;
+            return (seconds + 59) / 60 <= deadline ? route : null;
+        }
+
+        private static TransitRoute ChooseStairs(ActiveTripExecution execution, HierarchicalTransitGraph graph,
+            ElevatorBank bank, int origin, int destination, Tick tick, bool reconsidering)
+        {
+            if ((destination > origin && destination - origin > 2) || (origin > destination && origin - destination > 4)) return null;
+            var remaining = 360 - (tick.Value - execution.Trip.DepartureTick.Value);
+            var stairs = FindStairAlternative(execution, graph, remaining, true);
+            if (stairs == null) return null;
+            long stairCostSeconds = 0;
+            foreach (var edge in stairs.Legs)
+            {
+                stairCostSeconds += edge.DurationSeconds;
+                if (graph.TryGetNode(edge.FromNodeId, out var from) && graph.TryGetNode(edge.ToNodeId, out var to))
+                    stairCostSeconds += Math.Max(0, to.Floor - from.Floor) * 30L + Math.Max(0, from.Floor - to.Floor) * 15L;
+            }
+            long elevatorSeconds = bank.EstimateArrivalSeconds(origin, destination, reconsidering ? execution.Trip.PersonId : (EntityId?)null);
+            for (var i = execution.CurrentLegIndex + 1; i < execution.Route.Legs.Count; i++)
+                elevatorSeconds += execution.Route.Legs[i].DurationSeconds;
+            var improvement = elevatorSeconds - stairCostSeconds;
+            return improvement >= (reconsidering ? 180 : 1) ? stairs : null;
+        }
+
+        private static void AcceptAlternative(ActiveTripExecution execution, TransitRoute route)
+        {
+            execution.Route = route;
+            execution.CurrentLegIndex = 0;
+            if (route.Legs.Count > 0) StartLeg(execution, route.Legs[0]);
+            else { execution.LegRemainingTicks = 0; execution.LegRemainingSeconds = 0; }
+            execution.IsQueuedInElevator = false;
+            execution.IsRidingElevator = false;
         }
 
         private static void CancelInvalidRestoredTrip(TripRecord trip)
@@ -549,36 +636,10 @@ namespace OneRoof.Domain.Transit
             else
             {
                 var nextLeg = execution.Route.Legs[execution.CurrentLegIndex];
-                execution.LegRemainingTicks = Math.Max(1, nextLeg.Cost);
+                StartLeg(execution, nextLeg);
                 execution.IsQueuedInElevator = false;
                 execution.IsRidingElevator = false;
             }
-        }
-
-        private static bool TryRerouteWithoutElevators(
-            ActiveTripExecution execution,
-            HierarchicalTransitGraph graph,
-            long remainingDeadlineTicks = long.MaxValue)
-        {
-            var activeRoute = execution?.Route ?? execution?.Trip?.PlannedRoute;
-            if (activeRoute == null || graph == null ||
-                execution.CurrentLegIndex >= activeRoute.Legs.Count)
-            {
-                return false;
-            }
-
-            var currentNodeId = activeRoute.Legs[execution.CurrentLegIndex].FromNodeId;
-            var destinationNodeId = activeRoute.DestinationNodeId;
-            var accessibleGraph = graph.NonElevatorGraph;
-            var route = new TransitRoutePlanner(accessibleGraph).FindRoute(currentNodeId, destinationNodeId);
-            if (route == null || route.TotalCost > remainingDeadlineTicks) return false;
-
-            execution.Route = route;
-            execution.CurrentLegIndex = 0;
-            execution.LegRemainingTicks = route.Legs.Count > 0 ? Math.Max(1, route.Legs[0].Cost) : 0;
-            execution.IsQueuedInElevator = false;
-            execution.IsRidingElevator = false;
-            return true;
         }
 
         private void CancelTrip(int listIndex, ActiveTripExecution execution, PersonRecord person, ElevatorBank elevatorBank = null)

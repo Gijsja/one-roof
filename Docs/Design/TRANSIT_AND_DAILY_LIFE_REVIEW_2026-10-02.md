@@ -49,3 +49,16 @@ Do not stagger demand in response to observed queues merely to pass acceptance, 
 | Save / performance | Exact future decisions across queue reconsideration, movement remainder, midnight, overnight shifts, appointment windows and pending demand. Engine-free Domain/Application; bounded caches; no per-Resident Update. Native tick/frame and graphical review remain required. |
 
 A new activity-time target should be selected from these measurements and play observation; it supplements C0 rather than replacing its existing gate. Do not close C0 from this review or an aggregate percentile alone. Source inspection and three independent reviews completed; no tests, Unity runs, scene edits or runtime tuning performed.
+
+
+## Implementation checkpoint — 2026-10-03
+
+Tasks1–3 of the [approved execution plan](../../Docs/superpowers/plans/2026-10-03-transit-daily-life.md) are implemented and independently reviewed. The requested cutoff stops here; C0 remains open.
+
+- Explicit routine decisions preserve required Work/Home demand across travel and skips. Optional no-action is excluded; only actual local attendance receives local success.
+- The fixed minute clock contains twelve bounded5-second movement advances with exact integer-second remainders. Tier1–2/3–4/5 elevators use10/8/6 seconds per floor, opening/closing5 seconds and loading10 seconds. Hallways take1 second per cell; stairs45 seconds upward/30 downward per floor. Generalized route cost is separate from duration.
+- Ordinary stair alternatives are bounded to2 upward/4 downward floors. Reconsideration begins after15 live wait minutes, every5 minutes, and requires3 minutes of generalized improvement. Held-passenger ETA uses FIFO predecessors; later arrivals do not inflate its position. Long stairs remain an unavailable-elevator escape.
+- Dispatch uses configured endpoints, actual directional seat commitments and stable FIFO. A single landing can use all three cars immediately. Legacy timing and saves migrate explicitly; malformed new temporal progress is rejected.
+- One employment factory serves leasing and both reference fixtures. Supported shifts have varied preparation, breakfast, two240-minute work segments around30-minute lunch, dinner/home/optional outing and480-minute shift-relative sleep. Midnight splits retain logical identity; lunch return has its own demand episode. Planned departures use physical arrival estimates, and late arrival retains the scheduled end. Job changes preserve needs, location and accrued evidence; authored legacy schedules are preserved on load.
+
+Provider availability and route-feasible amenity selection, movement-specific fatigue/daily budgets, complete multi-seed demand outcomes, graphical/native performance and final C0 acceptance remain future Tasks4/5. No healthy operating configuration is newly certified by this checkpoint. Detailed evidence and review findings/fixes are in the [validation report](../Validation/TRANSIT_DAILY_LIFE_2026-10-03.md).

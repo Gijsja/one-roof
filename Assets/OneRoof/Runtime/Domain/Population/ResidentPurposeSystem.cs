@@ -13,6 +13,39 @@ namespace OneRoof.Domain.Population
         public static void AdvancePerson(PersonRecord person, Tick tick)
         {
             if (person == null || person.CurrentActivity == ActivityKind.Commuting) return;
+            person.EnsureRoutineDay(tick);
+            if (person.Schedule.IsEmploymentRoutine)
+            {
+                var routineBlock = person.Schedule.ActiveBlockAt(tick).Value;
+                var dayBase = tick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay;
+                if (person.CurrentActivity == ActivityKind.Working)
+                {
+                    if (routineBlock.Label == DailySchedule.LabelWork)
+                        person.PrepareWorkAppointment(routineBlock, dayBase, tick);
+                    person.RecordWorkArrival(tick);
+                    if (tick.Value < person.WorkSegmentStartTick || tick.Value >= person.WorkAppointmentEndTick)
+                    {
+                        person.UpdateActivity(ActivityKind.Idle);
+                        return;
+                    }
+                    if (routineBlock.Label != DailySchedule.LabelWork)
+                    {
+                        person.UpdateActivity(ActivityKind.Idle);
+                        return;
+                    }
+                    if (person.HasCommittedPurposeAt(tick) && person.PurposeEndsAtTick == person.WorkAppointmentEndTick) return;
+                    person.CommitPurpose(person.CurrentLocation.IsOutside ? ResidentPurposeKind.WorkingOutside : ResidentPurposeKind.WorkingInside,
+                        tick, person.WorkAppointmentEndTick - tick.Value);
+                    return;
+                }
+                if (person.CurrentActivity == ActivityKind.Sleeping && routineBlock.Label == DailySchedule.LabelSleep)
+                {
+                    var end = dayBase + routineBlock.AppointmentEndDayTick;
+                    if (person.HasCommittedPurposeAt(tick) && person.PurposeEndsAtTick == end) return;
+                    person.CommitPurpose(ResidentPurposeKind.Sleeping, tick, Math.Max(1, end - tick.Value));
+                    return;
+                }
+            }
             if (person.HasCommittedPurposeAt(tick)) return;
             // An outside shift begins on arrival and is never restarted merely
             // because the schedule generator observes another tick at Outside.
@@ -21,7 +54,7 @@ namespace OneRoof.Domain.Population
             // The five-floor acceptance fixture deliberately compresses its
             // morning schedule. Match its episode length to that test clock;
             // production schedules use the minute-based durations below.
-            var compressedFixture = person.Schedule.Blocks[0].DurationTicks <= 60;
+            var compressedFixture = !person.Schedule.IsEmploymentRoutine && person.Schedule.Blocks[0].DurationTicks <= 60;
             var homeTicks = compressedFixture ? 5 : HomeActivityTicks;
             var mealTicks = compressedFixture ? 5 : MealTicks;
 

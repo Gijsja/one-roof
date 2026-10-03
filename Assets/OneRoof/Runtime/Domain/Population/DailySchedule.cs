@@ -21,14 +21,22 @@ namespace OneRoof.Domain.Population
         public const string LabelWork = "Work";
         public const string LabelEat = "Eat";
         public const string LabelLeisure = "Leisure";
+        public const string LabelHome = "Home";
+        public const string LabelPreparation = "Preparation";
 
-        private DailySchedule(IReadOnlyList<ScheduleBlock> blocks)
+        private DailySchedule(IReadOnlyList<ScheduleBlock> blocks, EmploymentCohort cohort = EmploymentCohort.Legacy,
+            uint routineSeed = 0)
         {
             Blocks = blocks;
+            Cohort = cohort;
+            RoutineSeed = routineSeed;
         }
 
         /// <summary>Ordered schedule blocks covering the full day cycle.</summary>
         public IReadOnlyList<ScheduleBlock> Blocks { get; }
+        public EmploymentCohort Cohort { get; }
+        public uint RoutineSeed { get; }
+        public bool IsEmploymentRoutine => Cohort != EmploymentCohort.Legacy;
 
         /// <summary>
         /// Returns the label of the block active at <paramref name="dayTick"/>,
@@ -119,12 +127,13 @@ namespace OneRoof.Domain.Population
         }
 
         /// <summary>Constructs a schedule directly from an ordered, non-overlapping block list (for tests).</summary>
-        public static DailySchedule FromBlocks(IList<ScheduleBlock> blocks)
+        public static DailySchedule FromBlocks(IList<ScheduleBlock> blocks, EmploymentCohort cohort = EmploymentCohort.Legacy,
+            uint routineSeed = 0)
         {
             if (blocks == null) throw new ArgumentNullException(nameof(blocks));
             if (blocks.Count == 0) throw new ArgumentException("Schedule must have at least one block.", nameof(blocks));
 
-            return new DailySchedule(new ReadOnlyCollection<ScheduleBlock>(new List<ScheduleBlock>(blocks)));
+            return new DailySchedule(new ReadOnlyCollection<ScheduleBlock>(new List<ScheduleBlock>(blocks)), cohort, routineSeed);
         }
 
         private static long Clamp(long value, long min, long max) =>

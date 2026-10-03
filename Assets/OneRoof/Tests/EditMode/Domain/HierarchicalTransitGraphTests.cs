@@ -235,7 +235,7 @@ namespace OneRoof.Domain.Tests.EditMode
         }
 
         [Test]
-        public void ZeroCarElevatorLegReroutesOverStairsWithoutEnqueueing()
+        public void ZeroCarElevatorLegReachesOneFloorDestinationOverPhysicalStairsWithoutEnqueueing()
         {
             var building = CreateElevatorAndStairTopology(includeUnrelatedPortal: false);
             var topology = BuildingTopologyState.FromBuildingTopology(building);
@@ -256,12 +256,10 @@ namespace OneRoof.Domain.Tests.EditMode
             transit.Advance(new Tick(1), topology, bankWithoutCars, null);
 
             Assert.That(bankWithoutCars.TotalQueuedCount, Is.Zero);
-            Assert.That(transit.ActiveTripCount, Is.EqualTo(1));
-            Assert.That(transit.ActiveTrips[0].IsQueuedInElevator, Is.False);
-            Assert.That(transit.ActiveTrips[0].Route.Legs,
-                Has.None.Matches<TransitEdge>(edge => edge.Mode == TransitMode.Elevator));
-            Assert.That(transit.ActiveTrips[0].Route.Legs,
-                Has.Some.Matches<TransitEdge>(edge => edge.Cost == 15));
+            Assert.That(transit.ActiveTripCount, Is.Zero);
+            Assert.That(trip.State, Is.EqualTo(TripState.Completed));
+            Assert.That(trip.CompletionTick.Value.Value, Is.EqualTo(1));
+            // 3 hallway cells + 45 seconds ascending + 4 hallway cells fit in one minute.
         }
 
         private static BuildingTopology CreateElevatorAndStairTopology(bool includeUnrelatedPortal)

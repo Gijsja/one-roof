@@ -29,6 +29,8 @@ namespace OneRoof.Domain.Trips
         private Room[] _foodRooms;
         private Room[] _lobbyRooms;
         private readonly Dictionary<EntityId, long> _failedRouteCooldowns = new Dictionary<EntityId, long>();
+        private readonly ElevatorBank _elevatorBank;
+        private readonly Dictionary<(WorldLocation, WorldLocation), TransitRoute> _routineRoutes = new Dictionary<(WorldLocation, WorldLocation), TransitRoute>();
 
         private readonly DynamicScheduleArbitrator _arbitrator = new DynamicScheduleArbitrator();
         private int _nextTripId;
@@ -42,11 +44,13 @@ namespace OneRoof.Domain.Trips
             BuildingTopology topology,
             HierarchicalTransitGraph graph,
             TransitRoutePlanner planner,
-            int firstTripId = 1)
+            int firstTripId = 1,
+            ElevatorBank elevatorBank = null)
         {
             _topology = topology ?? throw new ArgumentNullException(nameof(topology));
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
+            _elevatorBank = elevatorBank;
             RebuildRoomCandidates();
             RebuildStairsPlanner();
 
@@ -90,6 +94,7 @@ namespace OneRoof.Domain.Trips
             _topology = topology ?? throw new ArgumentNullException(nameof(topology));
             _graph    = graph    ?? throw new ArgumentNullException(nameof(graph));
             _planner  = planner  ?? throw new ArgumentNullException(nameof(planner));
+            _routineRoutes.Clear();
             RebuildRoomCandidates();
             RebuildStairsPlanner();
         }
@@ -128,59 +133,70 @@ namespace OneRoof.Domain.Trips
 
             foreach (var person in population.Persons)
             {
-                var block = person.Schedule.ActiveBlockAt(currentTick);
-                var scheduledPurpose = LabelToPurpose(person.Schedule.ActiveLabelAt(currentTick));
-                var changed = person.Schedule.ActiveLabelAt(previousTick) != person.Schedule.ActiveLabelAt(currentTick);
-                long scheduledEpisode = currentTick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay + (block?.StartTick.Value ?? 0);
+                person.EnsureRoutineDay(currentTick);
+                var currentBlock = person.Schedule.ActiveBlockAt(currentTick);
+                if (currentBlock?.Label == DailySchedule.LabelWork)
+                    person.PrepareWorkAppointment(currentBlock.Value,
+                        currentTick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay, currentTick);
+                var scheduledPurpose = DynamicScheduleArbitrator.ScheduledPurpose(person.Schedule.ActiveLabelAt(currentTick));
+                var changed = person.Schedule.ActiveLabelAt(previousTick) != person.Schedule.ActiveLabelAt(currentTick) ||
+                    DynamicScheduleArbitrator.EpisodeStartAt(person, previousTick) != DynamicScheduleArbitrator.EpisodeStartAt(person, currentTick);
+                var scheduledEpisode = DynamicScheduleArbitrator.EpisodeStartAt(person, currentTick);
                 var isOutsideShift = person.CurrentPurpose == ResidentPurposeKind.WorkingOutside &&
                                      person.CurrentLocation.IsOutside;
-                if (changed && scheduledPurpose.HasValue &&
-                    ((canGenerateTrip != null && !canGenerateTrip(person)) ||
-                     (isOutsideShift && !CanInterruptOutsideWork(person, currentTick))))
+                var permitted = canGenerateTrip == null || canGenerateTrip(person);
+                var outsideCommitted = !person.Schedule.IsEmploymentRoutine && isOutsideShift && !CanInterruptOutsideWork(person, currentTick);
+
+                // Required appointments enter the cohort before any travel, commitment or retry skip.
+                // A trip already serving this purpose keeps its original observer identity.
+                if (scheduledPurpose == TripPurpose.Work || scheduledPurpose == TripPurpose.Home)
                 {
-                    var suppressed = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, scheduledEpisode, currentTick.Value) ?? 0;
+                    var required = changed
+                        ? DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, scheduledEpisode, currentTick.Value) ?? 0
+                        : DemandObserver?.FindOutstandingSequence(person.Id, scheduledPurpose.Value) ?? 0;
                     var requiredDestination = ResolveDestination(person, scheduledPurpose.Value);
-                    if (requiredDestination.HasValue && person.CurrentLocation.Equals(requiredDestination.Value) &&
-                        person.CurrentActivity != ActivityKind.Commuting)
-                        DemandObserver?.Complete(suppressed, currentTick.Value);
-                    else if (DemandObserver == null || !DemandObserver.HasOutstandingTrip(person.Id, scheduledPurpose.Value))
-                        DemandObserver?.Reject(suppressed, currentTick.Value, "SuppressedCommitted");
+                    var attending = requiredDestination.HasValue && person.CurrentLocation.Equals(requiredDestination.Value) &&
+                                    person.CurrentActivity != ActivityKind.Commuting;
+                    if (attending)
+                        DemandObserver?.Complete(required, currentTick.Value);
+                    else if (changed && (!permitted || outsideCommitted) &&
+                             (DemandObserver == null || !DemandObserver.HasOutstandingTrip(person.Id, scheduledPurpose.Value)))
+                        DemandObserver?.Reject(required, currentTick.Value, "SuppressedCommitted");
                 }
-                if (canGenerateTrip != null && !canGenerateTrip(person)) continue;
+                if (!permitted) continue;
                 if (person.CurrentActivity == ActivityKind.Commuting) continue;
                 if (person.CurrentPurpose == ResidentPurposeKind.None)
                     ResidentPurposeSystem.AdvancePerson(person, currentTick);
-                if (isOutsideShift && !CanInterruptOutsideWork(person, currentTick)) continue;
+                if (outsideCommitted) continue;
                 if (_failedRouteCooldowns.TryGetValue(person.Id, out var cooldownUntil) && currentTick.Value < cooldownUntil) continue;
 
                 var previousLabel = person.Schedule.ActiveLabelAt(previousTick);
                 var currentLabel  = person.Schedule.ActiveLabelAt(currentTick);
                 var blockChanged  = previousLabel != currentLabel;
 
-                TripPurpose? purpose = _arbitrator.ArbitrateDestination(person, currentTick, isBlockTransition: blockChanged);
+                var departure = AnticipatedWorkDeparture(person, currentTick);
+                var decision = _arbitrator.Decide(person, currentTick, isBlockTransition: blockChanged,
+                    anticipatedDepartureTick: departure);
+                var purpose = decision.Purpose;
 
                 if (purpose == TripPurpose.Food && person.CurrentLocation.IsOutside &&
                     person.IsOutsideFoodRetryBlocked(currentTick))
                 {
-                    var blocked = DemandObserver?.ObserveAttempt(person.Id, TripPurpose.Food, person.PurposeStartedAtTick, currentTick.Value) ?? 0;
+                    var blocked = DemandObserver?.ObserveAttempt(person.Id, TripPurpose.Food, decision.EpisodeStartTick, currentTick.Value) ?? 0;
                     DemandObserver?.Reject(blocked, currentTick.Value, "OutsideFoodRetryBlocked");
-                    purpose = null;
-                }
-
-                if (purpose == null)
-                {
                     ResidentPurposeSystem.AdvancePerson(person, currentTick);
-                    if (blockChanged && scheduledPurpose.HasValue)
-                    {
-                        var localEpisode = scheduledEpisode;
-                        var localDemand = DemandObserver?.ObserveAttempt(person.Id, scheduledPurpose.Value, localEpisode, currentTick.Value) ?? 0;
-                        DemandObserver?.Complete(localDemand, currentTick.Value);
-                    }
                     continue;
                 }
 
-                var episode = scheduledPurpose == purpose ? scheduledEpisode : person.PurposeStartedAtTick;
-                var demand = DemandObserver?.ObserveAttempt(person.Id, purpose.Value, episode, currentTick.Value) ?? 0;
+                if (decision.Kind == RoutineDecisionKind.None || !purpose.HasValue)
+                {
+                    ResidentPurposeSystem.AdvancePerson(person, currentTick);
+                    continue;
+                }
+
+                var episode = decision.EpisodeStartTick;
+                var demand = decision.IsRequired
+                    ? DemandObserver?.ObserveAttempt(person.Id, purpose.Value, episode, currentTick.Value) ?? 0 : 0;
                 var destination = ResolveDestination(person, purpose.Value);
                 if (!destination.HasValue)
                 {
@@ -208,6 +224,7 @@ namespace OneRoof.Domain.Trips
                     _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(TransitExecutionSystem.PurposeToActivity(purpose.Value));
                     TransitExecutionSystem.ReconcileArrivalActivity(person, currentTick);
+                    if (person.Schedule.IsEmploymentRoutine) ResidentPurposeSystem.AdvancePerson(person, currentTick);
                     continue;
                 }
 
@@ -220,6 +237,7 @@ namespace OneRoof.Domain.Trips
 
                 if (trip != null)
                 {
+                    if (purpose == TripPurpose.Work) person.RecordWorkDeparture(currentTick);
                     _failedRouteCooldowns.Remove(person.Id);
                     person.UpdateActivity(ActivityKind.Commuting);
                     if (trips == null) trips = new List<TripRecord>();
@@ -244,6 +262,62 @@ namespace OneRoof.Domain.Trips
                    person.GetNeedSatisfaction(NeedKind.Hunger) < DynamicScheduleArbitrator.CriticalHungerThreshold ||
                    person.GetNeedSatisfaction(NeedKind.Energy) < DynamicScheduleArbitrator.CriticalEnergyThreshold ||
                    person.GetNeedSatisfaction(NeedKind.Hygiene) < DynamicScheduleArbitrator.CriticalHygieneThreshold;
+        }
+
+        private long AnticipatedWorkDeparture(PersonRecord person, Tick tick)
+        {
+            if (!person.Schedule.IsEmploymentRoutine || person.CurrentLocation.Equals(person.WorkplaceLocation) ||
+                person.Schedule.ActiveLabelAt(tick) == DailySchedule.LabelWork) return -1;
+            ScheduleBlock? upcoming = null;
+            long upcomingDay = 0, next = long.MaxValue;
+            var dayBase = tick.Value / DailySchedule.TicksPerDay * DailySchedule.TicksPerDay;
+            foreach (var block in person.Schedule.Blocks)
+            {
+                if (block.Label != DailySchedule.LabelWork || block.EpisodeStartDayTick != block.StartTick.Value) continue;
+                var start = dayBase + block.EpisodeStartDayTick;
+                var candidateDay = dayBase;
+                if (start <= tick.Value) { start += DailySchedule.TicksPerDay; candidateDay += DailySchedule.TicksPerDay; }
+                if (start < next) { next = start; upcoming = block; upcomingDay = candidateDay; }
+            }
+            if (!upcoming.HasValue) return -1;
+            var origin = _graph.GetNodeForLocation(person.CurrentLocation);
+            var destination = _graph.GetNodeForLocation(person.WorkplaceLocation);
+            if (origin == null || destination == null) return -1;
+            var key = (person.CurrentLocation, person.WorkplaceLocation);
+            if (!_routineRoutes.TryGetValue(key, out var route))
+            {
+                route = Math.Abs(origin.Floor - destination.Floor) <= 2 ? _stairsPlanner?.FindRoute(origin.Id, destination.Id) : null;
+                if (route == null) route = _planner.FindRoute(origin.Id, destination.Id);
+                if (_routineRoutes.Count >= 2048) _routineRoutes.Clear();
+                _routineRoutes[key] = route;
+            }
+            if (route == null) return -1;
+            if (_elevatorBank != null && _elevatorBank.Cars.Count == 0)
+            {
+                route = _stairsPlanner?.FindRoute(origin.Id, destination.Id);
+                if (route == null) return -1;
+            }
+            long seconds = 0;
+            for (var i = 0; i < route.Legs.Count; i++)
+            {
+                var leg = route.Legs[i];
+                if (leg.Mode != TransitMode.Elevator || _elevatorBank == null) { seconds += leg.DurationSeconds; continue; }
+                _graph.TryGetNode(leg.FromNodeId, out var fromNode);
+                _graph.TryGetNode(leg.ToNodeId, out var toNode);
+                var from = fromNode.Floor;
+                var to = toNode.Floor;
+                while (i + 1 < route.Legs.Count && route.Legs[i + 1].Mode == TransitMode.Elevator)
+                {
+                    _graph.TryGetNode(route.Legs[++i].ToNodeId, out toNode);
+                    to = toNode.Floor;
+                }
+                seconds += (long)_elevatorBank.EstimateArrivalTicks(from, to) * 60;
+            }
+            var lead = Math.Max(1, (seconds + 59) / 60);
+            var departure = Math.Max(0, next - lead);
+            if (tick.Value < departure) return -1;
+            person.PrepareWorkAppointment(upcoming.Value, upcomingDay, tick);
+            return departure;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -303,16 +377,6 @@ namespace OneRoof.Domain.Trips
             if (person == null) throw new ArgumentNullException(nameof(person));
             if (person.CurrentLocation.IsOutside) return null;
             return BuildTrip(person.Id, person.CurrentLocation, WorldLocation.Outside, TripPurpose.MoveOut, tick);
-        }
-
-        private static TripPurpose? LabelToPurpose(string label)
-        {
-            if (label == null) return null;
-            if (label == DailySchedule.LabelWork)    return TripPurpose.Work;
-            if (label == DailySchedule.LabelEat)     return TripPurpose.Food;
-            if (label == DailySchedule.LabelLeisure) return TripPurpose.Leisure;
-            if (label == DailySchedule.LabelSleep)   return TripPurpose.Home;
-            return null;
         }
 
         private WorldLocation? ResolveDestination(PersonRecord person, TripPurpose purpose)

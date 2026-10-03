@@ -318,6 +318,20 @@ namespace OneRoof.Domain.Persistence
         public string[] scheduleLabels;
         public long[] scheduleStartTicks;
         public long[] scheduleEndTicks;
+        public int routineVersion;
+        public int employmentCohort;
+        public uint routineSeed;
+        public long[] scheduleEpisodeStartTicks;
+        public long[] scheduleAppointmentStartTicks;
+        public long[] scheduleAppointmentEndTicks;
+        public long routineChoiceDay;
+        public int routineDayChoice;
+        public long workAppointmentStartTick;
+        public long workAppointmentEndTick;
+        public long workSegmentStartTick;
+        public long workDemandEpisodeStartTick;
+        public long workDepartureTick;
+        public long workArrivalTick;
         public int trait;
         public int[] personalityFacets;
         public int[] socialTraits;
@@ -351,6 +365,8 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class ElevatorBankSaveData
     {
+        public int timingDataVersion;
+        public ElevatorPickupSaveData[] pickups;
         public int minFloor;
         public int maxFloor;
         public int tier = 1;
@@ -364,6 +380,14 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class ElevatorCarSaveData
     {
+        public int timingDataVersion;
+        public bool usesSeconds;
+        public int floorTravelSeconds;
+        public int doorCycleSeconds;
+        public int dwellSeconds;
+        public int timerSecondsRemaining;
+        public int phaseTimingDataVersion;
+        public int phaseDurationSeconds;
         public int[] targetFloors;
         public int id;
         public int currentFloor;
@@ -387,6 +411,12 @@ namespace OneRoof.Domain.Persistence
     [Serializable]
     public sealed class ActiveTripSaveData
     {
+        public int movementDataVersion;
+        public long checkpointTick;
+        public int legRemainingSeconds;
+        public int legDurationSeconds;
+        public bool legacyLegProgress;
+        public long lastReconsiderationTick;
         public int routeDataVersion;
         public TransitRouteSaveData plannedRoute;
         public TransitRouteSaveData executionRoute;

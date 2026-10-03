@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="12" result="Passed" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.3919153">
+  <test-suite type="TestSuite" id="1000" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="1280" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.391915" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1873" name="OneRoof.Domain.Tests.EditMode.dll" fullname="/tmp/one-roof-transit-baseline-unity/Library/ScriptAssemblies/OneRoof.Domain.Tests.EditMode.dll" runstate="Runnable" testcasecount="646" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.227239" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="74696" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1874" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="646" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.214733" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1878" name="Domain" fullname="OneRoof.Domain" runstate="Runnable" testcasecount="638" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.203014" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1879" name="Tests" fullname="OneRoof.Domain.Tests" runstate="Runnable" testcasecount="638" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.194256" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1880" name="EditMode" fullname="OneRoof.Domain.Tests.EditMode" runstate="Runnable" testcasecount="638" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.185136" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1684" name="RoutineDemandContinuityTests" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.174725" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1692" name="BlockedOutsideMeal_FailsOnceWithoutLocalSuccessOrNewIdentity" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.BlockedOutsideMeal_FailsOnceWithoutLocalSuccessOrNewIdentity" methodname="BlockedOutsideMeal_FailsOnceWithoutLocalSuccessOrNewIdentity" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="259280414" result="Passed" start-time="2026-10-03 12:06:26Z" end-time="2026-10-03 12:06:27Z" duration="0.104826" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1696" name="CriticalHungerSurvivingCommute_IsObservedWhenTravelBecomesEligible" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.CriticalHungerSurvivingCommute_IsObservedWhenTravelBecomesEligible" methodname="CriticalHungerSurvivingCommute_IsObservedWhenTravelBecomesEligible" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1951984020" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.018401" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1695" name="CrossedObligation_SaveLoadPreservesIdentityAndInclusive360Completion" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.CrossedObligation_SaveLoadPreservesIdentityAndInclusive360Completion" methodname="CrossedObligation_SaveLoadPreservesIdentityAndInclusive360Completion" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="824453668" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.014005" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1694" name="DepartedResident_PendingObligationStillFailsAtDeadline" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.DepartedResident_PendingObligationStillFailsAtDeadline" methodname="DepartedResident_PendingObligationStillFailsAtDeadline" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1111661121" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001635" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1691" name="ExistingSamePurposeTrip_RetainsOriginalEpisode" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.ExistingSamePurposeTrip_RetainsOriginalEpisode" methodname="ExistingSamePurposeTrip_RetainsOriginalEpisode" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1050312712" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001760" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1686" name="HomeBoundaryDuringCommute_IsObservedOnce" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.HomeBoundaryDuringCommute_IsObservedOnce" methodname="HomeBoundaryDuringCommute_IsObservedOnce" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="25251117" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001322" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1693" name="MissingWorkDestination_FailsUnreachableOnceDuringCooldown" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.MissingWorkDestination_FailsUnreachableOnceDuringCooldown" methodname="MissingWorkDestination_FailsUnreachableOnceDuringCooldown" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1185526425" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.002927" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1687" name="NullDecisionAwayFromDestination_IsNotLocalSuccess" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.NullDecisionAwayFromDestination_IsNotLocalSuccess" methodname="NullDecisionAwayFromDestination_IsNotLocalSuccess" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1510944899" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001122" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1697" name="RequiredWorkBoundaryDuringCooldown_IsObservedWithoutDuplicateRetry" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.RequiredWorkBoundaryDuringCooldown_IsObservedWithoutDuplicateRetry" methodname="RequiredWorkBoundaryDuringCooldown_IsObservedWithoutDuplicateRetry" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="530642681" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001366" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1690" name="SatisfiedOptionalWindow_DoesNotCreateDemand" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.SatisfiedOptionalWindow_DoesNotCreateDemand" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.006482" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1688" name="SatisfiedOptionalWindow_DoesNotCreateDemand(&quot;Eat&quot;)" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.SatisfiedOptionalWindow_DoesNotCreateDemand(&quot;Eat&quot;)" methodname="SatisfiedOptionalWindow_DoesNotCreateDemand" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="658755837" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.002693" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1689" name="SatisfiedOptionalWindow_DoesNotCreateDemand(&quot;Leisure&quot;)" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.SatisfiedOptionalWindow_DoesNotCreateDemand(&quot;Leisure&quot;)" methodname="SatisfiedOptionalWindow_DoesNotCreateDemand" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="593718698" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.000934" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1685" name="WorkBoundaryDuringCommute_IsObservedOnce" fullname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests.WorkBoundaryDuringCommute_IsObservedOnce" methodname="WorkBoundaryDuringCommute_IsObservedOnce" classname="OneRoof.Domain.Tests.EditMode.RoutineDemandContinuityTests" runstate="Runnable" seed="1258454056" result="Passed" start-time="2026-10-03 12:06:27Z" end-time="2026-10-03 12:06:27Z" duration="0.001731" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

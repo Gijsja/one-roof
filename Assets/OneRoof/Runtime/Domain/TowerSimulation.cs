@@ -58,7 +58,7 @@ namespace OneRoof.Domain
             RandomStream = randomStream ?? new DeterministicRandomStream(1337);
 
             Planner = new TransitRoutePlanner(Topology.TransitGraph);
-            TripGenerator = new ScheduleTripGenerator(Topology.ToSnapshot(), Topology.TransitGraph, Planner);
+            TripGenerator = new ScheduleTripGenerator(Topology.ToSnapshot(), Topology.TransitGraph, Planner, elevatorBank: ElevatorBank);
             Transit = new TransitExecutionSystem();
             TransitDemand = new TransitDemandObserver(8192, clock.CurrentTick.Value / DailySchedule.TicksPerDay);
             TripGenerator.DemandObserver = TransitDemand;
@@ -1491,7 +1491,7 @@ namespace OneRoof.Domain
             var tick = data.simulationTick >= 0 ? data.simulationTick : 0;
             var clock = new SimulationClock(new Tick(tick));
             var topology = BuildingTopologyState.FromSaveData(data.GetTopologySaveData(), data.nextEntityId > 0 ? data.nextEntityId : 3000);
-            var population = PopulationState.FromSaveData(data.GetPopulationSaveData(), randomStream);
+            var population = PopulationState.FromSaveData(data.GetPopulationSaveData(), randomStream, tick);
             var elevatorBank = ElevatorBank.FromSaveData(data.elevatorBank);
             var economy = TowerEconomyState.FromSaveData(data.GetEconomySaveData());
             var scrutiny = data.scrutiny == null ? new ScrutinyState() : new ScrutinyState(data.scrutiny.value, data.scrutiny.previousValue, data.scrutiny.recentExpansionPressure, data.scrutiny.recentPolicyPressure);
@@ -1515,7 +1515,7 @@ namespace OneRoof.Domain
             sim._nextElevatorCarId = data.nextElevatorCarId > 0 ? data.nextElevatorCarId : 500;
             sim._nextEntityId = data.nextEntityId > 0 ? data.nextEntityId : 3000;
 
-            sim.Transit.RestoreFromSaveData(data.activeTrips, sim.Topology, sim.Planner);
+            sim.Transit.RestoreFromSaveData(data.activeTrips, sim.Topology, sim.Planner, sim.Clock.CurrentTick);
             var nextTripId = 1;
             if (data.activeTrips != null)
                 foreach (var trip in data.activeTrips)

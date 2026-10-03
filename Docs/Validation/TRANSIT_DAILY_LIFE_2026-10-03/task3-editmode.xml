@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="26" result="Passed" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="13.0692681">
+  <test-suite type="TestSuite" id="1000" name="one-roof" fullname="one-roof" runstate="Runnable" testcasecount="1391" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="13.069268" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="2002" name="OneRoof.Domain.Tests.EditMode.dll" fullname="/tmp/one-roof-transit-baseline-unity/Library/ScriptAssemblies/OneRoof.Domain.Tests.EditMode.dll" runstate="Runnable" testcasecount="757" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.917036" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="23692" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="2003" name="OneRoof" fullname="OneRoof" runstate="Runnable" testcasecount="757" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.900003" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="2007" name="Domain" fullname="OneRoof.Domain" runstate="Runnable" testcasecount="749" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.883129" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="2008" name="Tests" fullname="OneRoof.Domain.Tests" runstate="Runnable" testcasecount="749" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.864101" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="2009" name="EditMode" fullname="OneRoof.Domain.Tests.EditMode" runstate="Runnable" testcasecount="749" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.845124" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1336" name="EmploymentRoutineTests" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:54:02Z" duration="12.809179" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1351" name="AuthoredLegacySchedule_IsPreservedWithoutEmploymentRegeneration" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.AuthoredLegacySchedule_IsPreservedWithoutEmploymentRegeneration" methodname="AuthoredLegacySchedule_IsPreservedWithoutEmploymentRegeneration" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="801410814" result="Passed" start-time="2026-10-03 18:53:49Z" end-time="2026-10-03 18:53:50Z" duration="0.314763" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1353" name="EmploymentChange_PreservesNeedsLocationAndAccruedAppointmentEvidence" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.EmploymentChange_PreservesNeedsLocationAndAccruedAppointmentEvidence" methodname="EmploymentChange_PreservesNeedsLocationAndAccruedAppointmentEvidence" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="269065045" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.063592" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1352" name="EmploymentReassignment_UsesSupportedJobCohortsWithoutChangingLegacySchedules" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.EmploymentReassignment_UsesSupportedJobCohortsWithoutChangingLegacySchedules" methodname="EmploymentReassignment_UsesSupportedJobCohortsWithoutChangingLegacySchedules" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="37108515" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.164465" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1344" name="ExpiredArrival_DoesNotCreateFreshWorkObligation" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.ExpiredArrival_DoesNotCreateFreshWorkObligation" methodname="ExpiredArrival_DoesNotCreateFreshWorkObligation" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1779899721" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.023269" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1350" name="FundedLeasing_UsesActualOfficeCohortAndRoutinePhaseNeeds" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.FundedLeasing_UsesActualOfficeCohortAndRoutinePhaseNeeds" methodname="FundedLeasing_UsesActualOfficeCohortAndRoutinePhaseNeeds" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1531951018" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.314193" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1346" name="LateLunchReturn_KeepsScheduledEndAndReportsLateness" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.LateLunchReturn_KeepsScheduledEndAndReportsLateness" methodname="LateLunchReturn_KeepsScheduledEndAndReportsLateness" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="2006723915" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.012228" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1340" name="LateOvernightArrival_KeepsScheduledEndAcrossMidnight" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.LateOvernightArrival_KeepsScheduledEndAcrossMidnight" methodname="LateOvernightArrival_KeepsScheduledEndAcrossMidnight" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1624383543" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.008206" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1343" name="LunchReturn_HasNewRequiredDemandInsideOriginalAppointment" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.LunchReturn_HasNewRequiredDemandInsideOriginalAppointment" methodname="LunchReturn_HasNewRequiredDemandInsideOriginalAppointment" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="732274551" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.040629" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1363" name="NoElevatorBank_AnticipationUsesAvailableStairsRatherThanInfinitePickup" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.NoElevatorBank_AnticipationUsesAvailableStairsRatherThanInfinitePickup" methodname="NoElevatorBank_AnticipationUsesAvailableStairsRatherThanInfinitePickup" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="627401037" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.085026" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1342" name="OptionalOutings_HaveBoundedDailyVariationWithoutRequiredDemand" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.OptionalOutings_HaveBoundedDailyVariationWithoutRequiredDemand" methodname="OptionalOutings_HaveBoundedDailyVariationWithoutRequiredDemand" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="666185087" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.001738" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1348" name="PredepartureAttendance_KeepsSubmissionAndDeadlineAtWorkBoundary" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.PredepartureAttendance_KeepsSubmissionAndDeadlineAtWorkBoundary" methodname="PredepartureAttendance_KeepsSubmissionAndDeadlineAtWorkBoundary" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="52381480" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.008890" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1349" name="PredepartureCheckpoint_PreservesOriginalEpisodeAndFutureAppointment" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.PredepartureCheckpoint_PreservesOriginalEpisodeAndFutureAppointment" methodname="PredepartureCheckpoint_PreservesOriginalEpisodeAndFutureAppointment" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1923732836" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.002145" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1338" name="ReferenceNeeds_AreDerivedFromRoutinePhase" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.ReferenceNeeds_AreDerivedFromRoutinePhase" methodname="ReferenceNeeds_AreDerivedFromRoutinePhase" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="374912305" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:50Z" duration="0.044666" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1337" name="ReferenceResidents_HavePreparationMealsAndShiftRelativeSleep" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.ReferenceResidents_HavePreparationMealsAndShiftRelativeSleep" methodname="ReferenceResidents_HavePreparationMealsAndShiftRelativeSleep" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1731112409" result="Passed" start-time="2026-10-03 18:53:50Z" end-time="2026-10-03 18:53:51Z" duration="0.084196" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1362" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-03 18:53:51Z" end-time="2026-10-03 18:54:02Z" duration="11.558685" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1354" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1439,True,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1439,True,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1726772238" result="Passed" start-time="2026-10-03 18:53:51Z" end-time="2026-10-03 18:53:52Z" duration="1.676462" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1355" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1441,True,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1441,True,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1636825678" result="Passed" start-time="2026-10-03 18:53:52Z" end-time="2026-10-03 18:53:53Z" duration="1.157527" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1356" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1400,True,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1400,True,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="770145509" result="Passed" start-time="2026-10-03 18:53:53Z" end-time="2026-10-03 18:53:55Z" duration="2.049574" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1357" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(900,True,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(900,True,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="92180001" result="Passed" start-time="2026-10-03 18:53:55Z" end-time="2026-10-03 18:53:58Z" duration="2.104634" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1358" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1200,False,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(1200,False,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1761164511" result="Passed" start-time="2026-10-03 18:53:58Z" end-time="2026-10-03 18:53:59Z" duration="1.621349" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1359" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(539,False,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(539,False,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="647680288" result="Passed" start-time="2026-10-03 18:53:59Z" end-time="2026-10-03 18:54:00Z" duration="0.999669" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1360" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(590,False,False)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(590,False,False)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="991100102" result="Passed" start-time="2026-10-03 18:54:00Z" end-time="2026-10-03 18:54:01Z" duration="1.077387" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1361" name="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(600,False,True)" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions(600,False,True)" methodname="RoutineCheckpoint_ReplaysExactFutureDemandActivitiesAndDecisions" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1040418693" result="Passed" start-time="2026-10-03 18:54:01Z" end-time="2026-10-03 18:54:02Z" duration="0.858446" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1339" name="RoutineSave_PreservesCohortAndLogicalOvernightBlocks" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.RoutineSave_PreservesCohortAndLogicalOvernightBlocks" methodname="RoutineSave_PreservesCohortAndLogicalOvernightBlocks" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="1942156802" result="Passed" start-time="2026-10-03 18:54:02Z" end-time="2026-10-03 18:54:02Z" duration="0.001534" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1347" name="SatisfiedLunch_StopsWorkUntilReturnAppointment" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.SatisfiedLunch_StopsWorkUntilReturnAppointment" methodname="SatisfiedLunch_StopsWorkUntilReturnAppointment" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="770332203" result="Passed" start-time="2026-10-03 18:54:02Z" end-time="2026-10-03 18:54:02Z" duration="0.000635" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1345" name="SleepSplit_PreservesEndAndEpisodeAcrossMidnight" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.SleepSplit_PreservesEndAndEpisodeAcrossMidnight" methodname="SleepSplit_PreservesEndAndEpisodeAcrossMidnight" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="841143952" result="Passed" start-time="2026-10-03 18:54:02Z" end-time="2026-10-03 18:54:02Z" duration="0.000443" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1341" name="WorkDeparture_AnticipatesPhysicalRouteBeforeAppointment" fullname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests.WorkDeparture_AnticipatesPhysicalRouteBeforeAppointment" methodname="WorkDeparture_AnticipatesPhysicalRouteBeforeAppointment" classname="OneRoof.Domain.Tests.EditMode.EmploymentRoutineTests" runstate="Runnable" seed="674521934" result="Passed" start-time="2026-10-03 18:54:02Z" end-time="2026-10-03 18:54:02Z" duration="0.001464" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: /home/geisha/.config/unity3d/DefaultCompany/one-roof/TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

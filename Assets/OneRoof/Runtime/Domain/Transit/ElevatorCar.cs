@@ -41,7 +41,26 @@ namespace OneRoof.Domain.Transit
 
         public ElevatorDirection Direction { get; private set; }
 
-        public int TimerTicksRemaining { get; private set; }
+        private int _legacyTimerTicksRemaining;
+        public int TimerTicksRemaining
+        {
+            get => Timing.UsesSeconds ? (TimerSecondsRemaining + 59) / 60 : _legacyTimerTicksRemaining;
+            private set { _legacyTimerTicksRemaining = value; }
+        }
+        public int TimerSecondsRemaining { get; private set; }
+        private int _phaseDurationSeconds;
+        public int PhaseDurationSeconds => Timing.UsesSeconds ? _phaseDurationSeconds : ConfiguredPhaseDurationSeconds(Timing, Phase);
+
+        internal static int ConfiguredPhaseDurationSeconds(ElevatorTimingConfig timing, ElevatorCarPhase phase) =>
+            phase == ElevatorCarPhase.Moving ? timing.FloorTravelSeconds :
+            phase == ElevatorCarPhase.OpenLoading ? timing.DwellSeconds :
+            phase == ElevatorCarPhase.DoorsOpening || phase == ElevatorCarPhase.DoorsClosing ? timing.DoorCycleSeconds : 0;
+
+        private void StartSecondTimer(int seconds)
+        {
+            TimerSecondsRemaining = seconds;
+            _phaseDurationSeconds = seconds;
+        }
 
         public IReadOnlyList<ElevatorPassenger> Passengers { get; }
 
@@ -57,6 +76,11 @@ namespace OneRoof.Domain.Transit
 
         internal void ApplyTier(ElevatorTierProfile profile)
         {
+            if (!Timing.UsesSeconds)
+            {
+                _phaseDurationSeconds = PhaseDurationSeconds;
+                TimerSecondsRemaining = checked(_legacyTimerTicksRemaining * 60);
+            }
             Timing = profile.Timing;
             // Upgrades never shrink a custom or previously upgraded car, or strand riders.
             Capacity = Math.Max(Math.Max(_passengers.Count, Capacity), profile.CarCapacity);
@@ -70,6 +94,7 @@ namespace OneRoof.Domain.Transit
                 {
                     Phase = ElevatorCarPhase.DoorsOpening;
                     TimerTicksRemaining = Timing.DoorCycleTicks;
+                    StartSecondTimer(Timing.DoorCycleSeconds);
                 }
                 return;
             }
@@ -182,6 +207,11 @@ namespace OneRoof.Domain.Transit
 
         public void Tick()
         {
+            if (Timing.UsesSeconds)
+            {
+                AdvanceSeconds(60, null);
+                return;
+            }
             switch (Phase)
             {
                 case ElevatorCarPhase.Idle:
@@ -269,6 +299,7 @@ namespace OneRoof.Domain.Transit
                 {
                     Phase = ElevatorCarPhase.Idle;
                     Direction = ElevatorDirection.None;
+                    TimerTicksRemaining = 0;
                 }
             }
         }
@@ -326,6 +357,7 @@ namespace OneRoof.Domain.Transit
             {
                 Phase = ElevatorCarPhase.Idle;
                 Direction = ElevatorDirection.None;
+                TimerTicksRemaining = 0;
             }
         }
 
@@ -348,14 +380,6 @@ namespace OneRoof.Domain.Transit
                 }
             }
 
-            // If car is idle or heading up from the bottom floor, pick the highest target so it
-            // sweeps all floors on the way down instead of fixating on the nearest low floor.
-            if (CurrentFloor == 0 && _targetFloors.Count > 0
-                && (Direction == ElevatorDirection.None || Direction == ElevatorDirection.Up))
-            {
-                return _targetFloors.Max;
-            }
-
             // Fallback to nearest
             var nearest = -1;
             var minDelta = int.MaxValue;
@@ -370,6 +394,80 @@ namespace OneRoof.Domain.Transit
             }
 
             return nearest;
+        }
+
+        internal void RestoreSecondsRemaining(int seconds, int? phaseDuration = null)
+        {
+            if (seconds < 0) throw new ArgumentOutOfRangeException(nameof(seconds));
+            TimerSecondsRemaining = seconds;
+            _phaseDurationSeconds = phaseDuration ?? Math.Max(seconds, ConfiguredPhaseDurationSeconds(Timing, Phase));
+        }
+
+        internal void SetServiceDirection(ElevatorDirection direction)
+        {
+            if (_passengers.Count == 0) Direction = direction;
+        }
+
+        /// <summary>Consume an integer-second budget, retaining partial floor/phase progress exactly.</summary>
+        internal void AdvanceSeconds(int seconds, Action<ElevatorCar> onOpen)
+        {
+            if (!Timing.UsesSeconds) throw new InvalidOperationException("Authored minute timing uses Tick().");
+            var transitions = 0;
+            while (seconds > 0 && transitions++ < 32)
+            {
+                if (Phase == ElevatorCarPhase.Idle)
+                {
+                    if (_targetFloors.Count == 0) { Direction = ElevatorDirection.None; return; }
+                    var target = ChooseNextTarget();
+                    if (target == CurrentFloor)
+                    {
+                        _targetFloors.Remove(target);
+                        Phase = ElevatorCarPhase.DoorsOpening;
+                        StartSecondTimer(Timing.DoorCycleSeconds);
+                    }
+                    else
+                    {
+                        Direction = target > CurrentFloor ? ElevatorDirection.Up : ElevatorDirection.Down;
+                        Phase = ElevatorCarPhase.Moving;
+                        StartSecondTimer(Timing.FloorTravelSeconds);
+                    }
+                }
+                if (Phase == ElevatorCarPhase.OpenLoading) onOpen?.Invoke(this);
+                var consumed = Math.Min(seconds, TimerSecondsRemaining);
+                TimerSecondsRemaining -= consumed;
+                seconds -= consumed;
+                if (TimerSecondsRemaining > 0) return;
+                switch (Phase)
+                {
+                    case ElevatorCarPhase.Moving:
+                        CurrentFloor += Direction == ElevatorDirection.Up ? 1 : -1;
+                        if (_targetFloors.Remove(CurrentFloor))
+                        {
+                            Phase = ElevatorCarPhase.DoorsOpening;
+                            StartSecondTimer(Timing.DoorCycleSeconds);
+                        }
+                        else if (HasTargetsInDirection(Direction)) StartSecondTimer(Timing.FloorTravelSeconds);
+                        else if (_targetFloors.Count > 0)
+                        {
+                            Direction = Direction == ElevatorDirection.Up ? ElevatorDirection.Down : ElevatorDirection.Up;
+                            StartSecondTimer(Timing.FloorTravelSeconds);
+                        }
+                        else { Phase = ElevatorCarPhase.Idle; Direction = ElevatorDirection.None; }
+                        break;
+                    case ElevatorCarPhase.DoorsOpening:
+                        Phase = ElevatorCarPhase.OpenLoading;
+                        StartSecondTimer(Timing.DwellSeconds);
+                        onOpen?.Invoke(this);
+                        break;
+                    case ElevatorCarPhase.OpenLoading:
+                        Phase = ElevatorCarPhase.DoorsClosing;
+                        StartSecondTimer(Timing.DoorCycleSeconds);
+                        break;
+                    case ElevatorCarPhase.DoorsClosing:
+                        Phase = ElevatorCarPhase.Idle;
+                        break;
+                }
+            }
         }
 
         public bool HasTargetsInDirection(ElevatorDirection dir)

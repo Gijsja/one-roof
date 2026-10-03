@@ -111,13 +111,10 @@ namespace OneRoof.Domain.Economy
                 var rng = random ?? new DeterministicRandomStream((ulong)nextEntityId);
                 var traitKind = (i % 2 == 0) ? PersonTraitKind.EarlyBird : PersonTraitKind.Frugal;
                 var trait = new PersonTrait(traitKind);
-                var schedule = DailySchedule.Standard(trait, rng);
-                var needs = new[]
-                {
-                    new NeedState(NeedKind.Hunger, 0.8f),
-                    new NeedState(NeedKind.Rest, 0.9f),
-                    new NeedState(NeedKind.Social, 0.7f)
-                };
+                var workplaceContent = workplaceId.IsValid ? topology.Rooms[workplaceId].ContentType.Value : null;
+                var schedule = EmploymentRoutineFactory.Create(personId, trait, workplaceContent,
+                    (uint)rng.NextInt(0, int.MaxValue));
+                var needs = EmploymentRoutineFactory.InitialNeeds(schedule, tick);
 
                 var person = new PersonRecord(
                     personId,
@@ -193,6 +190,7 @@ namespace OneRoof.Domain.Economy
                 var roomId = FindFundedWorkplace(rooms, businesses, assignedByRoom, occupancyFactor);
                 if (!roomId.IsValid) break;
                 if (!person.ReassignToRoomWork(roomId)) continue;
+                person.UpdateEmploymentRoutine(topology.Rooms[roomId].ContentType.Value);
                 assignedByRoom.TryGetValue(roomId, out var count);
                 assignedByRoom[roomId] = count + 1;
                 matched++;

@@ -48,11 +48,22 @@ namespace OneRoof.Domain.Persistence
     }
 
     [Serializable]
+    public sealed class ElevatorPickupSaveData
+    {
+        public int floor;
+        public int carId;
+        public int direction;
+    }
+
+    [Serializable]
     public sealed class TransitEdgeSaveData
     {
         public int fromNodeId;
         public int toNodeId;
         public int cost;
         public int mode;
+        public int durationDataVersion;
+        public int durationSeconds;
+        public bool hasPhysicalDuration;
     }
 }

@@ -88,7 +88,7 @@ namespace OneRoof.Domain.Population
 
         // ── Schedule & activity ───────────────────────────────────────────────
 
-        public DailySchedule Schedule { get; }
+        public DailySchedule Schedule { get; private set; }
 
         public ActivityKind CurrentActivity => _currentActivity;
         public ResidentPurposeKind CurrentPurpose => _currentPurpose;
@@ -98,6 +98,82 @@ namespace OneRoof.Domain.Population
         public bool IsOutsideFoodRetryBlocked(Tick tick) => tick.Value < _outsideFoodRetryAfterTick;
         public bool HasCommittedPurposeAt(Tick tick) =>
             _currentPurpose != ResidentPurposeKind.None && tick.Value < _purposeEndsAtTick;
+        public long RoutineChoiceDay { get; private set; } = -1;
+        public int RoutineDayChoice { get; private set; }
+        public long WorkAppointmentStartTick { get; private set; } = -1;
+        public long WorkAppointmentEndTick { get; private set; } = -1;
+        public long WorkSegmentStartTick { get; private set; } = -1;
+        public long WorkDemandEpisodeStartTick { get; private set; } = -1;
+        public long WorkDepartureTick { get; private set; } = -1;
+        public long WorkArrivalTick { get; private set; } = -1;
+        public long WorkArrivalLatenessTicks => WorkArrivalTick < 0 ? 0 : Math.Max(0, WorkArrivalTick - WorkSegmentStartTick);
+
+        public void EnsureRoutineDay(Tick tick)
+        {
+            if (!Schedule.IsEmploymentRoutine) return;
+            var day = tick.Value / DailySchedule.TicksPerDay;
+            if (RoutineChoiceDay == day) return;
+            RoutineChoiceDay = day;
+            RoutineDayChoice = (int)(EmploymentRoutineFactory.Mix(Schedule.RoutineSeed ^ (uint)Id.Value ^ (uint)day) % 4);
+        }
+
+        public void PrepareWorkAppointment(ScheduleBlock block, long dayBase, Tick tick)
+        {
+            if (!Schedule.IsEmploymentRoutine || block.Label != DailySchedule.LabelWork) return;
+            var segment = dayBase + block.EpisodeStartDayTick;
+            if (WorkSegmentStartTick == segment) return;
+            WorkAppointmentStartTick = dayBase + block.AppointmentStartDayTick;
+            WorkAppointmentEndTick = dayBase + block.AppointmentEndDayTick;
+            WorkSegmentStartTick = segment;
+            WorkDemandEpisodeStartTick = Math.Max(0, Math.Min(segment, tick.Value));
+            WorkDepartureTick = -1;
+            WorkArrivalTick = -1;
+        }
+
+        public void RecordWorkDeparture(Tick tick)
+        {
+            // This is the initial attendance departure. A later urgent outing/return must not
+            // attach its departure to an episode whose original local attendance is already recorded.
+            if (Schedule.IsEmploymentRoutine && WorkDepartureTick < 0 && WorkArrivalTick < 0) WorkDepartureTick = tick.Value;
+        }
+
+        public void RecordWorkArrival(Tick tick)
+        {
+            if (Schedule.IsEmploymentRoutine && WorkArrivalTick < 0) WorkArrivalTick = tick.Value;
+        }
+
+        public void RestoreRoutineState(long choiceDay, int choice, long appointmentStart, long appointmentEnd,
+            long segmentStart, long demandEpisode, long departure, long arrival, long? restoredTick = null)
+        {
+            var unset = appointmentStart == -1 && appointmentEnd == -1 && segmentStart == -1 &&
+                demandEpisode == -1 && departure == -1 && arrival == -1;
+            if (choiceDay < -1 || choice < 0 || choice > 3 || choiceDay == -1 && choice != 0 ||
+                restoredTick.HasValue && (restoredTick.Value < 0 || choiceDay > restoredTick.Value / DailySchedule.TicksPerDay))
+                throw new ArgumentException("Invalid resident routine checkpoint.");
+            if (!unset && (appointmentStart < -DailySchedule.TicksPerDay || appointmentEnd <= 0 || appointmentEnd <= appointmentStart ||
+                (decimal)appointmentEnd - appointmentStart > DailySchedule.TicksPerDay ||
+                segmentStart < appointmentStart || segmentStart >= appointmentEnd ||
+                demandEpisode < 0 || demandEpisode > Math.Max(0, segmentStart) ||
+                departure < -1 || arrival < -1 || departure >= 0 && departure < demandEpisode ||
+                arrival >= 0 && (arrival < demandEpisode || departure >= 0 && arrival < departure) ||
+                restoredTick.HasValue && (demandEpisode > restoredTick.Value || departure > restoredTick.Value || arrival > restoredTick.Value ||
+                    (decimal)appointmentStart > (decimal)restoredTick.Value + DailySchedule.TicksPerDay)))
+                throw new ArgumentException("Invalid resident appointment checkpoint.");
+            if (!Schedule.IsEmploymentRoutine)
+            {
+                if (!unset || choiceDay != -1 || choice != 0)
+                    throw new ArgumentException("Legacy schedules cannot carry employment observations.");
+                return;
+            }
+            RoutineChoiceDay = choiceDay;
+            RoutineDayChoice = choice;
+            WorkAppointmentStartTick = appointmentStart;
+            WorkAppointmentEndTick = appointmentEnd;
+            WorkSegmentStartTick = segmentStart;
+            WorkDemandEpisodeStartTick = demandEpisode;
+            WorkDepartureTick = departure;
+            WorkArrivalTick = arrival;
+        }
 
         // ── Needs & traits ────────────────────────────────────────────────────
 
@@ -123,6 +199,7 @@ namespace OneRoof.Domain.Population
 
             WorkplaceRoomId = default;
             WorkplaceLocation = WorldLocation.Outside;
+            UpdateEmploymentRoutine(null);
             if (_currentActivity == ActivityKind.Working)
                 UpdateActivity(ActivityKind.Idle);
             else if (_currentPurpose == ResidentPurposeKind.WorkingInside)
@@ -132,6 +209,15 @@ namespace OneRoof.Domain.Population
                 _purposeEndsAtTick = 0;
             }
             return true;
+        }
+
+        /// <summary>Real employment changes replace generated routines; authored/legacy schedules remain authoritative.</summary>
+        public void UpdateEmploymentRoutine(string workplaceContent)
+        {
+            if (!Schedule.IsEmploymentRoutine) return;
+            Schedule = EmploymentRoutineFactory.Create(Id, Traits.Count > 0 ? Traits[0] : default,
+                workplaceContent, Schedule.RoutineSeed);
+            // Existing attendance/demand evidence remains until a later actual appointment supersedes it.
         }
 
         /// <summary>Accepts a funded tower job without changing the resident's physical location.</summary>

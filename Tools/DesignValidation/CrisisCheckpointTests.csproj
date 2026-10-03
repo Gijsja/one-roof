@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><ImplicitUsings>enable</ImplicitUsings><NoWarn>1701</NoWarn><NUnitFrameworkPath Condition="'$(NUnitFrameworkPath)' == ''">../../Library/PackageCache/com.unity.ext.nunit@ec2d0043d6fc/net40/unity-custom/nunit.framework.dll</NUnitFrameworkPath></PropertyGroup>
+<ItemGroup>
+<Compile Include="../../Assets/OneRoof/Runtime/Domain/**/*.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/PopulationNeedPersistenceTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/Transit*PersistenceTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/TransitDemand*Tests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/ElevatorPickupContinuationTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/RoutineDemandContinuityTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/TransitChoiceAndClockTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/DirectionalDispatchTests.cs"/>
+<Compile Include="../../Assets/OneRoof/Tests/EditMode/Domain/EmploymentRoutineTests.cs"/>
+<Compile Include="CrisisCheckpointTests.cs"/>
+<Reference Include="nunit.framework"><HintPath>$(NUnitFrameworkPath)</HintPath></Reference>
+</ItemGroup></Project>

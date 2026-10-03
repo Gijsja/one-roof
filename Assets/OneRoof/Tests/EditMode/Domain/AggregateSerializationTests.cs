@@ -114,7 +114,9 @@ namespace OneRoof.Domain.Tests.EditMode
         [Test]
         public void ElevatorBank_ToSaveData_And_FromSaveData_RoundTripsAccurately()
         {
-            var car = new ElevatorCar(new EntityId(501), startingFloor: 2, capacity: 10);
+            // RestoreState's timer argument is authored minutes; keep this legacy round-trip premise explicit.
+            var car = new ElevatorCar(new EntityId(501), startingFloor: 2, capacity: 10,
+                timing: new ElevatorTimingConfig(5, 2, 2));
             var rider = new ElevatorPassenger(new EntityId(101), originFloor: 0, destinationFloor: 3)
             {
                 WaitTicks = 5,
@@ -144,6 +146,8 @@ namespace OneRoof.Domain.Tests.EditMode
             Assert.That(restored.Cars.Count, Is.EqualTo(1));
             Assert.That(restored.Cars[0].CurrentFloor, Is.EqualTo(2));
             Assert.That(restored.Cars[0].Phase, Is.EqualTo(ElevatorCarPhase.Moving));
+            Assert.That(restored.Cars[0].Timing.UsesSeconds, Is.False);
+            Assert.That(restored.Cars[0].TimerTicksRemaining, Is.EqualTo(3));
             Assert.That(restored.Cars[0].Passengers.Count, Is.EqualTo(1));
             Assert.That(restored.TotalQueuedCount, Is.EqualTo(1));
             Assert.That(restored.DeliveredCount, Is.EqualTo(1));

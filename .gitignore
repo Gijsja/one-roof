@@ -133,3 +133,6 @@ test-results.xml
 
 # Hand-authored standalone design probe; Unity-generated project files stay ignored.
 !Tools/DesignValidation/CrisisDesignProbe.csproj
+
+# Portable NUnit checkpoint runner is a hand-authored validation project.
+!Tools/DesignValidation/CrisisCheckpointTests.csproj

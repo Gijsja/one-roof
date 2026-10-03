@@ -171,8 +171,8 @@ namespace OneRoof.Domain.Transit
                         var b = floorNodes[j];
                         var walkDistance = Math.Abs(a.Location.X - b.Location.X);
 
-                        edges.Add(new TransitEdge(a.Id, b.Id, walkDistance, TransitMode.Walk));
-                        edges.Add(new TransitEdge(b.Id, a.Id, walkDistance, TransitMode.Walk));
+                        edges.Add(new TransitEdge(a.Id, b.Id, walkDistance, TransitMode.Walk, walkDistance));
+                        edges.Add(new TransitEdge(b.Id, a.Id, walkDistance, TransitMode.Walk, walkDistance));
                     }
                 }
             }
@@ -197,8 +197,8 @@ namespace OneRoof.Domain.Transit
                         new CellCoordinate(outsideX, 0));
                     nodes.Add(outside);
                     var distance = outsideX - entrance.Location.X;
-                    edges.Add(new TransitEdge(outside.Id, entrance.Id, distance, TransitMode.Walk));
-                    edges.Add(new TransitEdge(entrance.Id, outside.Id, distance, TransitMode.Walk));
+                    edges.Add(new TransitEdge(outside.Id, entrance.Id, distance, TransitMode.Walk, distance));
+                    edges.Add(new TransitEdge(entrance.Id, outside.Id, distance, TransitMode.Walk, distance));
                     break;
                 }
                 break;
@@ -216,8 +216,8 @@ namespace OneRoof.Domain.Transit
                         var floorDelta = Math.Abs(a.Floor - b.Floor);
                         var transitCost = floorDelta * VerticalElevatorFloorCost;
 
-                        edges.Add(new TransitEdge(a.Id, b.Id, transitCost, TransitMode.Elevator));
-                        edges.Add(new TransitEdge(b.Id, a.Id, transitCost, TransitMode.Elevator));
+                        edges.Add(new TransitEdge(a.Id, b.Id, transitCost, TransitMode.Elevator, floorDelta * 10));
+                        edges.Add(new TransitEdge(b.Id, a.Id, transitCost, TransitMode.Elevator, floorDelta * 10));
                     }
                 }
             }
@@ -249,8 +249,8 @@ namespace OneRoof.Domain.Transit
                     if (Math.Abs(a.Floor - b.Floor) == 1)
                     {
                         var stairCost = VerticalStairFloorCost;
-                        edges.Add(new TransitEdge(a.Id, b.Id, stairCost, TransitMode.Walk));
-                        edges.Add(new TransitEdge(b.Id, a.Id, stairCost, TransitMode.Walk));
+                        edges.Add(new TransitEdge(a.Id, b.Id, stairCost, TransitMode.Walk, 45));
+                        edges.Add(new TransitEdge(b.Id, a.Id, stairCost, TransitMode.Walk, 30));
                     }
                 }
             }
