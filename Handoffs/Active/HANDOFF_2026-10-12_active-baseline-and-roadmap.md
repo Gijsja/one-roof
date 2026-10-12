@@ -7,7 +7,7 @@ Updated: 2026-10-12. Authoritative active status summary.
 - **Fast Domain Runner**: `/home/geisha/.dotnet/dotnet run --project Tools/DesignValidation/CrisisCheckpointTests.csproj` passes 190/190 tests in ~1.5s.
 - **Transit Tasks 1–3 Complete**: Required-intent continuity, movement/dispatch fixes, and production employment routines verified.
 - **Transit Tasks 4–5 Pending**: Reachable providers and physiological budgets; complete-demand validation, save replay verification.
-- **3D Rooms & Hybrid Facade Architecture (OR-1200 Series) Ready**: Roadmap and backlog updated with OR-1201 through OR-1205. The execution plan and copyable sub-agent prompts are authoritative in `Planning/3D_ROOMS_AND_FACADE_ARCHITECTURE.md`.
+- **3D Rooms & Hybrid Facade Architecture (OR-1200 Series) Ready**: Governed by ADR-091. Roadmap and backlog updated with OR-1201 through OR-1205. The execution plan and copyable sub-agent prompts are authoritative in `Planning/3D_ROOMS_AND_FACADE_ARCHITECTURE.md`.
 
 ## Acceptance & Architectural Constraints
 - **Transit Goals**: Retain >=99% required episodes within 360 ticks, terminal nearest-rank wait p95 <= 60 ticks, live max wait <= 240 ticks, and zero unresolved unreachable demand.

@@ -71,7 +71,7 @@ Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and 
 
 ## 3. Planned Presentation Evolution — 3D Diorama Rooms & Hybrid Facade (OR-1200)
 
-Requested 2026-10-12. Detailed specification and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md). These packages can progress in the presentation layer without modifying domain simulation rules.
+Requested 2026-10-12. Governed by [ADR-091](../Docs/DECISIONS.md). Detailed specification and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md). These packages can progress in the presentation layer without modifying domain simulation rules.
 
 | ID | Status | Milestone | Task | Depends on | Acceptance |
 |---|---|---|---|---|---|

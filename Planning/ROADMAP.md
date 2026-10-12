@@ -90,7 +90,7 @@ The initial implementation target is OR-1101, followed by a small representative
 
 ## 5. Planned Presentation Evolution — 3D Diorama Rooms & Hybrid Facade Mapping (OR-1200)
 
-**Requested 2026-10-12. Status: planned; ready for sub-agent dispatch.** Detailed contracts, mesh specifications, camera mathematics, and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md).
+**Requested 2026-10-12. Status: planned; ready for sub-agent dispatch. Governed by [ADR-091](../Docs/DECISIONS.md).** Detailed contracts, mesh specifications, camera mathematics, and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md).
 
 Transition flat 2D cutaway cross-sections into **3D stage boxes ("diorama shoeboxes")** with 2.5D sprite positioning in depth, telephoto perspective camera parallax ($28^\circ$ FOV), contact shadow decals, and autonomous resident 3D locomotion, combined with a **dual-tier hybrid pipeline** integrating baked parallax raymarching (*Real Fake Interiors* pattern) for the macro exterior curtain wall:
 

@@ -2,6 +2,7 @@
 
 **Date**: 2026-10-12  
 **Status**: Planned / Ready for Sub-Agent Dispatch  
+**Governing ADR**: [ADR-091](../Docs/DECISIONS.md)  
 **Ownership**: Presentation & Graphics Layer (`OneRoof.Presentation`, `OneRoof.Content`)  
 **Domain Boundary**: Strictly 0 `UnityEngine` dependencies in `OneRoof.Domain` and `OneRoof.Application`.  
 **Performance Budget**: Hard limit of <180 draw calls, <100 batches, ≥60 FPS (16.6 ms frame budget), and 0 steady-state heap allocations per tick at reference scale (30 floors / 300 residents).
