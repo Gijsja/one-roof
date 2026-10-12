@@ -38,12 +38,18 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 5. **Projections only**: Presentation and UI consume immutable projections bound by stable entity IDs. UI dispatches validated commands via `TowerSimulation.CanExecute()`, never directly mutating simulation state.
 6. **No per-agent Update loops**: Simulation runs on a fixed discrete tick (1440 ticks/day). Views are pooled and presentation-interpolated.
 7. **Aggregate persistence**: All serialization lives in domain sub-aggregates (`ToSaveData()` / `FromSaveData()`). Zero scene references in saves.
-8. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/`. Keep it concise, authoritative, and focused on current task status.
-9. **Sub-Agent Roadmap & Handoff Protocol**: When packaging architectural proposals or feature tracks for sub-agents:
-   - Create an execution plan in `Planning/<FEATURE>_ARCHITECTURE.md` with package IDs, prerequisites, owned files, and copyable prompts.
-   - Add the phased sequence to `Planning/ROADMAP.md`.
-   - Register work packages in `Planning/BACKLOG.md` with dispatch statuses (`READY`, `QUEUED`, `BLOCKED`).
-   - Synchronize `Handoffs/Active/` without creating duplicate active handoff files.
+8. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/` (<=25 lines) pointing directly to the currently active backlog package.
+9. **Single Source of Truth (No Duplicated Tables)**:
+   - `Planning/BACKLOG.md` is the **exclusive** registry for work package statuses (`READY`, `IN_PROGRESS`, `DONE`).
+   - `Planning/ROADMAP.md` sequences high-level milestones and links to `BACKLOG.md` without duplicating task tables.
+   - `Planning/<FEATURE>_ARCHITECTURE.md` owns technical contracts and copyable sub-agent prompts.
+   - `Docs/DECISIONS.md` records settled architectural shifts (ADR-070+).
+10. **Code First, Sync on Close (Zero Meta-Commits)**:
+   - Sub-agents focus 100% on implementing code and passing Tier 1 tests.
+   - Never author standalone documentation-only commits during active feature work.
+   - Backlog status transitions (`READY` -> `DONE`) and handoffs are synchronized strictly in the closing commit alongside working code.
+11. **Configurable Tunables over Hardcoded Dogma**:
+   - Presentation metrics (depths, camera FOV, shadow opacity) must be authored as inspectable `[SerializeField]` settings on presenters or ScriptableObjects, never rigid hardcoded invariants that force documentation rewrites when tuned visually.
 
 ---
 
