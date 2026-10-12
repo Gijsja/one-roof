@@ -2,7 +2,7 @@
 
 Updated 2026-10-02. Organize work by complete, reviewable outcomes and shared hardening needs. Existing OR IDs remain traceable; grouped packages below replace the old milestone order as the execution schedule. No delivery dates or agents are assigned by this document.
 
-Use [BACKLOG](./BACKLOG.md) for eligibility and status, [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) for contracts, ownership and agent assignments, and the single [active handoff](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md) for current evidence. Earlier milestones remain in the [historical archive](./Archive/ROADMAP_HISTORICAL_ARCHIVE.md).
+Use [BACKLOG](./BACKLOG.md) for eligibility and status, [Beta hardening execution plan](./BETA_HARDENING_EXECUTION_PLAN.md) for contracts, ownership and agent assignments, and the single [active handoff](../Handoffs/Active/HANDOFF_2026-10-12_active-baseline-and-roadmap.md) for current evidence. Earlier milestones remain in the [historical archive](./Archive/ROADMAP_HISTORICAL_ARCHIVE.md).
 
 ## 1. Destination and non-negotiable beta boundary
 
@@ -88,10 +88,27 @@ The initial implementation target is OR-1101, followed by a small representative
 
 ---
 
-## 5. Evidence required to close the roadmap
+## 5. Planned Presentation Evolution — 3D Diorama Rooms & Hybrid Facade Mapping (OR-1200)
+
+**Requested 2026-10-12. Status: planned; ready for sub-agent dispatch.** Detailed contracts, mesh specifications, camera mathematics, and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md).
+
+Transition flat 2D cutaway cross-sections into **3D stage boxes ("diorama shoeboxes")** with 2.5D sprite positioning in depth, telephoto perspective camera parallax ($28^\circ$ FOV), contact shadow decals, and autonomous resident 3D locomotion, combined with a **dual-tier hybrid pipeline** integrating baked parallax raymarching (*Real Fake Interiors* pattern) for the macro exterior curtain wall:
+
+| Slice | Task | Primary Files | Depends on | Reviewable outcome |
+|---|---|---|---|---|
+| **P1** | **OR-1201**: 3D Stage Box Geometry & Floor Batching | `RoomBoxPresenter.cs`, `FloorRoomBoxBatcher.cs`, `RoomPresenter.cs` | Existing cutaways | Procedural 5-sided stage box mesh with baked vertex AO replacing flat 9-slice backdrop; floor-level mesh batching in 1 shared material. |
+| **P2** | **OR-1202**: 3-Tier Sprite Depth & Contact Shadows | `RoomFurnishingPresenter.cs`, `InteractionPoint.cs`, `OneRoofUnlit.shader` | OR-1201 | Props placed at discrete local $Z$ tiers (Access $0.15\text{m}$, Activity $0.50\text{m}$, Back Wall $0.85\text{m}$); soft floor contact shadow decals; $Z$-buffer cutout sorting. |
+| **P3** | **OR-1203**: Telephoto Perspective Camera & Parallax | `TowerCameraController.cs`, `TowerPlayableController.cs` | OR-1201 | $28^\circ$ FOV telephoto perspective camera matching orthographic framing; natural vertical/horizontal parallax across 30 floors; zero jitter. |
+| **P4** | **OR-1204**: Resident 3D Locomotion & Depth Docking | `TowerResidentPresenter.cs`, `NpcView.cs` | OR-1202, OR-1203 | Residents walk in corridor Tier 0 ($Z=0.15\text{m}$) and interpolate depth into rooms to dock at beds/desks; natural perspective foreshortening. |
+| **P5** | **OR-1205**: Hybrid Facade Interior Mapping Spike | `BuildingExteriorPresenter.cs`, `GoldCity.shader` | OR-1203, ADR-088 | Evaluates *Real Fake Interiors* (package 374398) shader approach for macro exterior window quads, rendering 300+ 3D windows at 0 extra polygons and $\le 83$ draw calls overview. |
+
+---
+
+## 6. Evidence required to close the roadmap
 
 A green unit suite alone cannot close a chain. Every chain requires the contract matrix, immutable explanation, validated systems intervention, attributable saved aftermath, deterministic continuation and observed feedback defined in the [execution plan](./BETA_HARDENING_EXECUTION_PLAN.md#2-common-definition-of-done).
 
 OR-1003-G closes only after all six chain packages plus explanation, campaign, recovery, accessibility and performance acceptance pass. Publish the actual 30-day streak, gate values/failure reasons, replay comparison and native reference-view measurements. Report skipped or unavailable evidence explicitly; do not substitute explicit Camera.Render timing for full presentation with HUD.
 
 Use [WORKFLOW_AND_TESTING](../Docs/WORKFLOW_AND_TESTING.md) for exact commands and `unity-cli` Editor probes. Recheck the lock/active Editor, coordinate one Unity runner, preserve unrelated changes, and retain one concise active handoff. Archived delivery detail is context, not a reason to reopen completed foundations without regression evidence.
+

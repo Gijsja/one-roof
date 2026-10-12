@@ -44,8 +44,8 @@ Verify C# compilation without running tests (exit code `0` required). Requires `
 
 **Preferred (Concurrent with live Editor / No lockfile clash)**:
 ```bash
-/home/geisha/.local/bin/dotnet build OneRoof.Presentation.csproj
-/home/geisha/.local/bin/dotnet build OneRoof.Presentation.Tests.EditMode.csproj
+/home/geisha/.dotnet/dotnet build OneRoof.Presentation.csproj
+/home/geisha/.dotnet/dotnet build OneRoof.Presentation.Tests.EditMode.csproj
 ```
 
 **Alternative (Headless Unity Batchmode - Requires Editor closed / no `Temp/UnityLockfile`)**:

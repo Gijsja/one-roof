@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "contentId": "fixture.soffit.residential_studio.v1",
+  "assetType": "fixture",
+  "theme": "residential_studio",
+  "metrics": {
+    "cellWidth": 2,
+    "cellHeight": 1,
+    "pixelsPerUnit": 320.0,
+    "pivot": {
+      "x": 0.5,
+      "y": 1.0
+    },
+    "pixelBounds": {
+      "width": 320,
+      "height": 80
+    }
+  },
+  "rendering": {
+    "sortingLayer": "Fixtures"
+  }
+}

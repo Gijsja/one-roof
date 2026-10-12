@@ -1,6 +1,6 @@
 # Resident Systems — Agent Prompt Pack
 
-Date: 2026-09-30. Ready-to-copy assignments; no agents have been dispatched by this document. Send the shared prompt followed by one package prompt. The [execution plan](../RESIDENT_SYSTEM_EXECUTION_PLAN.md) owns sequence, gates and validation history. The single [active handoff](../../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md) owns current status.
+Date: 2026-09-30. Ready-to-copy assignments; no agents have been dispatched by this document. Send the shared prompt followed by one package prompt. The [execution plan](../RESIDENT_SYSTEM_EXECUTION_PLAN.md) owns sequence, gates and validation history. The single [active handoff](../../Handoffs/Active/HANDOFF_2026-10-12_active-baseline-and-roadmap.md) owns current status.
 
 ## Shared prompt — include with every assignment
 

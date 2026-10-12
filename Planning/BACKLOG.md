@@ -26,7 +26,7 @@ Parent BLOCKED statuses describe final closure, not a prohibition on READY child
 
 | Package | Status | Requires | Acceptance / blocker exit |
 |---|---|---|---|
-| OR-1002-C0 | IN PROGRESS | Existing system evidence | [Transit/routine checkpoint](../Docs/Validation/TRANSIT_DAILY_LIFE_2026-10-03.md): Tasks1–3 implemented and independently reviewed; truthful demand continuity, coherent physical clock/directional dispatch, bounded stair choice and shared employment routines. Baseline finalized day5 failed selected gates; the new checkpoint has not received complete-demand certification. Reachable providers, physiological budgets, multi-seed C0 outcomes, graphical/native performance and final acceptance remain pending. |
+| OR-1002-C0 | IN PROGRESS | Existing system evidence | Transit/routine checkpoint: Tasks 1–3 implemented and independently reviewed; truthful demand continuity, coherent physical clock/directional dispatch, bounded stair choice and shared employment routines. Baseline finalized day5 failed selected gates; the new checkpoint has not received complete-demand certification. Reachable providers, physiological budgets, multi-seed C0 outcomes, graphical/native performance and final acceptance remain pending. |
 | OR-602/603-D | READY | Spatial facts contract | Real household/shared-space crowding, residential versus physical density, validated capacity response and measured recovery. Historical acceptance retained. |
 | OR-903-D | READY | Spatial facts; civil factual/save interfaces for scoped actions | One domain noise model, scoped civil effects, cause-driven recovery distinct from timed containment. |
 | OR-605-D | READY | Attendance/provider contract | Actual funded accessible instruction, attended progress, local qualified duty; no specialist aura. |
@@ -69,10 +69,25 @@ Requested 2026-09-30. [Execution plan](./RESIDENT_SYSTEM_EXECUTION_PLAN.md) and 
 
 ---
 
-## 3. Preserved foundations and evidence
+## 3. Planned Presentation Evolution — 3D Diorama Rooms & Hybrid Facade (OR-1200)
+
+Requested 2026-10-12. Detailed specification and copyable sub-agent prompts are authoritative in the [3D Rooms & Hybrid Facade Execution Plan](./3D_ROOMS_AND_FACADE_ARCHITECTURE.md). These packages can progress in the presentation layer without modifying domain simulation rules.
+
+| ID | Status | Milestone | Task | Depends on | Acceptance |
+|---|---|---|---|---|---|
+| **OR-1201** | **READY** | P1 | **3D Stage Box Geometry & Floor Batching** | Existing cutaways | Procedural 5-sided stage box mesh with baked vertex AO replaces flat 9-slice backdrop; `FloorRoomBoxBatcher` combines floor boxes into 1 dynamic mesh sharing 1 architectural material. |
+| **OR-1202** | **QUEUED** | P2 | **3-Tier Sprite Depth & Contact Shadows** | OR-1201 | Props placed at discrete local $Z$ tiers (Access $0.15\text{m}$, Activity $0.50\text{m}$, Back Wall $0.85\text{m}$); soft floor contact shadow decals; $Z$-buffer cutout sorting. |
+| **OR-1203** | **QUEUED** | P3 | **Telephoto Perspective Camera & Parallax** | OR-1201 | $28^\circ$ FOV telephoto perspective camera matching orthographic framing; natural vertical/horizontal parallax across 30 floors; zero jitter. |
+| **OR-1204** | **QUEUED** | P4 | **Resident 3D Locomotion & Depth Docking** | OR-1202, OR-1203 | Residents walk in corridor Tier 0 ($Z=0.15\text{m}$) and interpolate depth into rooms to dock at beds/desks; natural perspective foreshortening. |
+| **OR-1205** | **QUEUED** | P5 | **Hybrid Facade Interior Mapping Spike** | OR-1203, ADR-088 | Evaluates *Real Fake Interiors* (package 374398) shader approach for macro exterior window quads, rendering 300+ 3D windows at 0 extra polygons and $\le 83$ draw calls overview. |
+
+---
+
+## 4. Preserved foundations and evidence
 
 Closed-loop integer economy, physical utility networks, autonomous social/faction systems, eight diagnostic overlays, pooled three-tier Resident LOD, semantic zoom and weather remain delivered foundations. Historical 832/15 and overview 83 draws/~100 FPS describe earlier snapshots; archive references are in [historical backlog](./Archive/BACKLOG_HISTORICAL_ARCHIVE.md) and [2026-09-30 validation](../Docs/Validation/BACKLOG_REVIEW_2026-09-30.md).
 
 Native 1080p Caretaker performance (~36 FPS on GT 755M) remains an unresolved measurement, not a stale blocker to silently delete. Reproduction and comparable before/after evidence belong to OR-1003-P. Passing functional tests does not certify the frame budget.
 
-Strictly one [active handoff](../Handoffs/Active/HANDOFF_2026-09-30_v0.10-documentation-and-beta-readiness.md). Previous detail was preserved in [the pre-hardening snapshot](../Handoffs/Archive/HANDOFF_2026-10-01_before-beta-hardening-roadmap.md). This planning update changes documentation only; Unity validation was not run.
+Strictly one [active handoff](../Handoffs/Active/HANDOFF_2026-10-12_active-baseline-and-roadmap.md). Previous detail was preserved in [the pre-hardening snapshot](../Handoffs/Archive/HANDOFF_2026-10-01_before-beta-hardening-roadmap.md). This planning update changes documentation only; Unity validation was not run.
+

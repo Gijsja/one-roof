@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 2,
+  "contentId": "room.wall.residential_closed.tile.v1",
+  "assetType": "room_shell",
+  "theme": "residential_closed",
+  "metrics": {
+    "cellWidth": 1,
+    "cellHeight": 2,
+    "pixelsPerUnit": 320.0,
+    "pivot": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "pixelBounds": {
+      "width": 160,
+      "height": 454
+    }
+  },
+  "rendering": {
+    "sortingLayer": "Backdrops",
+    "drawMode": "Tiled",
+    "tilePitchMeters": 0.5
+  }
+}

@@ -33,11 +33,43 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 
 1. **Systems over individuals**: Players influence systems (zoning, capacity, leases, decrees), never individual residents directly.
 2. **Cause-chain explanation**: Every failure connects: `Symptom → Overlay → Inspector Cause → Systems Response → Measured Feedback`.
-3. **Pure-C# Domain purity**: `OneRoof.Domain` and `OneRoof.Application` strictly maintain `noEngineReferences: true` (0 `UnityEngine` references).
-4. **Projections only**: Presentation and UI consume immutable projections bound by stable entity IDs. UI dispatches validated commands via `TowerSimulation.CanExecute()`, never directly mutating simulation state.
-5. **No per-agent Update loops**: Simulation runs on a fixed discrete tick (1440 ticks/day). Views are pooled and presentation-interpolated.
-6. **Aggregate persistence**: All serialization lives in domain sub-aggregates (`ToSaveData()` / `FromSaveData()`). Zero scene references in saves.
-7. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/`. Keep it concise, authoritative, and focused on current task status.
+3. **Pure-C# Domain purity**: `OneRoof.Domain` and `OneRoof.Application` strictly maintain `noEngineReferences: true` (0 `UnityEngine` references). Never introduce `UnityEngine` dependencies into domain code.
+4. **Clean Layering**: Domain ➔ Application (projections & session caching) ➔ Presentation (`MonoBehaviour`s & VFX).
+5. **Projections only**: Presentation and UI consume immutable projections bound by stable entity IDs. UI dispatches validated commands via `TowerSimulation.CanExecute()`, never directly mutating simulation state.
+6. **No per-agent Update loops**: Simulation runs on a fixed discrete tick (1440 ticks/day). Views are pooled and presentation-interpolated.
+7. **Aggregate persistence**: All serialization lives in domain sub-aggregates (`ToSaveData()` / `FromSaveData()`). Zero scene references in saves.
+8. **Strict Handoff Hygiene**: Maintain **strictly ONE active handoff** in `Handoffs/Active/`. Keep it concise, authoritative, and focused on current task status.
+9. **Sub-Agent Roadmap & Handoff Protocol**: When packaging architectural proposals or feature tracks for sub-agents:
+   - Create an execution plan in `Planning/<FEATURE>_ARCHITECTURE.md` with package IDs, prerequisites, owned files, and copyable prompts.
+   - Add the phased sequence to `Planning/ROADMAP.md`.
+   - Register work packages in `Planning/BACKLOG.md` with dispatch statuses (`READY`, `QUEUED`, `BLOCKED`).
+   - Synchronize `Handoffs/Active/` without creating duplicate active handoff files.
+
+---
+
+## Workspace Agent Directives
+
+### Architecture & Boundaries
+- **Domain Purity**: `OneRoof.Domain` has `noEngineReferences: true`. Never introduce `UnityEngine` dependencies into domain code.
+- **Clean Layering**: Domain ➔ Application (projections & session caching) ➔ Presentation (`MonoBehaviour`s & VFX).
+
+### Execution & Testing Protocol (3-Tier Escalation)
+- **Tier 1 (Fast Inner Loop — 95% of tasks)**: Pure .NET CLI.
+  - Compile check: `dotnet build OneRoof.Presentation.csproj` (~7–11s; compiles Domain, App, Content, UI, Presentation).
+  - Fast domain tests: `dotnet run --project Tools/DesignValidation/CrisisCheckpointTests.csproj` (1.5s; standalone runner).
+  - Always prefer Tier 1 for routine iteration. Zero Unity startup overhead, zero lockfile conflicts, zero pipeline drops.
+- **Tier 2 (Interactive Live Editor)**: `unity-cli` (`unity status` / `unity command`).
+  - Use opportunistically when an Editor GUI instance is open to inspect game objects or drive play mode.
+  - **No Fallback on Drop**: If `unity status` is disconnected or the Pipeline socket drops, **NEVER fallback to headless batchmode**. Stay in Tier 1.
+- **Tier 3 (Full Regression Gate — On-Demand Only)**: Headless Unity Editor batchmode (`Tools/run_editmode_tests.sh`).
+  - Reserved strictly for explicit user-requested release checkpoints or full PlayMode/EditMode suite verification (832+ tests).
+  - Never invoke automatically as a background fallback.
+- **Zero Overengineering**: Never write Python test wrapper scripts or attempt headless display (`xvfb`) harnesses.
+- **Inspect Logs**: Check `~/.config/unity3d/DefaultCompany/one-roof/TestResults.xml` and `Editor.log` directly when examining editor test results.
+
+### Performance Guarantees
+- **0 Steady-State GC**: Maintain zero heap allocations per tick in simulation and presentation loops (use value structs, retained dictionary capacities, and procedural meshes).
+- **Hardware-Aware**: Cap concurrency to 4 threads (`-j4`) to respect the 4-core i5-4570 CPU.
 
 ---
 
@@ -49,7 +81,7 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 |---|---|
 | **Unity Version** | `6000.3.24f1` (Unity 6000.3 LTS) — defined in [`ProjectSettings/ProjectVersion.txt`](./ProjectSettings/ProjectVersion.txt) |
 | **Unity Binary** | `/home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity` |
-| **.NET CLI** | `/home/geisha/.local/bin/dotnet` (preferred fast compilation toolchain) |
+| **.NET CLI** | `/home/geisha/.dotnet/dotnet` (or `dotnet`) (preferred fast compilation toolchain) |
 | **Project Path** | `/home/geisha/Vibecode/UnityAI/one-roof` |
 | **Render Pipeline** | Universal Render Pipeline (URP 17.3.0) |
 | **Assemblies** | `OneRoof.Domain` & `OneRoof.Application` (`noEngineReferences: true`, 0 `UnityEngine` refs) |
@@ -58,8 +90,8 @@ Consult [`Planning/BACKLOG.md`](./Planning/BACKLOG.md) and [`Handoffs/Active/`](
 ### Essential Validation Commands
 ```bash
 # Preferred fast compilation check (concurrent with live running Editor; no lockfile clash):
-/home/geisha/.local/bin/dotnet build OneRoof.Presentation.csproj
-/home/geisha/.local/bin/dotnet build OneRoof.Presentation.Tests.EditMode.csproj
+/home/geisha/.dotnet/dotnet build OneRoof.Presentation.csproj
+/home/geisha/.dotnet/dotnet build OneRoof.Presentation.Tests.EditMode.csproj
 
 # Headless Unity compilation check (requires Editor to be closed / no Temp/UnityLockfile):
 /home/geisha/Unity/Hub/Editor/6000.3.24f1/Editor/Unity -batchmode -nographics -quit -projectPath . -logFile /tmp/compile.log

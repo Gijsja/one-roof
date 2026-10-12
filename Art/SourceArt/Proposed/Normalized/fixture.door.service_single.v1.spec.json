@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "status": "normalized-candidate",
+  "contentId": "fixture.door.service_single.v1",
+  "assetType": "fixture",
+  "source": {
+    "kind": "generator",
+    "provenance": "Tools/AssetPipeline/asset_normalizer.py",
+    "rawSourceFile": "src_door_service_single.png",
+    "rawSourceSha256": "fa7bff917b35ac4d8015863cc8074aaf073af4b662299efcf2b22251bb6e3ec5"
+  },
+  "metrics": {
+    "cellWidth": 1,
+    "cellHeight": 2,
+    "pixelsPerUnit": 320.0,
+    "pivot": {
+      "x": 0.5,
+      "y": 0.0
+    },
+    "pixelBounds": {
+      "width": 160,
+      "height": 320
+    }
+  },
+  "behavior": {
+    "heightClass": "medium",
+    "collisionMask": "none",
+    "interactionPoints": [],
+    "compatibleThemes": [
+      "residential",
+      "office",
+      "commercial"
+    ]
+  },
+  "rendering": {
+    "sortingLayer": "Fixtures"
+  }
+}

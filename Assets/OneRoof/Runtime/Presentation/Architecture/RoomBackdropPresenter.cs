@@ -56,6 +56,23 @@ namespace OneRoof.Presentation.Architecture
             var color = BackdropRenderer.color; color.a = _interiorAlpha; BackdropRenderer.color = color;
         }
 
+        public void SetBackdropDrawMode(SpriteDrawMode mode)
+        {
+            if (BackdropRenderer != null)
+            {
+                BackdropRenderer.drawMode = mode;
+            }
+        }
+
+        public void SetWidth(float newWidth)
+        {
+            Width = newWidth;
+            if (BackdropRenderer != null)
+            {
+                BackdropRenderer.size = new Vector2(Mathf.Max(0.5f, newWidth - 0.04f), Height);
+            }
+        }
+
         public void Setup(string roomTheme, float width, float height, float worldLeft, float worldRight, float centerY, bool isWestSide, Material sharedMaterial = null)
         {
             _sharedMaterial = sharedMaterial;

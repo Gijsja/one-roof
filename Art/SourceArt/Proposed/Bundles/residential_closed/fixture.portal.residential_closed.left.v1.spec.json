@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "contentId": "fixture.portal.residential_closed.left.v1",
+  "assetType": "fixture",
+  "theme": "residential_closed",
+  "metrics": {
+    "cellWidth": 1,
+    "cellHeight": 2,
+    "pixelsPerUnit": 320.0,
+    "pivot": {
+      "x": 0.0,
+      "y": 0.5
+    },
+    "pixelBounds": {
+      "width": 128,
+      "height": 454
+    }
+  },
+  "rendering": {
+    "sortingLayer": "Fixtures"
+  }
+}

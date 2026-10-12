@@ -6,7 +6,7 @@ This document is the authoritative design and UX specification for One Roof's co
 
 ## Selected relaxed UI direction
 
-The selected ivory-and-blue shell and its implementation acceptance criteria are documented in [Relaxed UI design specification](Design/RELAXED_UI.md), with the [approved visual reference](Design/RELAXED_UI_REFERENCE.png). This is a design decision; runtime implementation remains pending. Gameplay and cause-chain contracts below remain authoritative.
+The selected visual UI direction is an ivory-and-blue shell with crisp architectural typography and clean contrast. Runtime implementation remains pending; gameplay and cause-chain contracts below remain authoritative.
 
 ## 1. Product Vision & Player Role
 

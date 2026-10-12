@@ -31,6 +31,21 @@ namespace OneRoof.Editor.AssetLab
             else foreach (var error in errors) Debug.LogError(error);
         }
 
+        public static void ValidateBatchMode()
+        {
+            var errors = Validate();
+            if (errors.Count > 0)
+            {
+                foreach (var error in errors) Debug.LogError(error);
+                EditorApplication.Exit(1);
+            }
+            else
+            {
+                Debug.Log("[AssetLab] All content validation checks passed.");
+                EditorApplication.Exit(0);
+            }
+        }
+
         [MenuItem("One Roof/AssetLab/Configure Addressables")]
         public static void ConfigureAddressables()
         {

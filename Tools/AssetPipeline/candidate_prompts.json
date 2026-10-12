@@ -1,0 +1,446 @@
+{
+  "version": 2,
+  "pipeline": "OneRoof-Generative-2D-Asset-Pipeline",
+  "supportedEngines": [
+    "Google-Imagen3",
+    "OpenAI-DallE3",
+    "Antigravity",
+    "Codex"
+  ],
+  "count": 25,
+  "prompts": [
+    {
+      "assetType": "room_shell",
+      "moduleSize": "2x2",
+      "archetype": "tenement_noir",
+      "prompt": "2.5D architectural cutaway cross-section of an empty balanced 2x2 standard modular room shell (3.0m x 3.0m cutaway volume), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare honey-oak hardwood plank with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with warm terracotta plaster and dark baseboards (#c86446). Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "wall_tile",
+      "theme": "tenement_noir",
+      "prompt": "Seamless horizontally tileable texture of warm terracotta plaster and dark baseboards with #c86446 accents, straight-on front elevation architectural surface pattern, orthographic game backdrop art. Clean repetitive rhythm, crisp architectural vector linework, Frank Miller graphic novel ink styling, no furniture, no doors, no shadows, no perspective angle, 100% flat seamless surface pattern.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Tenement_noir Primary Seating",
+      "family": "tenement_noir",
+      "cellWidth": 2,
+      "cellHeight": 1,
+      "interactionAnchor": "seat-left, seat-right",
+      "prompt": "Single isolated 2D game prop sprite of a Tenement_noir Primary Seating, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (tenement_noir theme, footprint 2x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Tenement_noir Storage Console",
+      "family": "tenement_noir",
+      "cellWidth": 2,
+      "cellHeight": 1,
+      "interactionAnchor": "browse-front",
+      "prompt": "Single isolated 2D game prop sprite of a Tenement_noir Storage Console, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (tenement_noir theme, footprint 2x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "wear_decal",
+      "decalName": "Water Leak Stain & Peeling Plaster",
+      "decalType": "water_damage",
+      "theme": "tenement_noir",
+      "prompt": "Single isolated 2D game decal sprite of Water Leak Stain & Peeling Plaster (water_damage), straight-on front elevation view, orthographic perspective, completely isolated on pure solid white background. Designed for One Roof housing condition degradation (tenement_noir theme). Subtle Frank Miller noir grit, semi-transparent grime, water stain watermark or plaster fracture lines, crisp graphic novel ink styling, no drop shadow, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 360,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "targetResolution": [
+        256,
+        256
+      ]
+    },
+    {
+      "assetType": "wear_decal",
+      "decalName": "Baseboard Grime & Floor Debris",
+      "decalType": "floor_grime",
+      "theme": "tenement_noir",
+      "prompt": "Single isolated 2D game decal sprite of Baseboard Grime & Floor Debris (floor_grime), straight-on front elevation view, orthographic perspective, completely isolated on pure solid white background. Designed for One Roof housing condition degradation (tenement_noir theme). Subtle Frank Miller noir grit, semi-transparent grime, water stain watermark or plaster fracture lines, crisp graphic novel ink styling, no drop shadow, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 360,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "targetResolution": [
+        256,
+        256
+      ]
+    },
+    {
+      "assetType": "room_shell",
+      "moduleSize": "2x2",
+      "archetype": "residential_studio",
+      "prompt": "2.5D architectural cutaway cross-section of an empty balanced 2x2 standard modular room shell (3.0m x 3.0m cutaway volume), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare honey-oak hardwood plank with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with warm muted terracotta plaster (#c86446). Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "room_shell",
+      "moduleSize": "2x2",
+      "archetype": "commercial_office",
+      "prompt": "2.5D architectural cutaway cross-section of an empty balanced 2x2 standard modular room shell (3.0m x 3.0m cutaway volume), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare dark blue-grey tech carpet tile with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with cool acoustic panels with slate trim. Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "room_shell",
+      "moduleSize": "3x3",
+      "archetype": "civic_lobby",
+      "prompt": "2.5D architectural cutaway cross-section of an empty expansive 3x3 grand architectural chamber (4.5m x 4.5m spacious cutaway hall), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare polished slate stone tile with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with deep navy architectural monolithic panels. Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "room_shell",
+      "moduleSize": "2x2",
+      "archetype": "diner_retro",
+      "prompt": "2.5D architectural cutaway cross-section of an empty balanced 2x2 standard modular room shell (3.0m x 3.0m cutaway volume), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare dark warm parquet floor with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with restrained brick with cream banding. Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "room_shell",
+      "moduleSize": "1x1",
+      "archetype": "micro_pod",
+      "prompt": "2.5D architectural cutaway cross-section of an empty compact 1x1 single micro room module (1.5m x 1.5m cutaway bay), straight-on front elevation view, orthographic game backdrop art. Pristine completely vacant interior before tenant move-in, 100% unfurnished, zero furniture, zero occupants. Flat bare honey-oak floorboards with horizontal baseline parallel to bottom edge. Solid flat uninterrupted back perimeter wall with minimalist slate plaster with conduit chase. Solid clean flat side walls, completely closed perimeter, zero baked doors, zero doorway openings, zero windows. Flat bare ceiling slab with recessed utility chase. Framed top and bottom in monolithic midnight navy concrete (#0a0f18 / #161f30). Soft warm amber ambient interior lighting (#ebc068), crisp clean architectural vector linework, Frank Miller graphic novel ink clarity, sharp flat edges, 8k clarity.",
+      "negativePrompt": "door, doorway, door frame, portal, entrance, archway, open door, aperture, door handle, window, window frame, glass panes, outside scenery through window, furniture, chair, armchair, desk, table, coffee table, bed, mattress, couch, sofa, nightstand, lamp, floor lamp, chandelier, ceiling fan, rug, carpet roll, plant, potted plant, monstera, painting, picture frame, wall art, poster, tv, television, computer, monitor, keyboard, electronics, shelves, bookcase, cabinet, drawer, closet, wardrobe, kitchen counter, stove, oven, refrigerator, sink, microwave, appliances, boxes, cardboard, luggage, suitcase, clutter, trash, debris, clothes, shoes, human, person, man, woman, resident, worker, silhouette, avatar, dog, cat, pets, 3d isometric angle, tilted camera, oblique perspective, fisheye lens, vanishing perspective, blurry, depth of field, vignette, watermark, text, logo, signature",
+      "recommendedPpu": 360,
+      "recommendedBorder": {
+        "left": 32,
+        "bottom": 32,
+        "right": 32,
+        "top": 32
+      },
+      "targetResolution": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Executive Leather Sofa",
+      "family": "corporate",
+      "cellWidth": 2,
+      "cellHeight": 1,
+      "interactionAnchor": "seat-left, seat-right",
+      "prompt": "Single isolated 2D game prop sprite of a Executive Leather Sofa, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (corporate theme, footprint 2x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Diner Booth Set",
+      "family": "commercial",
+      "cellWidth": 2,
+      "cellHeight": 1,
+      "interactionAnchor": "seat-left, seat-right",
+      "prompt": "Single isolated 2D game prop sprite of a Diner Booth Set, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (commercial theme, footprint 2x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Ergonomic Dual-Monitor Desk",
+      "family": "corporate",
+      "cellWidth": 2,
+      "cellHeight": 1,
+      "interactionAnchor": "work-front",
+      "prompt": "Single isolated 2D game prop sprite of a Ergonomic Dual-Monitor Desk, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (corporate theme, footprint 2x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Double Residential Bed",
+      "family": "domestic",
+      "cellWidth": 2,
+      "cellHeight": 2,
+      "interactionAnchor": "sleep-left, sleep-right",
+      "prompt": "Single isolated 2D game prop sprite of a Double Residential Bed, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (domestic theme, footprint 2x2 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Compact Kitchenette Unit",
+      "family": "domestic",
+      "cellWidth": 3,
+      "cellHeight": 1,
+      "interactionAnchor": "cook-front",
+      "prompt": "Single isolated 2D game prop sprite of a Compact Kitchenette Unit, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (domestic theme, footprint 3x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "prop",
+      "propName": "Monstera Interior Planter",
+      "family": "decor",
+      "cellWidth": 1,
+      "cellHeight": 1,
+      "interactionAnchor": "none",
+      "prompt": "Single isolated 2D game prop sprite of a Monstera Interior Planter, straight-on 2.5D front elevation view, orthographic camera projection, completely isolated on pure solid white background with clean silhouette. Designed for One Roof vertical tower simulation (decor theme, footprint 1x1 grid units). Stylized graphic novel ink aesthetic with clean geometry, midnight slate framing (#161f30) and warm domestic oak (#d4a373) or amber (#ebc068) accents. Flat baseline resting perfectly on the bottom edge, zero perspective distortion, zero ground shadow, crisp vector edges, high clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "fixture",
+      "fixtureName": "Sliding Double Elevator Door",
+      "fixtureType": "door_elevator",
+      "prompt": "Single isolated 2D architectural fixture sprite of a Sliding Double Elevator Door, straight-on front elevation view, orthographic projection, perfectly isolated on pure solid white background. Clean architectural cutaway game asset for One Roof tower. Frame in monolithic slate-navy (#0a0f18), crisp graphic novel linework, flat lighting, no drop shadows, no perspective angle tilt, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "fixture",
+      "fixtureName": "Oak Apartment Entrance Door",
+      "fixtureType": "door_apartment",
+      "prompt": "Single isolated 2D architectural fixture sprite of a Oak Apartment Entrance Door, straight-on front elevation view, orthographic projection, perfectly isolated on pure solid white background. Clean architectural cutaway game asset for One Roof tower. Frame in monolithic slate-navy (#0a0f18), crisp graphic novel linework, flat lighting, no drop shadows, no perspective angle tilt, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "fixture",
+      "fixtureName": "Mullioned Residential Window",
+      "fixtureType": "window_mullion",
+      "prompt": "Single isolated 2D architectural fixture sprite of a Mullioned Residential Window, straight-on front elevation view, orthographic projection, perfectly isolated on pure solid white background. Clean architectural cutaway game asset for One Roof tower. Frame in monolithic slate-navy (#0a0f18), crisp graphic novel linework, flat lighting, no drop shadows, no perspective angle tilt, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "fixture",
+      "fixtureName": "Amber Wall Lighting Sconce",
+      "fixtureType": "sconce_amber",
+      "prompt": "Single isolated 2D architectural fixture sprite of a Amber Wall Lighting Sconce, straight-on front elevation view, orthographic projection, perfectly isolated on pure solid white background. Clean architectural cutaway game asset for One Roof tower. Frame in monolithic slate-navy (#0a0f18), crisp graphic novel linework, flat lighting, no drop shadows, no perspective angle tilt, vector clarity.",
+      "negativePrompt": "room, wall, floor background, ceiling, window, door, interior scene, architecture, room cutaway, human, person, hands holding, character, resident, man, woman, animal, shadow on wall, cluttered background, text, labels, watermark, logo, blurry, isometric grid lines, 3d render floor",
+      "recommendedPpu": 320,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "npc_component",
+      "layer": "UpperClothing",
+      "parentBone": "spine",
+      "prompt": "Single isolated 2D modular wardrobe attachment piece: Tailored Corporate Suit Jacket with Lapel for the UpperClothing slot, straight-on front elevation view, orthographic game sprite isolated on pure solid white background. Designed for One Roof 17-bone procedural character rig (parent bone: spine). Flat stylized 2D game illustration, neutral base tone with clean separation for palette masking, crisp dark ink contours, bottom-center pivot alignment at 512 PPU, zero perspective tilt.",
+      "negativePrompt": "full human face, realistic skin texture, eyes, hair on torso, background, scene, scenery, furniture, shadow, floor, perspective angle, side view, back view, realistic wrinkles, noisy patterns, blurry, logo, brand mark, text",
+      "recommendedPpu": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "npc_component",
+      "layer": "LowerClothing",
+      "parentBone": "hip",
+      "prompt": "Single isolated 2D modular wardrobe attachment piece: Straight-Leg Dark Wool Slacks for the LowerClothing slot, straight-on front elevation view, orthographic game sprite isolated on pure solid white background. Designed for One Roof 17-bone procedural character rig (parent bone: hip). Flat stylized 2D game illustration, neutral base tone with clean separation for palette masking, crisp dark ink contours, bottom-center pivot alignment at 512 PPU, zero perspective tilt.",
+      "negativePrompt": "full human face, realistic skin texture, eyes, hair on torso, background, scene, scenery, furniture, shadow, floor, perspective angle, side view, back view, realistic wrinkles, noisy patterns, blurry, logo, brand mark, text",
+      "recommendedPpu": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "npc_component",
+      "layer": "Footwear",
+      "parentBone": "foot",
+      "prompt": "Single isolated 2D modular wardrobe attachment piece: Polished Oxford Dress Shoes for the Footwear slot, straight-on front elevation view, orthographic game sprite isolated on pure solid white background. Designed for One Roof 17-bone procedural character rig (parent bone: foot). Flat stylized 2D game illustration, neutral base tone with clean separation for palette masking, crisp dark ink contours, bottom-center pivot alignment at 512 PPU, zero perspective tilt.",
+      "negativePrompt": "full human face, realistic skin texture, eyes, hair on torso, background, scene, scenery, furniture, shadow, floor, perspective angle, side view, back view, realistic wrinkles, noisy patterns, blurry, logo, brand mark, text",
+      "recommendedPpu": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    },
+    {
+      "assetType": "npc_component",
+      "layer": "Hair",
+      "parentBone": "head",
+      "prompt": "Single isolated 2D modular wardrobe attachment piece: Sleek Side-Parted Professional Haircut for the Hair slot, straight-on front elevation view, orthographic game sprite isolated on pure solid white background. Designed for One Roof 17-bone procedural character rig (parent bone: head). Flat stylized 2D game illustration, neutral base tone with clean separation for palette masking, crisp dark ink contours, bottom-center pivot alignment at 512 PPU, zero perspective tilt.",
+      "negativePrompt": "full human face, realistic skin texture, eyes, hair on torso, background, scene, scenery, furniture, shadow, floor, perspective angle, side view, back view, realistic wrinkles, noisy patterns, blurry, logo, brand mark, text",
+      "recommendedPpu": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.0
+      },
+      "targetResolution": [
+        512,
+        512
+      ]
+    }
+  ]
+}

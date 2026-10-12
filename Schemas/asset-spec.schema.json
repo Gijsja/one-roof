@@ -3,39 +3,79 @@
   "$id": "https://oneroof.game/schemas/asset-spec.schema.json",
   "title": "One Roof Asset Specification",
   "type": "object",
-  "additionalProperties": false,
-  "required": ["assetType", "contentId", "styleProfile", "approvalState", "source"],
+  "additionalProperties": true,
   "properties": {
-    "assetType": { "enum": ["npc_component", "furniture", "room_shell", "surface", "prop", "ui", "event_visual", "audio"] },
-    "contentId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$" },
-    "styleProfile": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "status": { "type": "string" },
+    "assetType": { "enum": ["npc_component", "furniture", "room_shell", "surface", "prop", "ui", "event_visual", "audio", "spritesheet"] },
+    "contentId": { "type": "string" },
+    "displayName": { "type": "string" },
+    "styleProfile": { "type": "string" },
     "theme": { "type": "string" },
-    "rig": { "type": ["string", "null"] },
-    "bodyCompatibility": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "layer": { "type": ["string", "null"] },
-    "footprint": {
-      "type": ["object", "null"],
-      "additionalProperties": false,
-      "required": ["width", "height"],
-      "properties": {
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "anchors": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "approvalState": { "enum": ["draft", "validated", "approved", "rejected", "deprecated"] },
+    "approvalState": { "enum": ["draft", "proposed", "validated", "approved", "rejected", "deprecated"] },
     "source": {
       "type": "object",
-      "additionalProperties": false,
-      "required": ["kind", "provenance"],
       "properties": {
-        "kind": { "enum": ["artist", "generator", "licensed", "internal"] },
-        "provenance": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["artist", "generator", "licensed", "internal", "antigravity", "codex", "google", "openai"] },
+        "provenance": { "type": "string" },
         "license": { "type": "string" },
-        "promptHash": { "type": "string" }
+        "promptHash": { "type": "string" },
+        "model": { "type": "string" },
+        "seed": { "type": "integer" }
       }
-    }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "cellWidth": { "type": "integer", "minimum": 1 },
+        "cellHeight": { "type": "integer", "minimum": 1 },
+        "pixelsPerUnit": { "type": "number", "minimum": 1 },
+        "pivot": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          },
+          "required": ["x", "y"]
+        },
+        "pixelBounds": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "integer" },
+            "height": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "properties": {
+        "heightClass": { "enum": ["low", "medium", "tall", "wall", "ceiling"] },
+        "collisionMask": { "enum": ["solid", "portal", "none", "passthrough"] },
+        "interactionPoints": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "compatibleThemes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "rendering": {
+      "type": "object",
+      "properties": {
+        "sortingLayer": { "type": "string" },
+        "nineSliceBorder": {
+          "type": "object",
+          "properties": {
+            "left": { "type": "integer" },
+            "bottom": { "type": "integer" },
+            "right": { "type": "integer" },
+            "top": { "type": "integer" }
+          },
+          "required": ["left", "bottom", "right", "top"]
+        },
+        "paletteMasks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sheet": { "type": "object" },
+    "recommendedUnityImport": { "type": "object" },
+    "assets": { "type": "array" },
+    "backdrops": { "type": "array" }
   }
 }
-

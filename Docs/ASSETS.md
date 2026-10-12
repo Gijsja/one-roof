@@ -82,7 +82,7 @@ Backdrops auto-expand horizontally across 1 to 8 cells without texture distortio
 
 The underground cutaway uses `BuildingExteriorPresenter`: granular deterministic soil/rock, uneven sediment horizons, angular inclusions/fractures and chipped excavation rims, with shared boundaries omitted between excavated cells. Earth uses a shared vertex lattice and stays one batch. Underground presentation cells match Tower columns (0.5 render units) and storeys (1.75 render units), with 32 columns spanning 16 units. The normalized undercity subtree keeps surface dressing unchanged; inverse scale preserves Resident bodies and text. Placement, utility routes and investigator positions use the same rectangular mapping. Corridors have open walkways and recessed gradient lighting. Room walls reuse a cropped approved industrial backdrop that excludes its baked utility stripe; the Generator has engine/alternator/control/exhaust detail, and the Access Hub has lockers and seating. Entrances/hatches follow actual adjacent corridor/shaft cells. Compact signs separate connection from staffing/operating state using text. Placement previews own their tinted mesh so excavation interiors and Tower geometry retain their own colors.
 
-Geometry refreshes on topology revisions; generated meshes and the cached artwork crop are released on retirement/teardown. Fixtures are decorative; utility projections remain authoritative. Build previews show the complete shaft footprint and metric depth, with dig → floor → connect → zone prerequisites. See [art/UX validation](Validation/UNDERCITY_ART_2026-10-02.md) for actual GameView captures and [initial construction validation](Validation/UNDERCITY_2026-10-02.md) for the earlier implementation evidence.
+Geometry refreshes on topology revisions; generated meshes and the cached artwork crop are released on retirement/teardown. Fixtures are decorative; utility projections remain authoritative. Build previews show the complete shaft footprint and metric depth, with dig → floor → connect → zone prerequisites.
 
 ### 4.2 Structural Fixtures (`Resources/Architecture/`)
 - **Doors**: Apartment wooden doors, elevator landing sliding doors, stairwell fire doors.
@@ -101,3 +101,84 @@ Geometry refreshes on topology revisions; generated meshes and the cached artwor
 | **Commercial Diner** | Diner booth, service counter, espresso bar, stool, wall menu board, recreation game table | `seat-booth`, `serve-counter`, `eat-stool`, `seat-left/right` | Restaurants & Diners |
 | **Corporate Office** | Ergonomic desk with dual monitors, rolling office chair, filing cabinet, whiteboard | `desk-work`, `seat`, `file-browse` | Offices & Workspaces |
 | **Civic & Lobby** | Reception curved desk, directory kiosk, coat rack, bench, lounge conversation set | `visitor-greet`, `staff-back`, `rest`, `seat-left/right` | Ground Lobby, Skylobbies & Lounges |
+
+---
+
+## 6. Generative 2D Asset Pipeline (Antigravity, Codex, Google & OpenAI)
+
+One Roof provides an automated, standardized generation pipeline combining agentic synthesis with diffusion models:
+
+```text
+[Prompt Synthesis via Codex] → [Generation via Google / OpenAI / Antigravity] → [Normalization via asset_normalizer.py] → [Validation Gate] → [AssetSpecImporter]
+```
+
+### 6.1 The 5-Part Prompt Anatomy
+Every generated asset prompt must strictly follow this structure:
+```text
+[CAMERA & PROJECTION PROFILE] + [SUBJECT & FOOTPRINT] + [ARCHITECTURAL/INTERIOR STATE] + [MATERIALS & SURFACES] + [LIGHTING & PALETTE TOKENS]
+```
+
+### 6.2 Provider Support
+- **Google (Imagen 3 / Gemini)**: Accessed via `Tools/AssetPipeline/api_generator.py --provider google` or Antigravity's `generate_image` tool.
+- **OpenAI (DALL-E 3)**: Accessed via `Tools/AssetPipeline/api_generator.py --provider openai` using `OPENAI_API_KEY`.
+- **Antigravity & Codex**: Codex generates prompt manifests via `Tools/AssetPipeline/generate_prompts.py`, while Antigravity orchestrates end-to-end normalization, spec binding, and testbed validation.
+
+---
+
+## 7. The Empty Room Canvas Invariant
+
+Rooms start 100% empty:
+- **Zero Baked Props**: Backdrops must never bake in furniture, clutter, or occupants.
+- **Dynamic Decoupling**: Inhabitants bring furnishings from outside markets at runtime; props anchor dynamically to floor baselines.
+- **Master Negative Prompt**: Always injected to eliminate hallucinated furniture in room shells:
+  ```text
+  furniture, chair, desk, table, bed, sofa, couch, cabinet, shelf, shelves, bookcase, dresser, wardrobe, kitchen counter, stove, sink, refrigerator, appliances, rug, carpet, plant, monstera, painting, frame, poster, tv, monitor, computer, clutter, trash, boxes, luggage, people, human, person, worker, resident, man, woman, silhouette, 3d isometric angle, oblique perspective, tilted horizon, vanishing point, blurry, depth of field, vignette, watermark, text
+  ```
+
+---
+
+## 8. Automated Normalization & Specification Tooling
+
+- **`Tools/AssetPipeline/asset_normalizer.py`**:
+  - Keys out solid backgrounds cleanly to extract alpha transparency.
+  - Aligns bottom baseline to pixel $y=0$ for floor-docked props.
+  - Rescales to discrete metric cells ($W \times 0.5\text{m}$, $H \times 0.5\text{m}$) at target PPU (Props @ 320 PPU, Rooms @ 360 PPU, Wardrobe @ 512 PPU).
+  - Emits paired `.spec.json` conforming to `Schemas/asset-spec.schema.json` v2.
+- **`AssetSpecImporter.cs`**:
+  - Unity `AssetPostprocessor` reading `.spec.json` on texture import to set Sprite mode, PPU, pivot, and 9-slice borders automatically.
+
+---
+
+## 9. Standalone AssetLab Testbed & Benchmarking
+
+To test new 2D backdrops, props, and modular character attachments without risking regressions in the main Tower simulation or ongoing daily-life systems:
+- Open Unity Editor and select **One Roof → AssetLab → Build Modular Test Scene**.
+- Builds `Assets/Scenes/AssetLab_ModularTest.unity` containing:
+  - 4 demo room cutaways across a cell-width matrix: 1-cell (0.5m), 2-cell (1.0m), 4-cell (2.0m), and 6-cell (3.0m).
+  - Multi-theme floor-docked props via `RoomFurnishingPresenter`.
+  - Articulated 17-bone character rigs via `NpcSkeletalHierarchy`.
+  - Standalone `AssetLabBenchmarkDisplay` overlay displaying real-time FPS, frame time, active SpriteRenderer count, and interactive controls:
+    - Dynamic room width resizing slider (0.5m to 4.0m).
+    - Wall mode toggle: Seamless Tiled (0.5m cell pitch) vs. Sliced (stretched).
+    - Housing Condition Stage scrubber: Pristine → Worn → Degraded.
+    - Prop clutter alpha slider and character animation scrubber.
+
+---
+
+## 10. Deepened Multi-Layer Modular Architecture & Theme Bundles
+
+### 10.1 Multi-Layer Decomposition
+Rooms are decomposed into complementary layers rather than monolithic static blocks:
+1. **Continuous Structural Deck**: Managed building-wide by `FloorDeckPresenter` using `FloorThemeCatalog` (reinforced slab, oak parquet, high-tech grid tiles), eliminating inter-room seams.
+2. **Back Wall Surface**: Owned by `RoomBackdropPresenter` using `SpriteDrawMode.Tiled`. Center wall patterns repeat seamlessly every 0.5m cell pitch (180 px @ 360 PPU) without horizontal stretching distortion across 1 to 8 cells.
+3. **Architectural Trims & Apertures**: Top ceiling soffit & utility conduit chase, bottom baseboard trim, and left/right doorway aperture frames.
+
+### 10.2 Archetype Theme Bundles
+Generated via `Tools/AssetPipeline/generate_prompts.py --category bundles --theme <id>` and extracted via `Tools/AssetPipeline/asset_normalizer.py --bundle`:
+- Produces a unified aesthetic package in one coordinated run:
+  - Seamless horizontally tileable wall pattern (`room.wall.<theme>.tile.v1`)
+  - Doorway portal frame (`fixture.portal.<theme>.left.v1`)
+  - Ceiling soffit and conduit chase (`fixture.soffit.<theme>.v1`)
+  - Coordinated furnishing props (primary seating, console desk)
+  - Degradation wear decals (water leak stain, wall crack, floor grime)
+- Guarantees 100% palette and lighting coherence across the room shell, fixtures, props, and degradation overlays.

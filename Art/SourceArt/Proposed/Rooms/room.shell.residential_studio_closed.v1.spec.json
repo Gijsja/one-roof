@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "status": "normalized-candidate",
+  "contentId": "room.shell.residential_studio_closed.v1",
+  "assetType": "room_shell",
+  "source": {
+    "kind": "generator",
+    "provenance": "Tools/AssetPipeline/asset_normalizer.py",
+    "rawSourceFile": "room_shell_closed_1791053775198.jpg",
+    "rawSourceSha256": "25354e5013ddf0527bfdb8d14ec82dcd24eef12e95262ef2d527a88ab0f890e6"
+  },
+  "metrics": {
+    "cellWidth": 2,
+    "cellHeight": 2,
+    "pixelsPerUnit": 360.0,
+    "pivot": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "pixelBounds": {
+      "width": 360,
+      "height": 511
+    }
+  },
+  "behavior": {
+    "heightClass": "medium",
+    "collisionMask": "none",
+    "interactionPoints": [],
+    "compatibleThemes": [
+      "residential",
+      "office",
+      "commercial"
+    ]
+  },
+  "rendering": {
+    "sortingLayer": "Backdrops",
+    "nineSliceBorder": {
+      "left": 32,
+      "bottom": 32,
+      "right": 32,
+      "top": 32
+    }
+  }
+}
